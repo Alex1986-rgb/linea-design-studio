@@ -1,0 +1,46 @@
+{
+  "meta": { "created": "2026-08-01", "source": "site-brief-wizard" },
+  "client": { "name": "Демо-клиент", "phone": "+7 900 000-00-00", "email": "client@example.com" },
+  "object": { "type": "квартира", "address": "ЖК «Северный парк», Москва", "area": 54, "ceilingHeight": 2.7 },
+  "rooms": [
+    {
+      "name": "Гостиная-кухня", "type": "living-kitchen", "width": 5.2, "length": 4.0,
+      "windows": [{ "wall": "A", "offset": 1.6, "width": 1.8, "height": 1.5, "sill": 0.85 }],
+      "doors": [{ "wall": "C", "offset": 0.3, "width": 0.9 }]
+    },
+    {
+      "name": "Спальня", "type": "bedroom", "width": 3.8, "length": 3.2,
+      "windows": [{ "wall": "A", "offset": 1.15, "width": 1.5, "height": 1.45, "sill": 0.9 }],
+      "doors": [{ "wall": "C", "offset": 0.2, "width": 0.9 }]
+    },
+    {
+      "name": "Детская", "type": "kids", "width": 3.4, "length": 2.9,
+      "windows": [{ "wall": "A", "offset": 1.0, "width": 1.4, "height": 1.45, "sill": 0.9 }],
+      "doors": [{ "wall": "C", "offset": 0.2, "width": 0.8 }]
+    },
+    {
+      "name": "Санузел", "type": "bathroom", "width": 2.2, "length": 1.8,
+      "windows": [],
+      "doors": [{ "wall": "C", "offset": 0.15, "width": 0.7 }]
+    },
+    {
+      "name": "Прихожая", "type": "hallway", "width": 3.0, "length": 1.6,
+      "windows": [],
+      "doors": [{ "wall": "C", "offset": 1.0, "width": 0.9 }]
+    }
+  ],
+  "style": {
+    "name": "japandi", "byStudio": false,
+    "colors": ["тёплый белый", "натуральное дерево", "серо-зелёный"],
+    "references": ["минимум декора", "скрытые двери", "шторы в нише"]
+  },
+  "budget": "business",
+  "answers": {
+    "household": "Пара с ребёнком 6 лет",
+    "pets": "Кот",
+    "wfh": "Да, нужно рабочее место",
+    "storage": "Хранения много: гардероб + антресоли",
+    "dislikes": "Глянец, холодный белый",
+    "timeline": "Ремонт в течение 6 месяцев"
+  }
+}

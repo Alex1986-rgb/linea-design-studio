@@ -1,0 +1,71 @@
+{
+  "generated": "2026-08-01T16:19:01.666Z",
+  "style": "japandi",
+  "tier": "business",
+  "totalArea": 54,
+  "rooms": [
+    {
+      "name": "Гостиная-кухня",
+      "type": "living-kitchen",
+      "area": 20.8
+    },
+    {
+      "name": "Спальня",
+      "type": "bedroom",
+      "area": 12.2
+    },
+    {
+      "name": "Детская",
+      "type": "kids",
+      "area": 9.9
+    },
+    {
+      "name": "Санузел",
+      "type": "bathroom",
+      "area": 4
+    },
+    {
+      "name": "Прихожая",
+      "type": "hallway",
+      "area": 4.8
+    }
+  ],
+  "files": [
+    "01-plany/plan-01-gostinaya-kuhnya.svg",
+    "02-razvertki/01-gostinaya-kuhnya-stena-A.svg",
+    "02-razvertki/01-gostinaya-kuhnya-stena-B.svg",
+    "02-razvertki/01-gostinaya-kuhnya-stena-C.svg",
+    "02-razvertki/01-gostinaya-kuhnya-stena-D.svg",
+    "03-potolki/potolok-01-gostinaya-kuhnya.svg",
+    "01-plany/plan-02-spalnya.svg",
+    "02-razvertki/02-spalnya-stena-A.svg",
+    "02-razvertki/02-spalnya-stena-B.svg",
+    "02-razvertki/02-spalnya-stena-C.svg",
+    "02-razvertki/02-spalnya-stena-D.svg",
+    "03-potolki/potolok-02-spalnya.svg",
+    "01-plany/plan-03-detskaya.svg",
+    "02-razvertki/03-detskaya-stena-A.svg",
+    "02-razvertki/03-detskaya-stena-B.svg",
+    "02-razvertki/03-detskaya-stena-C.svg",
+    "02-razvertki/03-detskaya-stena-D.svg",
+    "03-potolki/potolok-03-detskaya.svg",
+    "01-plany/plan-04-sanuzel.svg",
+    "02-razvertki/04-sanuzel-stena-A.svg",
+    "02-razvertki/04-sanuzel-stena-B.svg",
+    "02-razvertki/04-sanuzel-stena-C.svg",
+    "02-razvertki/04-sanuzel-stena-D.svg",
+    "03-potolki/potolok-04-sanuzel.svg",
+    "01-plany/plan-05-prihozhaya.svg",
+    "02-razvertki/05-prihozhaya-stena-A.svg",
+    "02-razvertki/05-prihozhaya-stena-B.svg",
+    "02-razvertki/05-prihozhaya-stena-C.svg",
+    "02-razvertki/05-prihozhaya-stena-D.svg",
+    "03-potolki/potolok-05-prihozhaya.svg",
+    "06-smeta/smeta.html",
+    "06-smeta/smeta.csv",
+    "05-materialy/specification.html",
+    "04-koncept/koncept.html",
+    "00-pasport/pasport.html",
+    "index.html"
+  ]
+}

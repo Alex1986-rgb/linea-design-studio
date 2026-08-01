@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Бриф на дизайн-проект — LINEA | 7 минут до старта</title>
+<meta name="description" content="Заполните бриф на дизайн-проект интерьера: размеры, фото и чертежи квартиры, стиль и референсы. Через 48 часов — полный комплект чертежей и смета.">
+<link rel="canonical" href="https://alex1986-rgb.github.io/linea-design-studio/brief.html">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' fill='%230F0E0C'/><text x='50' y='68' font-size='52' text-anchor='middle' fill='%23C29A5B' font-family='Georgia'>L</text></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;600&family=Inter:wght@400;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/main.css">
+</head>
+<body>
+
+<header class="site">
+  <div class="nav">
+    <a class="logo" href="index.html" style="text-decoration:none">LINE<i>A</i></a>
+    <nav class="links"><a href="index.html#process">Процесс</a><a href="index.html#price">Тарифы</a><a href="portfolio/demo/index.html">Демо-проект</a></nav>
+  </div>
+</header>
+
+<section class="hero" style="padding:70px 0 30px">
+  <div class="wrap">
+    <div class="kicker">Бриф · 7 минут</div>
+    <h1 style="font-size:clamp(28px,4vw,44px)">Расскажите о вашей квартире —<br>остальное сделает студия</h1>
+    <div class="steps" id="steps"></div>
+  </div>
+</section>
+
+<div class="wrap" style="padding-bottom:90px">
+
+  <!-- ШАГ 1: объект -->
+  <div class="panel" data-step="0">
+    <h2>Объект</h2>
+    <p class="hint">Общие данные — чтобы правильно посчитать смету и подобрать решения.</p>
+    <div class="row3">
+      <div class="field"><label>Тип объекта</label>
+        <select id="objType"><option>квартира</option><option>дом</option><option>апартаменты</option><option>студия</option></select></div>
+      <div class="field"><label>Площадь, м²</label><input type="number" id="objArea" placeholder="54" min="10" step="0.1"></div>
+      <div class="field"><label>Высота потолков, м</label><input type="number" id="objH" placeholder="2.7" value="2.7" step="0.05"></div>
+    </div>
+    <div class="field"><label>Адрес / ЖК (необязательно)</label><input type="text" id="objAddr" placeholder="ЖК «Северный парк», Москва"></div>
+  </div>
+
+  <!-- ШАГ 2: помещения и файлы -->
+  <div class="panel" data-step="1" hidden>
+    <h2>Помещения и размеры</h2>
+    <p class="hint">Добавьте каждое помещение с размерами в метрах. Не знаете точно — укажите примерно, уточним по чертежу.</p>
+    <div id="rooms"></div>
+    <button class="btn sm ghost" id="addRoom" type="button">+ Добавить помещение</button>
+    <div style="height:26px"></div>
+    <h2 style="font-size:20px">Фото, обмеры и чертежи</h2>
+    <p class="hint">План от застройщика, фото стен, листок с обмерами — подойдёт всё. Форматы: JPG, PNG, PDF, DWG.</p>
+    <div class="drop" id="drop">Нажмите, чтобы выбрать файлы, или перетащите их сюда</div>
+    <input type="file" id="files" multiple hidden accept=".jpg,.jpeg,.png,.pdf,.dwg,.heic">
+    <div class="filelist" id="filelist"></div>
+  </div>
+
+  <!-- ШАГ 3: стиль -->
+  <div class="panel" data-step="2" hidden>
+    <h2>Стиль и настроение</h2>
+    <p class="hint">Выберите направление — или доверьтесь студии, и мы предложим его сами по вашим ответам.</p>
+    <div class="style-grid" id="styles"></div>
+    <div style="height:22px"></div>
+    <div class="row2">
+      <div class="field"><label>Любимые цвета и материалы</label><input type="text" id="stColors" placeholder="тёплый белый, дерево, латунь"></div>
+      <div class="field"><label>Референсы (ссылки Pinterest и т.п.)</label><input type="text" id="stRefs" placeholder="https://pin.it/..., https://..."></div>
+    </div>
+  </div>
+
+  <!-- ШАГ 4: наводящие вопросы -->
+  <div class="panel" data-step="3" hidden>
+    <h2>Наводящие вопросы</h2>
+    <p class="hint">Эти ответы влияют на планировку, хранение, свет и материалы сильнее, чем кажется.</p>
+    <div class="row2">
+      <div class="field"><label>Кто будет жить в квартире?</label><input type="text" id="qWho" placeholder="пара с ребёнком 6 лет"></div>
+      <div class="field"><label>Домашние животные</label><input type="text" id="qPets" placeholder="кот / собака / нет"></div>
+      <div class="field"><label>Работаете из дома?</label>
+        <select id="qWfh"><option>нет</option><option>да, нужно рабочее место</option><option>иногда, хватит уголка</option></select></div>
+      <div class="field"><label>Сколько нужно хранения?</label>
+        <select id="qStorage"><option>стандартно</option><option>много: гардеробная + антресоли</option><option>минимум, живём налегке</option></select></div>
+      <div class="field"><label>Что точно НЕ нравится?</label><input type="text" id="qDislikes" placeholder="глянец, холодный белый, ковролин"></div>
+      <div class="field"><label>Когда планируете ремонт?</label>
+        <select id="qWhen"><option>в ближайшие 3 месяца</option><option>в течение 6 месяцев</option><option>в течение года</option><option>пока изучаю</option></select></div>
+    </div>
+    <div class="field"><label>Бюджет реализации</label>
+      <select id="qBudget">
+        <option value="econom">Эконом — практично и аккуратно</option>
+        <option value="business" selected>Бизнес — качественные бренды, оптимум</option>
+        <option value="premium">Премиум — без компромиссов</option>
+      </select></div>
+    <div class="field"><label>Что ещё нам важно знать?</label><textarea id="qNotes" placeholder="привычки, сценарии, особые пожелания…"></textarea></div>
+  </div>
+
+  <!-- ШАГ 5: контакты и итог -->
+  <div class="panel" data-step="4" hidden>
+    <h2>Контакты</h2>
+    <p class="hint">Куда прислать готовую папку проекта и уточняющие вопросы.</p>
+    <div class="row3">
+      <div class="field"><label>Имя</label><input type="text" id="cName" placeholder="Александр"></div>
+      <div class="field"><label>Телефон</label><input type="tel" id="cPhone" placeholder="+7 900 000-00-00"></div>
+      <div class="field"><label>E-mail</label><input type="email" id="cEmail" placeholder="you@mail.ru"></div>
+    </div>
+  </div>
+
+  <!-- РЕЗУЛЬТАТ -->
+  <div class="panel result" data-step="5" hidden>
+    <div class="okmsg"><b>Бриф собран!</b> Скачайте файл и отправьте нам — или просто нажмите «Отправить»: конвейер стартует, папка проекта придёт на ваш e-mail в течение 48 часов.</div>
+    <div class="cta-row" style="margin-bottom:24px">
+      <button class="btn" id="dl" type="button">Скачать brief.json</button>
+      <a class="btn ghost" id="mailto" href="#">Отправить на e-mail студии</a>
+      <a class="btn ghost" href="portfolio/demo/index.html">Пример готовой папки →</a>
+    </div>
+    <pre id="json"></pre>
+  </div>
+
+  <div class="wiz-nav">
+    <button class="btn ghost" id="prev" type="button" style="visibility:hidden">← Назад</button>
+    <button class="btn" id="next" type="button">Далее →</button>
+  </div>
+</div>
+
+<footer class="site"><div class="wrap cols"><div class="logo">LINE<i>A</i></div><div>© LINEA studio, 2026</div></div></footer>
+
+<script src="js/brief.js"></script>
+</body>
+</html>
