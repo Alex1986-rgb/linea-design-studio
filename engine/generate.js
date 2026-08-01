@@ -47,18 +47,20 @@ const nn = n => String(n).padStart(2, '0');
 function svgDoc(wPx, hPx, body) {
   return `<svg xmlns="http://www.w3.org/2000/svg" width="${wPx}" height="${hPx}" viewBox="0 0 ${wPx} ${hPx}" font-family='${FONT}'>\n<rect width="${wPx}" height="${hPx}" fill="#FAF9F6"/>\n${body}\n</svg>`;
 }
+let TOTAL_SHEETS = 0; // проставляется до генерации листов
 function stamp(x, y, w, drawingName, sheet, scale) {
   const sc = scale || '1:50';
+  const list = TOTAL_SHEETS ? `Лист ${sheet} из ${TOTAL_SHEETS}` : `Лист ${sheet}`;
   if (w < 700) { // узкий лист — компактный штамп в две строки
     return `<g><rect x="${x}" y="${y}" width="${w}" height="44" fill="none" stroke="#2E2A26" stroke-width="1"/>
 <text x="${x + 10}" y="${y + 17}" font-size="10.5" font-weight="700" fill="#2E2A26" letter-spacing="1">LINEA · ${esc(drawingName)}</text>
-<text x="${x + 10}" y="${y + 33}" font-size="9.5" fill="#7A756D">Лист ${sheet} · М ${sc} · ${DATE} · «${style.title}»</text></g>`;
+<text x="${x + 10}" y="${y + 33}" font-size="9.5" fill="#7A756D">${list} · М ${sc} · стадия РП · ${DATE}</text></g>`;
   }
   return `<g><rect x="${x}" y="${y}" width="${w}" height="44" fill="none" stroke="#2E2A26" stroke-width="1"/>
 <text x="${x + 10}" y="${y + 17}" font-size="11" font-weight="700" fill="#2E2A26" letter-spacing="2">LINEA · СТУДИЯ ДИЗАЙНА ИНТЕРЬЕРА</text>
-<text x="${x + 10}" y="${y + 33}" font-size="10" fill="#7A756D">${esc((brief.object && brief.object.address) || 'Объект')} · ${totalArea} м² · стиль «${style.title}»</text>
+<text x="${x + 10}" y="${y + 33}" font-size="10" fill="#7A756D">${esc((brief.object && brief.object.address) || 'Объект')} · ${totalArea} м² · стиль «${style.title}» · стадия РП</text>
 <text x="${x + w - 10}" y="${y + 17}" font-size="10" fill="#2E2A26" text-anchor="end">${esc(drawingName)}</text>
-<text x="${x + w - 10}" y="${y + 33}" font-size="10" fill="#7A756D" text-anchor="end">Лист ${sheet} · М ${sc} · ${DATE}</text></g>`;
+<text x="${x + w - 10}" y="${y + 33}" font-size="10" fill="#7A756D" text-anchor="end">${list} · М ${sc} · ${DATE}</text></g>`;
 }
 function dimH(x1, x2, y, label) {
   return `<g stroke="#8A8478" stroke-width="1" fill="none"><line x1="${x1}" y1="${y}" x2="${x2}" y2="${y}"/><line x1="${x1}" y1="${y - 5}" x2="${x1}" y2="${y + 5}"/><line x1="${x2}" y1="${y - 5}" x2="${x2}" y2="${y + 5}"/><line x1="${x1 - 3}" y1="${y + 3}" x2="${x1 + 3}" y2="${y - 3}"/><line x1="${x2 - 3}" y1="${y + 3}" x2="${x2 + 3}" y2="${y - 3}"/></g>
@@ -148,6 +150,133 @@ function lightsFor(room) {
   const pendant = ['living', 'bedroom', 'living-kitchen'].includes(room.type);
   const track = ['kitchen', 'living-kitchen'].includes(room.type);
   return { spots, pendant, track };
+}
+
+// ---------- размерные цепочки (ярус 1 = сегменты, ярус 2 = габарит) ----------
+function wallOpenings(room, wallKey) {
+  return [...room.windows.filter(o => o.wall === wallKey).map(o => ({ ...o, kind: 'окно' })),
+          ...room.doors.filter(o => o.wall === wallKey).map(o => ({ ...o, kind: 'дверь' }))].sort((a, b) => a.off - b.off);
+}
+function chainSegments(len, openings) {
+  const segs = []; let cur = 0;
+  for (const o of openings) {
+    if (o.off > cur + 10) segs.push({ a: cur, b: o.off });
+    segs.push({ a: o.off, b: o.off + o.w, open: true });
+    cur = o.off + o.w;
+  }
+  if (cur < len - 10) segs.push({ a: cur, b: len });
+  return segs;
+}
+function chainDimH(x0, y, len, openings, withTotal) {
+  const segs = chainSegments(len, openings);
+  let out = '';
+  if (segs.length > 1) for (const s of segs) out += dimH(x0 + px(s.a), x0 + px(s.b), y, String(Math.round(s.b - s.a)));
+  if (withTotal || segs.length <= 1) out += dimH(x0, x0 + px(len), y + (segs.length > 1 ? 22 : 0), String(len));
+  return out;
+}
+function chainDimV(x, y0, len, openings, withTotal) {
+  const segs = chainSegments(len, openings);
+  let out = '';
+  if (segs.length > 1) for (const s of segs) out += dimV(x, y0 + px(s.a), y0 + px(s.b), String(Math.round(s.b - s.a)));
+  if (withTotal || segs.length <= 1) out += dimV(x + (segs.length > 1 ? 22 : 0), y0, y0 + px(len), String(len));
+  return out;
+}
+
+// ---------- обмерный план ----------
+function drawObmer(room, sheet) {
+  const M = 120, WT = 12, w = px(room.w), l = px(room.l);
+  const Wd = w + M * 2 + 90, Hd = l + M * 2 + 150;
+  let b = `<rect x="${M - WT}" y="${M - WT}" width="${w + 2 * WT}" height="${l + 2 * WT}" fill="#D9D9D9" stroke="#57514A" stroke-width="1"/>`;
+  b += `<rect x="${M}" y="${M}" width="${w}" height="${l}" fill="#FCFBF8"/>`;
+  for (const o of room.windows) b += openingPlan(o, 'window', M, WT, room);
+  for (const o of room.doors) b += openingPlan(o, 'door', M, WT, room);
+  // диагональ (штриховая, с размером)
+  const diag = Math.round(Math.sqrt(room.w * room.w + room.l * room.l) / 5) * 5;
+  b += `<line x1="${M + 6}" y1="${M + 6}" x2="${M + w - 6}" y2="${M + l - 6}" stroke="#8A8478" stroke-width="0.8" stroke-dasharray="8 5"/>`;
+  b += `<text x="${M + w / 2}" y="${M + l / 2 - 8}" font-size="10" fill="#7A756D" transform="rotate(${(Math.atan2(l, w) * 180 / Math.PI).toFixed(1)} ${M + w / 2} ${M + l / 2})" text-anchor="middle">${diag}</text>`;
+  // цепочки: A сверху, C снизу, D слева, B справа
+  b += chainDimH(M, M - 40, room.w, wallOpenings(room, 'A'), true); // верх (сегменты −40, габарит −18)
+  b += chainDimH(M, M + l + 30, room.w, wallOpenings(room, 'C'), true);
+  b += chainDimV(M + w + 30, M, room.l, wallOpenings(room, 'B'), true);
+  b += chainDimV(M - 40, M, room.l, wallOpenings(room, 'D'), false);
+  // высотные отметки проёмов
+  for (const o of room.windows) {
+    const pos = o.wall === 'A' ? { x: M + px(o.off + o.w / 2), y: M + 16 } : o.wall === 'C' ? { x: M + px(o.off + o.w / 2), y: M + l - 8 } : { x: o.wall === 'D' ? M + 14 : M + w - 130, y: M + px(o.off + o.w / 2) };
+    b += `<text x="${pos.x}" y="${pos.y}" font-size="9" fill="#3B5C77">Вп=${o.sill} · Н.пр=${o.h}</text>`;
+  }
+  for (const o of room.doors) {
+    const pos = o.wall === 'C' ? { x: M + px(o.off + o.w / 2), y: M + l - 8 } : o.wall === 'A' ? { x: M + px(o.off + o.w / 2), y: M + 16 } : { x: o.wall === 'D' ? M + 14 : M + w - 90, y: M + px(o.off + o.w / 2) };
+    b += `<text x="${pos.x}" y="${pos.y}" font-size="9" fill="#3B5C77">h=${o.h}</text>`;
+  }
+  // штамп комнаты: S подчёркнуто, P, h
+  const per = (2 * (room.w + room.l) / 1000).toFixed(1);
+  b += `<g text-anchor="end"><text x="${M + w - 10}" y="${M + l - 40}" font-size="14" font-weight="700" fill="#2E2A26">${nn(room.idx)} ${esc(room.name)}</text>
+<text x="${M + w - 10}" y="${M + l - 24}" font-size="12" fill="#2E2A26" text-decoration="underline">S=${room.area} м²</text>
+<text x="${M + w - 10}" y="${M + l - 10}" font-size="10" fill="#57514A">P=${per} м · h=${room.h}</text></g>`;
+  b += `<text x="${M - WT}" y="${M - 104}" font-size="16" font-weight="700" fill="#2E2A26">Обмерный план · ${esc(room.name)}</text>`;
+  b += `<text x="${M - WT}" y="${M - 86}" font-size="11" fill="#7A756D">Все размеры в мм · Вп — высота подоконника, Н.пр — высота проёма · перегородки 150</text>`;
+  // ключевые высоты — красной рамкой (по образцу проф. альбомов)
+  const kw = room.windows[0], kd = room.doors[0];
+  const keyH = `H=${room.h}${kw ? ` · Вп=${kw.sill} · Н.пр=${kw.h}` : ''}${kd ? ` · дверь ${kd.w}/${kd.h}` : ''} · без учёта отделочного слоя`;
+  b += `<g><rect x="${M - WT}" y="${M - 72}" width="${Math.min(keyH.length * 6.2 + 20, w + 2 * WT + 80)}" height="20" fill="#FFF6F4" stroke="#B0483A" stroke-width="1.2"/><text x="${M - WT + 10}" y="${M - 58}" font-size="10.5" font-weight="600" fill="#B0483A">${keyH}</text></g>`;
+  const ny = M + l + 66;
+  b += `<text x="${M - WT}" y="${ny}" font-size="9" fill="#8A8478">Примечания: размеры проверять по месту · допуск обмера ±5 мм в зонах встроенной мебели и санузлов · за 0,000 принят уровень чистового пола</text>`;
+  b += stamp(M - WT, ny + 14, w + 2 * WT + 60, `Обмерный план. ${room.name}`, sheet);
+  return svgDoc(Wd + 20, Hd + 40, b);
+}
+
+// ---------- план полов ----------
+function drawFloor(room, sheet) {
+  const M = 100, WT = 12, w = px(room.w), l = px(room.l);
+  const Wd = w + M * 2 + 60, Hd = l + M * 2 + 160;
+  const wet = room.type === 'bathroom';
+  const code = wet ? 'Пл-2' : 'Пл-1';
+  let b = `<rect x="${M - WT}" y="${M - WT}" width="${w + 2 * WT}" height="${l + 2 * WT}" fill="#2E2A26"/>`;
+  b += `<rect x="${M}" y="${M}" width="${w}" height="${l}" fill="#FAF7F0"/>`;
+  b += `<rect x="${M}" y="${M}" width="${w}" height="${l}" fill="${wet ? '#EDEAE2' : style.floor.color + '40'}"/>`;
+  b += `<clipPath id="fl${room.idx}"><rect x="${M}" y="${M}" width="${w}" height="${l}"/></clipPath><g clip-path="url(#fl${room.idx})">`;
+  if (wet) { // плитка 600×600 от центра
+    for (let gx = (room.w % 600) / 2; gx <= room.w; gx += 600) b += `<line x1="${M + px(gx)}" y1="${M}" x2="${M + px(gx)}" y2="${M + l}" stroke="#00000022" stroke-width="0.9"/>`;
+    for (let gy = (room.l % 600) / 2; gy <= room.l; gy += 600) b += `<line x1="${M}" y1="${M + px(gy)}" x2="${M + w}" y2="${M + px(gy)}" stroke="#00000022" stroke-width="0.9"/>`;
+  } else { // ёлка 45°
+    const st = px(280);
+    for (let i = -Math.ceil(l / st); i < w / st + Math.ceil(l / st); i++) {
+      b += `<line x1="${M + i * st}" y1="${M}" x2="${M + i * st + l}" y2="${M + l}" stroke="#00000018" stroke-width="0.9"/>`;
+      b += `<line x1="${M + i * st}" y1="${M + l}" x2="${M + i * st + l}" y2="${M}" stroke="#00000018" stroke-width="0.9"/>`;
+    }
+  }
+  b += `</g>`;
+  for (const o of room.windows) b += openingPlan(o, 'window', M, WT, room);
+  for (const o of room.doors) {
+    b += openingPlan(o, 'door', M, WT, room);
+    // стык покрытий на оси дверного полотна
+    let jx1, jy1, jx2, jy2, tx, ty;
+    if (o.wall === 'A' || o.wall === 'C') { const y = o.wall === 'A' ? M : M + l; jx1 = M + px(o.off); jx2 = M + px(o.off + o.w); jy1 = jy2 = y; tx = jx1 + 8; ty = o.wall === 'A' ? y + 16 : y - 10; }
+    else { const x = o.wall === 'D' ? M : M + w; jy1 = M + px(o.off); jy2 = M + px(o.off + o.w); jx1 = jx2 = x; tx = o.wall === 'D' ? x + 4 : x - 150; ty = jy1 - 6; }
+    b += `<line x1="${jx1}" y1="${jy1}" x2="${jx2}" y2="${jy2}" stroke="#B0483A" stroke-width="2.4"/>`;
+    b += `<text x="${tx}" y="${ty}" font-size="8.5" fill="#B0483A">стык на оси полотна${wet ? '' : ', скрытый, без порожка'}</text>`;
+  }
+  // стрелка направления укладки — от стены с окном
+  if (!wet) {
+    const win = room.windows[0];
+    const dir = win ? win.wall : 'A';
+    const cx = M + w / 2, cy = M + l / 2;
+    const ar = { A: [cx, M + 30, cx, M + 110], C: [cx, M + l - 30, cx, M + l - 110], D: [M + 30, cy, M + 110, cy], B: [M + w - 30, cy, M + w - 110, cy] }[dir];
+    b += `<g stroke="#2E2A26" stroke-width="1.6" fill="none"><line x1="${ar[0]}" y1="${ar[1]}" x2="${ar[2]}" y2="${ar[3]}"/><path d="M ${ar[2]} ${ar[3]} l ${ar[0] === ar[2] ? '-5 -9 M ' + ar[2] + ' ' + ar[3] + ' l 5 -9' : '-9 -5 M ' + ar[2] + ' ' + ar[3] + ' l -9 5'}"/></g>`;
+    b += `<text x="${ar[0] + 8}" y="${(ar[1] + ar[3]) / 2}" font-size="9" fill="#57514A">направление укладки, от окна</text>`;
+  }
+  // отметка уровня
+  b += `<g><circle cx="${M + 26}" cy="${M + l - 26}" r="13" fill="#FFF" stroke="#2E2A26" stroke-width="1.2"/><text x="${M + 26}" y="${M + l - 22}" font-size="8.5" text-anchor="middle" fill="#2E2A26">${wet ? '−0.020' : '0.000'}</text></g>`;
+  const g = roomGeometry(room);
+  b += `<text x="${M - WT}" y="${M - 46}" font-size="16" font-weight="700" fill="#2E2A26">План пола · ${esc(room.name)}</text>`;
+  b += `<text x="${M - WT}" y="${M - 28}" font-size="11" fill="#7A756D">${code} · ${wet ? 'керамогранит 600×600, раскладка от центра' : esc(style.floor.name)} · S=${g.floor} м² · плинтус ${wet ? '—' : g.plinth + ' м.п.'}</text>`;
+  b += dimH(M, M + w, M + l + 30, room.w + '');
+  b += dimV(M + w + 30, M, M + l, room.l + '');
+  const ly = M + l + 58;
+  b += `<g font-size="10" fill="#57514A"><rect x="${M}" y="${ly - 12}" width="16" height="16" fill="${wet ? '#EDEAE2' : style.floor.color + '55'}" stroke="#57514A" stroke-width="0.7"/><text x="${M + 24}" y="${ly}">${code} · ${wet ? 'керамогранит, ' + (g.floor * 1.1).toFixed(1) + ' м² (+10%)' : esc(style.floor.name.split(',')[0]) + ', ' + (g.floor * 1.15).toFixed(1) + ' м² (+15% ёлка)'}</text></g>`;
+  b += `<text x="${M - WT}" y="${ly + 20}" font-size="9" fill="#8A8478">${wet ? 'Гидроизоляция обмазочная с заведением на стены 200 мм · уклон к трапу не требуется' : 'Стык покрытий выполнять на оси дверного полотна · компенсационный зазор у стен 10 мм под плинтус'}</text>`;
+  b += stamp(M - WT, ly + 34, w + 2 * WT + 40, `План пола. ${room.name}`, sheet);
+  return svgDoc(Wd + 20, Hd + 30, b);
 }
 
 // ---------- стена изголовья: без окна, затем без двери ----------
@@ -257,7 +386,7 @@ function openingPlan(o, kind, M, WT, room) {
   }
   return r;
 }
-function drawPlan(room, sheet) {
+function drawPlan(room, sheet, withDims) {
   const M = 90, WT = 12, w = px(room.w), l = px(room.l);
   const Wd = w + M * 2 + 60, Hd = l + M * 2 + 90;
   let b = `<rect x="${M - WT}" y="${M - WT}" width="${w + 2 * WT}" height="${l + 2 * WT}" fill="#2E2A26"/>`;
@@ -281,10 +410,15 @@ function drawPlan(room, sheet) {
     if (f.key !== 'rug' || f.w > 1500) b += `<text x="${M + px(f.x + f.w / 2)}" y="${M + px(f.y + f.h / 2) + 3}" font-size="9" fill="#57514A" text-anchor="middle">${esc(f.name)}</text>`;
   }
   b += `<text x="${M - WT}" y="${M - 46}" font-size="16" font-weight="700" fill="#2E2A26">${esc(room.name)} · ${room.area} м²</text>`;
-  b += `<text x="${M - WT}" y="${M - 28}" font-size="11" fill="#7A756D">План с расстановкой мебели · стиль «${style.title}» · h потолка ${room.h} мм</text>`;
-  b += dimH(M, M + w, M + l + 34, room.w + ' мм');
-  b += dimV(M + w + 34, M, M + l, room.l + ' мм');
-  b += stamp(M - WT, l + M * 2 + 30, w + 2 * WT + 40, `План. ${room.name}`, sheet);
+  b += `<text x="${M - WT}" y="${M - 28}" font-size="11" fill="#7A756D">План с расстановкой мебели${withDims ? ' и привязками проёмов' : ''} · стиль «${style.title}» · h потолка ${room.h} мм</text>`;
+  if (withDims) {
+    b += chainDimH(M, M + l + 34, room.w, wallOpenings(room, 'C'), true);
+    b += chainDimV(M + w + 34, M, room.l, wallOpenings(room, 'B'), true);
+  } else {
+    b += dimH(M, M + w, M + l + 34, room.w + ' мм');
+    b += dimV(M + w + 34, M, M + l, room.l + ' мм');
+  }
+  b += stamp(M - WT, l + M * 2 + 30, w + 2 * WT + 40, `План${withDims ? ' с размерами' : ''}. ${room.name}`, sheet);
   return svgDoc(Wd + 20, Hd + 10, b);
 }
 
@@ -292,7 +426,7 @@ function drawPlan(room, sheet) {
 function drawElevation(room, wallKey, sheet) {
   const len = (wallKey === 'A' || wallKey === 'C') ? room.w : room.l;
   const M = 90, w = px(len), h = px(room.h);
-  const Wd = w + M * 2 + 250, Hd = h + M * 2 + 90;
+  const Wd = w + M * 2 + 320, Hd = h + M * 2 + 110;
   let b = `<rect x="${M}" y="${M}" width="${w}" height="${h}" fill="${style.wall.color}" stroke="#2E2A26" stroke-width="2"/>`;
   if (room.type === 'bathroom') { // раскладка плитки 600×300
     for (let gx = 600; gx < len; gx += 600) b += `<line x1="${M + px(gx)}" y1="${M}" x2="${M + px(gx)}" y2="${M + h}" stroke="#00000018" stroke-width="0.8"/>`;
@@ -320,9 +454,15 @@ function drawElevation(room, wallKey, sheet) {
     b += `<circle cx="${x + px(o.w) - 8}" cy="${y + px(o.h) / 2}" r="2.5" fill="#57514A"/>`;
     b += `<text x="${x + px(o.w) / 2}" y="${y - 6}" font-size="10" fill="#7A756D" text-anchor="middle">дверь ${o.w}×${o.h}</text>`;
   }
-  b += dimH(M, M + w, M + h + 30, len + ' мм');
-  b += dimV(M - 30, M, M + h, room.h + ' мм');
-  const ax = M + w + 24;
+  // горизонтальная цепочка: проёмы + ниши этой стены
+  const hOpen = [...wallOpenings(room, wallKey), ...nichesFor(room).filter(n => n.wall === wallKey && n.depth >= 80).map(n => ({ off: n.off, w: n.w }))].sort((a, b) => a.off - b.off)
+    .filter((o, i, arr) => i === 0 || o.off >= arr[i - 1].off + arr[i - 1].w - 10); // без перекрытий
+  b += chainDimH(M, M + h + 30, len, hOpen, true);
+  // вертикальная цепочка: пол → подоконник → окно → потолок (по первому окну стены)
+  const vw = room.windows.find(o => o.wall === wallKey);
+  if (vw) b += chainDimV(M - 34, M, room.h, [{ off: room.h - vw.sill - vw.h, w: vw.h }], true);
+  else b += dimV(M - 30, M, M + h, room.h + '');
+  const ax = M + w + 60;
   b += `<text x="${ax}" y="${M + 16}" font-size="12" font-weight="700" fill="#2E2A26">Отделка стены</text>`;
   const notes = ['Стены: ' + style.wall.finish, 'Плинтус: ' + style.plinth, 'Двери: ' + style.doors, 'Акцент: ' + style.accent.finish];
   notes.forEach((t, i) => { wrapText(t, 34).forEach((line, j) => { b += `<text x="${ax}" y="${M + 40 + i * 46 + j * 14}" font-size="10" fill="#57514A">${esc(line)}</text>`; }); });
@@ -451,8 +591,8 @@ function drawElectro(room, sheet) {
   const ly = M + l + 56;
   b += `<g font-size="10" fill="#57514A"><circle cx="${M + 6}" cy="${ly - 3}" r="6" fill="#FFF" stroke="#2E2A26"/><line x1="${M}" y1="${ly - 11}" x2="${M + 12}" y2="${ly - 11}" stroke="#2E2A26"/><text x="${M + 18}" y="${ly}">розетка (блок)</text>`;
   b += `<circle cx="${M + 146}" cy="${ly - 3}" r="5" fill="#2E2A26"/><text x="${M + 158}" y="${ly}">выключатель</text></g>`;
-  b += `<text x="${M - WT}" y="${ly + 22}" font-size="9" fill="#8A8478">Санузлы: линии через УЗО 30 мА, розетки IP44 · выключатели со стороны ручки двери, ≥100 мм от проёма</text>`;
-  b += `<text x="${M - WT}" y="${ly + 36}" font-size="9" fill="#8A8478">Привязки выводов уточняются инженерным проектом · за 0,000 принят уровень чистового пола</text>`;
+  b += `<text x="${M - WT}" y="${ly + 22}" font-size="9.5" font-weight="600" fill="#B0483A">* Розетки — h=300 от чистого пола по умолчанию; отклонения подписаны у позиций. Выключатели — h=900.</text>`;
+  b += `<text x="${M - WT}" y="${ly + 36}" font-size="9" fill="#8A8478">Санузлы: линии через УЗО 30 мА, розетки IP44 · выключатели со стороны ручки двери, ≥100 мм от проёма · привязки уточняются инженерным проектом</text>`;
   b += stamp(M - WT, l + M * 2 + 86, w + 2 * WT + 40, `Электрика. ${room.name}`, sheet);
   return svgDoc(Wd + 20, Hd + 10, b);
 }
@@ -539,30 +679,35 @@ function smetaCSV(rows) {
 
 // ---------- спецификация чистовых материалов ----------
 function specHTML() {
+  const sku = style.skus || {};
   let body = '';
   for (const r of rooms) {
     const wet = r.type === 'bathroom';
     const g = roomGeometry(r);
+    const lv = ceilingLevelsFor(r);
+    let fin = 1;
+    const C = () => `FIN-${nn(r.idx)}-${fin++}`;
     const rowsSpec = wet ? [
-      ['Пол', `керамогранит 600×600, матовый · ${g.floor} м²`],
-      ['Стены', `керамогранит / плитка под камень · ${g.walls} м²`],
-      ['Потолок', 'влагостойкий ГКЛ, краска для влажных помещений'],
-      ['Сантехника', 'ванна 1700, подвесной унитаз, накладная раковина'],
-      ['Освещение', `точечные IP44 — ${lightsFor(r).spots.length} шт.`]
+      [C(), 'Пол', 'керамогранит 600×600, матовый', sku.tile || '—', `${(g.floor * 1.1).toFixed(1)} м² (+10%)`],
+      [C(), 'Стены', 'керамогранит / плитка под камень', sku.tile || '—', `${(g.walls * 1.1).toFixed(1)} м² (+10%)`],
+      [C(), 'Потолок', 'влагостойкий ГКЛ, краска для влажных помещений', '—', `${g.floor} м²`],
+      [C(), 'LED-подсветка', 'ниша-полка + контур короба, 3000K', sku.led || '—', `${lv.ledLen} м.п.`],
+      [C(), 'Сантехника', 'ванна 1700, подвесной унитаз, накладная раковина', 'по дизайн-борду', '3 поз.']
     ] : [
-      ['Пол', `${style.floor.name} · ${g.floor} м²`],
-      ['Стены', `${style.wall.finish} · ${g.walls} м²`],
-      ['Акцент', style.accent.finish],
-      ['Потолок', style.ceiling],
-      ['Плинтус', `${style.plinth} · ${g.plinth} м.п.`],
-      ['Двери', style.doors],
-      ['Текстиль', style.textiles]
+      [C(), 'Пол', style.floor.name, sku.floor || '—', `${(g.floor * 1.15).toFixed(1)} м² (+15% ёлка)`],
+      [C(), 'Стены', style.wall.finish, sku.paint || '—', `${(g.walls * 0.25).toFixed(1)} л (2 слоя)`],
+      [C(), 'Акцент', style.accent.finish, 'по дизайн-борду', '1 стена'],
+      [C(), 'Потолок', style.ceiling, '—', `${g.floor} м²`],
+      [C(), 'Плинтус', style.plinth, sku.plinth || '—', `${g.plinth} м.п.`],
+      [C(), 'Двери', style.doors, sku.doors || '—', `${r.doors.length} шт.`],
+      [C(), 'LED-подсветка', 'короб потолка + ниши, 3000K', sku.led || '—', `${lv.ledLen} м.п.`]
     ];
     const furn = furnitureFor(r).map(f => f.name).join(', ') || '—';
     body += `<h2>${nn(r.idx)} · ${esc(r.name)} · ${r.area} м²</h2>
-<table><tbody>${rowsSpec.map(x => `<tr><td class="k">${x[0]}</td><td>${esc(x[1])}</td></tr>`).join('')}
-<tr><td class="k">Ниши</td><td>${esc(nichesFor(r).map(n => `${n.label} — ${n.w}×${n.h}, глуб. ${n.depth}, низ +${(n.sill / 1000).toFixed(3).replace('.', ',')}`).join('; ') || '—')}</td></tr>
-<tr><td class="k">Мебель</td><td>${esc(furn)}</td></tr></tbody></table>`;
+<table><thead><tr><th>Код</th><th>Позиция</th><th>Наименование</th><th>Бренд · артикул</th><th>Кол-во</th></tr></thead>
+<tbody>${rowsSpec.map(x => `<tr><td class="num">${x[0]}</td><td class="k" style="width:90px">${x[1]}</td><td>${esc(x[2])}</td><td>${esc(x[3])}</td><td class="num">${x[4]}</td></tr>`).join('')}
+<tr><td class="num">—</td><td class="k">Ниши</td><td colspan="3">${esc(nichesFor(r).map(n => `${n.label} — ${n.w}×${n.h}, глуб. ${n.depth}, низ +${(n.sill / 1000).toFixed(3).replace('.', ',')}`).join('; ') || '—')}</td></tr>
+<tr><td class="num">—</td><td class="k">Мебель</td><td colspan="3">${esc(furn)}</td></tr></tbody></table>`;
   }
   // сводная ведомость отделки
   let tf = 0, tw = 0, tc = 0, tp = 0;
@@ -620,17 +765,30 @@ function coverHTML(counts) {
 <tr><td class="k">Дата выпуска</td><td>${DATE}</td></tr>
 </tbody></table>
 <div class="pal">${style.palette.map(c => `<span style="background:${c}"></span>`).join('')}<em>палитра проекта</em></div>
-<h2>Состав комплекта</h2>
+<h2>Состав комплекта · ${counts.obmer + counts.plans + counts.poly + counts.elev + counts.ceil + counts.electro + 1} листов + документы</h2>
 <table><tbody>
-<tr><td class="k">01 Планы</td><td>планы с расстановкой мебели — ${counts.plans} лист.</td></tr>
-<tr><td class="k">02 Развертки</td><td>развертка каждой стены, ниши, раскладка плитки — ${counts.elev} лист.</td></tr>
-<tr><td class="k">03 Потолки</td><td>потолки 2–3 уровня со светом — ${counts.ceil} лист. + узел короба с LED (М 1:20)</td></tr>
-<tr><td class="k">04 Концепция</td><td>образ, палитра${renders.length ? ` и ${renders.length} фотореалистичных визуализаций` : ''}</td></tr>
-<tr><td class="k">05 Материалы</td><td>спецификация чистовой отделки + сводная ведомость</td></tr>
-<tr><td class="k">06 Смета</td><td>смета реализации (HTML + CSV для Excel)</td></tr>
-<tr><td class="k">07 Электрика</td><td>розетки и выключатели с высотами — ${counts.electro} лист.</td></tr>
+<tr><td class="k">00 Паспорт</td><td>паспорт, пояснительная записка, <a href="vedomost.html">ведомость чертежей</a></td></tr>
+<tr><td class="k">01 Обмер</td><td>обмерные планы с цепочками привязок, высотами проёмов, диагональю — ${counts.obmer} лист.</td></tr>
+<tr><td class="k">02 Планы</td><td>парные планы мебели: с размерами / презентационные — ${counts.plans} лист.</td></tr>
+<tr><td class="k">03 Полы</td><td>планы полов: раскладка, направление укладки, стыки, отметки — ${counts.poly} лист.</td></tr>
+<tr><td class="k">04 Развертки</td><td>каждая стена: цепочки размеров, ниши, раскладка плитки — ${counts.elev} лист.</td></tr>
+<tr><td class="k">05 Потолки</td><td>потолки 2–3 уровня со светом — ${counts.ceil} лист. + узел короба с LED (М 1:20)</td></tr>
+<tr><td class="k">06 Концепция</td><td>образ, палитра${renders.length ? ` и ${renders.length} фотореалистичных визуализаций (2–3 ракурса на помещение)` : ''}</td></tr>
+<tr><td class="k">07 Материалы</td><td>спецификация с кодами FIN, брендами и артикулами + сводная ведомость</td></tr>
+<tr><td class="k">08 Смета</td><td>смета реализации (HTML + CSV для Excel)</td></tr>
+<tr><td class="k">09 Электрика</td><td>розетки и выключатели с высотами — ${counts.electro} лист.</td></tr>
 </tbody></table>
-<p class="note">Все чертежи — в масштабе 1:50 (узлы — 1:20), размеры в миллиметрах, отметки от чистого пола (за 0,000 принят уровень чистового пола). Комплект пригоден для передачи строительной бригаде.</p>`);
+<h2>Пояснительная записка</h2>
+<table><tbody>
+<tr><td class="k">Объект</td><td>${esc((brief.object && brief.object.type) || 'квартира')} ${totalArea} м², ${rooms.length} помещений: ${rooms.map(r => `${r.name} (${r.area} м²)`).join(', ')}. Высота потолков ${rooms[0] ? rooms[0].h : 2700} мм.</td></tr>
+<tr><td class="k">Стиль и колористика</td><td>«${style.title}». ${esc(style.concept)} Палитра из 5 тонов: светлая тёплая база, деревянные фактуры, один тёмный якорь и латунный акцент — сочетание проверено на контраст и температуру.</td></tr>
+<tr><td class="k">Потолки</td><td>Два уровня во всех помещениях (короб 450 мм, перепад 120 мм, скрытая LED 3000K по внутреннему контуру)${rooms.some(r => ceilingLevelsFor(r).three) ? '; в гостиной — третий уровень «парящий остров» с теневой щелью 10 мм' : ''}. Узел исполнения — лист «Узел А» (М 1:20). Закладные под все подвесные светильники.</td></tr>
+<tr><td class="k">Ниши</td><td>${esc(rooms.flatMap(r => nichesFor(r).map(n => n.label)).filter((v, i, a) => a.indexOf(v) === i).join('; ') || '—')}. Все ниши — ГКЛ с LED-подсветкой в алюминиевом профиле, БП с запасом 30% и ревизией.</td></tr>
+<tr><td class="k">Полы</td><td>${esc(style.floor.name)} (жилые), керамогранит (санузел, −0,020). Стыки покрытий — на оси дверного полотна, без порожков. Запас: +15% на «ёлку», +10% на плитку.</td></tr>
+<tr><td class="k">Электрика</td><td>Розетки по мебельным сценариям (кровать +600, фартук +1100, ТВ-блок +1300 скрыт в нише), выключатели +900 со стороны ручки. Санузлы — через УЗО 30 мА, IP44. Разводку выполняет инженерный проект по привязкам альбома.</td></tr>
+<tr><td class="k">Пожелания клиента</td><td>${esc(Object.values(brief.answers || {}).filter(Boolean).join(' · ') || '—')}</td></tr>
+</tbody></table>
+<p class="note">Все чертежи — в масштабе 1:50 (узлы — 1:20), размеры в миллиметрах без обозначения единиц, отметки от чистого пола (за 0,000 принят уровень чистового пола). Размеры проверять по месту; допуск обмера ±5 мм в зонах встроенной мебели и санузлов. Комплект пригоден для передачи строительной бригаде.</p>`);
 }
 
 // ---------- общий шаблон документов ----------
@@ -666,7 +824,7 @@ footer{max-width:900px;margin:14px auto 0;color:#9A937F;font-size:11px;letter-sp
 // ---------- просмотрщик папки ----------
 function viewerHTML(files) {
   const grp = k => files.filter(f => f.startsWith(k) && f.endsWith('.svg'));
-  const rnd = files.filter(f => f.startsWith('04-koncept/renders/'));
+  const rnd = files.filter(f => f.startsWith('06-koncept/renders/'));
   const sec = (title, list) => list.length ? `<section><h2>${title}</h2><div class="grid">${list.map(f => `<figure><a href="${f}" target="_blank"><img src="${f}" loading="lazy" alt=""></a><figcaption>${f.split('/').pop()}</figcaption></figure>`).join('')}</div></section>` : '';
   const secR = rnd.length ? `<section id="rendery"><h2>Визуализации</h2><div class="grid wide">${rnd.map(f => `<figure><a href="${f}" target="_blank"><img src="${f}" loading="lazy" alt="Фотореалистичная визуализация"></a><figcaption>${f.split('/').pop().replace(/\.\w+$/, '').replace(/-/g, ' ')}</figcaption></figure>`).join('')}</div></section>` : '';
   return `<!DOCTYPE html><html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Папка проекта — LINEA</title><style>
@@ -691,19 +849,22 @@ figcaption{font-size:11px;color:#57514A;padding:8px 12px;background:#F1EDE4}
 footer{padding:40px 5vw;color:#6d675c;font-size:12px;letter-spacing:2px;border-top:1px solid #2b271f}
 </style></head><body>
 <header><h1>Папка дизайн-проекта</h1><p>${esc((brief.object && brief.object.address) || 'Объект')} · ${totalArea} м² · стиль «${style.title}» · тариф «${tier.title}» · выпуск ${DATE}</p></header>
-<nav>${rnd.length ? '<a href="#rendery">Визуализации</a>' : ''}<a href="#docs">Документы</a><a href="#plany">01 Планы</a><a href="#razv">02 Развертки</a><a href="#pot">03 Потолки</a><a href="#elektro">07 Электрика</a></nav>
+<nav>${rnd.length ? '<a href="#rendery">Визуализации</a>' : ''}<a href="#docs">Документы</a><a href="#obmer">01 Обмер</a><a href="#plany">02 Планы</a><a href="#poly">03 Полы</a><a href="#razv">04 Развертки</a><a href="#pot">05 Потолки</a><a href="#elektro">09 Электрика</a></nav>
 ${secR}
 <section id="docs"><h2>Документы</h2><div class="docs">
-<a href="00-pasport/pasport.html"><b>00 · Паспорт проекта</b>состав, палитра, данные объекта</a>
-<a href="04-koncept/koncept.html"><b>04 · Концепция</b>образ каждого помещения</a>
-<a href="05-materialy/specification.html"><b>05 · Материалы</b>спецификация + сводная ведомость</a>
-<a href="06-smeta/smeta.html"><b>06 · Смета</b>работы, материалы, мебель, свет</a>
-<a href="06-smeta/smeta.csv"><b>06 · Смета CSV</b>для Excel / Google Sheets</a>
+<a href="00-pasport/pasport.html"><b>00 · Паспорт проекта</b>пояснительная записка, состав, палитра</a>
+<a href="00-pasport/vedomost.html"><b>00 · Ведомость чертежей</b>все листы АИ-N с масштабами</a>
+<a href="06-koncept/koncept.html"><b>06 · Концепция</b>образ и визуализации помещений</a>
+<a href="07-materialy/specification.html"><b>07 · Материалы</b>спецификация с артикулами + ведомость</a>
+<a href="08-smeta/smeta.html"><b>08 · Смета</b>работы, материалы, мебель, свет</a>
+<a href="08-smeta/smeta.csv"><b>08 · Смета CSV</b>для Excel / Google Sheets</a>
 </div></section>
-<section id="plany"><h2>01 · Планы с расстановкой мебели</h2><div class="grid">${grp('01-plany').map(f => `<figure><a href="${f}" target="_blank"><img src="${f}" loading="lazy" alt=""></a><figcaption>${f.split('/').pop()}</figcaption></figure>`).join('')}</div></section>
-${sec('02 · Развертки стен (ниши, отделка, раскладка плитки)', grp('02-razvertki'))}
-${sec('03 · Потолки 2–3 уровня, свет и узлы', grp('03-potolki'))}
-${sec('07 · Электрика: розетки и выключатели', grp('07-elektrika')).replace('<section>', '<section id="elektro">')}
+${sec('01 · Обмерные планы: цепочки привязок, высоты, диагонали', grp('01-obmer')).replace('<section>', '<section id="obmer">')}
+${sec('02 · Планы мебели: с размерами и презентационные', grp('02-plany')).replace('<section>', '<section id="plany">')}
+${sec('03 · Полы: раскладка, направление, стыки, отметки', grp('03-poly')).replace('<section>', '<section id="poly">')}
+${sec('04 · Развертки стен (цепочки размеров, ниши, плитка)', grp('04-razvertki')).replace('<section>', '<section id="razv">')}
+${sec('05 · Потолки 2–3 уровня, свет и узлы', grp('05-potolki')).replace('<section>', '<section id="pot">')}
+${sec('09 · Электрика: розетки и выключатели', grp('09-elektrika')).replace('<section>', '<section id="elektro">')}
 <footer>LINEA · СТУДИЯ ДИЗАЙНА ИНТЕРЬЕРА — комплект сформирован автоматически конвейером студии</footer>
 </body></html>`;
 }
@@ -718,30 +879,54 @@ function writeOut(rel, content) {
 }
 
 let sheet = 1;
-const counts = { plans: 0, elev: 0, ceil: 0, electro: 0 };
-for (const r of rooms) {
-  const sl = `${nn(r.idx)}-${slug(r.name)}`;
-  writeOut(`01-plany/plan-${sl}.svg`, drawPlan(r, sheet++)); counts.plans++;
-  for (const wk of ['A', 'B', 'C', 'D']) { writeOut(`02-razvertki/${sl}-stena-${wk}.svg`, drawElevation(r, wk, sheet++)); counts.elev++; }
-  writeOut(`03-potolki/potolok-${sl}.svg`, drawCeiling(r, sheet++)); counts.ceil++;
+TOTAL_SHEETS = rooms.length * 10 + 1; // обмер+2 плана+пол+4 развертки+потолок+электрика на комнату + узел
+const reg = []; // реестр листов для ведомости
+const counts = { obmer: 0, plans: 0, poly: 0, elev: 0, ceil: 0, electro: 0 };
+function sheetOut(rel, maker, title, scale) {
+  const no = sheet++;
+  writeOut(rel, maker(no));
+  reg.push({ no, title, scale: scale || '1:50', file: rel });
 }
-writeOut(`03-potolki/uzel-A-korob-led.svg`, drawNode(sheet++));
-for (const r of rooms) {
-  const sl = `${nn(r.idx)}-${slug(r.name)}`;
-  writeOut(`07-elektrika/elektrika-${sl}.svg`, drawElectro(r, sheet++)); counts.electro++;
-}
-// рендеры: подхватываем, если сгенерированы (04-koncept/renders/*.jpg|png)
+const SL = r => `${nn(r.idx)}-${slug(r.name)}`;
+// порядок листов — как в альбомах профессиональных студий
+for (const r of rooms) { sheetOut(`01-obmer/obmer-${SL(r)}.svg`, n => drawObmer(r, n), `Обмерный план. ${r.name}`); counts.obmer++; }
+for (const r of rooms) { sheetOut(`02-plany/plan-${SL(r)}.svg`, n => drawPlan(r, n, true), `План мебели с размерами. ${r.name}`); counts.plans++; }
+for (const r of rooms) { sheetOut(`02-plany/plan-${SL(r)}-mebel.svg`, n => drawPlan(r, n, false), `План мебели. ${r.name}`); counts.plans++; }
+for (const r of rooms) { sheetOut(`03-poly/pol-${SL(r)}.svg`, n => drawFloor(r, n), `План пола. ${r.name}`); counts.poly++; }
+for (const r of rooms) for (const wk of ['A', 'B', 'C', 'D']) { sheetOut(`04-razvertki/${SL(r)}-stena-${wk}.svg`, n => drawElevation(r, wk, n), `Развертка. ${r.name}, стена ${wk}`); counts.elev++; }
+for (const r of rooms) { sheetOut(`05-potolki/potolok-${SL(r)}.svg`, n => drawCeiling(r, n), `План потолка. ${r.name}`); counts.ceil++; }
+sheetOut(`05-potolki/uzel-A-korob-led.svg`, n => drawNode(n), 'Узел А. Короб с LED-подсветкой', '1:20');
+for (const r of rooms) { sheetOut(`09-elektrika/elektrika-${SL(r)}.svg`, n => drawElectro(r, n), `Электрика. ${r.name}`); counts.electro++; }
+// рендеры: подхватываем, если сгенерированы (06-koncept/renders/*.jpg|png)
 let renders = [];
 try {
-  const rdir = path.join(outDir, '04-koncept', 'renders');
-  renders = fs.readdirSync(rdir).filter(f => /\.(jpe?g|png|webp)$/i.test(f)).sort().map(f => '04-koncept/renders/' + f);
+  const rdir = path.join(outDir, '06-koncept', 'renders');
+  renders = fs.readdirSync(rdir).filter(f => /\.(jpe?g|png|webp)$/i.test(f)).sort().map(f => '06-koncept/renders/' + f);
   files.push(...renders);
 } catch (e) { /* рендеров нет — ок */ }
+
+// ---------- ведомость чертежей ----------
+function vedomostHTML() {
+  const docsRows = [
+    ['—', 'Паспорт проекта + пояснительная записка', '—'],
+    ['—', 'Ведомость чертежей (настоящий лист)', '—'],
+    ['—', 'Концепция и визуализации', '—'],
+    ['—', 'Спецификация материалов с артикулами', '—'],
+    ['—', 'Смета реализации (HTML + CSV)', '—']
+  ].map(x => `<tr><td class="num">${x[0]}</td><td>${x[1]}</td><td class="num">${x[2]}</td><td>документ</td></tr>`).join('');
+  const rows = reg.map(s => `<tr><td class="num">АИ-${s.no}</td><td>${esc(s.title)}</td><td class="num">${s.scale}</td><td>${s.file.split('/')[0]}</td></tr>`).join('');
+  return docHTML('Ведомость чертежей', `
+<h1>Ведомость чертежей</h1>
+<p class="sub">${esc((brief.object && brief.object.address) || 'Объект')} · ${totalArea} м² · всего листов: ${reg.length} · ${DATE}</p>
+<table><thead><tr><th>Лист</th><th>Наименование</th><th>Масштаб</th><th>Раздел</th></tr></thead><tbody>${docsRows}${rows}</tbody></table>
+<p class="note">Нумерация сквозная АИ-N (архитектура интерьера). Все чертежи выполнены автоматически конвейером LINEA и проверены главным архитектором студии.</p>`);
+}
+writeOut('00-pasport/vedomost.html', vedomostHTML());
 const smetaRows = buildSmeta();
-writeOut('06-smeta/smeta.html', smetaHTML(smetaRows));
-writeOut('06-smeta/smeta.csv', smetaCSV(smetaRows));
-writeOut('05-materialy/specification.html', specHTML());
-writeOut('04-koncept/koncept.html', conceptHTML());
+writeOut('08-smeta/smeta.html', smetaHTML(smetaRows));
+writeOut('08-smeta/smeta.csv', smetaCSV(smetaRows));
+writeOut('07-materialy/specification.html', specHTML());
+writeOut('06-koncept/koncept.html', conceptHTML());
 writeOut('00-pasport/pasport.html', coverHTML(counts));
 writeOut('index.html', viewerHTML(files.slice()));
 writeOut('manifest.json', JSON.stringify({ generated: new Date().toISOString(), style: styleKey, tier: tier.key, totalArea, rooms: rooms.map(r => ({ name: r.name, type: r.type, area: r.area })), files }, null, 2));

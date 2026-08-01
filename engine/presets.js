@@ -15,7 +15,15 @@ const STYLES = {
     doors: 'полотна скрытого монтажа, эмаль в цвет стен',
     textiles: 'лён и хлопок; шторы в скрытой потолочной нише',
     paintPriceL: 3900,
-    concept: 'Спокойный тёплый минимализм: природные материалы, низкая мебель, приглушённый свет и много воздуха.'
+    concept: 'Спокойный тёплый минимализм: природные материалы, низкая мебель, приглушённый свет и много воздуха.',
+    skus: {
+      paint: 'Little Greene · Slaked Lime №105, Absolute Matt',
+      floor: 'Coswick · Французская ёлка, Дуб Натуральный 1169-1201, 14 мм',
+      tile: 'Kerama Marazzi · Про Стоун беж тёмный 60×60, DD640200R',
+      plinth: 'Ultrawood · Base 0022, 80 мм, под окраску',
+      doors: 'Profil Doors · 1E Invisible, кромка ABS, магнитный замок AGB',
+      led: 'Arlight · RT 2-5000 24V Warm3000 (лента) + профиль SL-LINE-2011'
+    }
   },
   scandi: {
     key: 'scandi', title: 'Скандинавский',
@@ -28,7 +36,15 @@ const STYLES = {
     doors: 'царговые полотна, эмаль белая',
     textiles: 'хлопок, шерсть; яркие акценты в декоре',
     paintPriceL: 2400,
-    concept: 'Светло, уютно и функционально: белая база, светлое дерево, живые растения и тёплый текстиль.'
+    concept: 'Светло, уютно и функционально: белая база, светлое дерево, живые растения и тёплый текстиль.',
+    skus: {
+      paint: 'Dulux · Professional Bindo 7, база BW, глубокоматовая',
+      floor: 'Tarkett · Ballet Premium 33 кл., Дуб Джульетта',
+      tile: 'Cersanit · Woodhouse светло-серый 29,7×59,8, WS4O522',
+      plinth: 'Arbiton · Indo 80, белый',
+      doors: 'Волховец · Tekna 6001, эмаль белая',
+      led: 'Arlight · RT 2-5000 24V Warm3000 + профиль ARH-LINE'
+    }
   },
   minimal: {
     key: 'minimal', title: 'Минимализм',
@@ -41,7 +57,15 @@ const STYLES = {
     doors: 'скрытого монтажа, без наличников',
     textiles: 'однотонные плотные ткани, рулонные шторы',
     paintPriceL: 3400,
-    concept: 'Чистая геометрия: скрытые двери, теневые швы, минимум предметов — максимум качества поверхностей.'
+    concept: 'Чистая геометрия: скрытые двери, теневые швы, минимум предметов — максимум качества поверхностей.',
+    skus: {
+      paint: 'San Marco · Intonachino Minerale (микроцемент-эффект), тон 3020',
+      floor: 'Aquafloor · Stone XL AF3552MST, кварцвинил 6 мм',
+      tile: 'Italon · Metropolis Arctic White 80×80, 610010002338',
+      plinth: 'Profilpas · Metal Line 89/6, алюминий скрытый',
+      doors: 'Sofia · Invisible 501, скрытый короб',
+      led: 'Arlight · MICROLED-5000 24V Day4000 + теневой профиль'
+    }
   },
   modern: {
     key: 'modern', title: 'Современный',
@@ -54,7 +78,15 @@ const STYLES = {
     doors: 'полотна в цвет стен, скрытые петли',
     textiles: 'смесовые ткани, шторы блэкаут в спальнях',
     paintPriceL: 2900,
-    concept: 'Сдержанная современность: тёплая база, глубокие акценты, латунные детали и трековый свет.'
+    concept: 'Сдержанная современность: тёплая база, глубокие акценты, латунные детали и трековый свет.',
+    skus: {
+      paint: 'Tikkurila · Harmony, тон Y487 «Мулен», глубокоматовая',
+      floor: 'Amber Wood · Дуб Табак, брашированный, УФ-масло, 14 мм',
+      tile: 'Estima · Патина PT02 60×60, неполированный',
+      plinth: 'Orac · SX184, 110 мм, под окраску',
+      doors: 'Profil Doors · 2.7E, эмаль в цвет стен',
+      led: 'Maytoni · трек Busbar 48V + LED Arlight Warm3000'
+    }
   },
   neoclassic: {
     key: 'neoclassic', title: 'Неоклассика',
@@ -67,7 +99,15 @@ const STYLES = {
     doors: 'филёнчатые полотна, эмаль белая, латунная фурнитура',
     textiles: 'портьеры в пол, бархат и жаккард',
     paintPriceL: 4600,
-    concept: 'Классические пропорции в современном прочтении: молдинги, симметрия, благородные материалы.'
+    concept: 'Классические пропорции в современном прочтении: молдинги, симметрия, благородные материалы.',
+    skus: {
+      paint: 'Manders · Paint & Paper Library, Ivory II, Pure Flat Emulsion',
+      floor: 'Coswick · Французская ёлка, Дуб Ванильный 1167-1808, УФ-масло',
+      tile: 'Ametis by Estima · Marmulla MA02 60×120, полированный',
+      plinth: 'Ultrawood · Base 5573, 120 мм, белая эмаль',
+      doors: 'Волховец · Galant Classic 7401, эмаль, латунная фурнитура Morelli',
+      led: 'Arlight · RT 2-5000 24V Warm3000 + карнизная подсветка'
+    }
   },
   loft: {
     key: 'loft', title: 'Лофт',
@@ -80,7 +120,15 @@ const STYLES = {
     doors: 'полотна ревизионного типа, чёрный муар',
     textiles: 'грубый лён, кожа, металл',
     paintPriceL: 2600,
-    concept: 'Честные фактуры: бетон, кирпич, металл и дерево; открытый свет и свободная планировка.'
+    concept: 'Честные фактуры: бетон, кирпич, металл и дерево; открытый свет и свободная планировка.',
+    skus: {
+      paint: 'San Marco · Concret Art (бетон-эффект), тон серый натуральный',
+      floor: 'Goodwin · Дуб Термо, паркетная доска, браш, 14 мм',
+      tile: 'Italon · Eternum Magnum 80×80 + клинкер Feldhaus R700',
+      plinth: 'Profilpas · Metal Line 90/8, чёрный анод',
+      doors: 'ПК Концепт · ревизионные полотна, чёрный муар RAL 9005',
+      led: 'SWG · трек 48V чёрный + LED-профили Warm3000'
+    }
   }
 };
 

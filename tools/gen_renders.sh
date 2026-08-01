@@ -1,7 +1,7 @@
 #!/bin/bash
 # LINEA · серия консистентных рендеров демо-проекта (джапанди) через router-gen
 set -e
-OUT="$HOME/projects/linea-design-studio/site/portfolio/demo/04-koncept/renders"
+OUT="$HOME/projects/linea-design-studio/site/portfolio/demo/06-koncept/renders"
 mkdir -p "$OUT"
 RG="$HOME/projects/router-gen/rgen.py"
 BASE="photorealistic interior photograph, japandi style, warm white walls Little Greene Slaked Lime, oak herringbone engineered floor, warm hidden LED 3000K accents, soft morning daylight, sheer linen curtains in ceiling niche, shot on 28mm lens, eye level, premium interior design studio portfolio, 8k, no people, no text, no watermark"
