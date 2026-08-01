@@ -279,6 +279,41 @@ function drawFloor(room, sheet) {
   return svgDoc(Wd + 20, Hd + 30, b);
 }
 
+// ---------- демонтаж стен ----------
+function drawDemolition(room, sheet) {
+  const M = 100, WT = 12, w = px(room.w), l = px(room.l);
+  const Wd = w + M * 2 + 60, Hd = l + M * 2 + 120;
+  let b = `<rect x="${M - WT}" y="${M - WT}" width="${w + 2 * WT}" height="${l + 2 * WT}" fill="#2E2A26"/>`;
+  b += `<rect x="${M}" y="${M}" width="${w}" height="${l}" fill="#FAF7F0"/>`;
+  for (const o of room.windows) b += openingPlan(o, 'window', M, WT, room);
+  for (const o of room.doors) b += openingPlan(o, 'door', M, WT, room);
+  b += `<text x="${M - WT}" y="${M - 46}" font-size="16" font-weight="700" fill="#2E2A26">План демонтажа · ${esc(room.name)}</text>`;
+  b += `<text x="${M - WT}" y="${M - 28}" font-size="11" fill="#7A756D">Демонтаж существующих перегородок и дверных проёмов</text>`;
+  b += dimH(M, M + w, M + l + 34, room.w + '');
+  b += dimV(M + w + 34, M, M + l, room.l + '');
+  b += `<g font-size="9.5" font-weight="600" fill="#B0483A"><text x="${M - WT}" y="${M + l + 60}">⚠ Демонтируемые перегородки и проёмы указаны в проекте архитектора. Перед началом работ уточнить несущие конструкции и инженерные сети.</text></g>`;
+  b += stamp(M - WT, M + l + 80, w + 2 * WT + 40, `Демонтаж. ${room.name}`, sheet);
+  return svgDoc(Wd + 20, Hd + 30, b);
+}
+
+// ---------- монтаж перегородок ----------
+function drawMontage(room, sheet) {
+  const M = 100, WT = 12, w = px(room.w), l = px(room.l);
+  const Wd = w + M * 2 + 60, Hd = l + M * 2 + 120;
+  let b = `<rect x="${M - WT}" y="${M - WT}" width="${w + 2 * WT}" height="${l + 2 * WT}" fill="#2E2A26"/>`;
+  b += `<rect x="${M}" y="${M}" width="${w}" height="${l}" fill="#FAF7F0"/>`;
+  for (const o of room.windows) b += openingPlan(o, 'window', M, WT, room);
+  for (const o of room.doors) b += openingPlan(o, 'door', M, WT, room);
+  b += `<text x="${M - WT}" y="${M - 46}" font-size="16" font-weight="700" fill="#2E2A26">План монтажа · ${esc(room.name)}</text>`;
+  b += `<text x="${M - WT}" y="${M - 28}" font-size="11" fill="#7A756D">Новые перегородки: каркас гипсокартона, теплоизоляция и звукоизоляция</text>`;
+  b += dimH(M, M + w, M + l + 34, room.w + '');
+  b += dimV(M + w + 34, M, M + l, room.l + '');
+  const legH = M + l + 60;
+  b += `<g font-size="10" fill="#2E2A26"><rect x="${M - WT}" y="${legH - 16}" width="14" height="14" fill="none" stroke="#3B5C77" stroke-width="1.6" stroke-dasharray="4 3"/><text x="${M - WT + 20}" y="${legH - 4}">Новая перегородка ГКЛ 150 мм + звукоизоляция Rockwool 100 мм</text></g>`;
+  b += stamp(M - WT, legH + 20, w + 2 * WT + 40, `Монтаж перегородок. ${room.name}`, sheet);
+  return svgDoc(Wd + 20, Hd + 30, b);
+}
+
 // ---------- стена изголовья: без окна, затем без двери ----------
 function bedWallFor(room) {
   const hasWin = w => room.windows.some(o => o.wall === w);
@@ -879,9 +914,9 @@ function writeOut(rel, content) {
 }
 
 let sheet = 1;
-TOTAL_SHEETS = rooms.length * 10 + 1; // обмер+2 плана+пол+4 развертки+потолок+электрика на комнату + узел
+TOTAL_SHEETS = rooms.length * 12 + 1; // обмер+демо+монтаж+2 плана+пол+4 развертки+потолок+электрика на комнату + узел
 const reg = []; // реестр листов для ведомости
-const counts = { obmer: 0, plans: 0, poly: 0, elev: 0, ceil: 0, electro: 0 };
+const counts = { obmer: 0, demo: 0, mont: 0, plans: 0, poly: 0, elev: 0, ceil: 0, electro: 0 };
 function sheetOut(rel, maker, title, scale) {
   const no = sheet++;
   writeOut(rel, maker(no));
@@ -890,6 +925,8 @@ function sheetOut(rel, maker, title, scale) {
 const SL = r => `${nn(r.idx)}-${slug(r.name)}`;
 // порядок листов — как в альбомах профессиональных студий
 for (const r of rooms) { sheetOut(`01-obmer/obmer-${SL(r)}.svg`, n => drawObmer(r, n), `Обмерный план. ${r.name}`); counts.obmer++; }
+for (const r of rooms) { sheetOut(`01-obmer/demo-${SL(r)}.svg`, n => drawDemolition(r, n), `Демонтаж. ${r.name}`); counts.demo++; }
+for (const r of rooms) { sheetOut(`01-obmer/mont-${SL(r)}.svg`, n => drawMontage(r, n), `Монтаж перегородок. ${r.name}`); counts.mont++; }
 for (const r of rooms) { sheetOut(`02-plany/plan-${SL(r)}.svg`, n => drawPlan(r, n, true), `План мебели с размерами. ${r.name}`); counts.plans++; }
 for (const r of rooms) { sheetOut(`02-plany/plan-${SL(r)}-mebel.svg`, n => drawPlan(r, n, false), `План мебели. ${r.name}`); counts.plans++; }
 for (const r of rooms) { sheetOut(`03-poly/pol-${SL(r)}.svg`, n => drawFloor(r, n), `План пола. ${r.name}`); counts.poly++; }
