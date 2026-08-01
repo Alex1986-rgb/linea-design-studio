@@ -210,6 +210,7 @@ function drawObmer(room, sheet) {
   }
   // штамп комнаты: S подчёркнуто, P, h
   const per = (2 * (room.w + room.l) / 1000).toFixed(1);
+  b += `<rect x="${M + w - 190}" y="${M + l - 54}" width="184" height="50" fill="#FCFBF8E6"/>`;
   b += `<g text-anchor="end"><text x="${M + w - 10}" y="${M + l - 40}" font-size="14" font-weight="700" fill="#2E2A26">${nn(room.idx)} ${esc(room.name)}</text>
 <text x="${M + w - 10}" y="${M + l - 24}" font-size="12" fill="#2E2A26" text-decoration="underline">S=${room.area} м²</text>
 <text x="${M + w - 10}" y="${M + l - 10}" font-size="10" fill="#57514A">P=${per} м · h=${room.h}</text></g>`;
@@ -276,7 +277,7 @@ function drawFloor(room, sheet) {
     b += `<text x="${ax0}" y="${ay0}" font-size="9" fill="#57514A" text-anchor="middle">${atxt}</text>`;
   }
   // отметка уровня
-  b += `<g><circle cx="${M + 28}" cy="${M + l - 28}" r="16" fill="#FFF" stroke="#2E2A26" stroke-width="1.2"/><text x="${M + 28}" y="${M + l - 24}" font-size="8" text-anchor="middle" fill="#2E2A26">${wet ? '−0.020' : '0.000'}</text></g>`;
+  b += `<g><circle cx="${M + 28}" cy="${M + l - 58}" r="16" fill="#FFF" stroke="#2E2A26" stroke-width="1.2"/><text x="${M + 28}" y="${M + l - 54}" font-size="8" text-anchor="middle" fill="#2E2A26">${wet ? '−0.020' : '0.000'}</text></g>`;
   const g = roomGeometry(room);
   b += `<text x="${M - WT}" y="${M - 46}" font-size="16" font-weight="700" fill="#2E2A26">План пола · ${esc(room.name)}</text>`;
   b += `<text x="${M - WT}" y="${M - 28}" font-size="11" fill="#7A756D">${code} · ${wet ? 'керамогранит 600×600, раскладка от центра' : esc(style.floor.name)} · S=${g.floor} м² · плинтус ${wet ? '—' : g.plinth + ' м.п.'}</text>`;
@@ -545,10 +546,12 @@ function drawElevation(room, wallKey, sheet) {
     b += `<rect x="${x}" y="${y}" width="${px(nch.w)}" height="${px(nch.h)}" fill="#00000014" stroke="#57514A" stroke-width="1.2"/>`;
     b += `<rect x="${x + 3}" y="${y + 3}" width="${px(nch.w) - 6}" height="${px(nch.h) - 6}" fill="none" stroke="#C29A5B" stroke-width="1" stroke-dasharray="5 3"/>`;
     const l1 = `Ниша ${nch.w}×${nch.h}, глуб. ${nch.depth}`;
-    const lw = Math.max(l1.length, nch.label.length) * 5.2 + 10;
-    b += `<rect x="${x + px(nch.w) / 2 - lw / 2}" y="${y + px(nch.h) / 2 - 10}" width="${lw}" height="26" fill="#FFFFFFCC"/>`;
-    b += `<text x="${x + px(nch.w) / 2}" y="${y + px(nch.h) / 2}" font-size="9" fill="#57514A" text-anchor="middle">${l1}</text>`;
-    b += `<text x="${x + px(nch.w) / 2}" y="${y + px(nch.h) / 2 + 12}" font-size="8" fill="#8A6A3B" text-anchor="middle">${esc(nch.label)}</text>`;
+    const lw = Math.min(Math.max(l1.length, nch.label.length) * 5.2 + 10, w - 12);
+    // центр подписи прижимаем внутрь стены, чтобы подложка не стирала контуры
+    const tcx = Math.min(Math.max(x + px(nch.w) / 2, M + 6 + lw / 2), M + w - 6 - lw / 2);
+    b += `<rect x="${tcx - lw / 2}" y="${y + px(nch.h) / 2 - 10}" width="${lw}" height="26" fill="#FFFFFFCC"/>`;
+    b += `<text x="${tcx}" y="${y + px(nch.h) / 2}" font-size="9" fill="#57514A" text-anchor="middle">${l1}</text>`;
+    b += `<text x="${tcx}" y="${y + px(nch.h) / 2 + 12}" font-size="8" fill="#8A6A3B" text-anchor="middle">${esc(nch.label)}</text>`;
     b += `<text x="${x + px(nch.w) / 2}" y="${y - 5}" font-size="9" fill="#7A756D" text-anchor="middle">низ +${(nch.sill / 1000).toFixed(3).replace('.', ',')}</text>`;
   }
   for (const o of room.windows.filter(o => o.wall === wallKey)) {
@@ -684,8 +687,9 @@ function drawElectro(room, sheet) {
   for (const o of room.doors) b += openingPlan(o, 'door', M, WT, room);
   // мебель призраком
   for (const f of furnitureFor(room)) b += `<rect x="${M + px(f.x)}" y="${M + px(f.y)}" width="${px(f.w)}" height="${px(f.h)}" fill="none" stroke="#C5BFB2" stroke-width="1" rx="2"/>`;
-  // точки
-  let s = 0, sw = 0;
+  // точки: сначала все символы, затем все подписи (чтобы символы не перечёркивали текст)
+  let s = 0, sw = 0, labs = '';
+  const placed = []; // занятые прямоугольники подписей — расталкиваем коллизии по вертикали
   for (const p of pts) {
     const x = M + px(p.x), y = M + px(p.y);
     if (p.type === 'socket') { s++;
@@ -693,15 +697,19 @@ function drawElectro(room, sheet) {
     } else { sw++;
       b += `<g stroke="#2E2A26" stroke-width="1.4"><circle cx="${x}" cy="${y}" r="5" fill="#2E2A26"/><line x1="${x}" y1="${y - 5}" x2="${x + 7}" y2="${y - 12}"/><line x1="${x + 7}" y1="${y - 12}" x2="${x + 12}" y2="${y - 9}"/></g>`;
     }
-    // подпись: в правой половине — слева от точки; выключатели над символом, розетки под — чтобы соседние не сливались
     const txt = `${p.label} · h${p.h}`;
     const tw = txt.length * 4.8 + 6;
     const right = p.x > room.w / 2;
     const lx = right ? x - 12 : x + 12;
-    const lyy = p.type === 'switch' ? y - 16 : y + 6;
-    b += `<rect x="${right ? lx - tw : lx - 3}" y="${lyy - 9}" width="${tw}" height="13" fill="#FBFAF6D9"/>`;
-    b += `<text x="${lx}" y="${lyy}" font-size="8.5" fill="#57514A" text-anchor="${right ? 'end' : 'start'}">${esc(txt)}</text>`;
+    let lyy = p.type === 'switch' ? y - 16 : y + 6;
+    const x1 = right ? lx - tw : lx - 3, x2 = x1 + tw;
+    let guard = 0;
+    while (placed.some(r => x1 < r.x2 + 4 && x2 > r.x1 - 4 && Math.abs(lyy - r.y) < 13) && guard++ < 8) lyy += 15;
+    placed.push({ x1, x2, y: lyy });
+    labs += `<rect x="${x1}" y="${lyy - 9}" width="${tw}" height="13" fill="#FBFAF6D9"/>`;
+    labs += `<text x="${lx}" y="${lyy}" font-size="8.5" fill="#57514A" text-anchor="${right ? 'end' : 'start'}">${esc(txt)}</text>`;
   }
+  b += labs;
   b += `<text x="${M - WT}" y="${M - 46}" font-size="16" font-weight="700" fill="#2E2A26">План электрики · ${esc(room.name)}</text>`;
   b += `<text x="${M - WT}" y="${M - 28}" font-size="11" fill="#7A756D">Розетки — ${s} поз. · выключатели — ${sw} поз. · высоты от чистого пола, мм</text>`;
   b += dimH(M, M + w, M + l + 34, room.w + ' мм');
