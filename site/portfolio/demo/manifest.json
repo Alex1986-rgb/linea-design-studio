@@ -1,8 +1,8 @@
 {
-  "generated": "2026-08-01T21:33:52.180Z",
+  "generated": "2026-08-01T22:14:57.245Z",
   "style": "japandi",
   "tier": "business",
-  "totalArea": 54,
+  "totalArea": 56,
   "rooms": [
     {
       "name": "Гостиная-кухня",
@@ -12,25 +12,30 @@
     {
       "name": "Спальня",
       "type": "bedroom",
-      "area": 12.2
+      "area": 13.6
     },
     {
       "name": "Детская",
       "type": "kids",
-      "area": 9.9
+      "area": 8.6
     },
     {
       "name": "Санузел",
       "type": "bathroom",
-      "area": 4
+      "area": 4.8
     },
     {
       "name": "Прихожая",
       "type": "hallway",
-      "area": 4.8
+      "area": 8.6
     }
   ],
   "files": [
+    "01-kvartira/kvartira-01-obmer.svg",
+    "01-kvartira/kvartira-02-mebel.svg",
+    "01-kvartira/kvartira-03-poly.svg",
+    "01-kvartira/kvartira-04-potolki.svg",
+    "01-kvartira/kvartira-05-elektrika.svg",
     "01-obmer/obmer-01-gostinaya-kuhnya.svg",
     "01-obmer/obmer-02-spalnya.svg",
     "01-obmer/obmer-03-detskaya.svg",

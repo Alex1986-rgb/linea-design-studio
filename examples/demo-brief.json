@@ -1,32 +1,38 @@
 {
   "meta": { "created": "2026-08-01", "source": "site-brief-wizard" },
   "client": { "name": "Демо-клиент", "phone": "+7 900 000-00-00", "email": "client@example.com" },
-  "object": { "type": "квартира", "address": "ЖК «Северный парк», Москва", "area": 54, "ceilingHeight": 2.7 },
+  "object": { "type": "квартира", "address": "ЖК «Северный парк», Москва", "area": 56, "ceilingHeight": 2.7,
+    "flat": { "width": 8.75, "length": 6.75, "extWall": 0.2, "intWall": 0.15 } },
   "rooms": [
     {
       "name": "Гостиная-кухня", "type": "living-kitchen", "width": 5.2, "length": 4.0,
+      "pos": { "x": 0, "y": 0 },
       "windows": [{ "wall": "A", "offset": 1.6, "width": 1.8, "height": 1.5, "sill": 0.85 }],
-      "doors": [{ "wall": "C", "offset": 0.3, "width": 0.9 }]
+      "doors": [{ "wall": "C", "offset": 3.7, "width": 0.9 }]
     },
     {
-      "name": "Спальня", "type": "bedroom", "width": 3.8, "length": 3.2,
-      "windows": [{ "wall": "A", "offset": 1.15, "width": 1.5, "height": 1.45, "sill": 0.9 }],
-      "doors": [{ "wall": "C", "offset": 0.2, "width": 0.9 }]
+      "name": "Спальня", "type": "bedroom", "width": 3.4, "length": 4.0,
+      "pos": { "x": 5.35, "y": 0 },
+      "windows": [{ "wall": "A", "offset": 0.95, "width": 1.5, "height": 1.45, "sill": 0.9 }],
+      "doors": [{ "wall": "C", "offset": 0.4, "width": 0.9 }]
     },
     {
-      "name": "Детская", "type": "kids", "width": 3.4, "length": 2.9,
-      "windows": [{ "wall": "A", "offset": 1.0, "width": 1.4, "height": 1.45, "sill": 0.9 }],
-      "doors": [{ "wall": "C", "offset": 0.2, "width": 0.8 }]
+      "name": "Детская", "type": "kids", "width": 3.3, "length": 2.6,
+      "pos": { "x": 0, "y": 4.15 },
+      "windows": [{ "wall": "C", "offset": 0.9, "width": 1.4, "height": 1.45, "sill": 0.9 }],
+      "doors": [{ "wall": "B", "offset": 0.6, "width": 0.8 }]
     },
     {
-      "name": "Санузел", "type": "bathroom", "width": 2.2, "length": 1.8,
+      "name": "Санузел", "type": "bathroom", "width": 1.85, "length": 2.6,
+      "pos": { "x": 6.9, "y": 4.15 },
       "windows": [],
-      "doors": [{ "wall": "C", "offset": 0.15, "width": 0.7 }]
+      "doors": [{ "wall": "D", "offset": 0.6, "width": 0.7 }]
     },
     {
-      "name": "Прихожая", "type": "hallway", "width": 3.0, "length": 1.6,
+      "name": "Прихожая", "type": "hallway", "width": 3.3, "length": 2.6,
+      "pos": { "x": 3.45, "y": 4.15 },
       "windows": [],
-      "doors": [{ "wall": "C", "offset": 1.0, "width": 0.9 }]
+      "doors": [{ "wall": "C", "offset": 1.1, "width": 1.0 }]
     }
   ],
   "style": {
