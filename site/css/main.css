@@ -57,6 +57,12 @@ section.blk{padding:90px 0;border-top:1px solid var(--line)}
 .card ul{color:var(--mut);font-size:14px;margin:10px 0 0;padding-left:18px}
 .card li{margin:5px 0}
 
+/* карточки портфолио с фото */
+.pcard{display:block;position:relative;border-radius:6px;overflow:hidden;border:1px solid var(--line)}
+.pcard img{width:100%;height:230px;object-fit:cover;display:block;transition:.35s}
+.pcard:hover img{transform:scale(1.04)}
+.pcard span{position:absolute;left:0;right:0;bottom:0;padding:26px 16px 12px;font-size:13px;color:var(--ink);background:linear-gradient(transparent,#0F0E0Cd9)}
+
 /* тарифы */
 .price .card{position:relative;display:flex;flex-direction:column}
 .price .tag{position:absolute;top:-12px;right:20px;background:var(--gold);color:#14120E;font-size:11px;letter-spacing:2px;padding:4px 12px;border-radius:2px;font-weight:700}
