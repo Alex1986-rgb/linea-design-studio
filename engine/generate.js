@@ -570,6 +570,19 @@ function openingPlan(o, kind, M, WT, room) {
       r += `<line x1="${mx - 2.2}" y1="${y0}" x2="${mx - 2.2}" y2="${y0 + ow}" stroke="${CAD.window}" stroke-width="1.6"/><line x1="${mx + 2.2}" y1="${y0}" x2="${mx + 2.2}" y2="${y0 + ow}" stroke="${CAD.wallStroke}" stroke-width="0.7"/>`;
     }
   }
+  if (kind === 'window') { // радиатор отопления под окном
+    const rl = Math.min(ow - 8, px(1200)), t = px(90);
+    let rx, ry, rw2, rh2, horiz = (o.wall === 'A' || o.wall === 'C');
+    if (o.wall === 'A') { rx = M + px(o.off) + (ow - rl) / 2; ry = M + px(60); rw2 = rl; rh2 = t; }
+    else if (o.wall === 'C') { rx = M + px(o.off) + (ow - rl) / 2; ry = M + L - px(60) - t; rw2 = rl; rh2 = t; }
+    else if (o.wall === 'D') { rx = M + px(60); ry = M + px(o.off) + (ow - rl) / 2; rw2 = t; rh2 = rl; }
+    else { rx = M + W - px(60) - t; ry = M + px(o.off) + (ow - rl) / 2; rw2 = t; rh2 = rl; }
+    r += `<rect x="${rx}" y="${ry}" width="${rw2}" height="${rh2}" fill="#EAF3F7" stroke="${CAD.window}" stroke-width="0.9"/>`;
+    const n = Math.max(3, Math.round((horiz ? rw2 : rh2) / 6));
+    for (let i = 1; i < n; i++) r += horiz
+      ? `<line x1="${rx + (rw2 / n) * i}" y1="${ry + 1}" x2="${rx + (rw2 / n) * i}" y2="${ry + rh2 - 1}" stroke="${CAD.window}" stroke-width="0.5"/>`
+      : `<line x1="${rx + 1}" y1="${ry + (rh2 / n) * i}" x2="${rx + rw2 - 1}" y2="${ry + (rh2 / n) * i}" stroke="${CAD.window}" stroke-width="0.5"/>`;
+  }
   if (kind === 'door') { // полотно + четверть-дуга открывания
     const dw = ow;
     let hx, hy, lx, ly, arc;
@@ -659,10 +672,10 @@ function drawPlan(room, sheet, withDims) {
   const M = 90, WT = 12, w = px(room.w), l = px(room.l);
   const PW = 250; // колонка фото готового интерьера
   const hasPh = roomPhotos(room, 2).length;
-  const Wd = Math.max(760, w + M * 2 + 60 + (hasPh ? PW + 40 : 0));
-  const Hd = Math.max(l + M * 2 + 90, hasPh ? M + 2 * (PW * 0.68 + 22) + 120 : 0);
+  const Wd = Math.max(760, w + M * 2 + 110 + (hasPh ? PW + 100 : 0));
+  const Hd = Math.max(l + M * 2 + 140, hasPh ? M + 2 * (PW * 0.68 + 22) + 120 : 0);
   let b = roomWalls(M, WT, room, sheet, CAD.paper);
-  if (hasPh) b += photoPanel(M + w + 90, M + 14, PW, room, 'Реализация интерьера');
+  if (hasPh) b += photoPanel(M + w + 150, M + 14, PW, room, 'Реализация интерьера');
   for (const o of room.windows) b += openingPlan(o, 'window', M, WT, room);
   for (const o of room.doors) b += openingPlan(o, 'door', M, WT, room);
   for (const nch of nichesFor(room).filter(n => n.depth >= 80)) { // ниши пунктиром у стены
@@ -688,6 +701,17 @@ function drawPlan(room, sheet, withDims) {
   if (withDims) {
     b += chainDimH(M, M + l + 34, room.w, wallOpenings(room, 'C'), true);
     b += chainDimV(M + w + 34, M, room.l, wallOpenings(room, 'B'), true);
+    // обвязка мебели: проекции предметов на оси X и Y (как в рабочих альбомах)
+    const merge = ivs => ivs.sort((a, b2) => a.off - b2.off).reduce((acc, v) => {
+      const last = acc[acc.length - 1];
+      if (last && v.off <= last.off + last.w) { last.w = Math.max(last.w, v.off + v.w - last.off); return acc; }
+      acc.push({ ...v }); return acc;
+    }, []);
+    const fr = furnitureFor(room).filter(f => f.key !== 'rug');
+    const fx2 = merge(fr.map(f => ({ off: f.x, w: f.w })));
+    const fy2 = merge(fr.map(f => ({ off: f.y, w: f.h })));
+    if (fx2.length) b += chainDimH(M, M + l + 78, room.w, fx2, false);
+    if (fy2.length) b += chainDimV(M + w + 78, M, room.l, fy2, false);
   } else {
     b += dimH(M, M + w, M + l + 34, String(room.w));
     b += dimV(M + w + 34, M, M + l, String(room.l));
@@ -889,13 +913,23 @@ function drawElectro(room, sheet) {
     const x = M + px(p.x), y = M + px(p.y);
     const dup = seenLab.some(q => q.t === p.label && Math.abs(q.x - x) < 160 && Math.abs(q.y - y) < 60);
     seenLab.push({ t: p.label, x, y });
+    const lab = p.label.toLowerCase();
     if (p.type === 'socket') { s++;
-      b += `<g stroke="#2E2A26" stroke-width="1.4"><circle cx="${x}" cy="${y}" r="6" fill="#FFF"/><line x1="${x - 6}" y1="${y - 8}" x2="${x + 6}" y2="${y - 8}"/><line x1="${x - 4}" y1="${y - 11}" x2="${x + 4}" y2="${y - 11}"/></g>`;
+      const ip44 = /ip44|полот|фен/.test(lab), weak = /tv|lan|тв/.test(lab), outp = /вывод|встройк/.test(lab);
+      b += `<g stroke="#2E2A26" stroke-width="1.4"><circle cx="${x}" cy="${y}" r="6" fill="${weak ? '#E8F0E8' : '#FFF'}"/><line x1="${x - 6}" y1="${y - 8}" x2="${x + 6}" y2="${y - 8}"/><line x1="${x - 4}" y1="${y - 11}" x2="${x + 4}" y2="${y - 11}"/></g>`;
+      if (ip44) b += `<circle cx="${x}" cy="${y}" r="9" fill="none" stroke="#2E2A26" stroke-width="0.8"/>`; // защищённое исполнение
+      if (weak) b += `<text x="${x}" y="${y + 3}" font-size="6.5" font-weight="700" text-anchor="middle" fill="#27703F">TV</text>`;
+      if (outp) b += `<line x1="${x - 4}" y1="${y + 4}" x2="${x + 4}" y2="${y + 4}" stroke="#2E2A26" stroke-width="1.2"/>`; // вывод под встройку
     } else { sw++;
+      const pass = /проходн/.test(lab), two = /2-кл|двух/.test(lab);
       b += `<g stroke="#2E2A26" stroke-width="1.4"><circle cx="${x}" cy="${y}" r="5" fill="#2E2A26"/><line x1="${x}" y1="${y - 5}" x2="${x + 7}" y2="${y - 12}"/><line x1="${x + 7}" y1="${y - 12}" x2="${x + 12}" y2="${y - 9}"/></g>`;
+      if (pass) b += `<line x1="${x + 2}" y1="${y - 7}" x2="${x + 9}" y2="${y - 14}" stroke="#2E2A26" stroke-width="1.1"/>`; // вторая клавиша — проходной
+      if (two) b += `<circle cx="${x - 7}" cy="${y}" r="3" fill="#2E2A26"/>`;
     }
+    // привязка L/H — в самой подписи позиции (см. легенду)
     if (dup) continue; // повтор той же подписи рядом — не дублируем
-    const txt = `${p.label} · h${p.h}`;
+    const dl = Math.round(Math.min(p.x, room.w - p.x, p.y, room.l - p.y));
+    const txt = `${p.label} · ${dl}/${p.h}`;
     const tw = txt.length * 4.8 + 6;
     const right = p.x > room.w / 2;
     const lx = right ? x - 12 : x + 12;
@@ -917,10 +951,13 @@ function drawElectro(room, sheet) {
   b += dimV(M + w + 34, M, M + l, String(room.l));
   const ly = M + l + 56;
   b += `<g font-size="10" fill="#57514A"><circle cx="${M + 6}" cy="${ly - 3}" r="6" fill="#FFF" stroke="#2E2A26"/><line x1="${M}" y1="${ly - 11}" x2="${M + 12}" y2="${ly - 11}" stroke="#2E2A26"/><text x="${M + 18}" y="${ly}">розетка (блок)</text>`;
-  b += `<circle cx="${M + 146}" cy="${ly - 3}" r="5" fill="#2E2A26"/><text x="${M + 158}" y="${ly}">выключатель</text></g>`;
-  b += `<text x="${M - WT}" y="${ly + 22}" font-size="9.5" font-weight="600" fill="#B0483A">* Розетки — h=300 от чистого пола по умолчанию; отклонения подписаны у позиций. Выключатели — h=900.</text>`;
-  b += `<text x="${M - WT}" y="${ly + 36}" font-size="9" fill="#8A8478">Санузлы: линии через УЗО 30 мА, розетки IP44 · выключатели со стороны ручки двери, ≥100 мм от проёма · привязки уточняются инженерным проектом</text>`;
-  b += stamp(M - WT, l + M * 2 + 86, w + 2 * WT + 40, `Электрика. ${room.name}`, sheet);
+  b += `<circle cx="${M + 146}" cy="${ly - 3}" r="5" fill="#2E2A26"/><text x="${M + 158}" y="${ly}">выключатель</text>`;
+  b += `<circle cx="${M + 286}" cy="${ly - 3}" r="6" fill="#E8F0E8" stroke="#2E2A26" stroke-width="1.2"/><text x="${M + 286}" y="${ly}" font-size="6.5" font-weight="700" text-anchor="middle" fill="#27703F">TV</text><text x="${M + 298}" y="${ly}">слаботочная (TV/LAN)</text>`;
+  b += `<circle cx="${M + 456}" cy="${ly - 3}" r="6" fill="#FFF" stroke="#2E2A26" stroke-width="1.2"/><circle cx="${M + 456}" cy="${ly - 3}" r="9" fill="none" stroke="#2E2A26" stroke-width="0.8"/><text x="${M + 470}" y="${ly}">IP44 (влажная зона)</text></g>`;
+  b += `<text x="${M - WT}" y="${ly + 14}" font-size="8.5" fill="#57514A">В подписи после названия — привязка L/H: расстояние до ближайшей стены / высота установки от чистого пола, мм.</text>`;
+  b += `<text x="${M - WT}" y="${ly + 30}" font-size="9.5" font-weight="600" fill="#B0483A">* Розетки — h=300 от чистого пола по умолчанию; отклонения подписаны у позиций. Выключатели — h=900.</text>`;
+  b += `<text x="${M - WT}" y="${ly + 44}" font-size="9" fill="#8A8478">Санузлы: линии через УЗО 30 мА, розетки IP44 · выключатели со стороны ручки двери, ≥100 мм от проёма · привязки уточняются инженерным проектом</text>`;
+  b += stamp(M - WT, l + M * 2 + 100, w + 2 * WT + 40, `Электрика. ${room.name}`, sheet);
   return svgDoc(Wd + 20, Hd + 10, b);
 }
 
@@ -1775,50 +1812,103 @@ footer{max-width:900px;margin:14px auto 0;color:#9A937F;font-size:11px;letter-sp
 
 // ---------- просмотрщик папки ----------
 function viewerHTML(files) {
+  const titles = {}; reg.forEach(r0 => { titles[r0.file] = { t: r0.title, n: r0.no }; });
   const grp = k => files.filter(f => f.startsWith(k) && f.endsWith('.svg'));
-  const rnd = files.filter(f => f.startsWith('06-koncept/renders/'));
-  const sec = (title, list) => list.length ? `<section><h2>${title}</h2><div class="grid">${list.map(f => `<figure><a href="${f}" target="_blank"><img src="${f}" loading="lazy" alt=""></a><figcaption>${f.split('/').pop()}</figcaption></figure>`).join('')}</div></section>` : '';
-  const secR = rnd.length ? `<section id="rendery"><h2>Визуализации</h2><div class="grid wide">${rnd.map(f => `<figure><a href="${f}" target="_blank"><img src="${f}" loading="lazy" alt="Фотореалистичная визуализация"></a><figcaption>${f.split('/').pop().replace(/\.\w+$/, '').replace(/-/g, ' ')}</figcaption></figure>`).join('')}</div></section>` : '';
-  return `<!DOCTYPE html><html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Папка проекта — LINEA</title><style>
-body{font-family:${FONT};margin:0;background:#0F0E0C;color:#EDE7DC}
-header{padding:48px 5vw 24px;border-bottom:1px solid #2b271f}
-header h1{font-family:Georgia,serif;font-weight:500;font-size:30px;margin:0 0 8px}
-header p{color:#9A937F;margin:0;font-size:14px}
-nav{display:flex;flex-wrap:wrap;gap:10px;padding:18px 5vw;border-bottom:1px solid #2b271f;position:sticky;top:0;background:#0F0E0Cee;backdrop-filter:blur(8px)}
-nav a{color:#C29A5B;text-decoration:none;font-size:13px;letter-spacing:1px;border:1px solid #3a3428;border-radius:20px;padding:6px 14px}
-nav a:hover{background:#1c1913}
+  const rnd = files.filter(f => f.startsWith('06-koncept/renders/') && !f.includes('/thumbs/'));
+  const cap = f => { const t = titles[f]; return t ? `${t.t} <i>Лист ${t.n}</i>` : f.split('/').pop(); };
+  const alt = f => { const t = titles[f]; const obj = (brief.object && brief.object.address) || 'объект'; return t ? `${t.t} — ${obj}, ${totalArea} м²` : ''; };
+  const sec = (id, title, sub, list) => list.length ? `<section id="${id}"><h2>${title}</h2><p class="sub">${sub}</p><div class="grid">${list.map(f =>
+    `<figure><button class="sh" data-src="${f}" data-cap="${esc(alt(f))}"><img src="${f}" loading="lazy" alt="${esc(alt(f))}"></button><figcaption>${cap(f)}</figcaption></figure>`).join('')}</div></section>` : '';
+  const secR = rnd.length ? `<section id="rendery"><h2>Визуализации</h2><p class="sub">Фотореалистичные виды помещений — та же мебель, свет и материалы, что на чертежах</p><div class="grid wide">${rnd.map(f => {
+    const nm = f.split('/').pop().replace(/\.\w+$/, '').replace(/^\d+\w?-/, '').replace(/-/g, ' ');
+    return `<figure><button class="sh" data-src="${f}" data-cap="${esc(nm)}"><img src="${f}" loading="lazy" alt="Визуализация: ${esc(nm)} — стиль «${esc(style.title)}»"></button><figcaption>${esc(nm)}</figcaption></figure>`;
+  }).join('')}</div></section>` : '';
+  const totalSheets = files.filter(f => f.endsWith('.svg')).length;
+  return `<!DOCTYPE html><html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Папка дизайн-проекта · ${totalSheets} листов — LINEA</title>
+<meta name="description" content="Демо-проект LINEA: ${totalSheets} листов рабочих чертежей и ${rnd.length} визуализаций — обмер, планы, полы, развертки, потолки, электрика, спецификация и смета.">
+<link rel="canonical" href="https://alex1986-rgb.github.io/linea-design-studio/portfolio/demo/index.html">
+<meta property="og:type" content="article"><meta property="og:title" content="Папка дизайн-проекта LINEA — ${totalSheets} листов">
+<meta property="og:description" content="Реальный результат конвейера: рабочие чертежи, визуализации, спецификация и смета.">
+<meta property="og:image" content="https://alex1986-rgb.github.io/linea-design-studio/portfolio/demo/06-koncept/renders/01-gostinaya-kuhnya.jpg">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;600&family=Inter:wght@400;600&display=swap" rel="stylesheet">
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"LINEA","item":"https://alex1986-rgb.github.io/linea-design-studio/"},{"@type":"ListItem","position":2,"name":"Демо-проект","item":"https://alex1986-rgb.github.io/linea-design-studio/portfolio/demo/index.html"}]}</script>
+<style>
+:root{--bg:#0F0E0C;--ink:#EDE7DC;--mut:#9A937F;--gold:#C29A5B;--line:#2b271f;--card:#1c1913}
+*{box-sizing:border-box}
+body{font-family:Inter,${FONT};margin:0;background:var(--bg);color:var(--ink)}
+a{color:inherit}
+.top{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:20px 5vw;border-bottom:1px solid var(--line)}
+.logo{font-family:'Playfair Display',Georgia,serif;font-size:22px;letter-spacing:6px;text-decoration:none}
+.logo i{color:var(--gold);font-style:normal}
+.btn{display:inline-block;background:var(--gold);color:#171410;text-decoration:none;font-weight:600;font-size:13px;padding:11px 20px;border-radius:4px}
+.btn.ghost{background:transparent;color:var(--gold);border:1px solid var(--gold)}
+header{padding:40px 5vw 22px}
+header h1{font-family:'Playfair Display',Georgia,serif;font-weight:500;font-size:clamp(24px,4vw,34px);margin:0 0 10px}
+header p{color:var(--mut);margin:0;font-size:14px;line-height:1.6}
+nav{display:flex;flex-wrap:wrap;gap:8px;padding:14px 5vw;border-top:1px solid var(--line);border-bottom:1px solid var(--line);position:sticky;top:0;background:#0F0E0Cf2;backdrop-filter:blur(8px);z-index:5}
+nav a{color:var(--gold);text-decoration:none;font-size:12px;letter-spacing:.5px;border:1px solid #3a3428;border-radius:20px;padding:6px 13px;white-space:nowrap}
+nav a:hover{background:var(--card)}
 section{padding:34px 5vw}
-h2{font-family:Georgia,serif;font-weight:500;font-size:22px;color:#EDE7DC;border-left:3px solid #C29A5B;padding-left:14px}
-.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:18px;margin-top:18px}
-.grid.wide{grid-template-columns:repeat(auto-fill,minmax(440px,1fr))}
-figure{margin:0;background:#FAF9F6;border-radius:6px;overflow:hidden}
-figure img{width:100%;height:auto;display:block}
-figcaption{font-size:11px;color:#57514A;padding:8px 12px;background:#F1EDE4}
-.docs{display:flex;gap:14px;flex-wrap:wrap;margin-top:16px}
-.docs a{display:block;background:#1c1913;border:1px solid #3a3428;border-radius:8px;padding:18px 22px;color:#EDE7DC;text-decoration:none;min-width:220px}
-.docs a b{display:block;color:#C29A5B;margin-bottom:4px}
-.docs a:hover{border-color:#C29A5B}
-footer{padding:40px 5vw;color:#6d675c;font-size:12px;letter-spacing:2px;border-top:1px solid #2b271f}
+h2{font-family:'Playfair Display',Georgia,serif;font-weight:500;font-size:clamp(19px,2.4vw,23px);margin:0;border-left:3px solid var(--gold);padding-left:14px}
+.sub{color:var(--mut);font-size:13px;margin:10px 0 0;padding-left:17px}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:18px;margin-top:20px}
+.grid.wide{grid-template-columns:repeat(auto-fill,minmax(420px,1fr))}
+figure{margin:0;background:#FFF;border-radius:6px;overflow:hidden;border:1px solid #2b271f}
+.sh{display:block;width:100%;padding:0;border:0;background:#FFF;cursor:zoom-in}
+.sh img{width:100%;height:auto;display:block}
+figcaption{font-size:11.5px;color:#3A352E;padding:9px 12px;background:#F1EDE4;display:flex;justify-content:space-between;gap:10px}
+figcaption i{color:#8A8478;font-style:normal;white-space:nowrap}
+.docs{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:12px;margin-top:20px}
+.docs a{display:block;background:var(--card);border:1px solid #3a3428;border-radius:8px;padding:16px 18px;color:var(--ink);text-decoration:none;font-size:12.5px;line-height:1.5}
+.docs a b{display:block;color:var(--gold);margin-bottom:4px;font-size:13px}
+.docs a:hover{border-color:var(--gold)}
+.cta{margin:10px 5vw 0;padding:34px 5vw;background:var(--card);border:1px solid #3a3428;border-radius:10px;text-align:center}
+.cta h3{font-family:'Playfair Display',Georgia,serif;font-weight:500;font-size:22px;margin:0 0 10px}
+.cta p{color:var(--mut);font-size:14px;margin:0 0 18px}
+footer{padding:40px 5vw;color:#6d675c;font-size:12px;letter-spacing:2px;border-top:1px solid var(--line);margin-top:30px}
+#lb{position:fixed;inset:0;background:#0B0A08f5;display:none;z-index:20;padding:60px 16px 70px;overflow:auto}
+#lb.on{display:block}
+#lb img{width:min(100%,1500px);height:auto;margin:0 auto;display:block;background:#FFF;border-radius:4px}
+#lb .x,#lb .p,#lb .n{position:absolute;background:#1c1913;border:1px solid #3a3428;color:var(--ink);border-radius:6px;cursor:pointer;font-size:20px;line-height:1;padding:10px 14px}
+#lb .x{top:14px;right:16px;position:fixed}#lb .p{left:16px;top:50%;position:fixed}#lb .n{right:16px;top:50%;position:fixed}
+#lb .cap{position:fixed;left:0;right:0;bottom:18px;text-align:center;color:var(--mut);font-size:13px;padding:0 16px}
+@media(max-width:640px){.grid,.grid.wide{grid-template-columns:1fr}nav{gap:6px;padding:10px 4vw}nav a{font-size:11px;padding:5px 10px}section{padding:26px 4vw}}
 </style></head><body>
-<header><h1>Папка дизайн-проекта</h1><p>${esc((brief.object && brief.object.address) || 'Объект')} · ${totalArea} м² · стиль «${style.title}» · тариф «${tier.title}» · выпуск ${DATE}</p></header>
-<nav>${rnd.length ? '<a href="#rendery">Визуализации</a>' : ''}<a href="#docs">Документы</a><a href="#obmer">01 Обмер</a><a href="#plany">02 Планы</a><a href="#poly">03 Полы</a><a href="#razv">04 Развертки</a><a href="#pot">05 Потолки</a><a href="#elektro">09 Электрика</a></nav>
+<div class="top"><a class="logo" href="../../index.html">LINE<i>A</i></a><a class="btn" href="../../brief.html">Хочу такую папку →</a></div>
+<header><h1>Папка дизайн-проекта</h1><p>${esc((brief.object && brief.object.address) || 'Объект')} · ${totalArea} м² · стиль «${style.title}» · тариф «${tier.title}» · выпуск ${DATE}<br>${totalSheets} листов рабочих чертежей${rnd.length ? ` · ${rnd.length} визуализаций` : ''} · спецификация с артикулами · смета</p></header>
+<nav>${rnd.length ? '<a href="#rendery">Визуализации</a>' : ''}<a href="#docs">Документы</a>${grp('01-kvartira').length ? '<a href="#kvartira">01 Квартира</a>' : ''}<a href="#obmer">01 Обмер</a><a href="#plany">02 Планы</a><a href="#poly">03 Полы</a><a href="#razv">04 Развертки</a><a href="#pot">05 Потолки</a><a href="#elektro">09 Электрика</a></nav>
 ${secR}
-<section id="docs"><h2>Документы</h2><div class="docs">
+<section id="docs"><h2>Документы</h2><p class="sub">Открываются в браузере, смета доступна и в CSV для Excel</p><div class="docs">
 <a href="00-pasport/pasport.html"><b>00 · Паспорт проекта</b>пояснительная записка, состав, палитра</a>
 <a href="00-pasport/vedomost.html"><b>00 · Ведомость чертежей</b>все листы АИ-N с масштабами</a>
 <a href="06-koncept/koncept.html"><b>06 · Концепция</b>образ и визуализации помещений</a>
-<a href="07-materialy/specification.html"><b>07 · Материалы</b>спецификация с артикулами + ведомость</a>
+<a href="07-materialy/specification.html"><b>07 · Материалы</b>спецификация с артикулами</a>
 <a href="08-smeta/smeta.html"><b>08 · Смета</b>работы, материалы, мебель, свет</a>
 <a href="08-smeta/smeta.csv"><b>08 · Смета CSV</b>для Excel / Google Sheets</a>
 </div></section>
-${grp('01-kvartira').length ? sec('01 · Сводные планы квартиры (весь план на листе)', grp('01-kvartira')).replace('<section>', '<section id="kvartira">') : ''}
-${sec('01 · Обмер, демонтаж, монтаж ГКЛ-конструкций', grp('01-obmer')).replace('<section>', '<section id="obmer">')}
-${sec('02 · Планы мебели: с размерами и презентационные', grp('02-plany')).replace('<section>', '<section id="plany">')}
-${sec('03 · Полы: раскладка, направление, стыки, отметки', grp('03-poly')).replace('<section>', '<section id="poly">')}
-${sec('04 · Развертки стен (цепочки размеров, ниши, плитка)', grp('04-razvertki')).replace('<section>', '<section id="razv">')}
-${sec('05 · Потолки 2–3 уровня, свет и узлы', grp('05-potolki')).replace('<section>', '<section id="pot">')}
-${sec('09 · Электрика: розетки и выключатели', grp('09-elektrika')).replace('<section>', '<section id="elektro">')}
+${sec('kvartira', '01 · Сводные планы квартиры', 'Весь план на листе: обмер, демонтаж, монтаж, мебель, экспликация дверей, розетки, потолки, освещение, выключатели, полы, отделка, тёплые полы', grp('01-kvartira'))}
+${sec('obmer', '01 · Обмер, демонтаж, монтаж ГКЛ', 'Цепочки привязок, высоты проёмов, зоны демонтажа отделки, фальш-стены под ниши', grp('01-obmer'))}
+${sec('plany', '02 · Планы помещений', 'Парные листы: рабочий с размерными цепочками и презентационный, с фото реализации', grp('02-plany'))}
+${sec('poly', '03 · Полы', 'Раскладка покрытий, направление укладки, стыки на оси полотна, отметки уровней', grp('03-poly'))}
+${sec('razv', '04 · Развертки стен', 'Каждая стена: ниши с LED, раскладка плитки, цепочки размеров, отделка и фото', grp('04-razvertki'))}
+${sec('pot', '05 · Потолки', 'Уровни, скрытая LED-подсветка, ниши штор, узел короба М 1:20', grp('05-potolki'))}
+${sec('elektro', '09 · Электрика', 'Розетки и выключатели с привязками L/H, слаботочные и влагозащищённые позиции', grp('09-elektrika'))}
+<div class="cta"><h3>Такая же папка по вашей квартире — за 48 часов</h3><p>Заполните бриф: размеры, фото, пожелания по стилю. Остальное сделает конвейер студии под контролем дизайнера.</p><a class="btn" href="../../brief.html">Заполнить бриф — 7 минут</a> <a class="btn ghost" href="../../index.html">О студии</a></div>
 <footer>LINEA · СТУДИЯ ДИЗАЙНА ИНТЕРЬЕРА — комплект сформирован автоматически конвейером студии</footer>
+<div id="lb"><button class="x" aria-label="Закрыть">✕</button><button class="p" aria-label="Предыдущий">‹</button><button class="n" aria-label="Следующий">›</button><img alt=""><div class="cap"></div></div>
+<script>
+(function(){var sh=[].slice.call(document.querySelectorAll('.sh')),lb=document.getElementById('lb'),im=lb.querySelector('img'),cp=lb.querySelector('.cap'),i=0;
+function open(k){i=(k+sh.length)%sh.length;var b=sh[i];im.src=b.dataset.src;im.alt=b.dataset.cap;cp.textContent=b.dataset.cap+' — '+(i+1)+' из '+sh.length;lb.classList.add('on');}
+sh.forEach(function(b,k){b.addEventListener('click',function(){open(k);});});
+lb.querySelector('.x').onclick=function(){lb.classList.remove('on');};
+lb.querySelector('.p').onclick=function(e){e.stopPropagation();open(i-1);};
+lb.querySelector('.n').onclick=function(e){e.stopPropagation();open(i+1);};
+lb.addEventListener('click',function(e){if(e.target===lb||e.target===im)lb.classList.remove('on');});
+document.addEventListener('keydown',function(e){if(!lb.classList.contains('on'))return;if(e.key==='Escape')lb.classList.remove('on');if(e.key==='ArrowLeft')open(i-1);if(e.key==='ArrowRight')open(i+1);});
+})();
+</script>
 </body></html>`;
 }
 
