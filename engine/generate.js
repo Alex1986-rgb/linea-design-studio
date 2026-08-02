@@ -745,7 +745,7 @@ function drawNode(sheet) {
   b += `<line x1="${X + q(900)}" y1="${Y + q(60)}" x2="${X + q(900)}" y2="${y1}" stroke="#57514A" stroke-width="1.4"/><text x="${X + q(910)}" y="${(Y + q(60) + y1) / 2}" font-size="9" fill="#7A756D">подвес</text>`;
   b += `<rect x="${X + q(600)}" y="${y1}" width="${q(800)}" height="${q(27)}" fill="#D8D2C4" stroke="#57514A" stroke-width="0.8"/>`;
   b += `<rect x="${X + q(600)}" y="${y1 + q(27)}" width="${q(800)}" height="${q(12.5)}" fill="#F6F3EC" stroke="#2E2A26" stroke-width="1"/>`;
-  b += `<text x="${X + q(1020)}" y="${y1 + q(27) + 16}" font-size="10" fill="#57514A">1 ур.: ПП 60×27 + ГКЛ 12,5 · ${mark(2700)}</text>`;
+  b += `<text x="${X + q(1020)}" y="${y1 + q(27) + 16}" font-size="10" fill="#57514A">1 ур.: ПП 60×27 + ГКЛ 12,5 · ${mark(BASE_H)}</text>`;
   // короб 2 уровня с LED-полкой
   const y2 = y1 + q(120); // низ короба
   b += `<rect x="${X}" y="${y1}" width="${q(450)}" height="${y2 - y1 + q(12.5)}" fill="#E9E4D8" stroke="#2E2A26" stroke-width="1"/>`;
@@ -755,7 +755,7 @@ function drawNode(sheet) {
   b += `<rect x="${X + q(450)}" y="${shelfY}" width="${q(100)}" height="${q(12.5)}" fill="#E9E4D8" stroke="#2E2A26" stroke-width="1"/>`;
   b += `<rect x="${X + q(535)}" y="${shelfY - q(50)}" width="${q(15)}" height="${q(50)}" fill="#E9E4D8" stroke="#2E2A26" stroke-width="1"/>`;
   b += `<circle cx="${X + q(480)}" cy="${shelfY - 4}" r="3" fill="#C29A5B"/><rect x="${X + q(560) - 4}" y="${shelfY - 19}" width="292" height="15" fill="#FAF9F6E6"/><text x="${X + q(560)}" y="${shelfY - 8}" font-size="10" fill="#8A6A3B">LED 3000K в профиле, полка 100 · бортик 50 · зазор 70</text>`;
-  b += `<text x="${X + 8}" y="${y2 + q(12.5) + 18}" font-size="10" fill="#57514A">низ короба ${mark(2580)}</text>`;
+  b += `<text x="${X + 8}" y="${y2 + q(12.5) + 18}" font-size="10" fill="#57514A">низ короба ${mark(BASE_H - 120)}</text>`;
   // размерные
   b += dimV(X - 26, Y + q(60), y1, '180');
   b += dimV(X - 26, y1, y2 + q(12.5), '~130');
@@ -848,6 +848,36 @@ const CAD = {
   callout: '#1C1C1C'     // выноски
 };
 
+// Автокомпоновка квартиры, если координаты комнат не заданы в брифе (бриф с сайта):
+// раскладываем помещения рядами по ширине «полосы», жилые сверху, служебные снизу —
+// это даёт связную планировку для сводных листов вместо их пропуска.
+function autoLayout() {
+  const INT = 150; // перегородка между помещениями, мм
+  const order = [...rooms].sort((a, b) => {
+    const rank = t => ({ 'living-kitchen': 0, living: 1, kitchen: 2, bedroom: 3, kids: 4, cabinet: 5, hallway: 6, bathroom: 7, wc: 8 }[t] ?? 9);
+    return rank(a.type) - rank(b.type) || b.area - a.area;
+  });
+  const target = Math.max(...order.map(r => r.w), Math.round(Math.sqrt(order.reduce((s, r) => s + r.w * r.l, 0)) * 1.25));
+  let x = 0, y = 0, rowH = 0;
+  for (const r of order) {
+    if (x > 0 && x + r.w > target) { x = 0; y += rowH + INT; rowH = 0; }
+    r.pos = { x, y };
+    x += r.w + INT;
+    rowH = Math.max(rowH, r.l);
+  }
+  // окна — только во внешних стенах получившейся раскладки
+  const maxY = Math.max(...rooms.map(o => o.pos.y + o.l));
+  for (const r of rooms) {
+    for (const o of r.windows) {
+      const top = r.pos.y === 0, bottom = Math.abs(r.pos.y + r.l - maxY) < 1;
+      o.wall = top ? 'A' : bottom ? 'C' : (r.pos.x === 0 ? 'D' : 'B');
+      const wallLen = (o.wall === 'A' || o.wall === 'C') ? r.w : r.l;
+      o.off = Math.max(200, Math.min(o.off, wallLen - o.w - 200));
+    }
+  }
+  return true;
+}
+if (rooms.length && rooms.some(r => !r.pos)) autoLayout();
 const flatRooms = rooms.filter(r => r.pos);
 const FLAT = flatRooms.length === rooms.length && rooms.length > 0 ? {
   x0: Math.min(...flatRooms.map(r => r.pos.x)), y0: Math.min(...flatRooms.map(r => r.pos.y)),
@@ -855,6 +885,7 @@ const FLAT = flatRooms.length === rooms.length && rooms.length > 0 ? {
 } : null;
 if (FLAT) { FLAT.W = FLAT.x1 - FLAT.x0; FLAT.H = FLAT.y1 - FLAT.y0; }
 const EXT = 200; // наружная стена, мм
+const BASE_H = rooms.length ? rooms[0].h : 2700; // высота потолка объекта, мм
 
 function flatLayer(MX, MY, opts) {
   opts = opts || {};
@@ -970,7 +1001,7 @@ function drawFlatObmer(sheetNo) {
     s += dimH(base.fx(FLAT.x0) - px(EXT), base.fx(FLAT.x1) + px(EXT), yb + 24, String(FLAT.W + 2 * EXT));
     for (let i = 0; i + 1 < ys.length; i++) if (ys[i + 1] - ys[i] > 60) s += dimV(xr, base.fy(ys[i]), base.fy(ys[i + 1]), String(ys[i + 1] - ys[i]));
     s += dimV(xr + 24, base.fy(FLAT.y0) - px(EXT), base.fy(FLAT.y1) + px(EXT), String(FLAT.H + 2 * EXT));
-    s += `<g><rect x="${base.fx(FLAT.x0) - px(EXT)}" y="${base.fy(FLAT.y0) - px(EXT) - 26}" width="430" height="18" fill="#FFF6F4" stroke="#B0483A" stroke-width="1.1"/><text x="${base.fx(FLAT.x0) - px(EXT) + 8}" y="${base.fy(FLAT.y0) - px(EXT) - 13}" font-size="10" font-weight="600" fill="#B0483A">H=2700 · наружные стены 200, перегородки 150 · без учёта отделочного слоя</text></g>`;
+    s += `<g><rect x="${base.fx(FLAT.x0) - px(EXT)}" y="${base.fy(FLAT.y0) - px(EXT) - 26}" width="430" height="18" fill="#FFF6F4" stroke="#B0483A" stroke-width="1.1"/><text x="${base.fx(FLAT.x0) - px(EXT) + 8}" y="${base.fy(FLAT.y0) - px(EXT) - 13}" font-size="10" font-weight="600" fill="#B0483A">H=${BASE_H} · наружные стены 200, перегородки 150 · без учёта отделочного слоя</text></g>`;
     return s;
   }, (x, y, w) => {
     let s = `<rect x="${x}" y="${y}" width="${w}" height="${flatRooms.length * 20 + 58}" fill="none" stroke="#8A8478" stroke-width="0.8"/>`;
@@ -1116,9 +1147,9 @@ function drawFlatCeiling(sheetNo) {
     }
     return s + flatRoomMarks(base.fx, base.fy, false);
   }, (x, y, w) => flatLegendBox(x, y, w, 'Условные обозначения', [
-    { sym: (sx, sy) => `<rect x="${sx}" y="${sy - 8}" width="16" height="11" fill="#E9E4D8" stroke="#57514A" stroke-width="0.7"/>`, text: 'короб 2-го уровня, отметка +2,580' },
-    { sym: (sx, sy) => `<rect x="${sx}" y="${sy - 8}" width="16" height="11" fill="#F6F3EC" stroke="#57514A" stroke-width="0.7"/>`, text: 'базовый потолок, отметка +2,700' },
-    { sym: (sx, sy) => `<rect x="${sx}" y="${sy - 8}" width="16" height="11" fill="#E0D9C9" stroke="#57514A" stroke-width="0.7"/>`, text: '«парящий» остров 3-го уровня, +2,460' },
+    { sym: (sx, sy) => `<rect x="${sx}" y="${sy - 8}" width="16" height="11" fill="#E9E4D8" stroke="#57514A" stroke-width="0.7"/>`, text: `короб 2-го уровня, отметка ${mark(BASE_H - 120)}` },
+    { sym: (sx, sy) => `<rect x="${sx}" y="${sy - 8}" width="16" height="11" fill="#F6F3EC" stroke="#57514A" stroke-width="0.7"/>`, text: `базовый потолок, отметка ${mark(BASE_H)}` },
+    { sym: (sx, sy) => `<rect x="${sx}" y="${sy - 8}" width="16" height="11" fill="#E0D9C9" stroke="#57514A" stroke-width="0.7"/>`, text: `«парящий» остров 3-го уровня, ${mark(BASE_H - 240)}` },
     { sym: (sx, sy) => `<line x1="${sx}" y1="${sy - 3}" x2="${sx + 16}" y2="${sy - 3}" stroke="#C29A5B" stroke-width="1.2" stroke-dasharray="5 3"/>`, text: `LED 3000K скрытая — ${rooms.reduce((a, r) => a + ceilingLevelsFor(r).ledLen, 0).toFixed(1)} м.п. всего` },
     { sym: (sx, sy) => `<circle cx="${sx + 8}" cy="${sy - 3}" r="4" fill="#FFF" stroke="#57514A" stroke-width="0.9"/>`, text: `точечные светильники — ${rooms.reduce((a, r) => a + lightsFor(r).spots.length, 0)} шт. всего` },
   ]), ['Отметки и перепады уровней — на планах потолков помещений (раздел 05).', 'Узел короба с LED-полкой — лист «Узел А», М 1:20.', 'Закладные под все подвесные светильники и карнизы предусмотреть до зашивки ГКЛ.']);
@@ -1165,7 +1196,7 @@ function flatStamp(x, y, w, title, sheetNo) {
 <text x="${x + c1 + c2 + 20}" y="${y + 23}">РП</text>
 <text x="${x + c1 + c2 + c3 + 20}" y="${y + 23}">${sheetNo}</text>
 <text x="${x + c1 + c2 + c3 + c4 + 18}" y="${y + 23}">${TOTAL_SHEETS}</text>
-<text x="${x + c1 + c2 + 8}" y="${y + 49}" font-size="9" fill="#7A756D">М 1:100</text></g>`;
+<text x="${x + c1 + c2 + 8}" y="${y + 49}" font-size="9" fill="#7A756D">М 1:50</text></g>`;
   return s;
 }
 
@@ -1572,7 +1603,7 @@ function coverHTML(counts) {
 <h2>Состав комплекта · ${counts.flat + counts.obmer + counts.demo + counts.mont + counts.plans + counts.poly + counts.elev + counts.ceil + counts.electro + 1} листов + документы</h2>
 <table><tbody>
 <tr><td class="k">00 Паспорт</td><td>паспорт, пояснительная записка, <a href="vedomost.html">ведомость чертежей</a></td></tr>
-${counts.flat ? `<tr><td class="k">01 Сводные планы квартиры</td><td>канон рабочего альбома, весь план квартиры на листе (М 1:100): обмер, демонтаж, монтаж, мебель, экспликация дверей, розетки, потолки, освещение, выключатели, схема включения, полы, отделка стен, тёплые полы — ${counts.flat} лист.</td></tr>` : ''}
+${counts.flat ? `<tr><td class="k">01 Сводные планы квартиры</td><td>канон рабочего альбома, весь план квартиры на листе: обмер, демонтаж, монтаж, мебель, экспликация дверей, розетки, потолки, освещение, выключатели, схема включения, полы, отделка стен, тёплые полы — ${counts.flat} лист.</td></tr>` : ''}
 <tr><td class="k">01 Обмер и подготовка</td><td>обмерные планы с цепочками привязок (${counts.obmer}), демонтаж отделки и дверных блоков (${counts.demo}), монтаж ГКЛ-конструкций под ниши (${counts.mont}) — ${counts.obmer + counts.demo + counts.mont} лист.</td></tr>
 <tr><td class="k">02 Планы</td><td>парные планы мебели: с размерами / презентационные — ${counts.plans} лист.</td></tr>
 <tr><td class="k">03 Полы</td><td>планы полов: раскладка, направление укладки, стыки, отметки — ${counts.poly} лист.</td></tr>
@@ -1664,7 +1695,7 @@ ${secR}
 <a href="08-smeta/smeta.html"><b>08 · Смета</b>работы, материалы, мебель, свет</a>
 <a href="08-smeta/smeta.csv"><b>08 · Смета CSV</b>для Excel / Google Sheets</a>
 </div></section>
-${grp('01-kvartira').length ? sec('01 · Сводные планы квартиры (весь план на листе, М 1:100)', grp('01-kvartira')).replace('<section>', '<section id="kvartira">') : ''}
+${grp('01-kvartira').length ? sec('01 · Сводные планы квартиры (весь план на листе)', grp('01-kvartira')).replace('<section>', '<section id="kvartira">') : ''}
 ${sec('01 · Обмер, демонтаж, монтаж ГКЛ-конструкций', grp('01-obmer')).replace('<section>', '<section id="obmer">')}
 ${sec('02 · Планы мебели: с размерами и презентационные', grp('02-plany')).replace('<section>', '<section id="plany">')}
 ${sec('03 · Полы: раскладка, направление, стыки, отметки', grp('03-poly')).replace('<section>', '<section id="poly">')}
@@ -1711,7 +1742,7 @@ if (FLAT) { // канон альбома: 13 поквартирных листо
     ['12-otdelka-sten', drawFlatWallFinish, 'План отделки стен'],
     ['13-teplye-poly', drawFlatHeatFloor, 'План тёплых полов'],
   ];
-  for (const [key, fn, title] of flatSheets) { sheetOut(`01-kvartira/kvartira-${key}.svg`, n => fn(n), title, '1:100'); counts.flat++; }
+  for (const [key, fn, title] of flatSheets) { sheetOut(`01-kvartira/kvartira-${key}.svg`, n => fn(n), title, '1:50'); counts.flat++; }
 }
 for (const r of rooms) { sheetOut(`01-obmer/obmer-${SL(r)}.svg`, n => drawObmer(r, n), `Обмерный план. ${r.name}`); counts.obmer++; }
 for (const r of rooms) { sheetOut(`01-obmer/demo-${SL(r)}.svg`, n => drawDemolition(r, n), `Демонтаж. ${r.name}`); counts.demo++; }
