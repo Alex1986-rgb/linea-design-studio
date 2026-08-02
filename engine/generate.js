@@ -52,10 +52,12 @@ let TOTAL_SHEETS = 0; // проставляется до генерации ли
 function stamp(x, y, w, drawingName, sheet, scale) {
   const sc = scale || '1:50';
   const list = TOTAL_SHEETS ? `Лист ${sheet} из ${TOTAL_SHEETS}` : `Лист ${sheet}`;
+  const line2 = `${list} · М ${sc} · стадия РП · ${DATE}`;
+  w = Math.max(w, Math.max(drawingName.length * 6.2 + 60, line2.length * 5.2 + 24)); // не даём тексту вылезти
   if (w < 700) { // узкий лист — компактный штамп в две строки
     return `<g><rect x="${x}" y="${y}" width="${w}" height="44" fill="none" stroke="#2E2A26" stroke-width="1"/>
 <text x="${x + 10}" y="${y + 17}" font-size="10.5" font-weight="700" fill="#2E2A26" letter-spacing="1">LINEA · ${esc(drawingName)}</text>
-<text x="${x + 10}" y="${y + 33}" font-size="9.5" fill="#7A756D">${list} · М ${sc} · стадия РП · ${DATE}</text></g>`;
+<text x="${x + 10}" y="${y + 33}" font-size="9.5" fill="#7A756D">${line2}</text></g>`;
   }
   return `<g><rect x="${x}" y="${y}" width="${w}" height="44" fill="none" stroke="#2E2A26" stroke-width="1"/>
 <text x="${x + 10}" y="${y + 17}" font-size="11" font-weight="700" fill="#2E2A26" letter-spacing="2">LINEA · СТУДИЯ ДИЗАЙНА ИНТЕРЬЕРА</text>
@@ -73,9 +75,41 @@ function dimV(x, y1, y2, label) {
 }
 
 // ---------- расстановка мебели (правила по типу помещения) ----------
+// зоны открывания дверей — мебель туда ставить нельзя
+function doorZones(room) {
+  return room.doors.map(o => {
+    const d = o.w;
+    if (o.wall === 'A') return { x: o.off, y: 0, w: d, h: d };
+    if (o.wall === 'C') return { x: o.off, y: room.l - d, w: d, h: d };
+    if (o.wall === 'D') return { x: 0, y: o.off, w: d, h: d };
+    return { x: room.w - d, y: o.off, w: d, h: d };
+  });
+}
+const hits = (a, b) => a.x < b.x + b.w && a.x + a.w > b.x && a.y < b.y + b.h && a.y + a.h > b.y;
+
 function furnitureFor(room) {
   const W = room.w, L = room.l, it = [];
-  const add = (key, name, x, y, w, h) => { if (x >= 0 && y >= 0 && x + w <= W && y + h <= L) it.push({ key, name, x, y, w, h }); };
+  const zones = doorZones(room);
+  // мебель не пересекает другую мебель и не блокирует открывание дверей
+  const add = (key, name, x, y, w, h) => {
+    if (!(x >= 0 && y >= 0 && x + w <= W && y + h <= L)) return false;
+    const r = { x, y, w, h };
+    if (key !== 'rug' && (it.some(f => f.key !== 'rug' && hits(r, f)) || zones.some(z => hits(r, z)))) return false;
+    it.push({ key, name, x, y, w, h });
+    return true;
+  };
+  // поставить предмет в первую подходящую позицию из списка вариантов
+  const addAny = (key, name, w, h, cands) => { for (const c of cands) if (add(key, name, c[0], c[1], w, h)) return true; return false; };
+  // подбор вдоль стен с шагом 100 мм, если явные варианты заняты
+  const addScan = (key, name, w, h, cands) => {
+    if (addAny(key, name, w, h, cands || [])) return true;
+    for (const [dx, dy, sw, sh] of [[0, 0, w, h], [0, 0, h, w]]) {
+      for (let y = 80; y + sh <= L - 80; y += 100)
+        for (let x = 80; x + sw <= W - 80; x += 100)
+          if (add(key, name, x, y, sw, sh)) return true;
+    }
+    return false;
+  };
   switch (room.type) {
     case 'bedroom': {
       const hwall = bedWallFor(room), bw = 1600, bl = 2000;
@@ -122,10 +156,12 @@ function furnitureFor(room) {
       add('wardrobe', 'Шкаф', W - 700, L - 1600, 600, 1500);
       add('rug', 'Ковёр игровой', 1300, 1000, Math.min(1500, W - 1700), Math.min(1200, L - 1200));
       break; }
-    case 'bathroom': {
-      add('bath', 'Ванна 1700×700', 80, 80, Math.min(1700, W - 160), 700);
-      add('wc', 'Унитаз', 1100, L - 730, 400, 650);
-      add('sink', 'Раковина', W - 630, L - 530, 550, 450);
+    case 'bathroom': { // ванна у стены без двери, унитаз и раковина — по свободным углам
+      const bw2 = Math.min(1700, W - 160), bl2 = 700;
+      addAny('bath', `Ванна ${bw2}×${bl2}`, bw2, bl2, [[80, 80], [80, L - bl2 - 80], [(W - bw2) / 2, 80]]) ||
+        addAny('bath', 'Душевая 900×900', 900, 900, [[W - 980, 80], [80, 80], [W - 980, L - 980], [80, L - 980]]);
+      addScan('wc', 'Унитаз', 400, 650, [[80, L - 730], [W - 480, L - 730], [80, 80], [W - 480, 80]]);
+      addScan('sink', 'Раковина', 600, 450, [[W - 680, L - 530], [80, L - 530], [W - 680, 80], [(W - 600) / 2, L - 530]]);
       break; }
     case 'hallway': {
       add('hallwardrobe', 'Шкаф-гардероб', 100, 80, Math.min(1800, W - 1200), 600);
@@ -211,10 +247,11 @@ function drawObmer(room, sheet) {
   }
   // штамп комнаты: S подчёркнуто, P, h
   const per = (2 * (room.w + room.l) / 1000).toFixed(1);
-  b += `<rect x="${M + w - 190}" y="${M + l - 54}" width="184" height="50" fill="#FCFBF8E6"/>`;
-  b += `<g text-anchor="end"><text x="${M + w - 10}" y="${M + l - 40}" font-size="14" font-weight="700" fill="#2E2A26">${nn(room.idx)} ${esc(room.name)}</text>
-<text x="${M + w - 10}" y="${M + l - 24}" font-size="12" fill="#2E2A26" text-decoration="underline">S=${room.area} м²</text>
-<text x="${M + w - 10}" y="${M + l - 10}" font-size="10" fill="#57514A">P=${per} м · h=${room.h}</text></g>`;
+  const lbx = M + w / 2, lby = M + l / 2;
+  b += `<rect x="${lbx - 95}" y="${lby - 26}" width="190" height="52" fill="#FFFFFFE8"/>`;
+  b += `<g text-anchor="middle"><text x="${lbx}" y="${lby - 10}" font-size="14" font-weight="700" fill="#2E2A26">${nn(room.idx)} ${esc(room.name)}</text>
+<text x="${lbx}" y="${lby + 6}" font-size="12" fill="#2E2A26" text-decoration="underline">S=${room.area} м²</text>
+<text x="${lbx}" y="${lby + 20}" font-size="10" fill="#57514A">P=${per} м · h=${room.h}</text></g>`;
   b += `<text x="${M - WT}" y="${M - 104}" font-size="16" font-weight="700" fill="#2E2A26">Обмерный план · ${esc(room.name)}</text>`;
   b += `<text x="${M - WT}" y="${M - 86}" font-size="11" fill="#7A756D">Все размеры в мм · Вп — высота подоконника, Н.пр — высота проёма · перегородки 150</text>`;
   // ключевые высоты — красной рамкой (по образцу проф. альбомов)
@@ -277,7 +314,12 @@ function drawFloor(room, sheet) {
     b += `<text x="${ax0}" y="${ay0}" font-size="9" fill="#57514A" text-anchor="middle">${atxt}</text>`;
   }
   // отметка уровня
-  b += `<g><circle cx="${M + 28}" cy="${M + l - 58}" r="16" fill="#FFF" stroke="#2E2A26" stroke-width="1.2"/><text x="${M + 28}" y="${M + l - 54}" font-size="8" text-anchor="middle" fill="#2E2A26">${wet ? '−0.020' : '0.000'}</text></g>`;
+  { // отметка уровня — в первый угол без двери
+    const zs = doorZones(room);
+    const corners = [[28, l - 58], [w - 28, l - 58], [28, 58], [w - 28, 58]];
+    const free = corners.find(c => !zs.some(z => hits({ x: (c[0] - 20) / S, y: (c[1] - 20) / S, w: 40 / S, h: 40 / S }, z))) || corners[0];
+    b += `<g><circle cx="${M + free[0]}" cy="${M + free[1]}" r="16" fill="#FFF" stroke="#2E2A26" stroke-width="1.2"/><text x="${M + free[0]}" y="${M + free[1] + 4}" font-size="8" text-anchor="middle" fill="#2E2A26">${wet ? '−0.020' : '0.000'}</text></g>`;
+  }
   const g = roomGeometry(room);
   b += `<text x="${M - WT}" y="${M - 46}" font-size="16" font-weight="700" fill="#2E2A26">План пола · ${esc(room.name)}</text>`;
   b += `<text x="${M - WT}" y="${M - 28}" font-size="11" fill="#7A756D">${code} · ${wet ? 'керамогранит 600×600, раскладка от центра' : esc(style.floor.name)} · S=${g.floor} м² · плинтус ${wet ? '—' : g.plinth + ' м.п.'}</text>`;
@@ -391,7 +433,21 @@ function bedWallFor(room) {
 // ---------- ниши в стенах (авто по типу помещения) ----------
 function nichesFor(room) {
   const W = room.w, L = room.l, n = [];
-  const add = (wall, off, w, h, sill, label) => { const len = (wall === 'A' || wall === 'C') ? W : L; if (off >= 0 && off + w <= len) n.push({ wall, off, w, h, sill, depth: 100, label }); };
+  // ниша не должна попадать на проём (дверь/окно) той же стены
+  const clash = (wall, off, w) => [...room.doors, ...room.windows].some(o => o.wall === wall && off < o.off + o.w + 50 && off + w > o.off - 50);
+  const add = (wall, off, w, h, sill, label) => {
+    const len = (wall === 'A' || wall === 'C') ? W : L;
+    if (!(off >= 0 && off + w <= len)) return;
+    let pos = off;
+    if (clash(wall, pos, w)) { // пробуем сдвинуть вдоль стены в свободный участок
+      const alts = [];
+      for (const o of [...room.doors, ...room.windows].filter(o => o.wall === wall)) { alts.push(o.off + o.w + 100, o.off - w - 100); }
+      alts.push(100, len - w - 100);
+      pos = alts.find(a => a >= 0 && a + w <= len && !clash(wall, a, w));
+      if (pos == null) return; // свободного участка нет — ниша не размещается
+    }
+    n.push({ wall, off: pos, w, h, sill, depth: 100, label });
+  };
   switch (room.type) {
     case 'living-kitchen': add('D', (L - Math.min(2400, L - 800)) / 2, Math.min(2400, L - 800), 1500, 400, 'ТВ-ниша ГКЛ, LED 3000K по контуру'); break;
     case 'living': add('A', (W - Math.min(2400, W - 800)) / 2, Math.min(2400, W - 800), 1500, 400, 'ТВ-ниша ГКЛ, LED 3000K по контуру'); break;
@@ -403,7 +459,15 @@ function nichesFor(room) {
       add(hwall, ho, hw, 600, 1400, 'Ниша над изголовьем, LED 3000K');
       break; }
     case 'kids': add('B', (L - 1200) / 2, 1200, 1000, 900, 'Ниша-стеллаж с подсветкой'); break;
-    case 'bathroom': add('A', 300, Math.min(1200, W - 600), 350, 1100, 'Ниша-полка над ванной, LED, полка стекло'); break;
+    case 'bathroom': { // ниша-полка над фактическим положением ванны
+      const bath = furnitureFor(room).find(f => f.key === 'bath');
+      if (bath) {
+        const horiz = bath.w >= bath.h;
+        const wall = horiz ? (bath.y < L / 2 ? 'A' : 'C') : (bath.x < W / 2 ? 'D' : 'B');
+        const off = horiz ? bath.x + 150 : bath.y + 150;
+        add(wall, off, Math.min(1200, (horiz ? bath.w : bath.h) - 300), 350, 1100, 'Ниша-полка над ванной, LED, полка стекло');
+      }
+      break; }
     case 'hallway': add('A', W - 1000, 900, 1350, 450, 'Ниша банкетки с подсветкой'); break;
   }
   return n;
@@ -624,7 +688,8 @@ function drawElevation(room, wallKey, sheet) {
     for (let gy = 300; gy < room.h; gy += 300) b += `<line x1="${M}" y1="${M + h - px(gy)}" x2="${M + w}" y2="${M + h - px(gy)}" stroke="#00000018" stroke-width="0.8"/>`;
   }
   b += `<rect x="${M}" y="${M + h - px(80)}" width="${w}" height="${px(80)}" fill="#CFC9BD" stroke="#57514A" stroke-width="0.8"/>`; // плинтус
-  // ниши на этой стене
+  // ниши на этой стене (подписи выводим последними, поверх проёмов)
+  let nicheLabels = '';
   for (const nch of nichesFor(room).filter(o => o.wall === wallKey)) {
     const x = M + px(nch.off), y = M + h - px(nch.sill + nch.h);
     b += `<rect x="${x}" y="${y}" width="${px(nch.w)}" height="${px(nch.h)}" fill="#00000014" stroke="#57514A" stroke-width="1.2"/>`;
@@ -633,9 +698,9 @@ function drawElevation(room, wallKey, sheet) {
     const lw = Math.min(Math.max(l1.length, nch.label.length) * 5.2 + 10, w - 12);
     // центр подписи прижимаем внутрь стены, чтобы подложка не стирала контуры
     const tcx = Math.min(Math.max(x + px(nch.w) / 2, M + 6 + lw / 2), M + w - 6 - lw / 2);
-    b += `<rect x="${tcx - lw / 2}" y="${y + px(nch.h) / 2 - 10}" width="${lw}" height="26" fill="#FFFFFFCC"/>`;
-    b += `<text x="${tcx}" y="${y + px(nch.h) / 2}" font-size="9" fill="#57514A" text-anchor="middle">${l1}</text>`;
-    b += `<text x="${tcx}" y="${y + px(nch.h) / 2 + 12}" font-size="8" fill="#8A6A3B" text-anchor="middle">${esc(nch.label)}</text>`;
+    nicheLabels += `<rect x="${tcx - lw / 2}" y="${y + px(nch.h) / 2 - 10}" width="${lw}" height="26" fill="#FFFFFFE8"/>`;
+    nicheLabels += `<text x="${tcx}" y="${y + px(nch.h) / 2}" font-size="9" fill="#57514A" text-anchor="middle">${l1}</text>`;
+    nicheLabels += `<text x="${tcx}" y="${y + px(nch.h) / 2 + 12}" font-size="8" fill="#8A6A3B" text-anchor="middle">${esc(nch.label)}</text>`;
     b += `<text x="${x + px(nch.w) / 2}" y="${y - 5}" font-size="9" fill="#7A756D" text-anchor="middle">низ +${(nch.sill / 1000).toFixed(3).replace('.', ',')}</text>`;
   }
   for (const o of room.windows.filter(o => o.wall === wallKey)) {
@@ -650,6 +715,7 @@ function drawElevation(room, wallKey, sheet) {
     b += `<circle cx="${x + px(o.w) - 8}" cy="${y + px(o.h) / 2}" r="2.5" fill="#57514A"/>`;
     b += `<text x="${x + px(o.w) / 2}" y="${y - 6}" font-size="10" fill="#7A756D" text-anchor="middle">дверь ${o.w}×${o.h}</text>`;
   }
+  b += nicheLabels;
   // горизонтальная цепочка: проёмы + ниши этой стены
   const hOpen = [...wallOpenings(room, wallKey), ...nichesFor(room).filter(n => n.wall === wallKey && n.depth >= 80).map(n => ({ off: n.off, w: n.w }))].sort((a, b) => a.off - b.off)
     .filter((o, i, arr) => i === 0 || o.off >= arr[i - 1].off + arr[i - 1].w - 10); // без перекрытий
@@ -688,6 +754,7 @@ function drawCeiling(room, sheet) {
   const L = lightsFor(room);
   const lv = ceilingLevelsFor(room);
   const drop = 120; // перепад уровня, мм
+  let islandLabel = '';
   let b = roomWalls(M, WT, room, sheet, '#E9E4D8'); // уровень 2 (короб по периметру) — базовая заливка
   // уровень 1 (базовый потолок) — внутренняя зона
   const bx = M + px(lv.box), by = M + px(lv.box), bw = w - 2 * px(lv.box), bl = l - 2 * px(lv.box);
@@ -695,14 +762,16 @@ function drawCeiling(room, sheet) {
   // LED по внутреннему контуру короба
   b += `<rect x="${bx + 4}" y="${by + 4}" width="${bw - 8}" height="${bl - 8}" fill="none" stroke="#C29A5B" stroke-width="1.4" stroke-dasharray="6 4"/>`;
   // отметки уровней (по углам, чтобы не пересекались с нишами и треком)
-  b += `<g font-size="10" fill="#2E2A26"><rect x="${M + 8}" y="${M + l - 24}" width="130" height="16" fill="#FFFFFFCC" stroke="#57514A" stroke-width="0.6"/><text x="${M + 14}" y="${M + l - 12}">2 ур. ${mark(room.h - drop)} · короб ${lv.box}</text>`;
+  const nicheBottom = room.windows.some(o => o.wall === 'C'), nicheTop = room.windows.some(o => o.wall === 'A');
+  const p2y = nicheBottom && !nicheTop ? M + 30 : M + l - 24; // подальше от полосы ниши штор
+  b += `<g font-size="10" fill="#2E2A26"><rect x="${M + 8}" y="${p2y}" width="130" height="16" fill="#FFFFFFE6" stroke="#57514A" stroke-width="0.6"/><text x="${M + 14}" y="${p2y + 12}">2 ур. ${mark(room.h - drop)} · короб ${lv.box}</text>`;
   b += `<rect x="${bx + bw - 96}" y="${by + bl - 26}" width="88" height="16" fill="#FFFFFFCC" stroke="#57514A" stroke-width="0.6"/><text x="${bx + bw - 90}" y="${by + bl - 14}">1 ур. ${mark(room.h)}</text></g>`;
   // уровень 3 — «парящий остров»
   if (lv.three && lv.island) {
     const i = lv.island;
     b += `<rect x="${M + px(i.x)}" y="${M + px(i.y)}" width="${px(i.w)}" height="${px(i.l)}" fill="#E0D9C9" stroke="#57514A" stroke-width="1.2"/>`;
     b += `<rect x="${M + px(i.x) + 4}" y="${M + px(i.y) + 4}" width="${px(i.w) - 8}" height="${px(i.l) - 8}" fill="none" stroke="#C29A5B" stroke-width="1.4" stroke-dasharray="6 4"/>`;
-    b += `<g font-size="10" fill="#2E2A26"><rect x="${M + px(i.x)}" y="${M + px(i.y) - 24}" width="188" height="16" fill="#FFFFFFCC" stroke="#57514A" stroke-width="0.6"/><text x="${M + px(i.x) + 6}" y="${M + px(i.y) - 12}">3 ур. ${mark(room.h - 2 * drop)} · парящий, щель 10</text></g>`;
+    islandLabel = `<g font-size="10" fill="#2E2A26"><rect x="${M + px(i.x)}" y="${M + px(i.y) - 24}" width="188" height="16" fill="#FFFFFFE6" stroke="#57514A" stroke-width="0.6"/><text x="${M + px(i.x) + 6}" y="${M + px(i.y) - 12}">3 ур. ${mark(room.h - 2 * drop)} · парящий, щель 10</text></g>`;
   }
   // ниша штор вдоль стены с окном: длина = проём + 2×250, ширина 200
   for (const o of room.windows) {
@@ -717,6 +786,7 @@ function drawCeiling(room, sheet) {
   for (const s of L.spots) b += `<g stroke="#57514A" stroke-width="1"><circle cx="${M + px(s.x)}" cy="${M + px(s.y)}" r="5" fill="#FFF"/><line x1="${M + px(s.x) - 7}" y1="${M + px(s.y)}" x2="${M + px(s.x) + 7}" y2="${M + px(s.y)}"/><line x1="${M + px(s.x)}" y1="${M + px(s.y) - 7}" x2="${M + px(s.x)}" y2="${M + px(s.y) + 7}"/></g>`;
   if (L.pendant) b += `<circle cx="${M + w / 2}" cy="${M + l / 2}" r="11" fill="none" stroke="#2E2A26" stroke-width="1.6"/><circle cx="${M + w / 2}" cy="${M + l / 2}" r="3" fill="#2E2A26"/>`;
   if (L.track) b += `<line x1="${M + px(400)}" y1="${M + px(850)}" x2="${M + w - px(400)}" y2="${M + px(850)}" stroke="#2E2A26" stroke-width="3"/><text x="${M + px(420)}" y="${M + px(850) - 8}" font-size="9" fill="#57514A">трек-система</text>`;
+  b += islandLabel;
   b += `<text x="${M - WT}" y="${M - 46}" font-size="16" font-weight="700" fill="#2E2A26">План потолка · ${esc(room.name)}</text>`;
   b += `<text x="${M - WT}" y="${M - 28}" font-size="11" fill="#7A756D">${esc(style.ceiling)} · ${lv.three ? '3 уровня' : '2 уровня'} · перепад ${drop} мм · LED ${lv.ledLen} м.п. · отметки от чистого пола</text>`;
   b += dimH(M, M + w, M + l + 34, String(room.w));
@@ -794,7 +864,10 @@ function drawElectro(room, sheet) {
     let lyy = p.type === 'switch' ? y - 16 : y + 6;
     const x1 = right ? lx - tw : lx - 3, x2 = x1 + tw;
     let guard = 0;
-    while (placed.some(r => x1 < r.x2 + 4 && x2 > r.x1 - 4 && Math.abs(lyy - r.y) < 13) && guard++ < 8) lyy += 15;
+    const symbols = pts.map(q => ({ x1: M + px(q.x) - 9, x2: M + px(q.x) + 9, y: M + px(q.y) }));
+    const bad = () => placed.some(r => x1 < r.x2 + 4 && x2 > r.x1 - 4 && Math.abs(lyy - r.y) < 13)
+      || symbols.some(r => x1 < r.x2 && x2 > r.x1 && Math.abs(lyy - r.y) < 9);
+    while (bad() && guard++ < 10) lyy += 15;
     placed.push({ x1, x2, y: lyy });
     labs += `<rect x="${x1}" y="${lyy - 9}" width="${tw}" height="13" fill="#FBFAF6D9"/>`;
     labs += `<text x="${lx}" y="${lyy}" font-size="8.5" fill="#57514A" text-anchor="${right ? 'end' : 'start'}">${esc(txt)}</text>`;
