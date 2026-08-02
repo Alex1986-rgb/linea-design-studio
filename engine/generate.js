@@ -78,7 +78,7 @@ function dimV(x, y1, y2, label) {
 // зоны открывания дверей — мебель туда ставить нельзя
 function doorZones(room) {
   return room.doors.map(o => {
-    const d = o.w;
+    const d = o.w + 100;
     if (o.wall === 'A') return { x: o.off, y: 0, w: d, h: d };
     if (o.wall === 'C') return { x: o.off, y: room.l - d, w: d, h: d };
     if (o.wall === 'D') return { x: 0, y: o.off, w: d, h: d };
@@ -237,13 +237,14 @@ function drawObmer(room, sheet) {
   b += chainDimV(M + w + 30, M, room.l, wallOpenings(room, 'B'), true);
   b += chainDimV(M - 40, M, room.l, wallOpenings(room, 'D'), false);
   // высотные отметки проёмов
+  let openLabels = '';
   for (const o of room.windows) {
     const pos = o.wall === 'A' ? { x: M + px(o.off + o.w / 2), y: M + 16 } : o.wall === 'C' ? { x: M + px(o.off + o.w / 2), y: M + l - 8 } : { x: o.wall === 'D' ? M + 14 : M + w - 130, y: M + px(o.off + o.w / 2) };
-    b += `<text x="${pos.x}" y="${pos.y}" font-size="9" fill="#3B5C77">Вп=${o.sill} · Н.пр=${o.h}</text>`;
+    openLabels += `<rect x="${pos.x - 2}" y="${pos.y - 9}" width="112" height="12" fill="#FFFFFFCC"/><text x="${pos.x}" y="${pos.y}" font-size="9" fill="#3B5C77">Вп=${o.sill} · Н.пр=${o.h}</text>`;
   }
   for (const o of room.doors) {
     const pos = o.wall === 'C' ? { x: M + px(o.off + o.w / 2), y: M + l - 8 } : o.wall === 'A' ? { x: M + px(o.off + o.w / 2), y: M + 16 } : { x: o.wall === 'D' ? M + 14 : M + w - 90, y: M + px(o.off + o.w / 2) };
-    b += `<text x="${pos.x}" y="${pos.y}" font-size="9" fill="#3B5C77">h=${o.h}</text>`;
+    openLabels += `<rect x="${pos.x - 2}" y="${pos.y - 9}" width="46" height="12" fill="#FFFFFFCC"/><text x="${pos.x}" y="${pos.y}" font-size="9" fill="#3B5C77">h=${o.h}</text>`;
   }
   // штамп комнаты: S подчёркнуто, P, h
   const per = (2 * (room.w + room.l) / 1000).toFixed(1);
@@ -252,12 +253,13 @@ function drawObmer(room, sheet) {
   b += `<g text-anchor="middle"><text x="${lbx}" y="${lby - 10}" font-size="14" font-weight="700" fill="#2E2A26">${nn(room.idx)} ${esc(room.name)}</text>
 <text x="${lbx}" y="${lby + 6}" font-size="12" fill="#2E2A26" text-decoration="underline">S=${room.area} м²</text>
 <text x="${lbx}" y="${lby + 20}" font-size="10" fill="#57514A">P=${per} м · h=${room.h}</text></g>`;
+  b += openLabels;
   b += `<text x="${M - WT}" y="${M - 104}" font-size="16" font-weight="700" fill="#2E2A26">Обмерный план · ${esc(room.name)}</text>`;
   b += `<text x="${M - WT}" y="${M - 86}" font-size="11" fill="#7A756D">Все размеры в мм · Вп — высота подоконника, Н.пр — высота проёма · перегородки 150</text>`;
   // ключевые высоты — красной рамкой (по образцу проф. альбомов)
   const kw = room.windows[0], kd = room.doors[0];
   const keyH = `H=${room.h}${kw ? ` · Вп=${kw.sill} · Н.пр=${kw.h}` : ''}${kd ? ` · дверь ${kd.w}/${kd.h}` : ''} · без учёта отделочного слоя`;
-  b += `<g><rect x="${M - WT}" y="${M - 72}" width="${keyH.length * 6.7 + 20}" height="20" fill="#FFF6F4" stroke="#B0483A" stroke-width="1.2"/><text x="${M - WT + 10}" y="${M - 58}" font-size="10.5" font-weight="600" fill="#B0483A">${keyH}</text></g>`;
+  b += `<g><rect x="${M - WT}" y="${M - 86}" width="${keyH.length * 6.7 + 20}" height="20" fill="#FFF6F4" stroke="#B0483A" stroke-width="1.2"/><text x="${M - WT + 10}" y="${M - 72}" font-size="10.5" font-weight="600" fill="#B0483A">${keyH}</text></g>`;
   const ny = M + l + 66;
   b += `<text x="${M - WT}" y="${ny}" font-size="9" fill="#8A8478">Примечания: размеры проверять по месту · допуск обмера ±5 мм в зонах встроенной мебели и санузлов · за 0,000 принят уровень чистового пола</text>`;
   b += stamp(M - WT, ny + 14, w + 2 * WT + 60, `Обмерный план. ${room.name}`, sheet);
@@ -322,7 +324,7 @@ function drawFloor(room, sheet) {
   }
   const g = roomGeometry(room);
   b += `<text x="${M - WT}" y="${M - 46}" font-size="16" font-weight="700" fill="#2E2A26">План пола · ${esc(room.name)}</text>`;
-  b += `<text x="${M - WT}" y="${M - 28}" font-size="11" fill="#7A756D">${code} · ${wet ? 'керамогранит 600×600, раскладка от центра' : esc(style.floor.name)} · S=${g.floor} м² · плинтус ${wet ? '—' : g.plinth + ' м.п.'}</text>`;
+  b += `<text x="${M - WT}" y="${M - 28}" font-size="11" fill="#7A756D">${code} · ${wet ? 'керамогранит 600×600, раскладка от центра' : esc(style.floor.name)} · S=${g.floor} м²${wet ? '' : ' · плинтус ' + g.plinth + ' м.п.'}</text>`;
   b += dimH(M, M + w, M + l + 30, room.w + '');
   b += dimV(M + w + 30, M, M + l, room.l + '');
   const ly = M + l + 58;
@@ -410,8 +412,10 @@ function drawMontage(room, sheet) {
   // расшифровка позиций М1..N
   groups.forEach((g0, i) => {
     const short = g0.labels.map(s => s.split(',')[0]).join(' + ');
-    b += `<text x="${M - WT}" y="${legH}" font-size="10" fill="#3B5C77"><tspan font-weight="700">М${i + 1}</tspan> — фальш-стена ГКЛ, вылет ${g0.depth + 65} мм, стена ${g0.wall} · ${esc(short)}</text>`;
-    legH += 14;
+    const lines = wrapText(`— фальш-стена ГКЛ, вылет ${g0.depth + 65} мм, стена ${g0.wall} · ${short}`, 74);
+    b += `<text x="${M - WT}" y="${legH}" font-size="10" font-weight="700" fill="#3B5C77">М${i + 1}</text>`;
+    lines.forEach((ln, j) => { b += `<text x="${M - WT + 26}" y="${legH + j * 12}" font-size="10" fill="#3B5C77">${esc(ln)}</text>`; });
+    legH += 4 + lines.length * 12;
   });
   b += `<g font-size="10" fill="#2E2A26">
 <rect x="${M - WT}" y="${legH - 8}" width="14" height="14" fill="#3B5C7722" stroke="#3B5C77" stroke-width="1.4" stroke-dasharray="4 3"/><text x="${M - WT + 20}" y="${legH + 4}">новые ГКЛ-конструкции · внутри — закладные из фанеры 18 мм под навесное</text>
@@ -434,7 +438,22 @@ function bedWallFor(room) {
 function nichesFor(room) {
   const W = room.w, L = room.l, n = [];
   // ниша не должна попадать на проём (дверь/окно) той же стены
-  const clash = (wall, off, w) => [...room.doors, ...room.windows].some(o => o.wall === wall && off < o.off + o.w + 50 && off + w > o.off - 50);
+  const clash = (wall, off, w) => {
+    if ([...room.doors, ...room.windows].some(o => o.wall === wall && off < o.off + o.w + 50 && off + w > o.off - 50)) return true;
+    if (!room.pos) return false;
+    // глобальная проверка: проёмы всех помещений, выходящие на ту же линию стены
+    const horiz = wall === 'A' || wall === 'C';
+    const line = horiz ? room.pos.y + (wall === 'A' ? 0 : room.l) : room.pos.x + (wall === 'D' ? 0 : room.w);
+    const a0 = (horiz ? room.pos.x : room.pos.y) + off, a1 = a0 + w;
+    return rooms.some(r2 => r2 !== room && r2.pos && r2.doors.concat(r2.windows).some(o => {
+      const h2 = o.wall === 'A' || o.wall === 'C';
+      if (h2 !== horiz) return false;
+      const l2 = h2 ? r2.pos.y + (o.wall === 'A' ? 0 : r2.l) : r2.pos.x + (o.wall === 'D' ? 0 : r2.w);
+      if (Math.abs(l2 - line) > 200) return false;
+      const b0 = (h2 ? r2.pos.x : r2.pos.y) + o.off, b1 = b0 + o.w;
+      return a0 < b1 + 50 && a1 > b0 - 50;
+    }));
+  };
   const add = (wall, off, w, h, sill, label) => {
     const len = (wall === 'A' || wall === 'C') ? W : L;
     if (!(off >= 0 && off + w <= len)) return;
@@ -762,16 +781,31 @@ function drawCeiling(room, sheet) {
   // LED по внутреннему контуру короба
   b += `<rect x="${bx + 4}" y="${by + 4}" width="${bw - 8}" height="${bl - 8}" fill="none" stroke="#C29A5B" stroke-width="1.4" stroke-dasharray="6 4"/>`;
   // отметки уровней (по углам, чтобы не пересекались с нишами и треком)
+  // плашку уровня ставим в позицию без светильников и вне полосы ниши штор
+  const spotsPx = L.spots.map(sp => ({ x: M + px(sp.x), y: M + px(sp.y) }));
   const nicheBottom = room.windows.some(o => o.wall === 'C'), nicheTop = room.windows.some(o => o.wall === 'A');
-  const p2y = nicheBottom && !nicheTop ? M + 30 : M + l - 24; // подальше от полосы ниши штор
-  b += `<g font-size="10" fill="#2E2A26"><rect x="${M + 8}" y="${p2y}" width="130" height="16" fill="#FFFFFFE6" stroke="#57514A" stroke-width="0.6"/><text x="${M + 14}" y="${p2y + 12}">2 ур. ${mark(room.h - drop)} · короб ${lv.box}</text>`;
-  b += `<rect x="${bx + bw - 96}" y="${by + bl - 26}" width="88" height="16" fill="#FFFFFFCC" stroke="#57514A" stroke-width="0.6"/><text x="${bx + bw - 90}" y="${by + bl - 14}">1 ур. ${mark(room.h)}</text></g>`;
+  const cands2 = [];
+  for (let yy = M + 26; yy <= M + l - 26; yy += 10) for (const xx of [M + 8, M + w - 146]) cands2.push([xx, yy]);
+  cands2.sort((a, b) => Math.abs(a[1] - (M + l - 30)) - Math.abs(b[1] - (M + l - 30))); // ближе к низу плана
+  const cands2f = cands2.filter(c => !(nicheTop && c[1] < M + 44) && !(nicheBottom && c[1] > M + l - 44));
+  const busy = [{ x: bx + bw - 96, y: by + bl - 26, w: 88, h: 16 }]; // плашка «1 ур.»
+  const freeRect = (list, bw2, bh) => list.find(c =>
+    !spotsPx.some(sp => sp.x > c[0] - 8 && sp.x < c[0] + bw2 + 8 && sp.y > c[1] - 8 && sp.y < c[1] + bh + 8)
+    && !busy.some(r => c[0] < r.x + r.w + 6 && c[0] + bw2 > r.x - 6 && c[1] < r.y + r.h + 6 && c[1] + bh > r.y - 6)
+  ) || list[0] || [M + 8, M + l - 24];
+  const t2 = `2 ур. ${mark(room.h - drop)} · короб ${lv.box}`, w2 = t2.length * 5.6 + 14;
+  const p2 = freeRect(cands2f.length ? cands2f : cands2, w2, 16);
+  let levelPlates = `<g font-size="10" fill="#2E2A26"><rect x="${p2[0]}" y="${p2[1]}" width="${w2}" height="16" fill="#FFFFFFE6" stroke="#57514A" stroke-width="0.6"/><text x="${p2[0] + 6}" y="${p2[1] + 12}">${t2}</text>`;
+  levelPlates += `<rect x="${bx + bw - 96}" y="${by + bl - 26}" width="88" height="16" fill="#FFFFFFE6" stroke="#57514A" stroke-width="0.6"/><text x="${bx + bw - 90}" y="${by + bl - 14}">1 ур. ${mark(room.h)}</text></g>`;
   // уровень 3 — «парящий остров»
   if (lv.three && lv.island) {
     const i = lv.island;
     b += `<rect x="${M + px(i.x)}" y="${M + px(i.y)}" width="${px(i.w)}" height="${px(i.l)}" fill="#E0D9C9" stroke="#57514A" stroke-width="1.2"/>`;
     b += `<rect x="${M + px(i.x) + 4}" y="${M + px(i.y) + 4}" width="${px(i.w) - 8}" height="${px(i.l) - 8}" fill="none" stroke="#C29A5B" stroke-width="1.4" stroke-dasharray="6 4"/>`;
-    islandLabel = `<g font-size="10" fill="#2E2A26"><rect x="${M + px(i.x)}" y="${M + px(i.y) - 24}" width="188" height="16" fill="#FFFFFFE6" stroke="#57514A" stroke-width="0.6"/><text x="${M + px(i.x) + 6}" y="${M + px(i.y) - 12}">3 ур. ${mark(room.h - 2 * drop)} · парящий, щель 10</text></g>`;
+    const ic = [[M + px(i.x), M + px(i.y) - 24], [M + px(i.x), M + px(i.y + i.l) + 8], [M + px(i.x) + px(i.w) - 188, M + px(i.y) - 24], [M + px(i.x) + 8, M + px(i.y) + 8]];
+    const ip = freeRect(ic, 188, 16);
+    busy.push({ x: ip[0], y: ip[1], w: 188, h: 16 });
+    islandLabel = `<g font-size="10" fill="#2E2A26"><rect x="${ip[0]}" y="${ip[1]}" width="188" height="16" fill="#FFFFFFE6" stroke="#57514A" stroke-width="0.6"/><text x="${ip[0] + 6}" y="${ip[1] + 12}">3 ур. ${mark(room.h - 2 * drop)} · парящий, щель 10</text></g>`;
   }
   // ниша штор вдоль стены с окном: длина = проём + 2×250, ширина 200
   for (const o of room.windows) {
@@ -786,7 +820,7 @@ function drawCeiling(room, sheet) {
   for (const s of L.spots) b += `<g stroke="#57514A" stroke-width="1"><circle cx="${M + px(s.x)}" cy="${M + px(s.y)}" r="5" fill="#FFF"/><line x1="${M + px(s.x) - 7}" y1="${M + px(s.y)}" x2="${M + px(s.x) + 7}" y2="${M + px(s.y)}"/><line x1="${M + px(s.x)}" y1="${M + px(s.y) - 7}" x2="${M + px(s.x)}" y2="${M + px(s.y) + 7}"/></g>`;
   if (L.pendant) b += `<circle cx="${M + w / 2}" cy="${M + l / 2}" r="11" fill="none" stroke="#2E2A26" stroke-width="1.6"/><circle cx="${M + w / 2}" cy="${M + l / 2}" r="3" fill="#2E2A26"/>`;
   if (L.track) b += `<line x1="${M + px(400)}" y1="${M + px(850)}" x2="${M + w - px(400)}" y2="${M + px(850)}" stroke="#2E2A26" stroke-width="3"/><text x="${M + px(420)}" y="${M + px(850) - 8}" font-size="9" fill="#57514A">трек-система</text>`;
-  b += islandLabel;
+  b += levelPlates + islandLabel;
   b += `<text x="${M - WT}" y="${M - 46}" font-size="16" font-weight="700" fill="#2E2A26">План потолка · ${esc(room.name)}</text>`;
   b += `<text x="${M - WT}" y="${M - 28}" font-size="11" fill="#7A756D">${esc(style.ceiling)} · ${lv.three ? '3 уровня' : '2 уровня'} · перепад ${drop} мм · LED ${lv.ledLen} м.п. · отметки от чистого пола</text>`;
   b += dimH(M, M + w, M + l + 34, String(room.w));
@@ -850,13 +884,17 @@ function drawElectro(room, sheet) {
   // точки: сначала все символы, затем все подписи (чтобы символы не перечёркивали текст)
   let s = 0, sw = 0, labs = '';
   const placed = []; // занятые прямоугольники подписей — расталкиваем коллизии по вертикали
+  const seenLab = [];
   for (const p of pts) {
     const x = M + px(p.x), y = M + px(p.y);
+    const dup = seenLab.some(q => q.t === p.label && Math.abs(q.x - x) < 160 && Math.abs(q.y - y) < 60);
+    seenLab.push({ t: p.label, x, y });
     if (p.type === 'socket') { s++;
       b += `<g stroke="#2E2A26" stroke-width="1.4"><circle cx="${x}" cy="${y}" r="6" fill="#FFF"/><line x1="${x - 6}" y1="${y - 8}" x2="${x + 6}" y2="${y - 8}"/><line x1="${x - 4}" y1="${y - 11}" x2="${x + 4}" y2="${y - 11}"/></g>`;
     } else { sw++;
       b += `<g stroke="#2E2A26" stroke-width="1.4"><circle cx="${x}" cy="${y}" r="5" fill="#2E2A26"/><line x1="${x}" y1="${y - 5}" x2="${x + 7}" y2="${y - 12}"/><line x1="${x + 7}" y1="${y - 12}" x2="${x + 12}" y2="${y - 9}"/></g>`;
     }
+    if (dup) continue; // повтор той же подписи рядом — не дублируем
     const txt = `${p.label} · h${p.h}`;
     const tw = txt.length * 4.8 + 6;
     const right = p.x > room.w / 2;
@@ -1052,12 +1090,17 @@ function flatSheet(sheetNo, title, sub, layerFn, rightFn, notes, lopts) {
 }
 
 function flatLegendBox(x, y, w, title, rows) { // rows: [{sym, text}] sym = функция (sx, sy) => svg
-  let s = `<rect x="${x}" y="${y}" width="${w}" height="${rows.length * 20 + 34}" fill="none" stroke="#8A8478" stroke-width="0.8"/>`;
+  // высота строки зависит от числа переносов — многострочные записи не наезжают на соседние
+  const wrapped = rows.map(r0 => wrapText(r0.text, 40));
+  const heights = wrapped.map(ls => Math.max(20, ls.length * 11 + 8));
+  const total = heights.reduce((a, b) => a + b, 0);
+  let s = `<rect x="${x}" y="${y}" width="${w}" height="${total + 30}" fill="none" stroke="#8A8478" stroke-width="0.8"/>`;
   s += `<text x="${x + 10}" y="${y + 18}" font-size="10.5" font-weight="700" fill="#2E2A26">${esc(title)}</text>`;
+  let sy = y + 34;
   rows.forEach((r0, i) => {
-    const sy = y + 34 + i * 20;
     s += r0.sym(x + 12, sy);
-    wrapText(r0.text, 40).forEach((line, j) => { s += `<text x="${x + 38}" y="${sy + 3 + j * 10}" font-size="8.7" fill="#57514A">${esc(line)}</text>`; });
+    wrapped[i].forEach((line, j) => { s += `<text x="${x + 38}" y="${sy + 3 + j * 11}" font-size="8.7" fill="#57514A">${esc(line)}</text>`; });
+    sy += heights[i];
   });
   return s;
 }
