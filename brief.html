@@ -106,13 +106,14 @@
 
   <!-- РЕЗУЛЬТАТ -->
   <div class="panel result" data-step="5" hidden>
-    <div class="okmsg"><b>Бриф собран!</b> Скачайте файл и отправьте нам — или просто нажмите «Отправить»: конвейер стартует, папка проекта придёт на ваш e-mail в течение 48 часов.</div>
-    <div class="cta-row" style="margin-bottom:24px">
-      <button class="btn" id="dl" type="button">Скачать brief.json</button>
-      <a class="btn ghost" id="mailto" href="#">Отправить на e-mail студии</a>
+    <div class="okmsg"><b>Бриф собран.</b> Нажмите «Отправить бриф в студию» — мы подтвердим получение и вернёмся с папкой проекта в течение 48 часов. Чертежи и фото приложите ответным письмом.</div>
+    <div class="summary" id="summary"></div>
+    <div class="cta-row" style="margin-bottom:14px">
+      <a class="btn" id="mailto" href="#">Отправить бриф в студию</a>
       <a class="btn ghost" href="portfolio/demo/index.html">Пример готовой папки →</a>
     </div>
-    <pre id="json"></pre>
+    <p class="hint">Нужна копия для себя? <button class="linklike" id="dl" type="button">скачать бриф файлом</button></p>
+    <details class="raw"><summary>Показать технические данные брифа</summary><pre id="json"></pre></details>
   </div>
 
   <div class="wiz-nav">

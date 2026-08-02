@@ -122,3 +122,15 @@ textarea{min-height:90px;resize:vertical}
 footer.site{border-top:1px solid var(--line);padding:56px 0;color:var(--dim);font-size:13px}
 footer.site .cols{display:flex;justify-content:space-between;gap:30px;flex-wrap:wrap}
 footer.site .logo{font-size:18px}
+
+/* финальный экран брифа: человеческая сводка вместо JSON */
+.summary{border:1px solid var(--line);border-radius:8px;margin:0 0 22px;overflow:hidden}
+.srow{display:flex;gap:16px;padding:11px 16px;border-bottom:1px solid var(--line);font-size:14px}
+.srow:last-child{border-bottom:0}
+.srow span{color:var(--mut);min-width:150px}
+.srow b{font-weight:500}
+.hint{color:var(--mut);font-size:13px;margin:0 0 18px}
+.linklike{background:none;border:0;color:var(--gold);border-bottom:1px dashed currentColor;cursor:pointer;font:inherit;padding:0}
+details.raw{margin-top:8px}
+details.raw summary{color:var(--mut);font-size:12px;cursor:pointer}
+details.raw pre{max-height:320px;overflow:auto;font-size:11px;color:var(--mut);background:#15130F;padding:14px;border-radius:6px}

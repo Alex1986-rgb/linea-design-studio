@@ -115,6 +115,20 @@
     const brief = collect();
     const json = JSON.stringify(brief, null, 2);
     $('json').textContent = json;
+    // человеческая сводка вместо технического дампа
+    const o = brief.object, rooms = brief.rooms || [];
+    const styleName = brief.style && brief.style.byStudio ? 'на усмотрение студии' : (brief.style && brief.style.title) || (brief.style && brief.style.name) || '—';
+    const tier = { econom: 'Эконом', business: 'Бизнес', premium: 'Премиум' }[brief.budget] || brief.budget || '—';
+    const row = (k, v) => v ? '<div class="srow"><span>' + k + '</span><b>' + String(v).replace(/</g, '&lt;') + '</b></div>' : '';
+    const sum = $('summary');
+    if (sum) sum.innerHTML =
+      row('Объект', (o.type || 'квартира') + (o.address ? ', ' + o.address : '') + (o.area ? ' · ' + o.area + ' м²' : ''))
+      + row('Высота потолка', o.ceilingHeight ? o.ceilingHeight + ' м' : '')
+      + row('Помещений', rooms.length + ': ' + rooms.map(r => r.name + ' ' + r.width + '×' + r.length + ' м').join(', '))
+      + row('Стиль', styleName)
+      + row('Тариф', tier)
+      + row('Файлы', (brief.files || []).length ? (brief.files || []).map(f => f.name).join(', ') : 'приложите ответным письмом')
+      + row('Контакты', [brief.client.name, brief.client.phone, brief.client.email].filter(Boolean).join(' · '));
     $('dl').onclick = () => {
       const a = document.createElement('a');
       a.href = URL.createObjectURL(new Blob([json], { type: 'application/json' }));
