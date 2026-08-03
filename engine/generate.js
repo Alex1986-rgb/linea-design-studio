@@ -27,7 +27,7 @@ const rooms = (brief.rooms || []).map((r, i) => {
     .map(o => ({ wall: o.wall, off: Math.round(o.offset * 1000), w: Math.round(o.width * 1000), h: Math.round(o.height * 1000), sill: Math.round((o.sill == null ? 0.9 : o.sill) * 1000) }));
   const doors = (r.doors || [{ wall: 'C', offset: 0.2, width: 0.9 }])
     .map(o => ({ wall: o.wall, off: Math.round(o.offset * 1000), w: Math.round(o.width * 1000), h: Math.round((o.height || 2.05) * 1000) }));
-  return { idx: i + 1, id: r.id || 'room' + (i + 1), name: r.name, type: r.type || 'living', w, l, h, windows, doors, area: +(r.width * r.length).toFixed(1),
+  return { idx: i + 1, id: r.id || 'room' + (i + 1), name: r.name, type: r.type || 'living', w, l, h, windows, doors, area: +(r.width * r.length).toFixed(1), level: r.level || 1, stairs: r.stairs || null,
     pos: r.pos ? { x: Math.round(r.pos.x * 1000), y: Math.round(r.pos.y * 1000) } : null };
 });
 const totalArea = (brief.object && brief.object.area) || +rooms.reduce((s, r) => s + r.area, 0).toFixed(1);
@@ -148,6 +148,15 @@ function furnitureFor(room) {
     }
     return false;
   };
+  if (room.stairs) { // марш вдоль длинной стены; ширина марша 1000, длина по числу ступеней
+    const run = Math.min(3600, (room.w >= room.l ? room.w : room.l) - 400), march = 1000;
+    const it0 = room.w >= room.l
+      ? { x: (room.w - run) / 2, y: 100, w: run, h: march }
+      : { x: 100, y: (room.l - run) / 2, w: march, h: run };
+    if (add('stairs', room.stairs === 'down' ? 'Лестница вниз' : 'Лестница вверх', it0.x, it0.y, it0.w, it0.h)) {
+      const last = it[it.length - 1]; last.dir = room.stairs; last.steps = Math.max(10, Math.round(run / 260));
+    }
+  }
   switch (room.type) {
     case 'bedroom': {
       const hwall = bedWallFor(room), bw = 1600, bl = 2000;
@@ -703,6 +712,22 @@ function furnSymbol(X, Y, W2, H2, f) {
   if (f.key === 'table' || f.key === 'dining' || f.key === 'desk') s += `<ellipse cx="${X + W2 / 2}" cy="${Y + H2 / 2}" rx="${W2 * 0.26}" ry="${H2 * 0.26}" fill="none" stroke="${CAD.furn}" stroke-width="0.8"/>`;
   if (f.key === 'wardrobe' || f.key === 'kitchen') s += W2 >= H2 ? g(`M ${X} ${Y + H2 / 2} H ${X + W2}`) : g(`M ${X + W2 / 2} ${Y} V ${Y + H2}`);
   if (f.key === 'bath') s += `<rect x="${X + 4}" y="${Y + 4}" width="${W2 - 8}" height="${H2 - 8}" fill="none" stroke="${CAD.furn}" stroke-width="0.8" rx="6"/><circle cx="${X + W2 / 2}" cy="${Y + 9}" r="2" fill="${CAD.furn}"/>`;
+  if (f.key === 'stairs') { // марш: ступени + стрелка направления подъёма
+    const horiz = W2 >= H2, n = f.steps || 14;
+    for (let i = 1; i < n; i++) s += horiz
+      ? `<line x1="${X + (W2 / n) * i}" y1="${Y}" x2="${X + (W2 / n) * i}" y2="${Y + H2}" stroke="${CAD.furn}" stroke-width="0.7"/>`
+      : `<line x1="${X}" y1="${Y + (H2 / n) * i}" x2="${X + W2}" y2="${Y + (H2 / n) * i}" stroke="${CAD.furn}" stroke-width="0.7"/>`;
+    const up = f.dir !== 'down';
+    if (horiz) {
+      const y0 = Y + H2 / 2, x1 = up ? X + 8 : X + W2 - 8, x2 = up ? X + W2 - 8 : X + 8, sg = up ? -1 : 1;
+      s += `<line x1="${x1}" y1="${y0}" x2="${x2}" y2="${y0}" stroke="${CAD.doorArc}" stroke-width="1.2"/><path d="M ${x2} ${y0} l ${sg * 8} -4 M ${x2} ${y0} l ${sg * 8} 4" fill="none" stroke="${CAD.doorArc}" stroke-width="1.2"/>`;
+      s += `<circle cx="${x1}" cy="${y0}" r="2.4" fill="${CAD.doorArc}"/>`;
+    } else {
+      const x0 = X + W2 / 2, y1 = up ? Y + H2 - 8 : Y + 8, y2 = up ? Y + 8 : Y + H2 - 8, sg = up ? 1 : -1;
+      s += `<line x1="${x0}" y1="${y1}" x2="${x0}" y2="${y2}" stroke="${CAD.doorArc}" stroke-width="1.2"/><path d="M ${x0} ${y2} l -4 ${sg * 8} M ${x0} ${y2} l 4 ${sg * 8}" fill="none" stroke="${CAD.doorArc}" stroke-width="1.2"/>`;
+      s += `<circle cx="${x0}" cy="${y1}" r="2.4" fill="${CAD.doorArc}"/>`;
+    }
+  }
   if (f.key === 'wc' || f.key === 'sink') s += `<ellipse cx="${X + W2 / 2}" cy="${Y + H2 / 2}" rx="${W2 * 0.34}" ry="${H2 * 0.34}" fill="none" stroke="${CAD.furn}" stroke-width="0.8"/>`;
   return s;
 }
@@ -1037,9 +1062,9 @@ const CAD = {
 // Автокомпоновка квартиры, если координаты комнат не заданы в брифе (бриф с сайта):
 // раскладываем помещения рядами по ширине «полосы», жилые сверху, служебные снизу —
 // это даёт связную планировку для сводных листов вместо их пропуска.
-function autoLayout() {
+function autoLayout(level) {
   const INT = 150; // перегородка между помещениями, мм
-  const order = [...rooms].sort((a, b) => {
+  const order = rooms.filter(r => (r.level || 1) === (level || 1)).sort((a, b) => {
     const rank = t => ({ 'living-kitchen': 0, living: 1, kitchen: 2, bedroom: 3, kids: 4, cabinet: 5, hallway: 6, bathroom: 7, wc: 8 }[t] ?? 9);
     return rank(a.type) - rank(b.type) || b.area - a.area;
   });
@@ -1052,8 +1077,8 @@ function autoLayout() {
     rowH = Math.max(rowH, r.l);
   }
   // окна — только во внешних стенах получившейся раскладки
-  const maxY = Math.max(...rooms.map(o => o.pos.y + o.l));
-  for (const r of rooms) {
+  const maxY = Math.max(...order.map(o => o.pos.y + o.l));
+  for (const r of order) {
     for (const o of r.windows) {
       const top = r.pos.y === 0, bottom = Math.abs(r.pos.y + r.l - maxY) < 1;
       o.wall = top ? 'A' : bottom ? 'C' : (r.pos.x === 0 ? 'D' : 'B');
@@ -1063,13 +1088,22 @@ function autoLayout() {
   }
   return true;
 }
-if (rooms.length && rooms.some(r => !r.pos)) autoLayout();
-const flatRooms = rooms.filter(r => r.pos);
-const FLAT = flatRooms.length === rooms.length && rooms.length > 0 ? {
-  x0: Math.min(...flatRooms.map(r => r.pos.x)), y0: Math.min(...flatRooms.map(r => r.pos.y)),
-  x1: Math.max(...flatRooms.map(r => r.pos.x + r.w)), y1: Math.max(...flatRooms.map(r => r.pos.y + r.l))
-} : null;
-if (FLAT) { FLAT.W = FLAT.x1 - FLAT.x0; FLAT.H = FLAT.y1 - FLAT.y0; }
+if (rooms.length && rooms.some(r => !r.pos)) for (const lv of [...new Set(rooms.map(r => r.level || 1))]) autoLayout(lv);
+const allFlatRooms = rooms.filter(r => r.pos);
+const LEVELS = [...new Set(rooms.map(r => r.level || 1))].sort((a, b) => a - b);
+const LEVEL_NAME = lv => LEVELS.length > 1 ? ` · ${lv} этаж` : '';
+let flatRooms = [];   // помещения текущего этажа
+let FLAT = null;      // габарит текущего этажа
+function setLevel(lv) {
+  flatRooms = allFlatRooms.filter(r => (r.level || 1) === lv);
+  if (!flatRooms.length || allFlatRooms.length !== rooms.length) { FLAT = null; return; }
+  FLAT = {
+    x0: Math.min(...flatRooms.map(r => r.pos.x)), y0: Math.min(...flatRooms.map(r => r.pos.y)),
+    x1: Math.max(...flatRooms.map(r => r.pos.x + r.w)), y1: Math.max(...flatRooms.map(r => r.pos.y + r.l)), level: lv
+  };
+  FLAT.W = FLAT.x1 - FLAT.x0; FLAT.H = FLAT.y1 - FLAT.y0;
+}
+setLevel(LEVELS[0]);
 const EXT = 200; // наружная стена, мм
 const BASE_H = rooms.length ? rooms[0].h : 2700; // высота потолка объекта, мм
 
@@ -1145,6 +1179,7 @@ function flatRoomMarks(fx, fy, full) { // номер в кружке (+ имя �
 
 // каркас сводного листа: рамка, заголовок, колонка справа, примечания, штамп
 function flatSheet(sheetNo, title, sub, layerFn, rightFn, notes, lopts) {
+  if (FLAT && FLAT.level && LEVELS.length > 1) title = `${title} · ${FLAT.level} этаж`;
   const MX = 70, MY = 96;
   const planW = px(FLAT.W + 2 * EXT), planH = px(FLAT.H + 2 * EXT);
   const LGX = MX + planW + 76, LGW = 268;
@@ -1266,18 +1301,19 @@ function drawFlatFurniture(sheetNo) {
     // фото-врезки: наши рендеры как референсы решений; миниатюры встраиваются base64,
     // чтобы работали внутри <img> просмотрщика (SVG в <img> не грузит внешние ресурсы)
     let s = '';
-    const refs = [
-      { f: '01-gostinaya-kuhnya.jpg', t: 'Гостиная-кухня' },
-      { f: '02-spalnya.jpg', t: 'Спальня' },
-      { f: '05-prihozhaya.jpg', t: 'Прихожая' },
-    ];
+    let refs = [];
+    try {
+      refs = fs.readdirSync(path.join(outDir, '06-koncept', 'renders', 'thumbs'))
+        .filter(f => /\.(jpe?g|png)$/i.test(f)).sort().slice(0, 3)
+        .map(f => { const r0 = flatRooms.find(x => f.startsWith(nn(x.idx))); return { f, t: r0 ? r0.name : 'Референс' }; });
+    } catch (e) { refs = []; }
     refs.forEach((rf, i) => {
       const iy = y + i * 202;
-      let href = '../06-koncept/renders/' + rf.f;
+      let href = null;
       try {
         const raw = fs.readFileSync(path.join(outDir, '06-koncept', 'renders', 'thumbs', rf.f));
         href = 'data:image/jpeg;base64,' + raw.toString('base64');
-      } catch (e) { /* нет миниатюры — относительная ссылка */ }
+      } catch (e) { return; } // нет миниатюры — врезку не рисуем
       s += `<text x="${x + w / 2}" y="${iy + 12}" font-size="10" font-weight="600" text-anchor="middle" fill="#1C1C1C" text-decoration="underline">${rf.t}</text>`;
       s += `<image href="${href}" x="${x}" y="${iy + 18}" width="${w}" height="168" preserveAspectRatio="xMidYMid slice"/>`;
       s += `<rect x="${x}" y="${iy + 18}" width="${w}" height="168" fill="none" stroke="#1C1C1C" stroke-width="0.8"/>`;
@@ -1941,7 +1977,7 @@ function writeOut(rel, content) {
 }
 
 let sheet = 1;
-TOTAL_SHEETS = rooms.length * 12 + 1 + (FLAT ? 13 : 0); // сводные (канон 13) + обмер+демо+монтаж+2 плана+пол+4 развертки+потолок+электрика на комнату + узел
+TOTAL_SHEETS = rooms.length * 12 + 1 + (FLAT ? 13 * LEVELS.length : 0); // сводные (канон 13) + обмер+демо+монтаж+2 плана+пол+4 развертки+потолок+электрика на комнату + узел
 const reg = []; // реестр листов для ведомости
 const counts = { flat: 0, obmer: 0, demo: 0, mont: 0, plans: 0, poly: 0, elev: 0, ceil: 0, electro: 0 };
 function sheetOut(rel, maker, title, scale) {
@@ -1950,9 +1986,9 @@ function sheetOut(rel, maker, title, scale) {
   reg.push({ no, title, scale: scale || '1:50', file: rel });
 }
 const SL = r => `${nn(r.idx)}-${slug(r.name)}`;
+const RN = r => `${r.name}${LEVEL_NAME(r.level || 1)}`;
 // порядок листов — как в альбомах профессиональных студий
-if (FLAT) { // канон альбома: 13 поквартирных листов
-  const flatSheets = [
+const FLAT_SHEETS = [
     ['01-obmer', drawFlatObmer, 'Обмерный план квартиры'],
     ['02-demontazh', drawFlatDemolition, 'План демонтажа'],
     ['03-montazh', drawFlatMontage, 'План монтажа ГКЛ-конструкций'],
@@ -1966,19 +2002,27 @@ if (FLAT) { // канон альбома: 13 поквартирных листо
     ['11-poly', drawFlatFloors, 'План напольных покрытий'],
     ['12-otdelka-sten', drawFlatWallFinish, 'План отделки стен'],
     ['13-teplye-poly', drawFlatHeatFloor, 'План тёплых полов'],
-  ];
-  for (const [key, fn, title] of flatSheets) { sheetOut(`01-kvartira/kvartira-${key}.svg`, n => fn(n), title, '1:50'); counts.flat++; }
+];
+for (const lv of LEVELS) { // канон альбома: 13 сводных листов на каждый этаж
+  setLevel(lv);
+  if (!FLAT) continue;
+  const pre = LEVELS.length > 1 ? `et${lv}-` : '';
+  for (const [key, fn, title] of FLAT_SHEETS) {
+    sheetOut(`01-kvartira/kvartira-${pre}${key}.svg`, n => fn(n), title + LEVEL_NAME(lv), '1:50');
+    counts.flat++;
+  }
 }
-for (const r of rooms) { sheetOut(`01-obmer/obmer-${SL(r)}.svg`, n => drawObmer(r, n), `Обмерный план. ${r.name}`); counts.obmer++; }
-for (const r of rooms) { sheetOut(`01-obmer/demo-${SL(r)}.svg`, n => drawDemolition(r, n), `Демонтаж. ${r.name}`); counts.demo++; }
-for (const r of rooms) { sheetOut(`01-obmer/mont-${SL(r)}.svg`, n => drawMontage(r, n), `Монтаж перегородок. ${r.name}`); counts.mont++; }
-for (const r of rooms) { sheetOut(`02-plany/plan-${SL(r)}.svg`, n => drawPlan(r, n, true), `План мебели с размерами. ${r.name}`); counts.plans++; }
-for (const r of rooms) { sheetOut(`02-plany/plan-${SL(r)}-mebel.svg`, n => drawPlan(r, n, false), `План мебели. ${r.name}`); counts.plans++; }
-for (const r of rooms) { sheetOut(`03-poly/pol-${SL(r)}.svg`, n => drawFloor(r, n), `План пола. ${r.name}`); counts.poly++; }
-for (const r of rooms) for (const wk of ['A', 'B', 'C', 'D']) { sheetOut(`04-razvertki/${SL(r)}-stena-${wk}.svg`, n => drawElevation(r, wk, n), `Развертка. ${r.name}, стена ${wk}`); counts.elev++; }
-for (const r of rooms) { sheetOut(`05-potolki/potolok-${SL(r)}.svg`, n => drawCeiling(r, n), `План потолка. ${r.name}`); counts.ceil++; }
+setLevel(LEVELS[0]);
+for (const r of rooms) { sheetOut(`01-obmer/obmer-${SL(r)}.svg`, n => drawObmer(r, n), `Обмерный план. ${RN(r)}`); counts.obmer++; }
+for (const r of rooms) { sheetOut(`01-obmer/demo-${SL(r)}.svg`, n => drawDemolition(r, n), `Демонтаж. ${RN(r)}`); counts.demo++; }
+for (const r of rooms) { sheetOut(`01-obmer/mont-${SL(r)}.svg`, n => drawMontage(r, n), `Монтаж перегородок. ${RN(r)}`); counts.mont++; }
+for (const r of rooms) { sheetOut(`02-plany/plan-${SL(r)}.svg`, n => drawPlan(r, n, true), `План мебели с размерами. ${RN(r)}`); counts.plans++; }
+for (const r of rooms) { sheetOut(`02-plany/plan-${SL(r)}-mebel.svg`, n => drawPlan(r, n, false), `План мебели. ${RN(r)}`); counts.plans++; }
+for (const r of rooms) { sheetOut(`03-poly/pol-${SL(r)}.svg`, n => drawFloor(r, n), `План пола. ${RN(r)}`); counts.poly++; }
+for (const r of rooms) for (const wk of ['A', 'B', 'C', 'D']) { sheetOut(`04-razvertki/${SL(r)}-stena-${wk}.svg`, n => drawElevation(r, wk, n), `Развертка. ${RN(r)}, стена ${wk}`); counts.elev++; }
+for (const r of rooms) { sheetOut(`05-potolki/potolok-${SL(r)}.svg`, n => drawCeiling(r, n), `План потолка. ${RN(r)}`); counts.ceil++; }
 sheetOut(`05-potolki/uzel-A-korob-led.svg`, n => drawNode(n), 'Узел А. Короб с LED-подсветкой', '1:20');
-for (const r of rooms) { sheetOut(`09-elektrika/elektrika-${SL(r)}.svg`, n => drawElectro(r, n), `Электрика. ${r.name}`); counts.electro++; }
+for (const r of rooms) { sheetOut(`09-elektrika/elektrika-${SL(r)}.svg`, n => drawElectro(r, n), `Электрика. ${RN(r)}`); counts.electro++; }
 // рендеры: подхватываем, если сгенерированы (06-koncept/renders/*.jpg|png)
 let renders = [];
 try {

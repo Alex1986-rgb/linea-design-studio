@@ -1,0 +1,34 @@
+{
+  "meta": { "created": "2026-08-02", "source": "studio-demo" },
+  "client": { "name": "Демо-клиент (дом)", "phone": "+7 900 000-00-00", "email": "client@example.com" },
+  "object": { "type": "дом", "address": "КП «Сосновый бор», Московская обл.", "area": 120, "ceilingHeight": 2.9 },
+  "rooms": [
+    { "name": "Прихожая", "type": "hallway", "level": 1, "width": 3.2, "length": 2.4 },
+    { "name": "Гостиная-кухня", "type": "living-kitchen", "level": 1, "width": 6.4, "length": 5.0 },
+    { "name": "Кабинет", "type": "cabinet", "level": 1, "width": 3.4, "length": 3.0 },
+    { "name": "Санузел гостевой", "type": "bathroom", "level": 1, "width": 2.2, "length": 1.8 },
+    { "name": "Холл с лестницей", "type": "hallway", "level": 1, "width": 3.2, "length": 2.8, "stairs": "up" },
+
+    { "name": "Спальня родителей", "type": "bedroom", "level": 2, "width": 4.4, "length": 4.0 },
+    { "name": "Детская", "type": "kids", "level": 2, "width": 3.8, "length": 3.4 },
+    { "name": "Детская вторая", "type": "kids", "level": 2, "width": 3.4, "length": 3.0 },
+    { "name": "Санузел второго этажа", "type": "bathroom", "level": 2, "width": 2.6, "length": 2.2 },
+    { "name": "Гардеробная", "type": "hallway", "level": 2, "width": 2.2, "length": 1.8 },
+    { "name": "Холл второго этажа", "type": "hallway", "level": 2, "width": 3.2, "length": 2.8, "stairs": "down" }
+  ],
+  "style": {
+    "name": "modern", "byStudio": false,
+    "colors": ["тёплый графит", "дуб табак", "латунь"],
+    "references": ["трековый свет", "скрытые двери", "акцентная стена в гостиной"]
+  },
+  "budget": "business",
+  "answers": {
+    "household": "Семья с двумя детьми",
+    "pets": "Собака",
+    "wfh": "Да, отдельный кабинет на первом этаже",
+    "storage": "Гардеробная на втором этаже + встроенные шкафы",
+    "dislikes": "Холодный свет, глянцевые фасады",
+    "timeline": "Отделка в ближайшие 6 месяцев",
+    "notes": "Дом в два этажа, лестница из холла первого этажа"
+  }
+}
