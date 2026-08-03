@@ -48,7 +48,7 @@ const nn = n => String(n).padStart(2, '0');
 // ---------- ЛИСТ: А3 альбомный (420×297 мм при 96 dpi), рамка ГОСТ 2.301, поле подшивки 20 мм ----------
 const PAGE = { w: 1587, h: 1123, ml: 76, mr: 19, mt: 19, mb: 19 };
 // масштабный ряд: [знаменатель, коэффициент к внутренним координатам]. S=0.08 px/мм ≈ 1:47,24 при 96 dpi
-const SCALE_SERIES = [[20, 2.3622], [25, 1.8898], [50, 0.9449], [75, 0.6299], [100, 0.4724], [150, 0.3150], [200, 0.2362]];
+const SCALE_SERIES = [[15, 3.1496], [20, 2.3622], [25, 1.8898], [40, 1.1811], [50, 0.9449], [75, 0.6299], [100, 0.4724], [150, 0.3150], [200, 0.2362]];
 let LAST_STAMP = null; // штамп листа, собранный draw-функцией (рисуется рамкой листа, не содержимым)
 
 function sheetStampBlock(x, y, w, h, st) {
@@ -74,19 +74,47 @@ function sheetStampBlock(x, y, w, h, st) {
   return s;
 }
 
+// фактические границы содержимого: по ним лист заполняется без пустых полей
+function contentBox(body) {
+  let x0 = 1e9, y0 = 1e9, x1 = -1e9, y1 = -1e9;
+  const put = (x, y) => { if (isFinite(x) && isFinite(y)) { if (x < x0) x0 = x; if (y < y0) y0 = y; if (x > x1) x1 = x; if (y > y1) y1 = y; } };
+  // прямоугольники и изображения (с учётом ширины/высоты)
+  const re = /<(rect|image)\b[^>]*?x="(-?[\d.]+)"[^>]*?y="(-?[\d.]+)"[^>]*?width="(-?[\d.]+)"[^>]*?height="(-?[\d.]+)"/g;
+  let m; while ((m = re.exec(body))) { const x = +m[2], y = +m[3]; put(x, y); put(x + +m[4], y + +m[5]); }
+  // линии
+  const rl = /<line\b[^>]*?x1="(-?[\d.]+)"[^>]*?y1="(-?[\d.]+)"[^>]*?x2="(-?[\d.]+)"[^>]*?y2="(-?[\d.]+)"/g;
+  while ((m = rl.exec(body))) { put(+m[1], +m[2]); put(+m[3], +m[4]); }
+  // окружности и эллипсы
+  const rc = /<(circle|ellipse)\b[^>]*?cx="(-?[\d.]+)"[^>]*?cy="(-?[\d.]+)"/g;
+  while ((m = rc.exec(body))) { put(+m[2] - 12, +m[3] - 12); put(+m[2] + 12, +m[3] + 12); }
+  // тексты: якорь плюс запас на длину строки
+  const rt = /<text\b[^>]*?x="(-?[\d.]+)"[^>]*?y="(-?[\d.]+)"[^>]*?>([^<]*)</g;
+  while ((m = rt.exec(body))) { const x = +m[1], y = +m[2], w = (m[3] || '').length * 5.2; put(x - 6, y - 14); put(x + w, y + 6); }
+  // пути и полилинии
+  const rp = /<(path|polyline)\b[^>]*?(?:d|points)="([^"]+)"/g;
+  while ((m = rp.exec(body))) {
+    const nums = (m[2].match(/-?[\d.]+/g) || []).map(Number);
+    for (let i = 0; i + 1 < nums.length; i += 2) put(nums[i], nums[i + 1]);
+  }
+  if (x0 > x1 || y0 > y1) return null;
+  return { x0: x0 - 14, y0: y0 - 14, x1: x1 + 14, y1: y1 + 14 };
+}
+
 function svgDoc(wPx, hPx, body, bg) {
   const st = LAST_STAMP || { name: 'Лист', sheet: '—', scale: null }; LAST_STAMP = null;
   if (st.y && st.y > 40 && st.y < hPx) hPx = st.y + 12;   // низ содержимого — там, где стоял старый штамп
   const fx = PAGE.ml, fy = PAGE.mt, fw = PAGE.w - PAGE.ml - PAGE.mr, fh = PAGE.h - PAGE.mt - PAGE.mb;
   const sw = 700, sh = 150;                       // штамп 185×40 мм в правом нижнем углу поля
   const fieldW = fw - 16, fieldH = fh - sh - 20;  // поле чертежа над штампом
+  const bb = contentBox(body) || { x0: 0, y0: 0, x1: wPx, y1: hPx };
+  const cw = Math.max(40, bb.x1 - bb.x0), ch = Math.max(40, bb.y1 - bb.y0);
   let k = SCALE_SERIES[SCALE_SERIES.length - 1][1], ratio = SCALE_SERIES[SCALE_SERIES.length - 1][0];
-  for (const [r, kk] of SCALE_SERIES) { if (wPx * kk <= fieldW && hPx * kk <= fieldH) { k = kk; ratio = r; break; } }
+  for (const [r, kk] of SCALE_SERIES) { if (cw * kk <= fieldW && ch * kk <= fieldH) { k = kk; ratio = r; break; } }
   if (st.scale === '1:20') { k = SCALE_SERIES[0][1]; ratio = 20; }  // узлы — фиксированный масштаб
   st.ratio = ratio;
-  let ox = fx + 10;                                                    // содержимое от левого поля
-  if (ox + wPx * k > fx + fw - 12) ox = Math.max(fx + 6, fx + fw - 12 - wPx * k); // гарантированный отступ справа
-  const oy = fy + 12 + Math.max(0, (fieldH - hPx * k) / 2.6);          // по вертикали — с лёгким подъёмом
+  // содержимое ставим по фактическим границам: слева и сверху с равным полем, без пустых зон
+  const ox = fx + 12 - bb.x0 * k;
+  const oy = fy + 14 - bb.y0 * k + Math.max(0, (fieldH - ch * k) / 2.2);
   let s = `<svg xmlns="http://www.w3.org/2000/svg" width="${PAGE.w}" height="${PAGE.h}" viewBox="0 0 ${PAGE.w} ${PAGE.h}" font-family='${FONT}'>`;
   s += `<rect width="${PAGE.w}" height="${PAGE.h}" fill="${bg || CAD.paper}"/>`;
   s += `<rect x="${fx}" y="${fy}" width="${fw}" height="${fh}" fill="none" stroke="#1C1C1C" stroke-width="1.6"/>`;
@@ -736,7 +764,7 @@ function drawPlan(room, sheet, withDims) {
   const PW = 250; // колонка фото готового интерьера
   const hasPh = roomPhotos(room, 2).length;
   const Wd = Math.max(760, w + M * 2 + 110 + (hasPh ? PW + 100 : 0));
-  const Hd = Math.max(l + M * 2 + 140, hasPh ? M + 2 * (PW * 0.68 + 22) + 120 : 0);
+  const Hd = Math.max(l + M * 2 + 300, hasPh ? M + 2 * (PW * 0.68 + 22) + 240 : 0);
   let b = roomWalls(M, WT, room, sheet, CAD.paper);
   if (hasPh) b += photoPanel(M + w + 150, M + 14, PW, room, 'Реализация интерьера');
   for (const o of room.windows) b += openingPlan(o, 'window', M, WT, room);
@@ -778,6 +806,36 @@ function drawPlan(room, sheet, withDims) {
   } else {
     b += dimH(M, M + w, M + l + 34, String(room.w));
     b += dimV(M + w + 34, M, M + l, String(room.l));
+  }
+  { // сводка по помещению: геометрия и отделка — как в рабочих альбомах
+    const g = roomGeometry(room), lv = ceilingLevelsFor(room), nn2 = nichesFor(room);
+    const tx = M - WT, ty = M + l + 118, cw2 = Math.max(w + 2 * WT, 560);
+    const rows = [
+      ['Площадь пола', `${g.floor} м²`, 'Высота потолка', `${room.h} мм`],
+      ['Площадь стен (за вычетом проёмов)', `${g.walls} м²`, 'Плинтус', `${g.plinth} м.п.`],
+      ['Пол', style.floor.name.split(',')[0], 'Стены', style.wall.finish.split(',')[0]],
+      ['Потолок', `${lv.three ? '3 уровня' : '2 уровня'}, LED ${lv.ledLen} м.п.`, 'Двери', style.doors.split(',')[0]],
+    ];
+    b += `<text x="${tx}" y="${ty - 8}" font-size="11" font-weight="700" fill="#1C1C1C">Данные помещения и отделка</text>`;
+    b += `<rect x="${tx}" y="${ty}" width="${cw2}" height="${rows.length * 19 + 6}" fill="none" stroke="#8A8478" stroke-width="0.8"/>`;
+    rows.forEach((r0, i2) => {
+      const yy = ty + 18 + i2 * 19;
+      if (i2) b += `<line x1="${tx}" y1="${yy - 14}" x2="${tx + cw2}" y2="${yy - 14}" stroke="#D8D2C6" stroke-width="0.6"/>`;
+      const cut = (t, n) => { t = String(t); return t.length > n ? t.slice(0, n - 1) + '…' : t; };
+      b += `<text x="${tx + 8}" y="${yy}" font-size="9" fill="#7A756D">${esc(cut(r0[0], 30))}</text><text x="${tx + cw2 * 0.30}" y="${yy}" font-size="9.5" fill="#1C1C1C">${esc(cut(r0[1], 24))}</text>`;
+      b += `<line x1="${tx + cw2 * 0.55}" y1="${yy - 14}" x2="${tx + cw2 * 0.55}" y2="${yy + 5}" stroke="#D8D2C6" stroke-width="0.6"/>`;
+      b += `<text x="${tx + cw2 * 0.57}" y="${yy}" font-size="9" fill="#7A756D">${esc(cut(r0[2], 18))}</text><text x="${tx + cw2 * 0.78}" y="${yy}" font-size="9.5" fill="#1C1C1C">${esc(cut(r0[3], 26))}</text>`;
+    });
+    let ny2 = ty + rows.length * 19 + 24;
+    if (nn2.length) {
+      b += `<text x="${tx}" y="${ny2}" font-size="9" fill="#7A756D">Ниши:</text>`;
+      nn2.slice(0, 3).forEach((n, i2) => { b += `<text x="${tx + 44}" y="${ny2 + i2 * 12}" font-size="9" fill="#1C1C1C">${esc(n.label)} — ${n.w}×${n.h}, глуб. ${n.depth}, низ +${(n.sill / 1000).toFixed(3).replace('.', ',')}</text>`; });
+      ny2 += nn2.slice(0, 3).length * 12 + 8;
+    }
+    b += `<text x="${tx}" y="${ny2}" font-size="9" fill="#7A756D">Мебель:</text>`;
+    wrapText(furnitureFor(room).map(f => f.name).join(' · ') || '—', 92).slice(0, 2).forEach((ln, i2) => {
+      b += `<text x="${tx + 52}" y="${ny2 + i2 * 12}" font-size="9" fill="#1C1C1C">${esc(ln)}</text>`;
+    });
   }
   b += stamp(M - WT, Hd - 44, Math.max(w + 2 * WT + 40, 520), `План${withDims ? ' с размерами' : ''}. ${room.name}`, sheet);
   return svgDoc(Wd + 20, Hd + 20, b, CAD.paper);
