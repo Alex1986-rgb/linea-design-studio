@@ -1109,15 +1109,17 @@ const BASE_H = rooms.length ? rooms[0].h : 2700; // высота потолка 
 
 function flatLayer(MX, MY, opts) {
   opts = opts || {};
+  const pale = !!opts.pale; // тематический лист: подложка приглушена, акцент — на активном слое
+  const wallF = pale ? '#DFDFDF' : CAD.wallFill, wallS = pale ? '#9A9A9A' : CAD.wallStroke, hatchC = pale ? '#C4C4C4' : CAD.hatch;
   const fx = mm => MX + px(EXT + mm - FLAT.x0);
   const fy = mm => MY + px(EXT + mm - FLAT.y0);
   const bx = MX, by = MY, bw2 = px(FLAT.W + 2 * EXT), bh2 = px(FLAT.H + 2 * EXT);
   // стены: серая заливка + чёрный контур; наружная полоса — с диагональной штриховкой
-  let s = `<defs><pattern id="wh${opts.id || 0}" width="7" height="7" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="7" height="7" fill="${CAD.wallFill}"/><line x1="0" y1="0" x2="0" y2="7" stroke="${CAD.hatch}" stroke-width="2"/></pattern></defs>`;
-  s += `<rect x="${bx}" y="${by}" width="${bw2}" height="${bh2}" fill="url(#wh${opts.id || 0})" stroke="${CAD.wallStroke}" stroke-width="1.6"/>`;
+  let s = `<defs><pattern id="wh${opts.id || 0}" width="7" height="7" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="7" height="7" fill="${wallF}"/><line x1="0" y1="0" x2="0" y2="7" stroke="${hatchC}" stroke-width="2"/></pattern></defs>`;
+  s += `<rect x="${bx}" y="${by}" width="${bw2}" height="${bh2}" fill="url(#wh${opts.id || 0})" stroke="${wallS}" stroke-width="${pale ? 1 : 1.6}"/>`;
   // внутренняя зона (перегородки без штриховки — ровный серый)
-  s += `<rect x="${fx(FLAT.x0)}" y="${fy(FLAT.y0)}" width="${px(FLAT.W)}" height="${px(FLAT.H)}" fill="${CAD.wallFill}"/>`;
-  for (const r of flatRooms) s += `<rect x="${fx(r.pos.x)}" y="${fy(r.pos.y)}" width="${px(r.w)}" height="${px(r.l)}" fill="${opts.roomFill || CAD.paper}" stroke="${CAD.wallStroke}" stroke-width="1.1"/>`;
+  s += `<rect x="${fx(FLAT.x0)}" y="${fy(FLAT.y0)}" width="${px(FLAT.W)}" height="${px(FLAT.H)}" fill="${wallF}"/>`;
+  for (const r of flatRooms) s += `<rect x="${fx(r.pos.x)}" y="${fy(r.pos.y)}" width="${px(r.w)}" height="${px(r.l)}" fill="${opts.roomFill || CAD.paper}" stroke="${wallS}" stroke-width="${pale ? 0.8 : 1.1}"/>`;
   // дверные проёмы: прорезь + полотно + дуга открывания
   for (const r of flatRooms) for (const o of r.doors) {
     const t = 320, inset = 40;
@@ -1180,6 +1182,8 @@ function flatRoomMarks(fx, fy, full) { // номер в кружке (+ имя �
 // каркас сводного листа: рамка, заголовок, колонка справа, примечания, штамп
 function flatSheet(sheetNo, title, sub, layerFn, rightFn, notes, lopts) {
   if (FLAT && FLAT.level && LEVELS.length > 1) title = `${title} · ${FLAT.level} этаж`;
+  // тематические листы (слой поверх подложки) рисуются с приглушённой подложкой
+  if (/розет|освещен|выключател|схема|пол(ы|ов)|отделк|тёплы|потолк/i.test(title)) lopts = Object.assign({ pale: true }, lopts || {});
   const MX = 70, MY = 96;
   const planW = px(FLAT.W + 2 * EXT), planH = px(FLAT.H + 2 * EXT);
   const LGX = MX + planW + 76, LGW = 268;
@@ -1384,22 +1388,60 @@ function drawFlatCeiling(sheetNo) {
 
 // 5. План электрики (общий)
 function drawFlatElectro(sheetNo) {
-  return flatSheet(sheetNo, 'План электрики', 'Розетки и выключатели · привязки и высоты — на планах помещений (раздел 09)', base => {
+  const GRN = '#1F8A4C';                      // цвет активного слоя электрики
+  return flatSheet(sheetNo, 'План розеток 220 В и выводов с привязками', 'Привязки L/H: от угла или проёма / от чистого пола, мм', base => {
     let s = '';
-    for (const r of flatRooms) {
-      for (const f of furnitureFor(r)) s += `<rect x="${base.fx(r.pos.x + f.x)}" y="${base.fy(r.pos.y + f.y)}" width="${px(f.w)}" height="${px(f.h)}" fill="none" stroke="#D8D2C6" stroke-width="0.7" rx="1.5"/>`;
-      for (const p of electroFor(r)) {
-        const x = base.fx(r.pos.x + p.x), y = base.fy(r.pos.y + p.y);
-        if (p.type === 'socket') s += `<g stroke="${CAD.elec}" stroke-width="1.1"><circle cx="${x}" cy="${y}" r="4.5" fill="#FFF"/><line x1="${x - 4.5}" y1="${y - 6.5}" x2="${x + 4.5}" y2="${y - 6.5}"/></g>`;
-        else s += `<circle cx="${x}" cy="${y}" r="4" fill="${CAD.elec}"/>`;
-      }
+    // подложка: мебель бледно-серым, только для привязки
+    for (const r of flatRooms) for (const f of furnitureFor(r))
+      s += `<rect x="${base.fx(r.pos.x + f.x)}" y="${base.fy(r.pos.y + f.y)}" width="${px(f.w)}" height="${px(f.h)}" fill="none" stroke="#C9C9C9" stroke-width="0.6" rx="1.5"/>`;
+    // активный слой
+    const outs = [];
+    for (const r of flatRooms) for (const p of electroFor(r)) {
+      const x = base.fx(r.pos.x + p.x), y = base.fy(r.pos.y + p.y), lab = p.label.toLowerCase();
+      const ip44 = /ip44|полот|фен/.test(lab), weak = /tv|lan|тв/.test(lab);
+      if (p.type === 'socket') { // «купол» на ножке — стандартный символ розетки
+        s += `<g stroke="${GRN}" stroke-width="1.2" fill="none"><path d="M ${x - 5} ${y} a 5 5 0 0 1 10 0" fill="${ip44 ? GRN : '#FFF'}"/><line x1="${x - 6}" y1="${y}" x2="${x + 6}" y2="${y}"/><line x1="${x}" y1="${y}" x2="${x}" y2="${y + 4}"/></g>`;
+        if (weak) s += `<text x="${x + 8}" y="${y + 7}" font-size="5.5" font-weight="700" fill="${GRN}">it</text>`;
+      } else s += `<g stroke="${GRN}" stroke-width="1.2"><circle cx="${x}" cy="${y}" r="3.4" fill="${GRN}"/><line x1="${x}" y1="${y - 3.4}" x2="${x + 6}" y2="${y - 9}"/></g>`;
+      // компактная привязка L/H у символа
+      const dl = Math.round(Math.min(p.x, r.w - p.x, p.y, r.l - p.y) / 10);
+      s += `<text x="${x + 7}" y="${y - 5}" font-size="6.2" fill="#2A2A2A">${dl}/${Math.round(p.h / 10)}</text>`;
+      if (/полот|аквастор|стирал|кондиц|встройк/.test(lab)) outs.push({ x, y, t: p.label });
     }
+    // выноски к спецвыводам по периметру плана
+    outs.slice(0, 5).forEach((o, i2) => { // короткая полка рядом с точкой
+      const dx = o.x > base.fx(FLAT.x0 + FLAT.W / 2) ? -150 : 46;
+      s += callout(o.x + dx, o.y + (i2 % 2 ? 22 : -30), o.x, o.y, o.t.split(',')[0].slice(0, 22));
+    });
     return s + flatRoomMarks(base.fx, base.fy, false);
-  }, (x, y, w) => flatLegendBox(x, y, w, 'Условные обозначения', [
-    { sym: (sx, sy) => `<g stroke="${CAD.elec}" stroke-width="1.1"><circle cx="${sx + 8}" cy="${sy - 3}" r="4.5" fill="#FFF"/><line x1="${sx + 3.5}" y1="${sy - 9.5}" x2="${sx + 12.5}" y2="${sy - 9.5}"/></g>`, text: `розетка (блок) — ${rooms.reduce((a, r) => a + electroFor(r).filter(p => p.type === 'socket').length, 0)} поз. всего` },
-    { sym: (sx, sy) => `<circle cx="${sx + 8}" cy="${sy - 3}" r="4" fill="${CAD.elec}"/>`, text: `выключатель — ${rooms.reduce((a, r) => a + electroFor(r).filter(p => p.type === 'switch').length, 0)} поз. всего` },
-    { sym: (sx, sy) => `<rect x="${sx}" y="${sy - 8}" width="16" height="11" fill="none" stroke="#D8D2C6" stroke-width="0.9"/>`, text: 'мебель (для привязки выводов)' },
-  ]), ['Розетки — h=300 от чистого пола по умолчанию; отклонения (фартук 1100, ТВ 1300, тумбы 600) — на планах раздела 09.', 'Выключатели — h=900, со стороны ручки двери, ≥100 мм от проёма.', 'Санузел: линии через УЗО 30 мА, механизмы IP44.', 'Разводку выполнять по инженерному проекту; привязки уточнить по месту после монтажа перегородок.']);
+  }, (x, y, w) => {
+    const nS = rooms.reduce((a, r) => a + electroFor(r).filter(p => p.type === 'socket').length, 0);
+    const nW = rooms.reduce((a, r) => a + electroFor(r).filter(p => p.type === 'switch').length, 0);
+    let s = flatLegendBox(x, y, w, 'Условные обозначения', [
+      { sym: (sx, sy) => `<g stroke="${GRN}" stroke-width="1.2" fill="none"><path d="M ${sx + 3} ${sy - 3} a 5 5 0 0 1 10 0" fill="#FFF"/><line x1="${sx + 2}" y1="${sy - 3}" x2="${sx + 14}" y2="${sy - 3}"/></g>`, text: `розетка штепсельная IP20–IP23 — ${nS} поз.` },
+      { sym: (sx, sy) => `<g stroke="${GRN}" stroke-width="1.2" fill="none"><path d="M ${sx + 3} ${sy - 3} a 5 5 0 0 1 10 0" fill="${GRN}"/><line x1="${sx + 2}" y1="${sy - 3}" x2="${sx + 14}" y2="${sy - 3}"/></g>`, text: 'розетка влагозащищённая IP44–IP55' },
+      { sym: (sx, sy) => `<g><text x="${sx + 2}" y="${sy}" font-size="7" font-weight="700" fill="${GRN}">it</text><circle cx="${sx + 14}" cy="${sy - 3}" r="3" fill="${GRN}"/></g>`, text: 'интернет / ТВ-розетка (слаботочная)' },
+      { sym: (sx, sy) => `<g stroke="${GRN}" stroke-width="1.2"><circle cx="${sx + 7}" cy="${sy - 3}" r="3.4" fill="${GRN}"/><line x1="${sx + 7}" y1="${sy - 6.4}" x2="${sx + 13}" y2="${sy - 12}"/></g>`, text: `выключатель — ${nW} поз.` },
+      { sym: (sx, sy) => `<rect x="${sx}" y="${sy - 8}" width="16" height="11" fill="none" stroke="#C9C9C9" stroke-width="0.8"/>`, text: 'мебель — подложка для привязки' },
+    ]);
+    // красные блоки-пояснения, как в рабочих альбомах
+    const boxY = y + 5 * 20 + 46;
+    const kitchen = ['Холодильник', 'Посудомоечная машина', 'Варочная панель', 'Духовой шкаф', 'Вытяжка', 'СВЧ', 'Рабочая зона фартука'];
+    s += `<rect x="${x}" y="${boxY}" width="${w}" height="${kitchen.length * 13 + 58}" fill="#FFF6F4" stroke="#B0483A" stroke-width="1"/>`;
+    s += `<text x="${x + 10}" y="${boxY + 17}" font-size="10" font-weight="700" fill="#B0483A">Розетки в кухонной зоне</text>`;
+    kitchen.forEach((t, i2) => { s += `<text x="${x + 10}" y="${boxY + 32 + i2 * 13}" font-size="8.6" fill="#2A2A2A">${i2 + 1}. ${esc(t)}</text>`; });
+    wrapText('Итоговые размеры техники запросить у заказчика до разводки.', 40).forEach((ln, i3) => {
+      s += `<text x="${x + 10}" y="${boxY + 34 + kitchen.length * 13 + i3 * 11}" font-size="8.2" fill="#B0483A">${esc(ln)}</text>`;
+    });
+    const b2 = boxY + kitchen.length * 13 + 72;
+    s += `<rect x="${x}" y="${b2}" width="${w}" height="62" fill="#FFF6F4" stroke="#B0483A" stroke-width="1"/>`;
+    s += `<text x="${x + 10}" y="${b2 + 16}" font-size="10" font-weight="700" fill="#B0483A">Привязки L/H заданы:</text>`;
+    ['от чистого пола (высота)', 'от угла или дверного проёма (расстояние)', 'до центра блока розеток'].forEach((t, i2) => {
+      s += `<text x="${x + 10}" y="${b2 + 31 + i2 * 12}" font-size="8.6" fill="#2A2A2A">— ${esc(t)}</text>`;
+    });
+    return s;
+  }, ['Все размеры даны в сантиметрах, в формате L/H.', 'Размеры даны без учёта отделочного слоя.', '* размеры уточнить после выбора мебели и техники.', '** размеры уточнить у прораба на объекте.', 'Санузлы: линии через УЗО 30 мА, механизмы IP44.', 'Электросеть прокладывать в гофрированной трубе ПВХ за подвесными потолками и в подготовке пола вдоль стен в зоне 150 мм от стен.'],
+  { pale: true });
 }
 
 // ---------- табличный ГОСТ-штамп для сводных листов (формат рабочих альбомов) ----------
