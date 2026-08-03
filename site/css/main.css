@@ -134,3 +134,8 @@ footer.site .logo{font-size:18px}
 details.raw{margin-top:8px}
 details.raw summary{color:var(--mut);font-size:12px;cursor:pointer}
 details.raw pre{max-height:320px;overflow:auto;font-size:11px;color:var(--mut);background:#15130F;padding:14px;border-radius:6px}
+
+
+/* режим открытого тестирования */
+.beta{background:var(--gold);color:#14120E;text-align:center;font-size:13px;font-weight:600;letter-spacing:.4px;padding:9px 16px}
+.beta a{color:#14120E;text-decoration:underline}

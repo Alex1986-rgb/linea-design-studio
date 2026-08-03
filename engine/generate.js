@@ -45,25 +45,63 @@ const TR = { а:'a',б:'b',в:'v',г:'g',д:'d',е:'e',ё:'e',ж:'zh',з:'z',и:
 const slug = s => String(s).toLowerCase().split('').map(c => TR[c] != null ? TR[c] : c).join('').replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
 const nn = n => String(n).padStart(2, '0');
 
+// ---------- ЛИСТ: А3 альбомный (420×297 мм при 96 dpi), рамка ГОСТ 2.301, поле подшивки 20 мм ----------
+const PAGE = { w: 1587, h: 1123, ml: 76, mr: 19, mt: 19, mb: 19 };
+// масштабный ряд: [знаменатель, коэффициент к внутренним координатам]. S=0.08 px/мм ≈ 1:47,24 при 96 dpi
+const SCALE_SERIES = [[20, 2.3622], [25, 1.8898], [50, 0.9449], [75, 0.6299], [100, 0.4724], [150, 0.3150], [200, 0.2362]];
+let LAST_STAMP = null; // штамп листа, собранный draw-функцией (рисуется рамкой листа, не содержимым)
+
+function sheetStampBlock(x, y, w, h, st) {
+  const r1 = y + h * 0.42, c1 = x + w * 0.24;                       // верхняя строка: студия | объект
+  const b1 = x + w * 0.52, c2 = x + w * 0.63, c3 = x + w * 0.775, c4 = x + w * 0.885; // нижняя: имя | стадия | М | лист | листов
+  let s = `<g stroke="#1C1C1C" stroke-width="1" fill="none"><rect x="${x}" y="${y}" width="${w}" height="${h}"/>
+<line x1="${x}" y1="${r1}" x2="${x + w}" y2="${r1}"/><line x1="${c1}" y1="${y}" x2="${c1}" y2="${r1}"/>
+<line x1="${b1}" y1="${r1}" x2="${b1}" y2="${y + h}"/>
+<line x1="${c2}" y1="${r1}" x2="${c2}" y2="${y + h}"/><line x1="${c3}" y1="${r1}" x2="${c3}" y2="${y + h}"/><line x1="${c4}" y1="${r1}" x2="${c4}" y2="${y + h}"/></g>`;
+  const lbl = (tx, ty, t) => `<text x="${tx}" y="${ty}" font-size="8.5" fill="#7A756D">${esc(t)}</text>`;
+  const val = (tx, ty, t, sz, w2) => `<text x="${tx}" y="${ty}" font-size="${sz || 11}" font-weight="${w2 || 400}" fill="#1C1C1C">${esc(t)}</text>`;
+  s += lbl(x + 7, y + 13, 'Студия') + val(x + 7, y + 30, 'LINEA', 15, 700) + lbl(x + 7, y + 43, 'Дизайн интерьера');
+  s += lbl(c1 + 7, y + 13, 'Объект') + val(c1 + 7, y + 30, (brief.object && brief.object.address) || 'Объект', 12, 600);
+  s += lbl(c1 + 7, y + 43, `${(brief.object && brief.object.type) || 'квартира'} · ${totalArea} м² · стиль «${style.title}»`);
+  s += lbl(x + 7, r1 + 13, 'Наименование листа');
+  const nm = wrapText(String(st.name), 42);
+  nm.slice(0, 2).forEach((ln, i2) => { s += val(x + 7, r1 + 30 + i2 * 14, ln, nm.length > 1 ? 11 : 12.5, 600); });
+  s += lbl(b1 + 7, r1 + 13, 'Стадия') + val(b1 + 7, r1 + 30, 'РП', 12, 600);
+  s += lbl(c2 + 7, r1 + 13, 'Масштаб') + val(c2 + 7, r1 + 30, 'М 1:' + st.ratio, 12, 600);
+  s += lbl(c3 + 7, r1 + 13, 'Лист') + val(c3 + 7, r1 + 30, String(st.sheet), 12, 600);
+  s += lbl(c4 + 7, r1 + 13, 'Листов') + val(c4 + 7, r1 + 30, String(TOTAL_SHEETS || '—'), 12, 600);
+  s += `<text x="${x + w - 7}" y="${y + h - 6}" font-size="8" fill="#8A8478" text-anchor="end">${DATE}</text>`;
+  return s;
+}
+
 function svgDoc(wPx, hPx, body, bg) {
-  return `<svg xmlns="http://www.w3.org/2000/svg" width="${wPx}" height="${hPx}" viewBox="0 0 ${wPx} ${hPx}" font-family='${FONT}'>\n<rect width="${wPx}" height="${hPx}" fill="${bg || CAD.paper}"/>\n${body}\n</svg>`;
+  const st = LAST_STAMP || { name: 'Лист', sheet: '—', scale: null }; LAST_STAMP = null;
+  if (st.y && st.y > 40 && st.y < hPx) hPx = st.y + 12;   // низ содержимого — там, где стоял старый штамп
+  const fx = PAGE.ml, fy = PAGE.mt, fw = PAGE.w - PAGE.ml - PAGE.mr, fh = PAGE.h - PAGE.mt - PAGE.mb;
+  const sw = 700, sh = 150;                       // штамп 185×40 мм в правом нижнем углу поля
+  const fieldW = fw - 16, fieldH = fh - sh - 20;  // поле чертежа над штампом
+  let k = SCALE_SERIES[SCALE_SERIES.length - 1][1], ratio = SCALE_SERIES[SCALE_SERIES.length - 1][0];
+  for (const [r, kk] of SCALE_SERIES) { if (wPx * kk <= fieldW && hPx * kk <= fieldH) { k = kk; ratio = r; break; } }
+  if (st.scale === '1:20') { k = SCALE_SERIES[0][1]; ratio = 20; }  // узлы — фиксированный масштаб
+  st.ratio = ratio;
+  let ox = fx + 10;                                                    // содержимое от левого поля
+  if (ox + wPx * k > fx + fw - 12) ox = Math.max(fx + 6, fx + fw - 12 - wPx * k); // гарантированный отступ справа
+  const oy = fy + 12 + Math.max(0, (fieldH - hPx * k) / 2.6);          // по вертикали — с лёгким подъёмом
+  let s = `<svg xmlns="http://www.w3.org/2000/svg" width="${PAGE.w}" height="${PAGE.h}" viewBox="0 0 ${PAGE.w} ${PAGE.h}" font-family='${FONT}'>`;
+  s += `<rect width="${PAGE.w}" height="${PAGE.h}" fill="${bg || CAD.paper}"/>`;
+  s += `<rect x="${fx}" y="${fy}" width="${fw}" height="${fh}" fill="none" stroke="#1C1C1C" stroke-width="1.6"/>`;
+  s += `<g transform="translate(${ox} ${oy}) scale(${k.toFixed(4)})">${body}</g>`;
+  s += sheetStampBlock(fx + fw - sw, fy + fh - sh, sw, sh, st);
+  // контрольный отрезок масштаба: 1000 мм в натуре
+  const ctrl = 1000 * S * k;
+  s += `<g stroke="#1C1C1C" stroke-width="1"><line x1="${fx + 14}" y1="${fy + fh - 22}" x2="${fx + 14 + ctrl}" y2="${fy + fh - 22}"/><line x1="${fx + 14}" y1="${fy + fh - 27}" x2="${fx + 14}" y2="${fy + fh - 17}"/><line x1="${fx + 14 + ctrl}" y1="${fy + fh - 27}" x2="${fx + 14 + ctrl}" y2="${fy + fh - 17}"/></g>`;
+  s += `<text x="${fx + 14}" y="${fy + fh - 32}" font-size="9" fill="#57514A">контроль: 1000 мм · печать 1:1, без подгонки под лист</text>`;
+  return s + `</svg>`;
 }
 let TOTAL_SHEETS = 0; // проставляется до генерации листов
 function stamp(x, y, w, drawingName, sheet, scale) {
-  const sc = scale || '1:50';
-  const list = TOTAL_SHEETS ? `Лист ${sheet} из ${TOTAL_SHEETS}` : `Лист ${sheet}`;
-  const line2 = `${list} · М ${sc} · стадия РП · ${DATE}`;
-  w = Math.max(w, Math.max(drawingName.length * 6.2 + 60, line2.length * 5.2 + 24)); // не даём тексту вылезти
-  if (w < 700) { // узкий лист — компактный штамп в две строки
-    return `<g><rect x="${x}" y="${y}" width="${w}" height="44" fill="none" stroke="#2E2A26" stroke-width="1"/>
-<text x="${x + 10}" y="${y + 17}" font-size="10.5" font-weight="700" fill="#2E2A26" letter-spacing="1">LINEA · ${esc(drawingName)}</text>
-<text x="${x + 10}" y="${y + 33}" font-size="9.5" fill="#7A756D">${line2}</text></g>`;
-  }
-  return `<g><rect x="${x}" y="${y}" width="${w}" height="44" fill="none" stroke="#2E2A26" stroke-width="1"/>
-<text x="${x + 10}" y="${y + 17}" font-size="11" font-weight="700" fill="#2E2A26" letter-spacing="2">LINEA · СТУДИЯ ДИЗАЙНА ИНТЕРЬЕРА</text>
-<text x="${x + 10}" y="${y + 33}" font-size="10" fill="#7A756D">${esc((brief.object && brief.object.address) || 'Объект')} · ${totalArea} м² · стиль «${style.title}» · стадия РП</text>
-<text x="${x + w - 10}" y="${y + 17}" font-size="10" fill="#2E2A26" text-anchor="end">${esc(drawingName)}</text>
-<text x="${x + w - 10}" y="${y + 33}" font-size="10" fill="#7A756D" text-anchor="end">${list} · М ${sc} · ${DATE}</text></g>`;
+  LAST_STAMP = { name: drawingName, sheet, scale: scale || null, y, x };
+  return ''; // штамп рисуется рамкой листа (svgDoc) в едином месте
 }
 function dimH(x1, x2, y, label) {
   return `<g stroke="#2A2A2A" stroke-width="0.8" fill="none"><line x1="${x1}" y1="${y}" x2="${x2}" y2="${y}"/><line x1="${x1}" y1="${y - 5}" x2="${x1}" y2="${y + 5}"/><line x1="${x2}" y1="${y - 5}" x2="${x2}" y2="${y + 5}"/><line x1="${x1 - 3}" y1="${y + 3}" x2="${x1 + 3}" y2="${y - 3}"/><line x1="${x2 - 3}" y1="${y + 3}" x2="${x2 + 3}" y2="${y - 3}"/></g>
@@ -1330,27 +1368,8 @@ function drawFlatElectro(sheetNo) {
 
 // ---------- табличный ГОСТ-штамп для сводных листов (формат рабочих альбомов) ----------
 function flatStamp(x, y, w, title, sheetNo) {
-  const c1 = 84, c2 = w - 84 - 168, c3 = 56, c4 = 56, c5 = 56; // колонки
-  let s = `<g stroke="#2E2A26" stroke-width="1" fill="none">
-<rect x="${x}" y="${y}" width="${w}" height="56"/>
-<line x1="${x + c1}" y1="${y}" x2="${x + c1}" y2="${y + 56}"/>
-<line x1="${x + c1 + c2}" y1="${y}" x2="${x + c1 + c2}" y2="${y + 56}"/>
-<line x1="${x + c1 + c2 + c3}" y1="${y}" x2="${x + c1 + c2 + c3}" y2="${y + 56}"/>
-<line x1="${x + c1 + c2 + c3 + c4}" y1="${y}" x2="${x + c1 + c2 + c3 + c4}" y2="${y + 56}"/>
-<line x1="${x}" y1="${y + 28}" x2="${x + w}" y2="${y + 28}"/></g>`;
-  s += `<g font-size="8" fill="#7A756D">
-<text x="${x + 6}" y="${y + 11}">Дата</text><text x="${x + 6}" y="${y + 39}">Студия</text>
-<text x="${x + c1 + 8}" y="${y + 11}">${esc((brief.object && brief.object.address) || 'Объект')}</text>
-<text x="${x + c1 + c2 + 6}" y="${y + 11}">Стадия</text><text x="${x + c1 + c2 + c3 + 6}" y="${y + 11}">Лист</text><text x="${x + c1 + c2 + c3 + c4 + 6}" y="${y + 11}">Листов</text></g>`;
-  s += `<g font-size="10" fill="#2E2A26">
-<text x="${x + 6}" y="${y + 23}">${DATE}</text>
-<text x="${x + 6}" y="${y + 51}" font-weight="700" letter-spacing="1">LINEA</text>
-<text x="${x + c1 + 8}" y="${y + 49}" font-size="11" font-weight="600">${esc(title)}</text>
-<text x="${x + c1 + c2 + 20}" y="${y + 23}">РП</text>
-<text x="${x + c1 + c2 + c3 + 20}" y="${y + 23}">${sheetNo}</text>
-<text x="${x + c1 + c2 + c3 + c4 + 18}" y="${y + 23}">${TOTAL_SHEETS}</text>
-<text x="${x + c1 + c2 + 8}" y="${y + 49}" font-size="9" fill="#7A756D">М 1:50</text></g>`;
-  return s;
+  LAST_STAMP = { name: title, sheet: sheetNo, scale: null, y, x };
+  return ''; // единый штамп листа — в svgDoc
 }
 
 // сквозной список дверей квартиры (входная — первой)
