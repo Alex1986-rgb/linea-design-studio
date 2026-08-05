@@ -3433,7 +3433,27 @@ function viewerHTML(files) {
   const sec = (id, title, sub, list) => list.length ? `<section id="${id}"><h2>${title}</h2><p class="sub">${sub}</p><div class="grid">${list.map(f =>
     `<figure><button class="sh" data-src="${f}" data-cap="${esc(alt(f))}"><img src="${f}" loading="lazy" alt="${esc(alt(f))}"></button><figcaption>${cap(f)}</figcaption></figure>`).join('')}</div></section>` : '';
   const secR = rnd.length ? `<section id="rendery"><h2>Визуализации</h2><p class="sub">Фотореалистичные виды помещений — та же мебель, свет и материалы, что на чертежах</p><div class="grid wide">${rnd.map(f => {
-    const nm = f.split('/').pop().replace(/\.\w+$/, '').replace(/^\d+\w?-/, '').replace(/-/g, ' ');
+    // подпись рендера: имя файла в транслите → помещение из брифа + вид.
+    // Слова, уже прозвучавшие в названии помещения, из хвоста выбрасываем.
+    const base0 = f.split('/').pop().replace(/\.\w+$/, '');
+    const room0 = rooms.find(r0 => base0.startsWith(nn(r0.idx)));
+    const WORD = { gostinaya: 'гостиная', kuhnya: 'кухня', stolovaya: 'столовая', spalnya: 'спальня', detskaya: 'детская',
+      sanuzel: 'санузел', prihozhaya: 'прихожая', kabinet: 'кабинет', koridor: 'коридор', dom: 'дом',
+      detail: 'фрагмент', obshiy: 'общий вид', vid: 'вид', ot: 'от', krovati: 'кровати', stol: 'рабочее место',
+      dush: 'душевая зона', vanna: 'зона ванны', zerkalo: 'зеркало', hranenie: 'зона хранения', noch: 'вечерний свет',
+      terrasa: 'терраса', lestnica: 'лестница', vtoroy: 'второй', etazh: 'этаж', pervyy: 'первый' };
+    // слово уже есть в названии помещения — как транслит («spalnya») или как корень перевода
+    // («лестница» при «Холл с лестницей»)
+    const nameWords = room0 ? room0.name.toLowerCase().split(/[\s-]+/) : [];
+    const inName = w => {
+      if (!room0) return false;
+      if (slug(room0.name).split('-').includes(w)) return true;
+      const ru = (WORD[w] || '').toLowerCase();
+      return ru.length > 4 && nameWords.some(nw => nw.slice(0, 5) === ru.slice(0, 5));
+    };
+    const tail = base0.replace(/^\d+\w?-/, '').split('-').filter(w => w && !inName(w))
+      .map(w => WORD[w] || w).join(' ').trim();
+    const nm = room0 ? (room0.name + (tail ? ' · ' + tail : '')) : base0.replace(/-/g, ' ');
     return `<figure><button class="sh" data-src="${f}" data-cap="${esc(nm)}"><img src="${f}" loading="lazy" alt="Визуализация: ${esc(nm)} — стиль «${esc(style.title)}»"></button><figcaption>${esc(nm)}</figcaption></figure>`;
   }).join('')}</div></section>` : '';
   const totalSheets = files.filter(f => f.endsWith('.svg')).length;
