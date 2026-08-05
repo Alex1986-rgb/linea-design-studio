@@ -172,4 +172,29 @@ const FURN_PRICES = {
   spot: 2800, pendant: 22000, track: 19000
 };
 
-module.exports = { STYLES, TIERS, WORK_RATES, FURN_PRICES, pickStyle };
+// Высоты мебели для развёрток, мм: base — низ от чистого пола, h — высота фронта.
+// Кухня разбита по ярусам отдельно (kitchenEquipFor), здесь — корпусная и мягкая мебель.
+const FURN_H = {
+  wardrobe:    { base: 0, h: 2400, name: 'Шкаф' },
+  hallwardrobe:{ base: 0, h: 2400, name: 'Шкаф-гардероб' },
+  shelf:       { base: 0, h: 1400, name: 'Стеллаж' },
+  dresser:     { base: 0, h: 900,  name: 'Комод' },
+  bed:         { base: 0, h: 600,  head: 1100, name: 'Кровать' },
+  kidbed:      { base: 0, h: 600,  head: 950,  name: 'Кровать' },
+  nightstand:  { base: 0, h: 450,  name: 'Тумба' },
+  desk:        { base: 0, h: 750,  name: 'Стол' },
+  table:       { base: 0, h: 750,  name: 'Стол' },
+  dining:      { base: 0, h: 750,  name: 'Обеденный стол' },
+  sofa:        { base: 0, h: 850,  name: 'Диван' },
+  armchair:    { base: 0, h: 800,  name: 'Кресло' },
+  coffee:      { base: 0, h: 400,  name: 'Журнальный стол' },
+  bench:       { base: 0, h: 450,  name: 'Банкетка' },
+  fridge:      { base: 0, h: 2000, name: 'Холодильник' },
+  washer:      { base: 0, h: 850,  name: 'Стиральная машина' },
+  bath:        { base: 0, h: 600,  name: 'Ванна' },
+  shower:      { base: 0, h: 2000, name: 'Душевая' },
+  wc:          { base: 0, h: 800,  name: 'Унитаз' },
+  sink:        { base: 0, h: 850,  name: 'Раковина' }
+};
+
+module.exports = { STYLES, TIERS, WORK_RATES, FURN_PRICES, FURN_H, pickStyle };

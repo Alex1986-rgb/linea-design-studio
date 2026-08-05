@@ -9,7 +9,7 @@
 // ================================================================
 const fs = require('fs');
 const path = require('path');
-const { STYLES, TIERS, WORK_RATES, FURN_PRICES, pickStyle } = require('./presets');
+const { STYLES, TIERS, WORK_RATES, FURN_PRICES, FURN_H, pickStyle } = require('./presets');
 
 // ---------- CLI ----------
 // node engine/generate.js <brief.json> [папка-вывода] [--date=ДД.ММ.ГГГГ] [--strict]
@@ -1061,6 +1061,30 @@ function elevsFor(room, wallKey) {
   }));
 }
 
+// ---------- мебель на развёртке ----------
+// Развертка без мебели несёт ~10% информации: кухонщик не замерит модули, электрик
+// не поймёт, попадёт ли розетка за корпус. Берём фактическую расстановку с плана,
+// оставляем предметы, прилегающие к этой стене, и разворачиваем их в координату стены.
+function furnOnWall(room, wallKey) {
+  const GAP = 300;   // мм: считаем предмет пристенным, если зазор до стены меньше
+  const out = [];
+  for (const f of furnitureFor(room)) {
+    if (f.key === 'rug' || f.key === 'stairs') continue;
+    const spec = FURN_H[f.key];
+    if (!spec) continue;
+    let near = false, xElev = 0, wLen = 0;
+    if (wallKey === 'A') { near = f.y <= GAP; xElev = f.x; wLen = f.w; }
+    else if (wallKey === 'C') { near = room.l - (f.y + f.h) <= GAP; xElev = f.x; wLen = f.w; }
+    else if (wallKey === 'B') { near = room.w - (f.x + f.w) <= GAP; xElev = f.y; wLen = f.h; }
+    else { near = f.x <= GAP; xElev = room.l - (f.y + f.h); wLen = f.h; }
+    if (!near || wLen < 200) continue;
+    const isHead = spec.head && f.head === wallKey;   // изголовье кровати у этой стены
+    out.push({ key: f.key, name: f.name, xElev, w: wLen, base: spec.base,
+      h: isHead ? spec.head : spec.h, head: !!isHead, plan: f });
+  }
+  return out.sort((a, b) => b.h - a.h);   // высокое рисуем первым, низкое поверх
+}
+
 // ---------- развёртка: бра (настенные светильники) по типу помещения ----------
 function sconceFor(room, wallKey) {
   const W = room.w, L = room.l, sc = [];
@@ -1100,10 +1124,33 @@ function kitchenEquipFor(room, wallKey) {
   const kStart = 100;
   const kEnd   = room.w - 200;
   const kW     = kEnd - kStart;
+  // Ярусы гарнитура не могут идти сквозь проём: верхние шкафы обходят окно всегда,
+  // нижние — когда подоконник ниже столешницы (иначе столешница шла бы по радиатору).
+  const CLR = 50;
+  const winsOnWall = (room.windows || []).filter(o => o.wall === wallKey);
+  const gapsUpper = winsOnWall.map(o => [o.off - CLR, o.off + o.w + CLR]);
+  const gapsLower = winsOnWall.filter(o => o.sill < 900).map(o => [o.off - CLR, o.off + o.w + CLR]);
+  const splitAround = (a, b, gaps) => {
+    let segs = [[a, b]];
+    for (const [g0, g1] of gaps) {
+      const next = [];
+      for (const [s0, s1] of segs) {
+        if (g1 <= s0 || g0 >= s1) { next.push([s0, s1]); continue; }
+        if (s0 < g0) next.push([s0, Math.min(g0, s1)]);
+        if (s1 > g1) next.push([Math.max(g1, s0), s1]);
+      }
+      segs = next;
+    }
+    return segs.filter(([s0, s1]) => s1 - s0 >= 300);   // огрызок меньше 300 мм не модуль
+  };
+  const tier = (segs, hMm, bottomMm, type) => segs.map(([s0, s1]) => ({
+    type, xMm: s0, wMm: s1 - s0, hMm, bottomMm,
+    fillColor: '#D4C9A8', strokeColor: '#8A7A5A', label: ''
+  }));
   return [
     { type: 'fridge',     xMm: kStart,                          wMm: 600, hMm: 2000, bottomMm: 0,          fillColor: '#E8EDEB', strokeColor: '#3D8A6E', label: 'Холодильник' },
-    { type: 'counter',    xMm: kStart + 600,                    wMm: kW - 600,        hMm: 870,  bottomMm: 0,          fillColor: '#D4C9A8', strokeColor: '#8A7A5A', label: '' },
-    { type: 'upper',      xMm: kStart + 600,                    wMm: kW - 600 - 350,  hMm: 700,  bottomMm: room.h - 900, fillColor: '#D4C9A8', strokeColor: '#8A7A5A', label: '' },
+    ...tier(splitAround(kStart + 600, kEnd, gapsLower), 870, 0, 'counter'),
+    ...tier(splitAround(kStart + 600, kEnd - 350, gapsUpper), 700, room.h - 900, 'upper'),
     { type: 'dishwasher', xMm: kStart + 620,                    wMm: 600, hMm: 860,  bottomMm: 0,          fillColor: '#E0E8ED', strokeColor: '#3D6A8A', label: 'ПМ' },
     { type: 'hob',        xMm: kStart + Math.round(kW * 0.50),  wMm: 600, hMm: 40,   bottomMm: 870,        fillColor: '#2E2A26', strokeColor: '#2E2A26', label: 'Плита' },
     { type: 'hood',       xMm: kStart + Math.round(kW * 0.50),  wMm: 600, hMm: 380,  bottomMm: room.h - 900, fillColor: '#9A9A9A', strokeColor: '#555',    label: 'Вытяжка' },
@@ -1154,7 +1201,7 @@ function drawElevation(room, wallKey, sheet) {
   const SPEC_X = M + w + 72;
   const SPEC_W = 268;
   const Wd = Math.max(880, w + M * 2 + SPEC_W + 80);
-  const Hd = Math.max(h + M * 2 + 130, 800);
+  const Hd = h + M * 2 + 130;
 
   // ── 1. фон стены ──────────────────────────────────────────────
   let b = `<rect x="${M}" y="${M}" width="${w}" height="${h}" fill="${style.wall.color}" stroke="#2E2A26" stroke-width="2"/>`;
@@ -1171,8 +1218,8 @@ function drawElevation(room, wallKey, sheet) {
   const cornHpx = px(CORN_H);
   b += `<rect x="${M}" y="${M}" width="${w}" height="${cornHpx}" fill="#D8D4CC" stroke="#57514A" stroke-width="1" stroke-dasharray="5 3"/>`;
   b += `<line x1="${M + 6}" y1="${M + cornHpx * 0.64}" x2="${M + w - 6}" y2="${M + cornHpx * 0.64}" stroke="#C29A5B" stroke-width="2.5" stroke-dasharray="9 5"/>`;
-  b += `<text x="${M + w / 2}" y="${M + cornHpx * 0.35}" font-size="8" fill="#7A756D" text-anchor="middle">Карниз ГКЛ ${CORN_H}×60 мм</text>`;
-  b += `<text x="${M + w / 2}" y="${M + cornHpx * 0.62 - 6}" font-size="7.5" fill="#8A6A3B" text-anchor="middle">LED 3000К · ${style.skus.led.split('·')[0].trim()}</text>`;
+  b += `<text x="${M + 8}" y="${M + cornHpx * 0.42}" font-size="8" fill="#7A756D">Карниз ГКЛ ${CORN_H}×60 мм</text>`;
+  b += `<text x="${M + w - 8}" y="${M + cornHpx * 0.42}" font-size="7.5" fill="#8A6A3B" text-anchor="end">LED 3000К · ${style.skus.led.split('·')[0].trim()}</text>`;
 
   // ── 3. плинтус ────────────────────────────────────────────────
   b += `<rect x="${M}" y="${M + h - px(PLIN_H)}" width="${w}" height="${px(PLIN_H)}" fill="#CFC9BD" stroke="#57514A" stroke-width="0.8"/>`;
@@ -1198,6 +1245,42 @@ function drawElevation(room, wallKey, sheet) {
   const kitEquip    = kitchenEquipFor(room, wallKey);
   const bathEquip   = bathroomEquipFor(room, wallKey);
   const livingEquip = livingEquipFor(room, wallKey);
+
+  // ── 4a. фронты пристенной мебели с плана ─────────────────────
+  // Рисуем до техники: техника (плита, мойка, ТВ) ложится поверх своих корпусов.
+  const drawnByEquip = new Set();
+  if (kitEquip.length) { drawnByEquip.add('kitchen'); drawnByEquip.add('kitchen_ext'); drawnByEquip.add('fridge'); }
+  if (bathEquip.length) { drawnByEquip.add('sink'); }
+  const wallFurn = furnOnWall(room, wallKey).filter(f => !drawnByEquip.has(f.key));
+  let furnMarks = '';
+  for (const f of wallFurn) {
+    const fx0 = M + px(f.xElev), fy0 = M + h - px(f.base + f.h);
+    const fw0 = px(f.w), fh0 = px(f.h);
+    b += `<rect x="${fx0}" y="${fy0}" width="${fw0}" height="${fh0}" fill="#2E9E4F0F" stroke="${CAD.furn}" stroke-width="1.1"/>`;
+    // деталировка фронта: створки по 450–600 мм с ручками, у мягкой мебели — спинка
+    if (['wardrobe', 'hallwardrobe', 'shelf', 'dresser'].includes(f.key)) {
+      const nD = Math.max(1, Math.round(f.w / 500));
+      for (let d = 1; d < nD; d++) b += `<line x1="${fx0 + fw0 * d / nD}" y1="${fy0 + 3}" x2="${fx0 + fw0 * d / nD}" y2="${fy0 + fh0 - 3}" stroke="${CAD.furn}" stroke-width="0.7"/>`;
+      for (let d = 0; d < nD; d++) b += `<rect x="${fx0 + fw0 * (d + 0.5) / nD - 1.2}" y="${fy0 + fh0 * 0.45}" width="2.4" height="${Math.min(28, fh0 * 0.18)}" fill="${CAD.furn}"/>`;
+      if (f.key === 'shelf') for (let sh = 1; sh < Math.round(f.h / 350); sh++)
+        b += `<line x1="${fx0 + 2}" y1="${fy0 + fh0 * sh / Math.round(f.h / 350)}" x2="${fx0 + fw0 - 2}" y2="${fy0 + fh0 * sh / Math.round(f.h / 350)}" stroke="${CAD.furn}" stroke-width="0.6"/>`;
+    }
+    if (f.head) { // изголовье: мягкая панель с прошивкой
+      const nS = Math.max(2, Math.round(f.w / 600));
+      for (let sq = 1; sq < nS; sq++) b += `<line x1="${fx0 + fw0 * sq / nS}" y1="${fy0 + 4}" x2="${fx0 + fw0 * sq / nS}" y2="${fy0 + fh0 - 4}" stroke="${CAD.furn}" stroke-width="0.6" stroke-dasharray="3 2"/>`;
+    }
+    if (['sofa', 'armchair'].includes(f.key)) b += `<line x1="${fx0}" y1="${fy0 + fh0 * 0.42}" x2="${fx0 + fw0}" y2="${fy0 + fh0 * 0.42}" stroke="${CAD.furn}" stroke-width="0.7"/>`;
+    if (['table', 'desk', 'dining', 'coffee'].includes(f.key)) { // столешница + ножки
+      b += `<line x1="${fx0}" y1="${fy0 + 4}" x2="${fx0 + fw0}" y2="${fy0 + 4}" stroke="${CAD.furn}" stroke-width="1.4"/>`;
+      b += `<line x1="${fx0 + 6}" y1="${fy0 + 4}" x2="${fx0 + 6}" y2="${fy0 + fh0}" stroke="${CAD.furn}" stroke-width="0.8"/>`;
+      b += `<line x1="${fx0 + fw0 - 6}" y1="${fy0 + 4}" x2="${fx0 + fw0 - 6}" y2="${fy0 + fh0}" stroke="${CAD.furn}" stroke-width="0.8"/>`;
+    }
+    // подпись и отметка верха — поверх графики, собираем отдельно
+    const cap = `${f.head ? 'Изголовье' : (FURN_H[f.key] || {}).name || f.name} ${f.w}`;
+    if (fw0 > cap.length * 4.6 && fh0 > 16)
+      furnMarks += `<text x="${fx0 + fw0 / 2}" y="${fy0 + fh0 / 2 + 3}" font-size="8" fill="${CAD.furn}" text-anchor="middle">${esc(cap)}</text>`;
+    furnMarks += `<text x="${fx0 + fw0 - 3}" y="${fy0 - 4}" font-size="7.6" fill="#57514A" text-anchor="end">+${((f.base + f.h) / 1000).toFixed(3).replace('.', ',')}</text>`;
+  }
   for (const eq of [...kitEquip, ...bathEquip, ...livingEquip]) {
     const ex = M + px(eq.xMm), ey = M + h - px(eq.bottomMm + eq.hMm);
     const ew = px(eq.wMm),     eh = px(eq.hMm);
@@ -1287,14 +1370,14 @@ function drawElevation(room, wallKey, sheet) {
     const sillX = ox - px(sillOvhg), sillY = M + h - px(o.sill);
     b += `<rect x="${sillX}" y="${sillY}" width="${px(o.w + sillOvhg * 2)}" height="${px(sillThick)}" fill="#D8D2C0" stroke="#57514A" stroke-width="1.2"/>`;
     const sillMat = style.key === 'neoclassic' ? 'мрамор Bianco' : style.key === 'minimal' || style.key === 'loft' ? 'искусств. камень' : 'МДФ кр. в тон';
-    b += `<text x="${ox + px(o.w) / 2}" y="${sillY + px(sillThick) + 12}" font-size="8" fill="#7A756D" text-anchor="middle">подоконник ${o.w + sillOvhg * 2}×${o.sill}×${sillThick} · ${sillMat}</text>`;
+    b += `<text x="${ox + 4}" y="${sillY + px(sillThick) + 12}" font-size="8" fill="#7A756D">подоконник ${o.w + sillOvhg * 2}×${o.sill}×${sillThick} · ${sillMat}</text>`;
     // радиатор под подоконником
     const radW = px(Math.min(o.w, 1200)), radH = px(88);
     const radX = ox + (px(o.w) - radW) / 2, radY = sillY + px(sillThick) + px(20);
     radSvg += `<rect x="${radX}" y="${radY}" width="${radW}" height="${radH}" fill="#EAF3F7" stroke="#5B7FA0" stroke-width="0.9"/>`;
     const rn = Math.max(4, Math.round(radW / 9));
     for (let i = 1; i < rn; i++) radSvg += `<line x1="${radX + radW / rn * i}" y1="${radY + 2}" x2="${radX + radW / rn * i}" y2="${radY + radH - 2}" stroke="#5B7FA0" stroke-width="0.6"/>`;
-    radSvg += `<text x="${ox + px(o.w) / 2}" y="${radY + radH + 10}" font-size="8" fill="#5B7FA0" text-anchor="middle">радиатор отопления</text>`;
+    radSvg += `<text x="${ox + px(o.w) - 4}" y="${radY + radH + 11}" font-size="8" fill="#5B7FA0" text-anchor="end">радиатор отопления</text>`;
   }
 
   // ── 6. двери + перемычка ──────────────────────────────────────
@@ -1307,6 +1390,7 @@ function drawElevation(room, wallKey, sheet) {
   }
 
   b += radSvg;
+  b += furnMarks;      // подписи мебели поверх графики фронтов
   b += nicheLabels;
 
   // ── 7. бра ────────────────────────────────────────────────────
@@ -1323,6 +1407,7 @@ function drawElevation(room, wallKey, sheet) {
   }
 
   // ── 8. электрика на стене (розетки / выключатели) ─────────────
+  const elevHLabels = [];
   const elPts = elevsFor(room, wallKey);
   const SR = 8; // px фиксированный — размер символа
   for (const ep of elPts) {
@@ -1340,8 +1425,21 @@ function drawElevation(room, wallKey, sheet) {
     }
     // вертикальная нитка вниз к полу
     b += `<line x1="${ex}" y1="${M + h}" x2="${ex}" y2="${ey + SR + 1}" stroke="#21A36630" stroke-width="0.6" stroke-dasharray="2 3"/>`;
-    // подпись высоты
-    b += `<text x="${ex}" y="${M + h + 16}" font-size="8" fill="#21A366" text-anchor="middle">h=${ep.h}</text>`;
+    // подпись высоты — собираем, чтобы разложить в два ряда без слипания
+    elevHLabels.push({ x: ex, h: ep.h });
+  }
+  // Подписи привязок раскладываем по двум рядам: в один ряд они слипались в кашу
+  // («h=1800h=150h=1100»). Не влезло даже во второй ряд — высота всё равно есть
+  // в выносках справа от стены.
+  {
+    const rows = [[], []];
+    for (const lab of elevHLabels.slice().sort((a, b) => a.x - b.x)) {
+      const wLab = 30;
+      const ri = rows.findIndex(r => !r.length || lab.x - r[r.length - 1] >= wLab);
+      if (ri < 0) continue;
+      rows[ri].push(lab.x);
+      b += `<text x="${lab.x}" y="${M + h + 16 + ri * 12}" font-size="8" fill="#21A366" text-anchor="middle">h=${lab.h}</text>`;
+    }
   }
   // горизонтальная группировка подписей h= (уникальные высоты, вынос вправо от стены)
   const uniqH = [...new Set(elPts.map(p => p.h))].sort((a, b) => a - b);
