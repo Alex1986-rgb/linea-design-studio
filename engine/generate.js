@@ -12,11 +12,31 @@ const path = require('path');
 const { STYLES, TIERS, WORK_RATES, FURN_PRICES, pickStyle } = require('./presets');
 
 // ---------- CLI ----------
-const briefPath = process.argv[2];
-const outDir = process.argv[3] || path.join('output', 'project-' + new Date().toISOString().slice(0, 10));
-if (!briefPath) { console.error('Использование: node engine/generate.js <brief.json> [папка-вывода]'); process.exit(1); }
+// node engine/generate.js <brief.json> [папка-вывода] [--date=ДД.ММ.ГГГГ] [--strict]
+const FLAGS = {}, POS = [];
+for (const a of process.argv.slice(2)) {
+  const m = /^--([a-z][a-z-]*)(?:=(.*))?$/.exec(a);
+  if (m) FLAGS[m[1]] = m[2] === undefined ? true : m[2]; else POS.push(a);
+}
+const briefPath = POS[0];
+if (!briefPath) { console.error('Использование: node engine/generate.js <brief.json> [папка-вывода] [--date=ДД.ММ.ГГГГ] [--strict]'); process.exit(1); }
 const brief = JSON.parse(fs.readFileSync(briefPath, 'utf8'));
-const DATE = new Date().toLocaleDateString('ru-RU');
+// дата выпуска: флаг → бриф → системные часы. Первые два дают побайтово воспроизводимый альбом.
+const ISSUE_DATE = (typeof FLAGS.date === 'string' && FLAGS.date) || (brief.meta && brief.meta.issueDate) || null;
+const DATE = ISSUE_DATE || new Date().toLocaleDateString('ru-RU');
+const outDir = POS[1] || path.join('output', 'project-' + (ISSUE_DATE ? ISSUE_DATE.split('.').reverse().join('-') : new Date().toISOString().slice(0, 10)));
+
+// ---------- проверка исходных данных ----------
+const CHECK = require('./validate').validate(brief);
+if (CHECK.errors.length || CHECK.warnings.length) {
+  console.log(`Проверка брифа: ошибок ${CHECK.errors.length}, предупреждений ${CHECK.warnings.length}`);
+  CHECK.errors.forEach(e => console.error('  ✖ ' + e));
+  CHECK.warnings.forEach(w => console.log('  ⚠ ' + w));
+}
+if (CHECK.errors.length && FLAGS.strict) {
+  console.error('--strict: альбом не собран, пока в исходных данных есть ошибки.');
+  process.exit(1);
+}
 
 // ---------- нормализация брифа (метры → мм) ----------
 const HABITABLE = new Set(['living', 'bedroom', 'kids', 'living-kitchen', 'cabinet', 'kitchen']);
@@ -58,7 +78,7 @@ function sheetStampBlock(x, y, w, h, st) {
 <line x1="${x}" y1="${r1}" x2="${x + w}" y2="${r1}"/><line x1="${c1}" y1="${y}" x2="${c1}" y2="${r1}"/>
 <line x1="${b1}" y1="${r1}" x2="${b1}" y2="${y + h}"/>
 <line x1="${c2}" y1="${r1}" x2="${c2}" y2="${y + h}"/><line x1="${c3}" y1="${r1}" x2="${c3}" y2="${y + h}"/><line x1="${c4}" y1="${r1}" x2="${c4}" y2="${y + h}"/></g>`;
-  const lbl = (tx, ty, t) => `<text x="${tx}" y="${ty}" font-size="8.5" fill="#7A756D">${esc(t)}</text>`;
+  const lbl = (tx, ty, t) => `<text x="${tx}" y="${ty}" font-size="9.5" fill="#7A756D">${esc(t)}</text>`;
   const val = (tx, ty, t, sz, w2) => `<text x="${tx}" y="${ty}" font-size="${sz || 11}" font-weight="${w2 || 400}" fill="#1C1C1C">${esc(t)}</text>`;
   s += lbl(x + 7, y + 13, 'Студия') + val(x + 7, y + 30, 'LINEA', 15, 700) + lbl(x + 7, y + 43, 'Дизайн интерьера');
   s += lbl(c1 + 7, y + 13, 'Объект') + val(c1 + 7, y + 30, (brief.object && brief.object.address) || 'Объект', 12, 600);
@@ -70,12 +90,36 @@ function sheetStampBlock(x, y, w, h, st) {
   s += lbl(c2 + 7, r1 + 13, 'Масштаб') + val(c2 + 7, r1 + 30, 'М 1:' + st.ratio, 12, 600);
   s += lbl(c3 + 7, r1 + 13, 'Лист') + val(c3 + 7, r1 + 30, String(st.sheet), 12, 600);
   s += lbl(c4 + 7, r1 + 13, 'Листов') + val(c4 + 7, r1 + 30, String(TOTAL_SHEETS || '—'), 12, 600);
-  s += `<text x="${x + w - 7}" y="${y + h - 6}" font-size="8" fill="#8A8478" text-anchor="end">${DATE}</text>`;
+  s += `<text x="${x + w - 7}" y="${y + h - 6}" font-size="9.5" fill="#8A8478" text-anchor="end">${DATE}</text>`;
   return s;
+}
+
+// вырезать содержимое групп с clip-path (учитывая вложенность <g>)
+function stripClipped(body) {
+  let out = '', i = 0;
+  for (;;) {
+    const m = /<g[^>]*clip-path="[^"]*"[^>]*>/.exec(body.slice(i));
+    if (!m) return out + body.slice(i);
+    const start = i + m.index, inner = start + m[0].length;
+    out += body.slice(i, start);
+    let depth = 1, j = inner;
+    const re = /<g\b|<\/g>/g; re.lastIndex = inner;
+    let t;
+    while ((t = re.exec(body))) { depth += t[0] === '</g>' ? -1 : 1; if (!depth) break; }
+    i = t ? re.lastIndex : body.length;
+  }
 }
 
 // фактические границы содержимого: по ним лист заполняется без пустых полей
 function contentBox(body) {
+  // <defs> измерять нельзя: координаты внутри <pattern>/<marker> живут в своей системе,
+  // и нулевая точка штриховки тянула габарит листа к (0,0) — из-за этого чертёж уезжал
+  // на ступень мельче по масштабному ряду и половина поля оставалась пустой
+  body = body.replace(/<defs>[\s\S]*?<\/defs>/g, '');
+  // Содержимое обрезанных групп на листе не видно за пределами clipPath: штриховки
+  // рисуются с запасом (демонтаж, полы, раскладка плитки) и раньше раздували габарит.
+  // Видимые границы задаёт <rect> внутри <clipPath> — он остаётся в замере.
+  body = stripClipped(body);
   let x0 = 1e9, y0 = 1e9, x1 = -1e9, y1 = -1e9;
   const put = (x, y) => { if (isFinite(x) && isFinite(y)) { if (x < x0) x0 = x; if (y < y0) y0 = y; if (x > x1) x1 = x; if (y > y1) y1 = y; } };
   // прямоугольники и изображения (с учётом ширины/высоты)
@@ -100,6 +144,24 @@ function contentBox(body) {
   return { x0: x0 - 14, y0: y0 - 14, x1: x1 + 14, y1: y1 + 14 };
 }
 
+// ---------- перо и типографика в миллиметрах бумаги (ГОСТ 2.303 / 2.304) ----------
+const PXMM = 1587 / 420;          // px листа на 1 мм бумаги (A3 при 96 dpi)
+const PEN_MM = { cut: 0.7, cutSecondary: 0.5, visible: 0.35, thin: 0.25, aux: 0.18 };
+const TEXT_MM = { h5: 5, h35: 3.5, h25: 2.5 };
+// Содержимое листа рисуется в модельных px и потом масштабируется в поле чертежа
+// коэффициентом k (см. SCALE_SERIES). Из-за этого один и тот же font-size давал на бумаге
+// от 1,5 до 5,6 мм — альбом читался как склейка из разных проектов. Нормализация держит
+// толщины и кегли постоянными на бумаге: делим на k и подпираем минимумами ГОСТ.
+const K_REF = 1.05;               // опорный коэффициент: font-size 9 → 2,5 мм на бумаге
+function normalizeInk(body, k) {
+  const c = Math.max(0.35, Math.min(1.35, K_REF / k));   // границы: не даём тексту распухнуть на мелких масштабах
+  const minText = TEXT_MM.h25 * PXMM / k;                // 2,5 мм — ниже ГОСТ 2.304 не выводим
+  const minPen = PEN_MM.aux * PXMM / k;                  // 0,18 мм — тоньше не печатается
+  return body
+    .replace(/font-size="([\d.]+)"/g, (m, v) => `font-size="${Math.max(+v * c, minText).toFixed(2)}"`)
+    .replace(/stroke-width="([\d.]+)"/g, (m, v) => `stroke-width="${Math.max(+v * c, minPen).toFixed(2)}"`);
+}
+
 function svgDoc(wPx, hPx, body, bg) {
   const st = LAST_STAMP || { name: 'Лист', sheet: '—', scale: null }; LAST_STAMP = null;
   if (st.y && st.y > 40 && st.y < hPx) hPx = st.y + 12;   // низ содержимого — там, где стоял старый штамп
@@ -112,18 +174,19 @@ function svgDoc(wPx, hPx, body, bg) {
   for (const [r, kk] of SCALE_SERIES) { if (cw * kk <= fieldW && ch * kk <= fieldH) { k = kk; ratio = r; break; } }
   if (st.scale === '1:20') { k = SCALE_SERIES[0][1]; ratio = 20; }  // узлы — фиксированный масштаб
   st.ratio = ratio;
+  if (process.env.LINEA_DEBUG_FIT) console.log(`FIT ${st.name} | bb ${bb.x0.toFixed(0)},${bb.y0.toFixed(0)} → ${bb.x1.toFixed(0)},${bb.y1.toFixed(0)} | cw×ch ${cw.toFixed(0)}×${ch.toFixed(0)} | k=${k} 1:${ratio} | на бумаге ${(cw*k).toFixed(0)}×${(ch*k).toFixed(0)} из ${fieldW}×${fieldH}`);
   // содержимое ставим по фактическим границам: слева и сверху с равным полем, без пустых зон
-  const ox = fx + 12 - bb.x0 * k;
-  const oy = fy + 14 - bb.y0 * k + Math.max(0, (fieldH - ch * k) / 2.2);
+  const ox = fx + 12 + Math.max(0, (fieldW - cw * k) / 2) - bb.x0 * k;
+  const oy = fy + 14 + Math.max(0, (fieldH - ch * k) / 2) - bb.y0 * k;
   let s = `<svg xmlns="http://www.w3.org/2000/svg" width="${PAGE.w}" height="${PAGE.h}" viewBox="0 0 ${PAGE.w} ${PAGE.h}" font-family='${FONT}'>`;
   s += `<rect width="${PAGE.w}" height="${PAGE.h}" fill="${bg || CAD.paper}"/>`;
   s += `<rect x="${fx}" y="${fy}" width="${fw}" height="${fh}" fill="none" stroke="#1C1C1C" stroke-width="1.6"/>`;
-  s += `<g transform="translate(${ox} ${oy}) scale(${k.toFixed(4)})">${body}</g>`;
+  s += `<g transform="translate(${ox} ${oy}) scale(${k.toFixed(4)})">${normalizeInk(body, k)}</g>`;
   s += sheetStampBlock(fx + fw - sw, fy + fh - sh, sw, sh, st);
   // контрольный отрезок масштаба: 1000 мм в натуре
   const ctrl = 1000 * S * k;
   s += `<g stroke="#1C1C1C" stroke-width="1"><line x1="${fx + 14}" y1="${fy + fh - 22}" x2="${fx + 14 + ctrl}" y2="${fy + fh - 22}"/><line x1="${fx + 14}" y1="${fy + fh - 27}" x2="${fx + 14}" y2="${fy + fh - 17}"/><line x1="${fx + 14 + ctrl}" y1="${fy + fh - 27}" x2="${fx + 14 + ctrl}" y2="${fy + fh - 17}"/></g>`;
-  s += `<text x="${fx + 14}" y="${fy + fh - 32}" font-size="9" fill="#57514A">контроль: 1000 мм · печать 1:1, без подгонки под лист</text>`;
+  s += `<text x="${fx + 14}" y="${fy + fh - 32}" font-size="9.5" fill="#57514A">контроль: 1000 мм · печать 1:1, без подгонки под лист</text>`;
   return s + `</svg>`;
 }
 let TOTAL_SHEETS = 0; // проставляется до генерации листов
@@ -2289,6 +2352,49 @@ function flatLayer(MX, MY, opts) {
   return { s, fx, fy };
 }
 
+// ---------- выноска по ГОСТ 2.316 ----------
+// Точка → наклонная → горизонтальная полка → текст без белой плашки поверх чертежа.
+// Раскладчик перебирает 8 направлений и ставит подпись в первое свободное место;
+// занятость листа накапливается в ink, поэтому подписи не наезжают ни на графику,
+// ни друг на друга. Не нашлось места — зовущий ставит номер позиции и уводит текст
+// в ведомость (так делают в рабочих альбомах вместо диагоналей через весь план).
+function inkMap() {
+  const boxes = [];
+  return {
+    add: (x, y, w, h) => { boxes.push({ x, y, w, h }); },
+    free: (x, y, w, h) => !boxes.some(b => hits({ x, y, w, h }, b)),
+    boxes
+  };
+}
+const LEAD_DIRS = [[1, -1], [-1, -1], [1, 1], [-1, 1], [1, -0.45], [-1, -0.45], [1, 0.45], [-1, 0.45]];
+function leader(ink, tx, ty, text, opt) {
+  opt = opt || {};
+  const fs = opt.size || 8.6, tw = String(text).length * fs * 0.55, th = fs * 1.4;
+  const arm = opt.arm || 30, shelf = opt.shelf || 30;
+  for (const [dx, dy] of LEAD_DIRS) {
+    const bx = tx + dx * arm, by = ty + dy * arm;      // конец наклонной
+    const ex = bx + Math.sign(dx) * shelf;             // конец полки
+    const txx = dx > 0 ? ex + 3 : ex - 3 - tw;
+    if (!ink.free(Math.min(tx, txx) - 2, Math.min(ty, by - th) - 2, Math.abs(txx - tx) + tw + 4, Math.abs(by - ty) + th + 4)) continue;
+    ink.add(txx - 2, by - th + 2, tw + 4, th);         // занимаем только текст: полки тонкие, пересечение допустимо
+    return `<g stroke="${CAD.callout}" stroke-width="0.6" fill="none"><line x1="${tx}" y1="${ty}" x2="${bx}" y2="${by}"/><line x1="${bx}" y1="${by}" x2="${ex}" y2="${by}"/></g>`
+      + `<circle cx="${tx}" cy="${ty}" r="1.6" fill="${CAD.callout}" stroke="none"/>`
+      + `<text x="${txx}" y="${by - 3}" font-size="${fs}" fill="${CAD.callout}">${esc(text)}</text>`;
+  }
+  return null;
+}
+
+// значимые для спецификации предметы: по ним идёт нумерация позиций на плане мебели
+const FURN_POS_KEYS = new Set(['bed', 'kidbed', 'sofa', 'armchair', 'wardrobe', 'kitchen', 'kitchen_ext', 'table', 'dining', 'desk', 'tv', 'bath', 'shower', 'wc', 'sink', 'washer', 'fridge', 'shelf', 'nightstand', 'coffee', 'stairs']);
+function furnPositions() {
+  const out = []; let n = 0;
+  for (const r of flatRooms) for (const f of furnitureFor(r)) {
+    if (!FURN_POS_KEYS.has(f.key)) continue;
+    out.push({ n: ++n, r, f });
+  }
+  return out;
+}
+
 // выноска-плашка с линией-указкой (стандарт рабочих альбомов)
 function callout(tx, ty, px2, py2, text) {
   const w = text.length * 5.4 + 12;
@@ -2318,14 +2424,14 @@ function flatSheet(sheetNo, title, sub, layerFn, rightFn, notes, lopts) {
   if (FLAT && FLAT.level && LEVELS.length > 1) title = `${title} · ${FLAT.level} этаж`;
   // тематические листы (слой поверх подложки) рисуются с приглушённой подложкой
   if (/розет|освещен|выключател|схема|пол(ы|ов)|отделк|тёплы|потолк/i.test(title)) lopts = Object.assign({ pale: true }, lopts || {});
-  const MX = 70, MY = 96;
+  const MX = 70, MY = 74;
   const planW = px(FLAT.W + 2 * EXT), planH = px(FLAT.H + 2 * EXT);
   const LGX = MX + planW + 76, LGW = 268;
   const Wd = LGX + LGW + 26;
   const base = flatLayer(MX, MY, Object.assign({ id: sheetNo }, lopts || {}));
   let b = base.s + layerFn(base);
   b += rightFn(LGX, MY, LGW);
-  let ny = MY + planH + 104;
+  let ny = MY + planH + 62;
   b += `<text x="${MX}" y="${ny - 22}" font-size="10" font-weight="700" fill="#2E2A26">Примечания:</text>`;
   notes.forEach((n, i) => { b += `<text x="${MX}" y="${ny - 8 + i * 14}" font-size="9" fill="#57514A">${i + 1}. ${esc(n)}</text>`; });
   const stY = ny - 16 + notes.length * 14 + 10;
@@ -2333,7 +2439,7 @@ function flatSheet(sheetNo, title, sub, layerFn, rightFn, notes, lopts) {
   b += `<text x="${MX}" y="${MY - 34}" font-size="11" fill="#7A756D">${esc(sub)}</text>`;
   b += flatStamp(Wd - 26 - 560, stY, 560, title, sheetNo);
   const Hd = stY + 56 + 26;
-  b = `<rect x="16" y="16" width="${Wd - 32}" height="${Hd - 32}" fill="none" stroke="${CAD.frame}" stroke-width="1.3"/>` + b;
+  // рамку листа рисует svgDoc (ГОСТ 2.301 + поле подшивки) — вторая здесь была лишней
   return svgDoc(Wd, Hd, b, CAD.paper);
 }
 
@@ -2422,31 +2528,107 @@ function drawFlatFurniture(sheetNo) {
       }
       s += `<polyline points="${pts.join(' ')}" fill="none" stroke="${CAD.curtain}" stroke-width="0.9"/>`;
     }
-    // выноски к ключевым решениям (по одной на комнату)
-    const co = [];
+    // ---------- позиции и выноски ----------
+    // Раньше здесь было 4 выноски-плашки, летевшие диагоналями через всю квартиру
+    // («Кровать 1600×2000» через гостиную в спальню). Теперь: каждый предмет получает
+    // номер позиции в кружке и строку в спецификации справа, а короткие выноски по ГОСТ
+    // остаются для проектных решений — ниш.
+    const ink = inkMap();
+    // занятость: подписи помещений в центрах и площадь листа под мебелью
     for (const r of flatRooms) {
-      const f0 = furnitureFor(r)[0];
-      if (f0) co.push({ r, f: f0 });
+      ink.add(base.fx(r.pos.x + r.w / 2) - 62, base.fy(r.pos.y + r.l / 2) - 28, 124, 56);
+      for (const f of furnitureFor(r)) ink.add(base.fx(r.pos.x + f.x), base.fy(r.pos.y + f.y), px(f.w), px(f.h));
     }
-    co.slice(0, 4).forEach((c, i) => {
-      const pxx = base.fx(c.r.pos.x + c.f.x + c.f.w / 2), pyy = base.fy(c.r.pos.y + c.f.y + c.f.h / 2);
-      const top = pyy < MYREF();
-      s += callout(base.fx(FLAT.x0) - px(EXT) + 10 + i * 150, top ? 66 : base.fy(FLAT.y1) + px(EXT) + 10, pxx, pyy, c.f.name.split(' ')[0] + (c.f.name.split(' ')[1] ? ' ' + c.f.name.split(' ')[1] : ''));
-    });
-    function MYREF() { return base.fy(FLAT.y0 + FLAT.H / 2); }
+    // ниши — проектное решение, которое клиент должен увидеть на плане, а не в примечании.
+    // Ниша задана стеной и смещением по ней (wall + off) — переводим в координаты плана.
+    const nichePoint = (r, n) => {
+      const c = n.off + n.w / 2, IN = 120;   // точка внутри помещения у соответствующей стены
+      if (n.wall === 'A') return { x: r.pos.x + c, y: r.pos.y + IN };
+      if (n.wall === 'C') return { x: r.pos.x + c, y: r.pos.y + r.l - IN };
+      if (n.wall === 'D') return { x: r.pos.x + IN, y: r.pos.y + c };
+      return { x: r.pos.x + r.w - IN, y: r.pos.y + c };
+    };
+    // контур ниши по стене + марка Нn. Сначала пробуем короткую выноску по ГОСТ;
+    // на плотном плане места нет — тогда работает штатный запасной путь: марка на плане,
+    // расшифровка в ведомости справа (так делают в рабочих альбомах).
+    const nicheRect = (r, nz) => {
+      const D = nz.depth || 100;
+      if (nz.wall === 'A') return { x: r.pos.x + nz.off, y: r.pos.y, w: nz.w, h: D };
+      if (nz.wall === 'C') return { x: r.pos.x + nz.off, y: r.pos.y + r.l - D, w: nz.w, h: D };
+      if (nz.wall === 'D') return { x: r.pos.x, y: r.pos.y + nz.off, w: D, h: nz.w };
+      return { x: r.pos.x + r.w - D, y: r.pos.y + nz.off, w: D, h: nz.w };
+    };
+    drawFlatFurniture.niches = [];
+    for (const r of flatRooms) for (const nz of nichesFor(r)) {
+      const pt = nichePoint(r, nz), rc = nicheRect(r, nz);
+      const nx = base.fx(pt.x), ny = base.fy(pt.y);
+      if (!isFinite(nx) || !isFinite(ny)) continue;
+      const mk = 'Н' + (drawFlatFurniture.niches.length + 1);
+      drawFlatFurniture.niches.push({ mk, r, nz });
+      s += `<rect x="${base.fx(rc.x)}" y="${base.fy(rc.y)}" width="${px(rc.w)}" height="${px(rc.h)}" fill="none" stroke="${CAD.plumb}" stroke-width="0.8" stroke-dasharray="5 3"/>`;
+      const lead = leader(ink, nx, ny, `${mk} · ${nz.label.length > 30 ? nz.label.slice(0, 29) + '…' : nz.label}`, { size: 8 });
+      if (lead) { s += lead; continue; }
+      s += `<rect x="${nx - 8}" y="${ny - 7}" width="16" height="14" rx="2" fill="#FFFFFFE8" stroke="${CAD.plumb}" stroke-width="0.9"/>`
+        + `<text x="${nx}" y="${ny + 3}" font-size="7.6" font-weight="700" text-anchor="middle" fill="${CAD.plumb}">${mk}</text>`;
+    }
+    // номера позиций: кружок Ø7 мм в центре предмета, поверх контура
+    for (const p of furnPositions()) {
+      const cx = base.fx(p.r.pos.x + p.f.x + p.f.w / 2), cy = base.fy(p.r.pos.y + p.f.y + p.f.h / 2);
+      s += `<rect x="${cx - 7}" y="${cy - 7}" width="14" height="14" rx="2" fill="#FFFFFFE8" stroke="${CAD.furn}" stroke-width="0.9"/>`
+        + `<text x="${cx}" y="${cy + 3}" font-size="8" font-weight="700" text-anchor="middle" fill="${CAD.furn}">${p.n}</text>`;
+    }
     return s + flatRoomMarks(base.fx, base.fy, true);
   }, (x, y, w) => {
-    // фото-врезки: наши рендеры как референсы решений; миниатюры встраиваются base64,
-    // чтобы работали внутри <img> просмотрщика (SVG в <img> не грузит внешние ресурсы)
+    // Правая колонка: спецификация позиций (номера с плана) + одна фото-врезка-референс.
+    // Спецификация связывает кружок на чертеже с наименованием, габаритом и помещением —
+    // без неё номера на плане нечитаемы, а мебель не сходится со сметой.
     let s = '';
+    const pos = furnPositions();
+    const rowH = 12.6, headH = 44;
+    const maxRows = Math.max(6, Math.floor((px(FLAT.H + 2 * EXT) - 210 - headH) / rowH));
+    const shown = pos.slice(0, maxRows);
+    const tblH = headH + shown.length * rowH + (pos.length > shown.length ? rowH : 0) + 8;
+    s += `<rect x="${x}" y="${y}" width="${w}" height="${tblH}" fill="none" stroke="#8A8478" stroke-width="0.8"/>`;
+    s += `<text x="${x + 10}" y="${y + 18}" font-size="10.5" font-weight="700" fill="#2E2A26">Спецификация мебели и оборудования</text>`;
+    s += `<text x="${x + 26}" y="${y + headH - 10}" font-size="7.4" fill="#7A756D">поз. · наименование</text>`;
+    s += `<text x="${x + w - 30}" y="${y + headH - 10}" font-size="7.4" fill="#7A756D" text-anchor="end">габарит, мм</text>`;
+    s += `<text x="${x + w - 8}" y="${y + headH - 10}" font-size="7.4" fill="#7A756D" text-anchor="end">пом.</text>`;
+    s += `<line x1="${x}" y1="${y + headH - 6}" x2="${x + w}" y2="${y + headH - 6}" stroke="#8A8478" stroke-width="0.6"/>`;
+    shown.forEach((p, i) => {
+      const ry = y + headH + 8 + i * rowH;
+      s += `<rect x="${x + 7}" y="${ry - 9}" width="13" height="13" rx="2" fill="none" stroke="${CAD.furn}" stroke-width="0.8"/>`;
+      s += `<text x="${x + 13.5}" y="${ry}" font-size="7.6" font-weight="700" text-anchor="middle" fill="${CAD.furn}">${p.n}</text>`;
+      const nm = p.f.name.length > 28 ? p.f.name.slice(0, 27) + '…' : p.f.name;
+      s += `<text x="${x + 26}" y="${ry}" font-size="8" fill="#2E2A26">${esc(nm)}</text>`;
+      s += `<text x="${x + w - 30}" y="${ry}" font-size="7.6" fill="#57514A" text-anchor="end">${p.f.w}×${p.f.h}</text>`;
+      s += `<text x="${x + w - 8}" y="${ry}" font-size="7.6" fill="#7A756D" text-anchor="end">${nn(p.r.idx)}</text>`;
+    });
+    if (pos.length > shown.length) s += `<text x="${x + 26}" y="${y + headH + 8 + shown.length * rowH}" font-size="7.6" fill="#7A756D">…ещё ${pos.length - shown.length} поз. — в спецификации, раздел 07</text>`;
+    // ведомость ниш: марка → что это и в каком помещении
+    const nl = drawFlatFurniture.niches || [];
+    let nicheH = 0;
+    if (nl.length) {
+      const ny0 = y + tblH + 12;
+      nicheH = 26 + nl.length * rowH + 8;
+      s += `<rect x="${x}" y="${ny0}" width="${w}" height="${nicheH}" fill="none" stroke="#8A8478" stroke-width="0.8"/>`;
+      s += `<text x="${x + 10}" y="${ny0 + 17}" font-size="10" font-weight="700" fill="#2E2A26">Ниши ГКЛ с подсветкой</text>`;
+      nl.forEach((it, i) => {
+        const ry = ny0 + 26 + 10 + i * rowH;
+        s += `<rect x="${x + 7}" y="${ry - 9}" width="17" height="13" rx="2" fill="none" stroke="${CAD.plumb}" stroke-width="0.8"/>`;
+        s += `<text x="${x + 15.5}" y="${ry}" font-size="7.4" font-weight="700" text-anchor="middle" fill="${CAD.plumb}">${it.mk}</text>`;
+        const lbl = it.nz.label.length > 30 ? it.nz.label.slice(0, 29) + '…' : it.nz.label;
+        s += `<text x="${x + 30}" y="${ry}" font-size="7.8" fill="#2E2A26">${esc(lbl)}</text>`;
+        s += `<text x="${x + w - 8}" y="${ry}" font-size="7.6" fill="#7A756D" text-anchor="end">${nn(it.r.idx)}</text>`;
+      });
+    }
     let refs = [];
     try {
       refs = fs.readdirSync(path.join(outDir, '06-koncept', 'renders', 'thumbs'))
-        .filter(f => /\.(jpe?g|png)$/i.test(f)).sort().slice(0, 3)
+        .filter(f => /\.(jpe?g|png)$/i.test(f)).sort().slice(0, 1)
         .map(f => { const r0 = flatRooms.find(x => f.startsWith(nn(x.idx))); return { f, t: r0 ? r0.name : 'Референс' }; });
     } catch (e) { refs = []; }
     refs.forEach((rf, i) => {
-      const iy = y + i * 202;
+      const iy = y + tblH + (typeof nicheH === 'number' ? nicheH : 0) + 26 + i * 202;
       let href = null;
       try {
         const raw = fs.readFileSync(path.join(outDir, '06-koncept', 'renders', 'thumbs', rf.f));
@@ -3082,6 +3264,72 @@ ${vedomost}
 <p class="note">Артикулы и точные коллекции подбираются на этапе комплектации; допустимы аналоги в той же ценовой группе без изменения образа. Площади стен даны за вычетом проёмов.</p>`);
 }
 
+// Описание помещения собирается из фактической расстановки и геометрии этого помещения.
+// Общий текст о стиле стоит в шапке документа один раз — в карточках он превращал
+// концепцию в пять одинаковых абзацев.
+function roomConcept(r) {
+  const f = furnitureFor(r), by = k => f.find(x => x.key === k);
+  const m = v => (v / 1000).toFixed(2).replace(/\.?0+$/, '').replace('.', ',');
+  const wallOf = it => !it ? null : (it.y < 300 ? 'A' : (r.l - (it.y + it.h) < 300 ? 'C' : (it.x < 300 ? 'D' : (r.w - (it.x + it.w) < 300 ? 'B' : null))));
+  const at = it => { const w = wallOf(it); return w ? ` по стене ${w}` : ' в центре помещения'; };
+  const lv = ceilingLevelsFor(r);
+  const b = [];
+  const bed = by('bed') || by('kidbed'), kit = by('kitchen'), sofa = by('sofa'), desk = by('desk'), wr = by('wardrobe');
+  switch (r.type) {
+    case 'living-kitchen':
+      b.push(`Единое пространство ${r.area} м² без перегородок`);
+      if (kit) b.push(`кухонный фронт ${m(kit.w)} м${at(kit)}`);
+      if (sofa) b.push(`мягкая зона напротив ТВ-стены`);
+      if (by('table')) b.push('обеденная группа на границе зон');
+      b.push(`границы держат свет и ${lv.three ? 'три уровня' : 'два уровня'} потолка, а не стены`);
+      break;
+    case 'living':
+      b.push(`Гостиная ${r.area} м² с ТВ-зоной${at(by('tv'))}`);
+      if (sofa) b.push(`диван ${m(sofa.w >= sofa.h ? sofa.w : sofa.h)} м напротив`);
+      if (by('armchair')) b.push('кресло у окна для чтения');
+      break;
+    case 'bedroom':
+      b.push(`Спальня ${r.area} м²: кровать${bed ? ' ' + bed.name.replace(/^Кровать /, '') : ''} изголовьем к стене ${bed && bed.head ? bed.head : '—'} — без окна и двери за головой`);
+      if (f.filter(x => x.key === 'nightstand').length) b.push(`тумбы с розетками на высоте 600 мм по обе стороны`);
+      if (wr) b.push(`шкаф ${m(wr.w >= wr.h ? wr.w : wr.h)} м${at(wr)}`);
+      break;
+    case 'kids':
+      b.push(`Детская ${r.area} м²: спальное место${bed ? ' ' + bed.name.replace(/^Кровать /, '') : ''}${at(bed)}`);
+      if (desk) b.push(`рабочий стол ${m(desk.w)} м у окна — свет слева`);
+      if (by('rug')) b.push('игровая зона в центре');
+      b.push('свет разделён на общий, рабочий и ночной');
+      break;
+    case 'kitchen':
+      b.push(`Кухня ${r.area} м²`);
+      if (kit) b.push(`фронт ${m(kit.w + (by('kitchen_ext') ? by('kitchen_ext').h : 0))} м.п.${by('kitchen_ext') ? ' Г-образной компоновкой' : at(kit)}`);
+      b.push('фартук с подсветкой и розетками на высоте 1100 мм');
+      break;
+    case 'bathroom':
+    case 'wc': {
+      const bath = by('bath');
+      b.push(`Санузел ${r.area} м²: ${bath ? bath.name.toLowerCase() : 'душевая зона'}${at(bath)}`);
+      b.push('пол ниже жилых на 20 мм, гидроизоляция с заходом на стены 200 мм');
+      b.push('вся электрика IP44, тёплый пол с терморегулятором');
+      break; }
+    case 'hallway':
+      b.push((wr || by('shelf'))
+        ? `Прихожая ${r.area} м²: входная группа хранения${at(wr || by('shelf'))}`
+        : `Прихожая ${r.area} м²: шкаф-купе и скамья — по фактическому обмеру после демонтажа`);
+      b.push('керамогранит с тёплым полом в зоне входа, зеркало в полный рост');
+      break;
+    case 'cabinet':
+      b.push(`Кабинет ${r.area} м²: рабочее место${desk ? ' ' + m(desk.w) + ' м' : ''} у окна`);
+      b.push('розетки и слаботочка в столе, свет 4000K на рабочей плоскости');
+      break;
+    default:
+      b.push(`${r.name}, ${r.area} м², высота ${r.h} мм`);
+  }
+  const nich = nichesFor(r);
+  if (nich.length) b.push(`${nich.length === 1 ? 'ниша' : 'ниши'} ГКЛ с LED в алюминиевом профиле`);
+  if (r.windows.length) b.push(`${r.windows.length === 1 ? 'окно' : `окна (${r.windows.length})`} со шторами в потолочной нише`);
+  return b.join(' · ') + '.';
+}
+
 // ---------- концепт ----------
 function conceptHTML() {
   const cards = rooms.map(r => {
@@ -3092,7 +3340,7 @@ function conceptHTML() {
     return `
 <div class="card"><h2>${nn(r.idx)} · ${esc(r.name)}</h2>
 ${gal}
-<p>${esc(style.concept)}</p>
+<p>${esc(roomConcept(r))}</p>
 <p class="mut">Потолок: ${lv.three ? '3 уровня с «парящим» островом' : '2 уровня'}, скрытая LED 3000K — ${lv.ledLen} м.п. ${niches ? '· Ниши: ' + esc(niches) : ''}</p>
 <p class="mut">Свет: ${lightsFor(r).spots.length} точечных${lightsFor(r).pendant ? ' + декоративный подвес' : ''}${lightsFor(r).track ? ' + трек' : ''}. Пол: ${esc(style.floor.name)}.</p></div>`;
   }).join('');
@@ -3287,7 +3535,10 @@ function writeOut(rel, content) {
 }
 
 let sheet = 1;
-TOTAL_SHEETS = rooms.length * 12 + 1 + (FLAT ? 15 * LEVELS.length : 0); // сводные (канон 15) + обмер+демо+монтаж+2 плана+пол+4 развертки+потолок+электрика на комнату + узел
+// на помещение: обмер, демонтаж, монтаж, 2 плана, пол, 4 развертки, потолок, электрика,
+// умный дом, слаботочка = 14 листов; плюс узел А и 15 сводных на этаж.
+// Расхождение с фактом проверяется в конце: штамп «Листов N» обязан совпадать с ведомостью.
+TOTAL_SHEETS = rooms.length * 14 + 1 + (FLAT ? 15 * LEVELS.length : 0);
 const reg = []; // реестр листов для ведомости
 const counts = { flat: 0, obmer: 0, demo: 0, mont: 0, plans: 0, poly: 0, elev: 0, ceil: 0, electro: 0 };
 function sheetOut(rel, maker, title, scale) {
@@ -3346,14 +3597,19 @@ try {
 } catch (e) { /* рендеров нет — ок */ }
 
 // ---------- ведомость чертежей ----------
+// документы альбома: своя нумерация Д-N, чтобы у каждой позиции ведомости был номер,
+// по которому её спрашивают у бригады («Д-4» вместо «—»)
+const DOCS = [
+  { id: 'Д-1', title: 'Паспорт проекта + пояснительная записка', file: '00-pasport/pasport.html' },
+  { id: 'Д-2', title: 'Ведомость чертежей', file: '00-pasport/vedomost.html' },
+  { id: 'Д-3', title: 'Концепция и визуализации', file: '06-koncept/koncept.html' },
+  { id: 'Д-4', title: 'Спецификация материалов с артикулами', file: '07-materialy/specification.html' },
+  { id: 'Д-5', title: 'Смета реализации (HTML + CSV)', file: '08-smeta/smeta.html' }
+].concat((CHECK.errors.length || CHECK.warnings.length)
+  ? [{ id: 'Д-6', title: `Замечания к исходным данным (ошибок ${CHECK.errors.length}, проверить ${CHECK.warnings.length})`, file: '00-pasport/zamechaniya.html' }] : []);
+
 function vedomostHTML() {
-  const docsRows = [
-    ['—', 'Паспорт проекта + пояснительная записка', '—'],
-    ['—', 'Ведомость чертежей (настоящий лист)', '—'],
-    ['—', 'Концепция и визуализации', '—'],
-    ['—', 'Спецификация материалов с артикулами', '—'],
-    ['—', 'Смета реализации (HTML + CSV)', '—']
-  ].map(x => `<tr><td class="num">${x[0]}</td><td>${x[1]}</td><td class="num">${x[2]}</td><td>документ</td></tr>`).join('');
+  const docsRows = DOCS.map(d => `<tr><td class="num">${d.id}</td><td>${esc(d.title)}</td><td class="num">—</td><td>документ</td></tr>`).join('');
   const rows = reg.map(s => `<tr><td class="num">АИ-${s.no}</td><td>${esc(s.title)}</td><td class="num">${s.scale}</td><td>${s.file.split('/')[0]}</td></tr>`).join('');
   return docHTML('Ведомость чертежей', `
 <h1>Ведомость чертежей</h1>
@@ -3361,17 +3617,94 @@ function vedomostHTML() {
 <table><thead><tr><th>Лист</th><th>Наименование</th><th>Масштаб</th><th>Раздел</th></tr></thead><tbody>${docsRows}${rows}</tbody></table>
 <p class="note">Нумерация сквозная АИ-N (архитектура интерьера). Все чертежи выполнены автоматически конвейером LINEA и проверены главным архитектором студии.</p>`);
 }
-writeOut('00-pasport/vedomost.html', vedomostHTML());
+// ---------- замечания к исходным данным ----------
+// Лист выпускается только когда валидатору есть что сказать: он объясняет заказчику,
+// какие цифры в альбоме взяты по умолчанию, а какие противоречивы.
+function zamechaniyaHTML() {
+  const li = (arr, cls) => arr.map(t => `<tr><td class="k">${cls}</td><td>${esc(t)}</td></tr>`).join('');
+  return docHTML('Замечания к исходным данным', `
+<h1>Замечания к исходным данным</h1>
+<p class="sub">${esc((brief.object && brief.object.address) || 'Объект')} · проверка брифа перед выпуском · ${DATE}</p>
+<p class="mut">Альбом собран автоматически из брифа. Ниже — всё, что валидатор нашёл в исходных данных: ошибки требуют уточнения обмера, предупреждения означают, что движок подставил значение по умолчанию.</p>
+<table><tbody>${li(CHECK.errors, 'ошибка')}${li(CHECK.warnings, 'проверить')}</tbody></table>
+<p class="note">Ошибки геометрии влияют на площади, а значит — на спецификацию и смету. До их устранения цифры разделов 07 и 08 считать предварительными.</p>`);
+}
 const smetaRows = buildSmeta();
-writeOut('08-smeta/smeta.html', smetaHTML(smetaRows));
+// документы собираем в память: те же строки уходят и в отдельные HTML, и в единый print.html
+const DOC_HTML = {
+  '00-pasport/pasport.html': coverHTML(counts),
+  '00-pasport/vedomost.html': vedomostHTML(),
+  '06-koncept/koncept.html': conceptHTML(),
+  '07-materialy/specification.html': specHTML(),
+  '08-smeta/smeta.html': smetaHTML(smetaRows)
+};
+if (CHECK.errors.length || CHECK.warnings.length) DOC_HTML['00-pasport/zamechaniya.html'] = zamechaniyaHTML();
+for (const [rel, html] of Object.entries(DOC_HTML)) writeOut(rel, html);
 writeOut('08-smeta/smeta.csv', smetaCSV(smetaRows));
-writeOut('07-materialy/specification.html', specHTML());
-writeOut('06-koncept/koncept.html', conceptHTML());
-writeOut('00-pasport/pasport.html', coverHTML(counts));
+// ---------- единый альбом на печать (print.html → album.pdf) ----------
+// Бригаде нельзя отдавать 86 файлов: распечатают не ту ревизию и половину потеряют.
+// Один документ: титул → оглавление со ссылками → документы → листы, каждый на своей A3.
+function printHTML() {
+  const docCSS = (/<style>([\s\S]*?)<\/style>/.exec(docHTML('x', '')) || [, ''])[1];
+  const body = h => (/<main>([\s\S]*?)<\/main>/.exec(h) || [, ''])[1];
+  const addr = (brief.object && brief.object.address) || 'Объект';
+  const tocRow = (id, title, extra, href) => `<a class="tr" href="#${href}"><span class="n">${id}</span><span class="t">${esc(title)}</span><span class="s">${extra}</span></a>`;
+  const toc = DOCS.map((d, i) => tocRow(d.id, d.title, 'документ', 'd' + (i + 1))).join('')
+    + reg.map(s => tocRow('АИ-' + s.no, s.title, s.scale, 's' + s.no)).join('');
+  const docPages = DOCS.map((d, i) => DOC_HTML[d.file]
+    ? `<section class="page doc" id="d${i + 1}"><div class="dhead">${d.id} · ${esc(addr)} · ${DATE}</div><div class="inner">${body(DOC_HTML[d.file])}</div></section>` : '').join('');
+  const sheetPages = reg.map(s => `<section class="page" id="s${s.no}"><img src="${s.file}" alt="${esc(s.title)}"></section>`).join('');
+  return `<!DOCTYPE html><html lang="ru"><head><meta charset="utf-8"><title>Альбом · ${esc(addr)} — LINEA</title><style>
+${docCSS}
+@page{size:A3 landscape;margin:0}
+html,body{margin:0;padding:0;background:#fff}
+.page{width:420mm;height:297mm;overflow:hidden;position:relative;box-sizing:border-box;page-break-after:always;break-after:page;display:flex;align-items:center;justify-content:center}
+.page:last-child{page-break-after:auto;break-after:auto}
+.page>img{width:420mm;height:297mm;object-fit:contain;display:block}
+.cover{flex-direction:column;background:#FAF9F6}
+.cover .mark{font-family:Georgia,serif;font-size:64pt;letter-spacing:12px;margin:0 0 6mm;color:#2E2A26}
+.cover .sub{letter-spacing:5px;font-size:11pt;color:#7A756D;text-transform:uppercase;margin:0 0 24mm}
+.cover .obj{font-family:Georgia,serif;font-size:22pt;color:#2E2A26;margin:0 0 4mm;text-align:center}
+.cover .meta{font-size:11pt;color:#57514A;margin:0 0 2mm}
+.cover .stage{margin-top:26mm;font-size:10pt;letter-spacing:3px;color:#7A756D;text-transform:uppercase}
+.toc{flex-direction:column;align-items:stretch;padding:18mm 20mm 14mm;background:#fff}
+.toc h1{font-family:Georgia,serif;font-size:20pt;margin:0 0 2mm}
+.toc .lead{color:#7A756D;font-size:10pt;margin:0 0 6mm}
+.toc .cols{columns:3;column-gap:12mm;font-size:8.6pt}
+.toc .tr{display:flex;gap:3mm;padding:0.9mm 0;border-bottom:1px solid #EFEBE2;text-decoration:none;color:#2E2A26;break-inside:avoid}
+.toc .n{flex:0 0 15mm;color:#9A937F}
+.toc .t{flex:1 1 auto;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.toc .s{flex:0 0 12mm;text-align:right;color:#9A937F}
+/* документ — не окно фиксированной высоты, а поток: длинная ведомость сама
+   разливается на нужное число A3 вместо того, чтобы обрезаться на границе */
+.doc{display:block;height:auto;min-height:297mm;overflow:visible;padding:14mm 20mm 16mm;background:#fff}
+.doc .dhead{font-size:7.5pt;color:#9A937F;letter-spacing:1px;border-bottom:1px solid #EFEBE2;padding-bottom:2mm;margin-bottom:6mm}
+.doc .inner{columns:2;column-gap:14mm;font-size:9pt;orphans:3;widows:3}
+.doc .inner h1{font-size:17pt;margin:0 0 3mm;column-span:all}
+.doc .inner h2{font-size:11pt;margin:5mm 0 2mm;break-after:avoid}
+.doc .inner p.sub{column-span:all}
+.doc .inner table{font-size:7.8pt;break-inside:auto}
+.doc .inner tr,.doc .inner .card,.doc .inner .pal{break-inside:avoid}
+.doc .inner thead{display:table-header-group}
+.doc .inner img{max-width:100%;height:auto}
+</style></head><body>
+<section class="page cover"><p class="mark">LINEA</p><p class="sub">студия дизайна интерьера</p>
+<p class="obj">${esc(addr)}</p>
+<p class="meta">${esc((brief.object && brief.object.type) || 'квартира')} · ${totalArea} м² · помещений ${rooms.length} · стиль «${esc(style.title)}»</p>
+<p class="meta">Альбом рабочей документации · листов ${reg.length} · документов ${DOCS.length}</p>
+<p class="stage">стадия РП · выпуск ${DATE}</p></section>
+<section class="page toc"><h1>Состав альбома</h1>
+<p class="lead">${esc(addr)} · ${totalArea} м² · листов ${reg.length} · выпуск ${DATE}. Нумерация: АИ-N — чертежи, Д-N — документы. Названия в оглавлении — ссылки на лист.</p>
+<div class="cols">${toc}</div></section>
+${docPages}${sheetPages}
+</body></html>`;
+}
+writeOut('print.html', printHTML());
 writeOut('index.html', viewerHTML(files.slice()));
-writeOut('manifest.json', JSON.stringify({ generated: new Date().toISOString(), style: styleKey, tier: tier.key, totalArea, rooms: rooms.map(r => ({ name: r.name, type: r.type, area: r.area })), files }, null, 2));
+writeOut('manifest.json', JSON.stringify({ generated: ISSUE_DATE || new Date().toISOString(), issues: { errors: CHECK.errors, warnings: CHECK.warnings }, style: styleKey, tier: tier.key, totalArea, rooms: rooms.map(r => ({ name: r.name, type: r.type, area: r.area })), files }, null, 2));
 
 const total = smetaRows.reduce((s, r) => s + r.sum, 0);
+if (reg.length !== TOTAL_SHEETS) console.warn(`  ⚠ штамп обещает «Листов ${TOTAL_SHEETS}», фактически выпущено ${reg.length} — поправить формулу TOTAL_SHEETS`);
 console.log(`✔ Проект собран: ${outDir}`);
 console.log(`  Стиль «${style.title}», тариф «${tier.title}», ${totalArea} м², помещений: ${rooms.length}`);
 console.log(`  Листов: планы ${counts.plans} · развертки ${counts.elev} · потолки ${counts.ceil}`);

@@ -1,0 +1,55 @@
+{
+  "meta": { "issueDate": "01.01.2026", "source": "fixture", "note": "панельный дом: несущие стены, стояки, запрет глубоких ниш. Поля structure/bearing/risers — контракт для конструктива (волна 1, п.6)" },
+  "client": { "name": "Фикстура: панель" },
+  "object": { "type": "квартира", "address": "Фикстура · панель П-44Т, 44 м²", "area": 44.2, "ceilingHeight": 2.5,
+    "flat": { "width": 8.0, "length": 6.0, "extWall": 0.3, "intWall": 0.08 },
+    "structure": { "houseType": "panel", "extWall": 0.3, "intWall": 0.08, "slab": 0.14 },
+    "bearing": [
+      { "from": [0, 0], "to": [8.0, 0], "t": 0.3 },
+      { "from": [4.2, 0], "to": [4.2, 6.0], "t": 0.14 }
+    ],
+    "risers": [
+      { "x": 6.6, "y": 3.6, "d": 0.11, "kind": "sewer" },
+      { "x": 6.85, "y": 3.6, "d": 0.032, "kind": "water" },
+      { "x": 7.2, "y": 3.6, "d": 0.4, "kind": "vent" }
+    ] },
+  "rooms": [
+    {
+      "name": "Гостиная", "type": "living", "width": 4.1, "length": 3.4,
+      "pos": { "x": 0, "y": 0 },
+      "walls": { "A": "bearing", "B": "bearing", "C": "partition", "D": "bearing" },
+      "windows": [{ "wall": "A", "offset": 1.3, "width": 1.5, "height": 1.4, "sill": 0.85 }],
+      "doors": [{ "wall": "C", "offset": 2.9, "width": 0.9 }]
+    },
+    {
+      "name": "Спальня", "type": "bedroom", "width": 3.6, "length": 3.4,
+      "pos": { "x": 4.25, "y": 0 },
+      "walls": { "A": "bearing", "B": "bearing", "C": "partition", "D": "bearing" },
+      "windows": [{ "wall": "A", "offset": 1.0, "width": 1.5, "height": 1.4, "sill": 0.85 }],
+      "doors": [{ "wall": "C", "offset": 0.35, "width": 0.8 }]
+    },
+    {
+      "name": "Кухня", "type": "kitchen", "width": 2.6, "length": 2.4,
+      "pos": { "x": 0, "y": 3.55 },
+      "walls": { "A": "partition", "B": "partition", "C": "bearing", "D": "bearing" },
+      "windows": [{ "wall": "C", "offset": 0.6, "width": 1.4, "height": 1.4, "sill": 0.85 }],
+      "doors": [{ "wall": "B", "offset": 0.4, "width": 0.8 }]
+    },
+    {
+      "name": "Санузел", "type": "bathroom", "width": 1.6, "length": 2.4,
+      "pos": { "x": 6.25, "y": 3.55 },
+      "walls": { "A": "partition", "B": "bearing", "C": "bearing", "D": "partition" },
+      "windows": [],
+      "doors": [{ "wall": "D", "offset": 0.5, "width": 0.6 }]
+    },
+    {
+      "name": "Прихожая", "type": "hallway", "width": 3.4, "length": 2.4,
+      "pos": { "x": 2.75, "y": 3.55 },
+      "walls": { "A": "partition", "B": "partition", "C": "bearing", "D": "partition" },
+      "windows": [],
+      "doors": [{ "wall": "C", "offset": 1.2, "width": 0.9 }]
+    }
+  ],
+  "style": { "name": "modern", "byStudio": false },
+  "budget": "comfort"
+}

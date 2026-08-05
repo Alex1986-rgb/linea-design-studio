@@ -1,0 +1,40 @@
+{
+  "meta": { "issueDate": "01.01.2026", "source": "fixture", "note": "Г-образная планировка: габарит квартиры больше суммы помещений. Ловит компоновку сводных листов на несплошном контуре" },
+  "client": { "name": "Фикстура: Г-образная" },
+  "object": { "type": "квартира", "address": "Фикстура · Г-образная 54 м²", "area": 54.4, "ceilingHeight": 2.8,
+    "flat": { "width": 9.6, "length": 7.4, "extWall": 0.25, "intWall": 0.15 } },
+  "rooms": [
+    {
+      "name": "Гостиная", "type": "living", "width": 5.0, "length": 4.2,
+      "pos": { "x": 0, "y": 0 },
+      "windows": [{ "wall": "A", "offset": 1.5, "width": 2.1, "height": 1.6, "sill": 0.8 }],
+      "doors": [{ "wall": "B", "offset": 2.9, "width": 0.9 }]
+    },
+    {
+      "name": "Кухня", "type": "kitchen", "width": 3.2, "length": 3.0,
+      "pos": { "x": 5.15, "y": 0 },
+      "windows": [{ "wall": "A", "offset": 0.8, "width": 1.5, "height": 1.6, "sill": 0.85 }],
+      "doors": [{ "wall": "C", "offset": 0.5, "width": 0.9 }]
+    },
+    {
+      "name": "Спальня", "type": "bedroom", "width": 3.6, "length": 3.0,
+      "pos": { "x": 0, "y": 4.35 },
+      "windows": [{ "wall": "C", "offset": 1.0, "width": 1.5, "height": 1.6, "sill": 0.85 }],
+      "doors": [{ "wall": "B", "offset": 0.4, "width": 0.9 }]
+    },
+    {
+      "name": "Санузел", "type": "bathroom", "width": 2.2, "length": 2.4,
+      "pos": { "x": 3.75, "y": 4.35 },
+      "windows": [],
+      "doors": [{ "wall": "A", "offset": 0.6, "width": 0.7 }]
+    },
+    {
+      "name": "Коридор", "type": "hallway", "width": 3.2, "length": 2.4,
+      "pos": { "x": 6.15, "y": 4.35 },
+      "windows": [],
+      "doors": [{ "wall": "C", "offset": 1.1, "width": 1.0 }]
+    }
+  ],
+  "style": { "byStudio": true },
+  "budget": "business"
+}

@@ -1,5 +1,9 @@
 {
-  "generated": "2026-08-05T18:41:47.889Z",
+  "generated": "2026-08-05T22:38:52.292Z",
+  "issues": {
+    "errors": [],
+    "warnings": []
+  },
   "style": "japandi",
   "tier": "business",
   "totalArea": 56,
@@ -128,12 +132,13 @@
     "06-koncept/renders/04b-sanuzel-zerkalo.jpg",
     "06-koncept/renders/05-prihozhaya.jpg",
     "06-koncept/renders/05b-prihozhaya-vhod.jpg",
+    "00-pasport/pasport.html",
     "00-pasport/vedomost.html",
+    "06-koncept/koncept.html",
+    "07-materialy/specification.html",
     "08-smeta/smeta.html",
     "08-smeta/smeta.csv",
-    "07-materialy/specification.html",
-    "06-koncept/koncept.html",
-    "00-pasport/pasport.html",
+    "print.html",
     "index.html"
   ]
 }

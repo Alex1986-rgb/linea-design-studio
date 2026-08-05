@@ -1,0 +1,28 @@
+{
+  "meta": { "issueDate": "01.01.2026", "source": "fixture", "note": "минимальный объект: студия + санузел. Ловит вырождение компоновки на малых площадях" },
+  "client": { "name": "Фикстура: студия" },
+  "object": { "type": "квартира", "address": "Фикстура · студия 24 м²", "area": 24, "ceilingHeight": 2.65,
+    "flat": { "width": 6.15, "length": 4.0, "extWall": 0.2, "intWall": 0.1 } },
+  "rooms": [
+    {
+      "name": "Студия", "type": "living-kitchen", "width": 4.4, "length": 4.0,
+      "pos": { "x": 0, "y": 0 },
+      "windows": [{ "wall": "A", "offset": 1.4, "width": 1.6, "height": 1.5, "sill": 0.85 }],
+      "doors": [{ "wall": "B", "offset": 1.2, "width": 0.9 }]
+    },
+    {
+      "name": "Санузел", "type": "bathroom", "width": 1.65, "length": 2.2,
+      "pos": { "x": 4.5, "y": 0 },
+      "windows": [],
+      "doors": [{ "wall": "C", "offset": 0.4, "width": 0.7 }]
+    },
+    {
+      "name": "Прихожая", "type": "hallway", "width": 1.65, "length": 1.7,
+      "pos": { "x": 4.5, "y": 2.3 },
+      "windows": [],
+      "doors": [{ "wall": "C", "offset": 0.3, "width": 0.9 }]
+    }
+  ],
+  "style": { "name": "scandi", "byStudio": false },
+  "budget": "comfort"
+}

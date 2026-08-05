@@ -1,0 +1,27 @@
+{
+  "meta": { "issueDate": "01.01.2026", "source": "fixture", "note": "заведомо кривой бриф: нахлёст помещений, окно за стеной, площадь врёт втрое, неизвестный тип, дверь выше потолка. Валидатор обязан поймать всё это" },
+  "client": { "name": "Фикстура: кривой бриф" },
+  "object": { "type": "квартира", "address": "Фикстура · заведомо кривой бриф", "area": 40, "ceilingHeight": 2.6 },
+  "rooms": [
+    {
+      "name": "Комната", "type": "living", "width": 3.6, "length": 3.5,
+      "pos": { "x": 0, "y": 0 },
+      "windows": [{ "wall": "A", "offset": 3.0, "width": 1.8, "height": 1.5, "sill": 0.9 }],
+      "doors": [{ "wall": "C", "offset": 0.3, "width": 0.9, "height": 2.6 }]
+    },
+    {
+      "name": "Спальня", "type": "bedroom", "width": 3.0, "length": 3.0,
+      "pos": { "x": 2.0, "y": 1.0 },
+      "windows": [{ "wall": "A", "offset": 0.5, "width": 1.5, "height": 2.2, "sill": 0.9 }],
+      "doors": [{ "wall": "E", "offset": 0.3, "width": 0.8 }]
+    },
+    {
+      "name": "Кладовая", "type": "pantry", "width": 0.6, "length": 1.2,
+      "pos": { "x": 6.0, "y": 0 },
+      "windows": [],
+      "doors": []
+    }
+  ],
+  "style": { "name": "japandi", "byStudio": false },
+  "budget": "business"
+}
