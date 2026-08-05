@@ -350,9 +350,33 @@ function drawFloor(room, sheet) {
   let b = roomWalls(M, WT, room, sheet, CAD.paper);
   b += `<rect x="${M}" y="${M}" width="${w}" height="${l}" fill="${wet ? '#EDEAE2' : style.floor.color + '40'}"/>`;
   b += `<clipPath id="fl${room.idx}"><rect x="${M}" y="${M}" width="${w}" height="${l}"/></clipPath><g clip-path="url(#fl${room.idx})">`;
-  if (wet) { // плитка 600×600 от центра
-    for (let gx = (room.w % 600) / 2; gx <= room.w; gx += 600) b += `<line x1="${M + px(gx)}" y1="${M}" x2="${M + px(gx)}" y2="${M + l}" stroke="#00000022" stroke-width="0.9"/>`;
-    for (let gy = (room.l % 600) / 2; gy <= room.l; gy += 600) b += `<line x1="${M}" y1="${M + px(gy)}" x2="${M + w}" y2="${M + px(gy)}" stroke="#00000022" stroke-width="0.9"/>`;
+  if (wet) { // кирпичная раскладка 600×300 от угла А, затирка 2 мм
+    const TILE_W = 600, TILE_H = 300;
+    const tileFill = '#F2EEE8', groutStroke = '#C4BDB3';
+    for (let gy = 0; gy < room.l; gy += TILE_H) {
+      const rowOffset = (Math.floor(gy / TILE_H) % 2 === 1) ? TILE_W / 2 : 0;
+      for (let gx = -rowOffset; gx < room.w; gx += TILE_W) {
+        if (gx + TILE_W <= 0 || gx >= room.w) continue;
+        b += `<rect x="${M + px(gx) + 0.5}" y="${M + px(gy) + 0.5}" width="${px(TILE_W) - 1}" height="${px(TILE_H) - 1}" fill="${tileFill}" stroke="${groutStroke}" stroke-width="0.6"/>`;
+      }
+    }
+    // маяки укладки ✚ каждые 1000 мм
+    for (let bx = 1000; bx < room.w; bx += 1000) {
+      for (let by = 1000; by < room.l; by += 1000) {
+        const bcx = M + px(bx), bcy = M + px(by);
+        b += `<line x1="${bcx - 6}" y1="${bcy}" x2="${bcx + 6}" y2="${bcy}" stroke="#C29A5B" stroke-width="1.4"/>`;
+        b += `<line x1="${bcx}" y1="${bcy - 6}" x2="${bcx}" y2="${bcy + 6}" stroke="#C29A5B" stroke-width="1.4"/>`;
+      }
+    }
+    // стрелка «начало укладки от угла А» — диагональ 45°
+    { const sid = `arrS${room.idx}`;
+      b += `<defs><marker id="${sid}" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0 0 L6 3 L0 6Z" fill="#2E2A26"/></marker></defs>`;
+      const alen = Math.min(px(room.w), px(room.l)) * 0.28;
+      const ax2 = M + 10 + alen * 0.707, ay2 = M + 10 + alen * 0.707;
+      b += `<line x1="${M + 10}" y1="${M + 10}" x2="${ax2}" y2="${ay2}" stroke="#2E2A26" stroke-width="2" marker-end="url(#${sid})"/>`;
+      b += `<rect x="${ax2 + 4}" y="${ay2 - 10}" width="156" height="13" fill="#FAF7F0D9" rx="2"/>`;
+      b += `<text x="${ax2 + 8}" y="${ay2}" font-size="8.5" fill="#2E2A26">начало укладки от угла А</text>`;
+    }
   } else { // ёлка 45°
     const st = px(280);
     for (let i = -Math.ceil(l / st); i < w / st + Math.ceil(l / st); i++) {
@@ -399,12 +423,21 @@ function drawFloor(room, sheet) {
   }
   const g = roomGeometry(room);
   b += `<text x="${M - WT}" y="${M - 46}" font-size="16" font-weight="700" fill="#2E2A26">План пола · ${esc(room.name)}</text>`;
-  b += `<text x="${M - WT}" y="${M - 28}" font-size="11" fill="#7A756D">${code} · ${wet ? 'керамогранит 600×600, раскладка от центра' : esc(style.floor.name)} · S=${g.floor} м²${wet ? '' : ' · плинтус ' + g.plinth + ' м.п.'}</text>`;
+  b += `<text x="${M - WT}" y="${M - 28}" font-size="11" fill="#7A756D">${code} · ${wet ? 'керамогранит 600×300, кирпичная раскладка (перевязка)' : esc(style.floor.name)} · S=${g.floor} м²${wet ? '' : ' · плинтус ' + g.plinth + ' м.п.'}</text>`;
   b += dimH(M, M + w, M + l + 30, room.w + '');
   b += dimV(M + w + 30, M, M + l, room.l + '');
   const ly = M + l + 58;
   b += `<g font-size="10" fill="#57514A"><rect x="${M}" y="${ly - 12}" width="16" height="16" fill="${wet ? '#EDEAE2' : style.floor.color + '55'}" stroke="#57514A" stroke-width="0.7"/><text x="${M + 24}" y="${ly}">${code} · ${wet ? 'керамогранит, ' + (g.floor * 1.1).toFixed(1) + ' м² (+10%)' : esc(style.floor.name.split(',')[0]) + ', ' + (g.floor * 1.15).toFixed(1) + ' м² (+15% ёлка)'}</text></g>`;
   b += `<text x="${M - WT}" y="${ly + 20}" font-size="9" fill="#8A8478">${wet ? 'Гидроизоляция обмазочная с заведением на стены 200 мм · уклон к трапу не требуется' : 'Стык покрытий выполнять на оси дверного полотна · компенсационный зазор у стен 10 мм под плинтус'}</text>`;
+  if (wet) {
+    const TILE_W2 = 600, TILE_H2 = 300;
+    const g2 = roomGeometry(room);
+    const tileArea = (TILE_W2 / 1000) * (TILE_H2 / 1000); // м²
+    const tileCount = Math.ceil(g2.floor / tileArea * 1.1);
+    const anLy = M + l + 74; // ниже легенды
+    b += `<text x="${M - WT}" y="${anLy}" font-size="9.5" font-weight="600" fill="#57514A">Плитка пол: 600×300 мм · затирка 2 мм · кирпичная раскладка (перевязка)</text>`;
+    b += `<text x="${M - WT}" y="${anLy + 14}" font-size="9.5" fill="#57514A">≈ ${tileCount} шт. / ${(g2.floor * 1.1).toFixed(1)} м² (+10% запас)</text>`;
+  }
   b += stamp(M - WT, ly + 34, w + 2 * WT + 40, `План пола. ${room.name}`, sheet);
   return svgDoc(Wd + 20, Hd + 30, b);
 }
@@ -1036,6 +1069,20 @@ function bathroomEquipFor(room, wallKey) {
   ];
 }
 
+// ── livingEquipFor: возвращает TV-технику для развёртки гостиной ──
+function livingEquipFor(room, wallKey) {
+  if (!(room.type === 'living-kitchen' || room.type === 'living')) return [];
+  const tvNiche = nichesFor(room).find(n => n.label && n.label.includes('ТВ') && n.wall === wallKey);
+  if (!tvNiche) return [];
+  const hasDeco = !!(room.decor || (room.style && ['neoclassic', 'modern-classic', 'classic'].includes(room.style)));
+  return [
+    { type: 'tv_console', xMm: tvNiche.off + tvNiche.w * 0.1,  wMm: tvNiche.w * 0.8,        hMm: 480,                    bottomMm: 0,                  fillColor: '#2E2A26', strokeColor: '#1A1A1A', label: '' },
+    { type: 'tv_screen',  xMm: tvNiche.off + tvNiche.w * 0.15, wMm: tvNiche.w * 0.7,        hMm: tvNiche.w * 0.7 * 0.56, bottomMm: tvNiche.sill + 520, fillColor: '#1A2030', strokeColor: '#404858', label: 'ТВ 65"' },
+    { type: 'soundbar',   xMm: tvNiche.off + tvNiche.w * 0.25, wMm: tvNiche.w * 0.5,        hMm: 80,                     bottomMm: tvNiche.sill + 490, fillColor: '#2E2A26', strokeColor: '#1A1A1A', label: 'Soundbar' },
+    ...(hasDeco ? [{ type: 'deco', xMm: tvNiche.off + 60, wMm: 120, hMm: 280, bottomMm: tvNiche.sill, fillColor: '#8A7A5A', strokeColor: '#7A6A4A', label: '' }] : []),
+  ];
+}
+
 // ---------- развертка стены (премиум: карниз, электрика, бра, подоконник, перемычки) ----------
 function drawElevation(room, wallKey, sheet) {
   const len = (wallKey === 'A' || wallKey === 'C') ? room.w : room.l;
@@ -1048,11 +1095,13 @@ function drawElevation(room, wallKey, sheet) {
 
   // ── 1. фон стены ──────────────────────────────────────────────
   let b = `<rect x="${M}" y="${M}" width="${w}" height="${h}" fill="${style.wall.color}" stroke="#2E2A26" stroke-width="2"/>`;
-  if (room.type === 'bathroom') {
-    for (let gx = 600; gx < len; gx += 600)
-      b += `<line x1="${M + px(gx)}" y1="${M}" x2="${M + px(gx)}" y2="${M + h}" stroke="#00000018" stroke-width="0.8"/>`;
-    for (let gy = 300; gy < room.h; gy += 300)
-      b += `<line x1="${M}" y1="${M + h - px(gy)}" x2="${M + w}" y2="${M + h - px(gy)}" stroke="#00000018" stroke-width="0.8"/>`;
+  if (room.type === 'bathroom') { // настенная плитка 600×300 (горизонтальная укладка)
+    const WTILE_W = 600, WTILE_H = 300;
+    for (let ty = 0; ty < room.h; ty += WTILE_H) {
+      for (let tx = 0; tx < len; tx += WTILE_W) {
+        b += `<rect x="${M + px(tx) + 0.5}" y="${M + h - px(ty + WTILE_H) + 0.5}" width="${px(WTILE_W) - 1}" height="${px(WTILE_H) - 1}" fill="#F2EEE8" stroke="#C8C0B4" stroke-width="0.6"/>`;
+      }
+    }
   }
 
   // ── 2. карниз с подсветкой (у потолка) ───────────────────────
@@ -1082,10 +1131,11 @@ function drawElevation(room, wallKey, sheet) {
     b += `<text x="${nx + px(nch.w) / 2}" y="${ny - 5}" font-size="9" fill="#7A756D" text-anchor="middle">низ +${(nch.sill / 1000).toFixed(3).replace('.', ',')}</text>`;
   }
 
-  // ── кухонная техника + сантехника на развёртке ──────────────────
-  const kitEquip  = kitchenEquipFor(room, wallKey);
-  const bathEquip = bathroomEquipFor(room, wallKey);
-  for (const eq of [...kitEquip, ...bathEquip]) {
+  // ── кухонная техника + сантехника + ТВ на развёртке ─────────────
+  const kitEquip    = kitchenEquipFor(room, wallKey);
+  const bathEquip   = bathroomEquipFor(room, wallKey);
+  const livingEquip = livingEquipFor(room, wallKey);
+  for (const eq of [...kitEquip, ...bathEquip, ...livingEquip]) {
     const ex = M + px(eq.xMm), ey = M + h - px(eq.bottomMm + eq.hMm);
     const ew = px(eq.wMm),     eh = px(eq.hMm);
     if (eq.type === 'hood') {
@@ -1114,6 +1164,47 @@ function drawElevation(room, wallKey, sheet) {
       b += `<line x1="${ex+tw2-6}" y1="${ey}" x2="${ex+tw2-6}" y2="${ey+th2}" stroke="#BBBBBB" stroke-width="3"/>`;
       const rungs = Math.max(2, Math.round(eq.hMm/80));
       for (let ri=0; ri<=rungs; ri++) b += `<line x1="${ex+6}" y1="${ey+th2*ri/rungs}" x2="${ex+tw2-6}" y2="${ey+th2*ri/rungs}" stroke="#BBBBBB" stroke-width="2"/>`;
+    } else if (eq.type === 'tv_screen') {
+      // inset bezel rect
+      b += `<rect x="${ex+3}" y="${ey+3}" width="${ew-6}" height="${eh-6}" fill="none" stroke="${eq.strokeColor}" stroke-width="0.7" rx="3"/>`;
+      // four corner quarter-arc highlights
+      const ar = Math.min(9, ew * 0.07);
+      b += `<path d="M ${ex+5} ${ey+5+ar} A ${ar} ${ar} 0 0 1 ${ex+5+ar} ${ey+5}" fill="none" stroke="#FFFFFF45" stroke-width="1.3"/>`;
+      b += `<path d="M ${ex+ew-5-ar} ${ey+5} A ${ar} ${ar} 0 0 1 ${ex+ew-5} ${ey+5+ar}" fill="none" stroke="#FFFFFF45" stroke-width="1.3"/>`;
+      b += `<path d="M ${ex+5} ${ey+eh-5-ar} A ${ar} ${ar} 0 0 0 ${ex+5+ar} ${ey+eh-5}" fill="none" stroke="#FFFFFF20" stroke-width="1"/>`;
+      b += `<path d="M ${ex+ew-5-ar} ${ey+eh-5} A ${ar} ${ar} 0 0 0 ${ex+ew-5} ${ey+eh-5-ar}" fill="none" stroke="#FFFFFF20" stroke-width="1"/>`;
+      // stand line at bottom centre
+      const stW = ew * 0.32;
+      b += `<line x1="${ex+ew/2-stW/2}" y1="${ey+eh}" x2="${ex+ew/2+stW/2}" y2="${ey+eh+3}" stroke="${eq.strokeColor}" stroke-width="2.2"/>`;
+      // dimension annotation above screen
+      b += `<text x="${ex}" y="${ey-7}" font-size="7.5" fill="#5A6880">экран: ${Math.round(eq.wMm)}×${Math.round(eq.hMm)} мм · ось +${Math.round(eq.bottomMm + eq.hMm/2)} мм</text>`;
+    } else if (eq.type === 'tv_console') {
+      // top accent strip
+      b += `<rect x="${ex}" y="${ey}" width="${ew}" height="${Math.max(4, eh*0.08)}" fill="#3E3A36" stroke="none" rx="3"/>`;
+      // vertical door division lines
+      const nDoors = Math.max(2, Math.round(eq.wMm / 550));
+      for (let d = 1; d < nDoors; d++)
+        b += `<line x1="${ex + ew*d/nDoors}" y1="${ey + Math.max(4, eh*0.08) + 2}" x2="${ex + ew*d/nDoors}" y2="${ey+eh-4}" stroke="#1A1A1A" stroke-width="0.8"/>`;
+      // horizontal handle bars per door section
+      for (let d = 0; d < nDoors; d++) {
+        const hcx = ex + ew*(d+0.5)/nDoors;
+        const hcy = ey + eh * 0.52;
+        b += `<rect x="${hcx-9}" y="${hcy-2}" width="18" height="4" fill="#888880" stroke="none" rx="2"/>`;
+      }
+    } else if (eq.type === 'soundbar') {
+      // speaker grille — row of evenly-spaced dots
+      const nDots = Math.max(5, Math.round(eq.wMm / 90));
+      const dotR  = Math.min(2.5, eh * 0.22);
+      const dotY  = ey + eh / 2;
+      for (let d = 0; d < nDots; d++)
+        b += `<circle cx="${ex + ew*(d+0.5)/nDots}" cy="${dotY}" r="${dotR}" fill="#484858" stroke="none"/>`;
+    } else if (eq.type === 'deco') {
+      // tall vase: trapezoid body + neck rectangle + ellipse mouth
+      const vCx  = ex + ew / 2;
+      const neckW = ew * 0.38, bodyW = ew * 0.72, neckH = eh * 0.24;
+      b += `<path d="M ${vCx-bodyW/2} ${ey+eh} L ${vCx-neckW/2} ${ey+neckH} L ${vCx+neckW/2} ${ey+neckH} L ${vCx+bodyW/2} ${ey+eh} Z" fill="${eq.fillColor}" stroke="${eq.strokeColor}" stroke-width="1"/>`;
+      b += `<rect x="${vCx-neckW/2}" y="${ey+4}" width="${neckW}" height="${neckH}" fill="${eq.fillColor}" stroke="${eq.strokeColor}" stroke-width="0.8"/>`;
+      b += `<ellipse cx="${vCx}" cy="${ey+4}" rx="${neckW*0.58}" ry="${Math.max(3, neckH*0.18)}" fill="${eq.strokeColor}" stroke="${eq.strokeColor}" stroke-width="0.8"/>`;
     }
     if (eq.label && eh > 14) b += `<text x="${ex + ew/2}" y="${ey + eh/2 + 4}" font-size="8" fill="${eq.strokeColor}" text-anchor="middle" font-weight="600">${esc(eq.label)}</text>`;
   }
@@ -1241,9 +1332,11 @@ function drawElevation(room, wallKey, sheet) {
   cy += 18;
   const counters = [
     ...(sockCount > 0 ? [['Розетки', `${sockCount} шт.`]] : []),
-    ...(swCount > 0 ? [['Выключатели', `${swCount} шт.`]] : []),
-    ...(braCount > 0 ? [[`Бра h=1600`, `${braCount} шт.`]] : []),
+    ...(swCount > 0   ? [['Выключатели', `${swCount} шт.`]] : []),
+    ...(braCount > 0  ? [[`Бра h=1600`, `${braCount} шт.`]] : []),
     ...(wallNiches.length > 0 ? [[`Ниши с LED`, `${wallNiches.length} шт.`]] : []),
+    ...(livingEquip.some(e => e.type === 'tv_screen')  ? [['ТВ 65"',   '1 шт.']] : []),
+    ...(livingEquip.some(e => e.type === 'tv_console') ? [['ТВ-тумба', '1 шт.']] : []),
     [`LED карниз`, `${ledCorniceM} м.п.`],
     [`Плинтус`, `${+(len / 1000).toFixed(1)} м.п.`]
   ];
@@ -1795,6 +1888,273 @@ function drawSmartHome(room, sheet) {
   b += `<text x="${M - WT}" y="${M - 46}" font-size="16" font-weight="700" fill="#2E2A26">Умный дом · ${esc(room.name)}</text>`;
   b += `<text x="${M - WT}" y="${M - 28}" font-size="11" fill="#7A756D">Автоматизация: ${pts.length} устройств · Zigbee 3.0 / Z-Wave · высоты от чистого пола, мм</text>`;
   b += stamp(M - WT, l + M * 2 + 100, w + 2 * WT + 40, `Умный дом. ${room.name}`, sheet);
+  return svgDoc(Wd + 20, Hd + 10, b);
+}
+
+// ---------- слаботочка — точки (TV / LAN / satellite / phone / camera / intercom / speaker) ----------
+function slabotochkaFor(room) {
+  const W = room.w, L = room.l, pts = [];
+  const D = (x, y, type, hh, label) => pts.push({
+    x: Math.max(100, Math.min(W - 100, x)),
+    y: Math.max(100, Math.min(L - 100, y)),
+    type, h: hh, label
+  });
+
+  const door  = room.doors[0]  || { wall: 'C', off: 200, w: 900 };
+  const dwall = door.wall, doff = door.off, dw = door.w;
+  const winWalls = new Set(room.windows.map(o => o.wall));
+
+  switch (room.type) {
+
+    case 'bedroom': {
+      const hw = bedWallFor(room);
+      if (hw === 'A' || hw === 'C') {
+        const yy = hw === 'A' ? 150 : L - 150;
+        D(W * 0.5, yy, 'tv', 1100, 'ТВ-розетка');
+      } else {
+        const xx = hw === 'B' ? W - 150 : 150;
+        D(xx, L * 0.5, 'tv', 1100, 'ТВ-розетка');
+      }
+      D(W * 0.72, L * 0.72, 'lan', 300, 'LAN рабочая');
+      if (W * L > 14e6) {
+        const cx = dwall === 'A' || dwall === 'C' ? (doff + dw * 0.5) : (W * 0.5);
+        const cy = dwall === 'A' ? 150 : dwall === 'C' ? L - 150 : (doff + dw * 0.5);
+        D(cx, cy, 'camera', 2200, 'камера');
+      }
+      break;
+    }
+
+    case 'living-kitchen': {
+      const tvWall = !winWalls.has('B') ? 'B' : !winWalls.has('D') ? 'D' : 'C';
+      if (tvWall === 'B') D(W - 150, L * 0.5, 'tv', 1100, 'ТВ-розетка');
+      else if (tvWall === 'D') D(150, L * 0.5, 'tv', 1100, 'ТВ-розетка');
+      else D(W * 0.5, L - 150, 'tv', 1100, 'ТВ-розетка');
+      D(W * 0.25, L * 0.7, 'lan', 300, 'LAN диван');
+      D(W * 0.7,  L * 0.25, 'lan', 300, 'LAN стол');
+      const winW = room.windows[0];
+      if (winW) {
+        if (winW.wall === 'A') D(winW.off + winW.w * 0.5, 150, 'satellite', 300, 'спутник');
+        else if (winW.wall === 'C') D(winW.off + winW.w * 0.5, L - 150, 'satellite', 300, 'спутник');
+        else if (winW.wall === 'B') D(W - 150, winW.off + winW.w * 0.5, 'satellite', 300, 'спутник');
+        else D(150, winW.off + winW.w * 0.5, 'satellite', 300, 'спутник');
+      }
+      break;
+    }
+
+    case 'living': {
+      const tvWall = !winWalls.has('B') ? 'B' : !winWalls.has('D') ? 'D' : 'C';
+      if (tvWall === 'B') D(W - 150, L * 0.5, 'tv', 1100, 'ТВ-розетка');
+      else if (tvWall === 'D') D(150, L * 0.5, 'tv', 1100, 'ТВ-розетка');
+      else D(W * 0.5, L - 150, 'tv', 1100, 'ТВ-розетка');
+      D(W * 0.3, L * 0.6, 'lan', 300, 'LAN диван');
+      D(W * 0.65, L * 0.3, 'lan', 300, 'LAN стол');
+      break;
+    }
+
+    case 'kitchen': {
+      D(W * 0.6, L * 0.4, 'lan', 1100, 'LAN кухня');
+      break;
+    }
+
+    case 'hallway': {
+      let ix, iy;
+      if (dwall === 'A') { ix = doff + dw + 150; iy = 150; }
+      else if (dwall === 'C') { ix = doff + dw + 150; iy = L - 150; }
+      else if (dwall === 'B') { ix = W - 150; iy = doff + dw + 150; }
+      else { ix = 150; iy = doff + dw + 150; }
+      D(ix, iy, 'intercom', 1400, 'домофон');
+      D(dwall === 'A' ? doff + dw * 0.5 : dwall === 'C' ? doff + dw * 0.5 : dwall === 'B' ? W - 150 : 150,
+        dwall === 'A' ? 150 : dwall === 'C' ? L - 150 : doff + dw * 0.5,
+        'camera', 2200, 'камера');
+      D(W * 0.5, L * 0.5, 'lan', 1800, 'LAN патч-панель');
+      break;
+    }
+
+    case 'bathroom': {
+      let bx = 150, by = 150;
+      if (dwall === 'A') { bx = doff + dw + 100; by = 150; }
+      else if (dwall === 'C') { bx = doff + dw + 100; by = L - 150; }
+      else if (dwall === 'B') { bx = W - 150; by = doff + dw + 100; }
+      else { bx = 150; by = doff + dw + 100; }
+      D(bx, by, 'speaker', 1600, 'динамик');
+      break;
+    }
+
+    case 'kids': {
+      const hw = bedWallFor(room);
+      const yy = (hw === 'A') ? 150 : (hw === 'C') ? L - 150 : L * 0.5;
+      const xx = (hw === 'B') ? W - 150 : (hw === 'D') ? 150 : W * 0.5;
+      D(hw === 'A' || hw === 'C' ? W * 0.5 : xx,
+        hw === 'A' || hw === 'C' ? yy : L * 0.5,
+        'tv', 1100, 'ТВ-розетка');
+      D(W * 0.7, L * 0.65, 'lan', 300, 'LAN рабочая');
+      break;
+    }
+
+    default: {
+      D(W * 0.5, L * 0.5, 'lan', 300, 'LAN');
+      break;
+    }
+  }
+
+  return pts;
+}
+
+// ---------- план слаботочки ----------
+function drawSlabotochka(room, sheet) {
+  const M = 90, WT = 12, w = px(room.w), l = px(room.l);
+  const SPEC_X = M + w + 24, SPEC_W = 280;
+  const Wd = Math.max(860, w + M * 2 + SPEC_W + 40), Hd = l + M * 2 + 150;
+  const pts = slabotochkaFor(room);
+  let b = roomWalls(M, WT, room, sheet, CAD.paper);
+  for (const o of room.windows) b += openingPlan(o, 'window', M, WT, room);
+  for (const o of room.doors)   b += openingPlan(o, 'door',   M, WT, room);
+  // мебель призраком
+  for (const f of furnitureFor(room))
+    b += `<rect x="${M + px(f.x)}" y="${M + px(f.y)}" width="${px(f.w)}" height="${px(f.h)}" fill="none" stroke="#C5BFB2" stroke-width="0.8" rx="2"/>`;
+
+  // ---- SVG-символы + подписи ----
+  let labs = '';
+  for (const p of pts) {
+    const x = M + px(p.x), y = M + px(p.y);
+
+    if (p.type === 'tv') {
+      b += `<rect x="${x - 6}" y="${y}" width="12" height="8" rx="1" fill="white" stroke="#2E4A8A" stroke-width="1.2"/>`;
+      b += `<line x1="${x}" y1="${y}" x2="${x}" y2="${y - 6}" stroke="#2E4A8A" stroke-width="1"/>`;
+      b += `<line x1="${x - 4}" y1="${y - 6}" x2="${x + 4}" y2="${y - 6}" stroke="#2E4A8A" stroke-width="1"/>`;
+    } else if (p.type === 'lan') {
+      b += `<rect x="${x - 5}" y="${y - 5}" width="10" height="10" rx="1" fill="#E8F4E8" stroke="#2E8A4A" stroke-width="1.2"/>`;
+      b += `<line x1="${x - 5}" y1="${y}" x2="${x + 5}" y2="${y}" stroke="#2E8A4A" stroke-width="0.8"/>`;
+      b += `<line x1="${x}" y1="${y - 5}" x2="${x}" y2="${y + 5}" stroke="#2E8A4A" stroke-width="0.8"/>`;
+    } else if (p.type === 'camera') {
+      b += `<path d="M ${x - 6} ${y - 7} L ${x + 6} ${y - 7} L ${x} ${y - 13} Z" fill="#8A8A8A" stroke="#555" stroke-width="0.7"/>`;
+      b += `<circle cx="${x}" cy="${y}" r="7" fill="#2E2A26" stroke="#8A8A8A" stroke-width="1"/>`;
+      b += `<circle cx="${x}" cy="${y}" r="3" fill="none" stroke="#AAAAAA" stroke-width="1"/>`;
+    } else if (p.type === 'intercom') {
+      b += `<rect x="${x - 5}" y="${y - 7}" width="10" height="14" rx="2.5" fill="#3A6A8A" stroke="#1A4A6A" stroke-width="1.2"/>`;
+      b += `<line x1="${x - 4}" y1="${y}" x2="${x + 4}" y2="${y}" stroke="#AACCE8" stroke-width="1"/>`;
+    } else if (p.type === 'speaker') {
+      b += `<path d="M ${x} ${y - 8} L ${x + 6} ${y + 5} Q ${x} ${y + 9} ${x - 6} ${y + 5} Z" fill="#8A5A2A" stroke="#6A3A1A" stroke-width="1"/>`;
+    } else if (p.type === 'satellite') {
+      b += `<circle cx="${x}" cy="${y}" r="7" fill="#C0C0C0" stroke="#808080" stroke-width="1"/>`;
+      b += `<line x1="${x - 5}" y1="${y - 5}" x2="${x + 5}" y2="${y + 5}" stroke="#808080" stroke-width="0.8"/>`;
+      b += `<line x1="${x - 5}" y1="${y + 5}" x2="${x + 5}" y2="${y - 5}" stroke="#808080" stroke-width="0.8"/>`;
+    } else if (p.type === 'phone') {
+      b += `<path d="M ${x - 5} ${y - 6} C ${x - 5} ${y - 10} ${x + 5} ${y - 10} ${x + 5} ${y - 6} L ${x + 5} ${y + 6} C ${x + 5} ${y + 10} ${x - 5} ${y + 10} ${x - 5} ${y + 6} Z" fill="#4A8A4A" stroke="#2A5A2A" stroke-width="0.8"/>`;
+    }
+
+    // подпись с белой плашкой
+    const lx2 = x + 13, ly2 = y - 6;
+    const txt = `${p.label} · h${p.h}`;
+    const tw2 = txt.length * 4.8 + 6;
+    labs += `<rect x="${lx2 - 3}" y="${ly2 - 9}" width="${tw2}" height="12" fill="#FBFAF6D9"/>`;
+    labs += `<text x="${lx2}" y="${ly2}" font-size="8" fill="#57514A">${esc(txt)}</text>`;
+  }
+  b += labs;
+
+  // ---- правая панель спецификации ----
+  const nTV       = pts.filter(p => p.type === 'tv').length;
+  const nLAN      = pts.filter(p => p.type === 'lan').length;
+  const nCamera   = pts.filter(p => p.type === 'camera').length;
+  const nIntercom = pts.filter(p => p.type === 'intercom').length;
+  const nSpeaker  = pts.filter(p => p.type === 'speaker').length;
+  const nSatellite= pts.filter(p => p.type === 'satellite').length;
+  const nPhone    = pts.filter(p => p.type === 'phone').length;
+  const sx = SPEC_X;
+  let ry = M;
+
+  b += `<text x="${sx}" y="${ry + 17}" font-size="14" font-weight="700" fill="#2E2A26">Слаботочка · ${esc(room.name)}</text>`;
+  b += `<line x1="${sx}" y1="${ry + 24}" x2="${sx + SPEC_W}" y2="${ry + 24}" stroke="#2E4A8A" stroke-width="1.2"/>`;
+  ry += 38;
+
+  const specRows = [
+    nTV       > 0 ? ['tv',       'ТВ-розетка',         nTV,       1100] : null,
+    nLAN      > 0 ? ['lan',      'LAN (UTP Cat.6)',     nLAN,      300 ] : null,
+    nCamera   > 0 ? ['camera',   'Камера PoE',          nCamera,   2200] : null,
+    nIntercom > 0 ? ['intercom', 'Домофон/переговор.',  nIntercom, 1400] : null,
+    nSpeaker  > 0 ? ['speaker',  'Динамик',             nSpeaker,  1600] : null,
+    nSatellite> 0 ? ['satellite','Спутник',              nSatellite, 300] : null,
+    nPhone    > 0 ? ['phone',    'Телефон',              nPhone,    800 ] : null,
+  ].filter(Boolean);
+
+  for (const [type, label, cnt, hh] of specRows) {
+    if (type === 'tv') {
+      b += `<rect x="${sx + 1}" y="${ry - 10}" width="12" height="8" rx="1" fill="white" stroke="#2E4A8A" stroke-width="1"/>`;
+      b += `<line x1="${sx + 7}" y1="${ry - 10}" x2="${sx + 7}" y2="${ry - 14}" stroke="#2E4A8A" stroke-width="0.9"/>`;
+      b += `<line x1="${sx + 4}" y1="${ry - 14}" x2="${sx + 10}" y2="${ry - 14}" stroke="#2E4A8A" stroke-width="0.9"/>`;
+    } else if (type === 'lan') {
+      b += `<rect x="${sx + 2}" y="${ry - 10}" width="10" height="10" rx="1" fill="#E8F4E8" stroke="#2E8A4A" stroke-width="1"/>`;
+      b += `<line x1="${sx + 2}" y1="${ry - 5}" x2="${sx + 12}" y2="${ry - 5}" stroke="#2E8A4A" stroke-width="0.7"/>`;
+      b += `<line x1="${sx + 7}" y1="${ry - 10}" x2="${sx + 7}" y2="${ry}" stroke="#2E8A4A" stroke-width="0.7"/>`;
+    } else if (type === 'camera') {
+      b += `<circle cx="${sx + 7}" cy="${ry - 5}" r="6" fill="#2E2A26" stroke="#8A8A8A" stroke-width="0.8"/>`;
+      b += `<circle cx="${sx + 7}" cy="${ry - 5}" r="2.5" fill="none" stroke="#AAA" stroke-width="0.7"/>`;
+    } else if (type === 'intercom') {
+      b += `<rect x="${sx + 2}" y="${ry - 12}" width="10" height="14" rx="2" fill="#3A6A8A" stroke="#1A4A6A" stroke-width="0.9"/>`;
+      b += `<line x1="${sx + 3}" y1="${ry - 5}" x2="${sx + 11}" y2="${ry - 5}" stroke="#AACCE8" stroke-width="0.9"/>`;
+    } else if (type === 'speaker') {
+      b += `<path d="M ${sx + 7} ${ry - 12} L ${sx + 13} ${ry + 1} Q ${sx + 7} ${ry + 5} ${sx + 1} ${ry + 1} Z" fill="#8A5A2A" stroke="#6A3A1A" stroke-width="0.8"/>`;
+    } else if (type === 'satellite') {
+      b += `<circle cx="${sx + 7}" cy="${ry - 5}" r="6" fill="#C0C0C0" stroke="#808080" stroke-width="0.8"/>`;
+      b += `<line x1="${sx + 2}" y1="${ry - 10}" x2="${sx + 12}" y2="${ry}" stroke="#808080" stroke-width="0.7"/>`;
+    } else if (type === 'phone') {
+      b += `<path d="M ${sx + 2} ${ry - 11} C ${sx + 2} ${ry - 15} ${sx + 12} ${ry - 15} ${sx + 12} ${ry - 11} L ${sx + 12} ${ry - 1} C ${sx + 12} ${ry + 3} ${sx + 2} ${ry + 3} ${sx + 2} ${ry - 1} Z" fill="#4A8A4A" stroke="#2A5A2A" stroke-width="0.7"/>`;
+    }
+    b += `<text x="${sx + 22}" y="${ry}" font-size="10" fill="#2E2A26">${esc(label)}</text>`;
+    b += `<text x="${sx + SPEC_W - 60}" y="${ry}" font-size="10" fill="#57514A">${cnt} шт.</text>`;
+    b += `<text x="${sx + SPEC_W - 8}" y="${ry}" font-size="9" fill="#8A8478" text-anchor="end">h=${hh}</text>`;
+    ry += 20;
+    b += `<line x1="${sx}" y1="${ry - 6}" x2="${sx + SPEC_W}" y2="${ry - 6}" stroke="#EDEBE4" stroke-width="0.6"/>`;
+  }
+
+  // кабельное расписание
+  ry += 8;
+  b += `<text x="${sx}" y="${ry}" font-size="11" font-weight="700" fill="#2E2A26">Кабельное расписание</text>`;
+  b += `<line x1="${sx}" y1="${ry + 5}" x2="${sx + SPEC_W}" y2="${ry + 5}" stroke="#D8D2C6" stroke-width="0.8"/>`;
+  ry += 18;
+  const cableNotes = ['Кабель ТВ: RG-6/U', 'LAN: UTP Cat.6', 'Трасса: гофра ПВХ 16 мм'];
+  for (const ln of cableNotes) {
+    b += `<text x="${sx}" y="${ry}" font-size="9.5" fill="#57514A">${esc(ln)}</text>`;
+    ry += 14;
+  }
+
+  // блок СЩ
+  ry += 6;
+  b += `<rect x="${sx}" y="${ry}" width="${SPEC_W}" height="38" rx="4" fill="#EAF0F8" stroke="#2E4A8A" stroke-width="0.8"/>`;
+  b += `<text x="${sx + 6}" y="${ry + 14}" font-size="9.5" font-weight="700" fill="#2E4A8A">Слаботочный щит (СЩ)</text>`;
+  b += `<text x="${sx + 6}" y="${ry + 27}" font-size="8.5" fill="#57514A">Шкаф настенный 9U, 600×450</text>`;
+  b += `<text x="${sx + 6}" y="${ry + 38}" font-size="8" fill="#8A8478">Место: кладовая / прихожая</text>`;
+  ry += 52;
+
+  if (nCamera > 0) {
+    b += `<rect x="${sx}" y="${ry}" width="${SPEC_W}" height="30" rx="4" fill="#F4F0E8" stroke="#8A8A50" stroke-width="0.7"/>`;
+    b += `<text x="${sx + 6}" y="${ry + 13}" font-size="9" font-weight="700" fill="#57514A">Камеры PoE</text>`;
+    b += `<text x="${sx + 6}" y="${ry + 26}" font-size="8.5" fill="#7A7560">Питание по LAN, отдельный БП не нужен</text>`;
+    ry += 44;
+  }
+
+  // легенда снизу плана
+  const lyS = M + l + 56;
+  b += `<g font-size="10" fill="#57514A">`;
+  b += `<rect x="${M + 1}" y="${lyS - 8}" width="12" height="8" rx="1" fill="white" stroke="#2E4A8A" stroke-width="1"/>`;
+  b += `<text x="${M + 18}" y="${lyS}">ТВ-розетка</text>`;
+  b += `<rect x="${M + 100}" y="${lyS - 8}" width="10" height="10" rx="1" fill="#E8F4E8" stroke="#2E8A4A" stroke-width="1"/>`;
+  b += `<text x="${M + 116}" y="${lyS}">LAN</text>`;
+  b += `<circle cx="${M + 175}" cy="${lyS - 3}" r="6" fill="#2E2A26" stroke="#8A8A8A" stroke-width="0.8"/>`;
+  b += `<text x="${M + 186}" y="${lyS}">Камера</text>`;
+  b += `<rect x="${M + 255}" y="${lyS - 10}" width="10" height="14" rx="2" fill="#3A6A8A" stroke="#1A4A6A" stroke-width="0.8"/>`;
+  b += `<text x="${M + 270}" y="${lyS}">Домофон</text>`;
+  b += `<circle cx="${M + 358}" cy="${lyS - 3}" r="6" fill="#C0C0C0" stroke="#808080" stroke-width="0.8"/>`;
+  b += `<text x="${M + 369}" y="${lyS}">Спутник</text>`;
+  b += `<path d="M ${M + 440} ${lyS - 10} L ${M + 447} ${lyS + 2} Q ${M + 440} ${lyS + 6} ${M + 433} ${lyS + 2} Z" fill="#8A5A2A" stroke="#6A3A1A" stroke-width="0.8"/>`;
+  b += `<text x="${M + 452}" y="${lyS}">Динамик</text>`;
+  b += `</g>`;
+
+  b += dimH(M, M + w, M + l + 34, String(room.w));
+  b += dimV(M + w + 34, M, M + l, String(room.l));
+  b += `<text x="${M - WT}" y="${M - 46}" font-size="16" font-weight="700" fill="#2E2A26">Слаботочка · ${esc(room.name)}</text>`;
+  b += `<text x="${M - WT}" y="${M - 28}" font-size="11" fill="#7A756D">TV / LAN / камеры / домофон · ${pts.length} точек · высоты от чистого пола, мм</text>`;
+  b += stamp(M - WT, l + M * 2 + 100, w + 2 * WT + 40, `Слаботочка. ${room.name}`, sheet);
   return svgDoc(Wd + 20, Hd + 10, b);
 }
 
@@ -2456,6 +2816,140 @@ function drawFlatHeatFloor(sheetNo) {
   ]), ['Отступ мата от стен и стационарной мебели — 100 мм; под мебелью без зазора не укладывать.', 'Датчик температуры — в гофре 16 мм, вывод в центр зоны.', 'Питание зон тёплого пола — отдельными линиями через УЗО 30 мА.']);
 }
 
+// 14. Кондиционеры
+function drawFlatAC(sheetNo) {
+  const acUnits = [];
+  const oppWall = { A: 'C', C: 'A', B: 'D', D: 'B' };
+  for (const r of flatRooms) {
+    if (!['bedroom', 'kids', 'living-kitchen', 'living'].includes(r.type)) continue;
+    const targetWall = r.windows.length ? (oppWall[r.windows[0].wall] || 'C') : 'C';
+    const wallLen = (targetWall === 'A' || targetWall === 'C') ? r.w : r.l;
+    if (wallLen < 950) continue;
+    const count = (r.type === 'living-kitchen' && r.area > 20) ? 2 : 1;
+    for (let i = 0; i < count; i++) {
+      const center = count === 1 ? wallLen / 2 : wallLen * (i === 0 ? 0.3 : 0.7);
+      const off = Math.max(100, Math.min(center - 425, wallLen - 950));
+      acUnits.push({ r, wall: targetWall, off });
+    }
+  }
+  return flatSheet(sheetNo, 'Кондиционеры', 'Схема кондиционирования · внутренние блоки, трассы фреона, конденсат', base => {
+    let s = '';
+    const patId = `acOuP${sheetNo}`;
+    s += `<defs><pattern id="${patId}" width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="6" height="6" fill="#E8F4FF"/><line x1="0" y1="0" x2="0" y2="6" stroke="#2A6AA0" stroke-width="1.8"/></pattern></defs>`;
+    const ouX = base.fx(FLAT.x0), ouY = base.fy(FLAT.y0) - px(EXT);
+    const ouW = Math.min(px(850), px(FLAT.W / 2)), ouH = px(EXT);
+    s += `<rect x="${ouX}" y="${ouY}" width="${ouW}" height="${ouH}" fill="url(#${patId})" stroke="#2A6AA0" stroke-width="1.3"/>`;
+    s += `<text x="${ouX + ouW / 2}" y="${ouY + ouH / 2 + 3}" font-size="5.5" text-anchor="middle" fill="#2A6AA0" font-weight="700">Наруж. блок</text>`;
+    const ocx = ouX + ouW / 2, ocy = ouY + ouH;
+    for (const u of acUnits) {
+      const r = u.r;
+      let ux, uy, uw, uh, horiz;
+      if (u.wall === 'A')      { ux = base.fx(r.pos.x + u.off); uy = base.fy(r.pos.y);                  uw = px(850); uh = px(200); horiz = true; }
+      else if (u.wall === 'C') { ux = base.fx(r.pos.x + u.off); uy = base.fy(r.pos.y + r.l) - px(200); uw = px(850); uh = px(200); horiz = true; }
+      else if (u.wall === 'D') { ux = base.fx(r.pos.x);         uy = base.fy(r.pos.y + u.off);          uw = px(200); uh = px(850); horiz = false; }
+      else                     { ux = base.fx(r.pos.x + r.w) - px(200); uy = base.fy(r.pos.y + u.off); uw = px(200); uh = px(850); horiz = false; }
+      s += `<rect x="${ux}" y="${uy}" width="${uw}" height="${uh}" fill="#E8F4FF" stroke="#2A6AA0" stroke-width="1.2"/>`;
+      const fanR = Math.min(horiz ? uh / 2 - 2 : uw / 2 - 2, 8);
+      if (horiz) {
+        const step = uh / 5;
+        for (let fi = 1; fi <= 4; fi++) s += `<line x1="${ux + 4}" y1="${uy + step * fi}" x2="${ux + uw - 4}" y2="${uy + step * fi}" stroke="#2A6AA066" stroke-width="0.7"/>`;
+      } else {
+        const step = uw / 5;
+        for (let fi = 1; fi <= 4; fi++) s += `<line x1="${ux + step * fi}" y1="${uy + 4}" x2="${ux + step * fi}" y2="${uy + uh - 4}" stroke="#2A6AA066" stroke-width="0.7"/>`;
+      }
+      s += `<circle cx="${ux + uw / 2}" cy="${uy + uh / 2}" r="${fanR}" fill="none" stroke="#2A6AA0" stroke-width="0.8"/>`;
+      const lbl2 = r.name.length > 9 ? r.name.slice(0, 9) + '…' : r.name;
+      s += `<text x="${ux + uw / 2}" y="${uy + uh / 2 + (horiz ? 3 : 0)}" font-size="5.5" text-anchor="middle" fill="#1A4A70">${esc(lbl2)}</text>`;
+      const sox = ux + uw - 10, soy = uy + 2;
+      s += `<rect x="${sox}" y="${soy}" width="8" height="8" fill="#FFF" stroke="${CAD.elec}" stroke-width="0.8"/>`;
+      s += `<circle cx="${sox + 4}" cy="${soy + 4}" r="1.8" fill="${CAD.elec}"/>`;
+      const icx = ux + uw / 2, icy = uy + uh / 2;
+      s += `<polyline points="${icx},${icy} ${icx},${ocy} ${ocx},${ocy}" fill="none" stroke="#2A6AA0" stroke-width="0.9" stroke-dasharray="8 4"/>`;
+    }
+    return s + flatRoomMarks(base.fx, base.fy, false);
+  }, (x, y, w) => flatLegendBox(x, y, w, 'Условные обозначения', [
+    { sym: (sx, sy) => `<rect x="${sx}" y="${sy - 10}" width="16" height="9" fill="#E8F4FF" stroke="#2A6AA0" stroke-width="0.9"/><line x1="${sx + 3}" y1="${sy - 7}" x2="${sx + 13}" y2="${sy - 7}" stroke="#2A6AA066" stroke-width="0.7"/><circle cx="${sx + 8}" cy="${sy - 5}" r="2.5" fill="none" stroke="#2A6AA0" stroke-width="0.6"/>`, text: `внутренний блок 850×200, h=2200 — ${acUnits.length} шт.` },
+    { sym: (sx, sy) => `<rect x="${sx}" y="${sy - 10}" width="14" height="9" fill="#E8F4FF80" stroke="#2A6AA0" stroke-width="0.9" stroke-dasharray="3 2"/>`, text: 'наружный блок 850×650 · вылет от фасада' },
+    { sym: (sx, sy) => `<line x1="${sx}" y1="${sy - 4}" x2="${sx + 16}" y2="${sy - 4}" stroke="#2A6AA0" stroke-width="1.2" stroke-dasharray="8 4"/>`, text: 'трасса фреона: медная труба в теплоизоляции ø6/10 мм' },
+    { sym: (sx, sy) => `<rect x="${sx + 2}" y="${sy - 9}" width="8" height="8" fill="#FFF" stroke="${CAD.elec}" stroke-width="0.8"/><circle cx="${sx + 6}" cy="${sy - 5}" r="1.8" fill="${CAD.elec}"/>`, text: 'розетка питания 16А/2,5мм² от щита' },
+  ]), [
+    'Конденсат: полипропиленовая труба ø20 в штробе.',
+    'Питание: выделенная линия 16А/2,5мм² от щита.',
+    'Рекомендации: Mitsubishi Electric MSZ-LN / Daikin FTXB / Bosch Climate 5000.',
+    'Трассы фреона: медная труба в теплоизоляции — монтаж сертифицированными мастерами.',
+  ]);
+}
+
+// 15. Сантехника с привязками
+function drawFlatPlumbing(sheetNo) {
+  const plumbTypes = new Set(['bathroom', 'wc', 'kitchen', 'living-kitchen']);
+  const plumbRooms = flatRooms.filter(r => plumbTypes.has(r.type));
+  return flatSheet(sheetNo, 'Сантехника с привязками', 'Расположение сантехнических приборов · привязки от стен в мм', base => {
+    let s = '';
+    for (const r of plumbRooms)
+      s += `<rect x="${base.fx(r.pos.x)}" y="${base.fy(r.pos.y)}" width="${px(r.w)}" height="${px(r.l)}" fill="#E8F2FC" fill-opacity="0.55" stroke="none"/>`;
+    for (const r of plumbRooms) {
+      const furns = furnitureFor(r);
+      for (const f of furns) {
+        if (!['wc', 'sink', 'bath', 'kitchen'].includes(f.key)) continue;
+        const fx2 = base.fx(r.pos.x + f.x), fy2 = base.fy(r.pos.y + f.y);
+        const fw = px(f.w), fh = px(f.h);
+        const fcx = fx2 + fw / 2, fcy = fy2 + fh / 2;
+        if (f.key === 'wc') {
+          s += `<rect x="${fx2}" y="${fy2}" width="${fw}" height="${fh * 0.42}" fill="#E0F0FF" stroke="${CAD.plumb}" stroke-width="1"/>`;
+          s += `<line x1="${fx2}" y1="${fy2 + fh * 0.42}" x2="${fx2 + fw}" y2="${fy2 + fh * 0.42}" stroke="${CAD.plumb}" stroke-width="0.9"/>`;
+          s += `<rect x="${fx2}" y="${fy2 + fh * 0.42}" width="${fw}" height="${fh * 0.58}" fill="none" stroke="${CAD.plumb}" stroke-width="0.8"/>`;
+          s += `<ellipse cx="${fcx}" cy="${fy2 + fh * 0.72}" rx="${fw * 0.42}" ry="${fh * 0.27}" fill="#FFF" stroke="${CAD.plumb}" stroke-width="1"/>`;
+        } else if (f.key === 'sink') {
+          s += `<rect x="${fx2}" y="${fy2}" width="${fw}" height="${fh}" fill="#E0F0FF" stroke="${CAD.plumb}" stroke-width="1" rx="4"/>`;
+          s += `<ellipse cx="${fcx}" cy="${fcy}" rx="${fw * 0.38}" ry="${fh * 0.42}" fill="#FFF" stroke="${CAD.plumb}" stroke-width="0.9"/>`;
+          s += `<circle cx="${fcx}" cy="${fcy}" r="2" fill="${CAD.plumb}"/>`;
+        } else if (f.key === 'bath') {
+          s += `<rect x="${fx2}" y="${fy2}" width="${fw}" height="${fh}" fill="#E0F0FF" stroke="${CAD.plumb}" stroke-width="1.1" rx="3"/>`;
+          s += `<rect x="${fx2 + 4}" y="${fy2 + 4}" width="${fw - 8}" height="${fh - 8}" fill="none" stroke="${CAD.plumb}" stroke-width="0.7" rx="2"/>`;
+          s += `<circle cx="${fcx}" cy="${fy2 + fh * 0.85}" r="${Math.min(fw * 0.12, 5)}" fill="none" stroke="${CAD.plumb}" stroke-width="0.8"/>`;
+        } else if (f.key === 'kitchen' && r.type !== 'bathroom') {
+          const hw = fw / 2 - 3;
+          s += `<rect x="${fx2}" y="${fy2}" width="${fw}" height="${fh}" fill="#E0F0FF" stroke="${CAD.plumb}" stroke-width="1.1" rx="3"/>`;
+          s += `<rect x="${fx2 + 3}" y="${fy2 + 3}" width="${hw}" height="${fh - 6}" fill="#FFF" stroke="${CAD.plumb}" stroke-width="0.8" rx="2"/>`;
+          s += `<rect x="${fx2 + fw / 2 + 1}" y="${fy2 + 3}" width="${hw - 1}" height="${fh - 6}" fill="#FFF" stroke="${CAD.plumb}" stroke-width="0.8" rx="2"/>`;
+          s += `<circle cx="${fx2 + fw * 0.27}" cy="${fcy}" r="2" fill="${CAD.plumb}"/>`;
+          s += `<circle cx="${fx2 + fw * 0.75}" cy="${fcy}" r="2" fill="${CAD.plumb}"/>`;
+        }
+        const wl = base.fx(r.pos.x), wt = base.fy(r.pos.y);
+        const dimGap = 14;
+        const distH = Math.round(f.x + f.w / 2);
+        if (distH > 0) s += dimH(wl, fcx, fy2 + fh + dimGap, String(distH));
+        const distV = Math.round(f.y + f.h / 2);
+        if (distV > 0) s += dimV(fx2 - dimGap, wt, fcy, String(distV));
+      }
+      const plFurns = furns.filter(ff => ['wc', 'sink', 'bath', 'kitchen'].includes(ff.key));
+      if (plFurns.length && r.doors.length) {
+        const d = r.doors[0];
+        let dpx2, dpy2;
+        if      (d.wall === 'A') { dpx2 = base.fx(r.pos.x + d.off + d.w / 2); dpy2 = base.fy(r.pos.y); }
+        else if (d.wall === 'C') { dpx2 = base.fx(r.pos.x + d.off + d.w / 2); dpy2 = base.fy(r.pos.y + r.l); }
+        else if (d.wall === 'D') { dpx2 = base.fx(r.pos.x);                    dpy2 = base.fy(r.pos.y + d.off + d.w / 2); }
+        else                     { dpx2 = base.fx(r.pos.x + r.w);              dpy2 = base.fy(r.pos.y + d.off + d.w / 2); }
+        const ff0 = plFurns[0];
+        s += `<line x1="${dpx2}" y1="${dpy2}" x2="${base.fx(r.pos.x + ff0.x + ff0.w / 2)}" y2="${base.fy(r.pos.y + ff0.y + ff0.h / 2)}" stroke="${CAD.plumb}" stroke-width="0.8" stroke-dasharray="6 3"/>`;
+      }
+    }
+    return s + flatRoomMarks(base.fx, base.fy, false);
+  }, (x, y, w) => flatLegendBox(x, y, w, 'Условные обозначения', [
+    { sym: (sx, sy) => `<rect x="${sx}" y="${sy - 10}" width="10" height="14" fill="#E0F0FF" stroke="${CAD.plumb}" stroke-width="0.9"/><ellipse cx="${sx + 5}" cy="${sy + 1}" rx="3.5" ry="2.5" fill="#FFF" stroke="${CAD.plumb}" stroke-width="0.7"/>`, text: 'унитаз 400×680' },
+    { sym: (sx, sy) => `<ellipse cx="${sx + 8}" cy="${sy - 3}" rx="7" ry="5" fill="#E0F0FF" stroke="${CAD.plumb}" stroke-width="0.9"/><circle cx="${sx + 8}" cy="${sy - 3}" r="1.5" fill="${CAD.plumb}"/>`, text: 'раковина 600×450' },
+    { sym: (sx, sy) => `<rect x="${sx}" y="${sy - 9}" width="16" height="10" fill="#E0F0FF" stroke="${CAD.plumb}" stroke-width="0.9" rx="2"/><circle cx="${sx + 8}" cy="${sy - 2}" r="1.8" fill="none" stroke="${CAD.plumb}" stroke-width="0.7"/>`, text: 'ванна 1700×700 / душ 900×900' },
+    { sym: (sx, sy) => `<rect x="${sx}" y="${sy - 9}" width="16" height="10" fill="#E0F0FF" stroke="${CAD.plumb}" stroke-width="0.9" rx="2"/><circle cx="${sx + 5}" cy="${sy - 4}" r="1.5" fill="${CAD.plumb}"/><circle cx="${sx + 11}" cy="${sy - 4}" r="1.5" fill="${CAD.plumb}"/>`, text: 'мойка кухонная двойная 600×500' },
+    { sym: (sx, sy) => `<line x1="${sx}" y1="${sy - 4}" x2="${sx + 16}" y2="${sy - 4}" stroke="${CAD.plumb}" stroke-width="0.9" stroke-dasharray="6 3"/>`, text: 'трасса ГВС/ХВС от стояка' },
+  ]), [
+    'Привязки от оси прибора; уточнить после укладки плитки ±5 мм.',
+    'Сантехника монтируется после завершения чистовой отделки.',
+    'Уклоны канализации ≥2% (20 мм/пог.м) в направлении стояка.',
+    'Ввод ГВС и ХВС — от существующих стояков согласно проекту ВК.',
+  ], { pale: true });
+}
+
 // ---------- смета ----------
 function roomGeometry(r) {
   const floor = r.w * r.l / 1e6;
@@ -2793,7 +3287,7 @@ function writeOut(rel, content) {
 }
 
 let sheet = 1;
-TOTAL_SHEETS = rooms.length * 12 + 1 + (FLAT ? 13 * LEVELS.length : 0); // сводные (канон 13) + обмер+демо+монтаж+2 плана+пол+4 развертки+потолок+электрика на комнату + узел
+TOTAL_SHEETS = rooms.length * 12 + 1 + (FLAT ? 15 * LEVELS.length : 0); // сводные (канон 15) + обмер+демо+монтаж+2 плана+пол+4 развертки+потолок+электрика на комнату + узел
 const reg = []; // реестр листов для ведомости
 const counts = { flat: 0, obmer: 0, demo: 0, mont: 0, plans: 0, poly: 0, elev: 0, ceil: 0, electro: 0 };
 function sheetOut(rel, maker, title, scale) {
@@ -2818,6 +3312,8 @@ const FLAT_SHEETS = [
     ['11-poly', drawFlatFloors, 'План напольных покрытий'],
     ['12-otdelka-sten', drawFlatWallFinish, 'План отделки стен'],
     ['13-teplye-poly', drawFlatHeatFloor, 'План тёплых полов'],
+    ['14-kondicionery', drawFlatAC, 'Кондиционеры'],
+    ['15-santehnika', drawFlatPlumbing, 'Сантехника с привязками'],
 ];
 for (const lv of LEVELS) { // канон альбома: 13 сводных листов на каждый этаж
   setLevel(lv);
@@ -2840,6 +3336,7 @@ for (const r of rooms) { sheetOut(`05-potolki/potolok-${SL(r)}.svg`, n => drawCe
 sheetOut(`05-potolki/uzel-A-korob-led.svg`, n => drawNode(n), 'Узел А. Короб с LED-подсветкой', '1:20');
 for (const r of rooms) { sheetOut(`09-elektrika/elektrika-${SL(r)}.svg`, n => drawElectro(r, n), `Электрика. ${RN(r)}`); counts.electro++; }
 for (const r of rooms) { sheetOut(`09-elektrika/smarthome-${SL(r)}.svg`, n => drawSmartHome(r, n), `Умный дом. ${RN(r)}`); counts.electro++; }
+for (const r of rooms) { sheetOut(`09-elektrika/slabotochka-${SL(r)}.svg`, n => drawSlabotochka(r, n), `Слаботочка. ${RN(r)}`); counts.electro++; }
 // рендеры: подхватываем, если сгенерированы (06-koncept/renders/*.jpg|png)
 let renders = [];
 try {
