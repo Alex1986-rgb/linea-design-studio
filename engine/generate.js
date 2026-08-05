@@ -583,47 +583,156 @@ function ceilingLevelsFor(room) {
   return lv;
 }
 
-// ---------- электрика (розетки/выключатели по мебельным сценариям) ----------
+// ---------- электрика — Phase 2 (per-appliance, multi-gang, smart home) ----------
 function electroFor(room) {
   const W = room.w, L = room.l, pts = [];
-  const P = (x, y, type, hh, label) => pts.push({ x: Math.max(120, Math.min(W - 120, x)), y: Math.max(120, Math.min(L - 120, y)), type, h: hh, label });
+  // Phase 2: expanded P helper — opts spread supplies gang/pass/ip44/amps/smart/hidden
+  const P = (x, y, type, hh, label, opts) => pts.push({ x: Math.max(120, Math.min(W-120,x)), y: Math.max(120, Math.min(L-120,y)), type, h:hh, label, ...(opts||{}) });
+
   const door = room.doors[0];
-  const doorPos = door ? (door.wall === 'A' ? { x: door.off + door.w + 150, y: 150 } : door.wall === 'C' ? { x: door.off + door.w + 150, y: L - 150 } : door.wall === 'B' ? { x: W - 150, y: door.off + door.w + 150 } : { x: 150, y: door.off + door.w + 150 }) : { x: 150, y: L - 150 };
-  P(doorPos.x, doorPos.y, 'switch', 900, 'выкл.');
+  const doorPos = door
+    ? (door.wall === 'A' ? { x: door.off + door.w + 150, y: 150 }
+     : door.wall === 'C' ? { x: door.off + door.w + 150, y: L - 150 }
+     : door.wall === 'B' ? { x: W - 150, y: door.off + door.w + 150 }
+     :                     { x: 150, y: door.off + door.w + 150 })
+    : { x: 150, y: L - 150 };
+
   switch (room.type) {
+
     case 'bedroom': {
+      // Entry: 2-gang switch (ceiling + bedside group)
+      P(doorPos.x, doorPos.y, 'switch', 900, 'выкл. 2-кл.', { gang: 2 });
+
       const hwall = bedWallFor(room);
       if (hwall === 'A' || hwall === 'C') {
-        const bx = (W - 1600) / 2, yy = hwall === 'A' ? 150 : L - 150, y2 = hwall === 'A' ? 380 : L - 380;
-        P(bx - 300, yy, 'socket', 600, '2×розетка'); P(bx + 1900, yy, 'socket', 600, '2×розетка');
-        P(bx - 300, y2, 'switch', 900, 'проходной'); P(bx + 1900, y2, 'switch', 900, 'проходной');
+        const bx = (W - 1600) / 2;
+        const yy = hwall === 'A' ? 150 : L - 150;
+        const y2 = hwall === 'A' ? 380 : L - 380;
+        // Bedside sockets
+        P(bx - 300, yy, 'socket', 600, '2×розетка');
+        P(bx + 1900, yy, 'socket', 600, '2×розетка');
+        // Passage/2-way switches at each bedside
+        P(bx - 300, y2, 'switch', 900, 'проходной', { pass: true });
+        P(bx + 1900, y2, 'switch', 900, 'проходной', { pass: true });
         P(500, hwall === 'A' ? L - 150 : 150, 'socket', 300, 'комод/шкаф');
       } else {
-        const by = (L - 1600) / 2, xx = hwall === 'B' ? W - 150 : 150, x2 = hwall === 'B' ? W - 380 : 380;
-        P(xx, by - 300, 'socket', 600, '2×розетка'); P(xx, by + 1900, 'socket', 600, '2×розетка');
-        P(x2, by - 300, 'switch', 900, 'проходной');
+        const by = (L - 1600) / 2;
+        const xx = hwall === 'B' ? W - 150 : 150;
+        const x2 = hwall === 'B' ? W - 380 : 380;
+        P(xx, by - 300, 'socket', 600, '2×розетка');
+        P(xx, by + 1900, 'socket', 600, '2×розетка');
+        // Passage switch at bedside
+        P(x2, by - 300, 'switch', 900, 'проходной', { pass: true });
         P(hwall === 'B' ? 500 : W - 500, 150, 'socket', 300, 'шкаф/утюг');
       }
-      break; }
+      // TV / work zone socket
+      P(W * 0.5, L * 0.5, 'socket', 300, 'ТВ/рабочая 2×');
+      // Smart: PIR motion sensor near door
+      P(Math.min(W - 200, doorPos.x + 300), doorPos.y, 'sensor', 1800, 'датчик движения', { smart: true });
+      // Smart: thermostat on wall opposite entry
+      P(W * 0.5, doorPos.y < L / 2 ? L - 200 : 200, 'thermostat', 1400, 'термостат', { smart: true });
+      // Smart: robot vacuum dock near wardrobe
+      P(200, L - 200, 'vacuum', 150, 'база робота-пылесоса', { smart: true });
+      break;
+    }
+
     case 'living-kitchen': {
-      P(W * 0.25, 150, 'socket', 1100, 'фартук 2×'); P(W * 0.55, 150, 'socket', 1100, 'фартук 2×');
-      P(W * 0.4, 350, 'socket', 150, 'встройка 3× (посудом./духовой/холод.)');
+      // Entry: 4-gang switch (ceiling spots / LED strip / pendant / kitchen zone)
+      P(doorPos.x, doorPos.y, 'switch', 900, 'выкл. 4-кл.', { gang: 4 });
+
+      // Kitchen zone — per-appliance sockets along wall A (y≈150)
+      P(W * 0.12, 150, 'socket', 150, 'холодильник 1×');
+      P(W * 0.25, 150, 'socket', 150, 'посудомойка IP44', { ip44: true });
+      P(W * 0.38, 150, 'socket', 150, 'плита 16А', { amps: 16 });
+      P(W * 0.52, 150, 'socket', 150, 'духовой шкаф 16А', { amps: 16 });
+      P(W * 0.65, 150, 'socket', 1550, 'микроволновка встроенная');
+      P(W * 0.40, 260, 'socket', 2100, 'вытяжка 1×');
+      // Backsplash fartuk: 3× sockets at h=1100 distributed along counter
+      P(W * 0.22, 260, 'socket', 1100, 'фартук 1×');
+      P(W * 0.43, 260, 'socket', 1100, 'фартук 1×');
+      P(W * 0.61, 260, 'socket', 1100, 'фартук 1×');
+
+      // Living zone
       P(150, L * 0.5, 'socket', 1300, 'ТВ 5× + TV/LAN (скрыто в нише)');
-      P(W - 150, L * 0.4, 'socket', 300, 'диван 2×'); P(W * 0.55, L - 150, 'socket', 300, 'стол'); break; }
+      P(W - 150, L * 0.4, 'socket', 300, 'диван 2×');
+      P(W * 0.55, L - 150, 'socket', 300, 'стол');
+
+      // Smart: PIR sensor
+      P(Math.min(W - 200, doorPos.x + 300), doorPos.y, 'sensor', 1800, 'датчик движения', { smart: true });
+      // Smart: robot vacuum dock in living corner
+      P(W - 200, L - 200, 'vacuum', 150, 'база робота-пылесоса', { smart: true });
+      // Smart: hub
+      P(200, 200, 'hub', 1800, 'хаб умного дома', { smart: true, hidden: true });
+      break;
+    }
+
     case 'living': {
+      P(doorPos.x, doorPos.y, 'switch', 900, 'выкл. 2-кл.', { gang: 2 });
       P(W * 0.5, 150, 'socket', 1300, 'ТВ 5× + TV/LAN (скрыто в нише)');
-      P(W * 0.2, L - 150, 'socket', 300, 'диван 2×'); P(W - 150, L * 0.5, 'socket', 300, 'торшер'); break; }
+      P(W * 0.2, L - 150, 'socket', 300, 'диван 2×');
+      P(W - 150, L * 0.5, 'socket', 300, 'торшер');
+      P(Math.min(W - 200, doorPos.x + 300), doorPos.y, 'sensor', 1800, 'датчик движения', { smart: true });
+      P(W - 200, L - 200, 'vacuum', 150, 'база робота-пылесоса', { smart: true });
+      break;
+    }
+
     case 'kitchen': {
-      P(W * 0.3, 150, 'socket', 1100, 'фартук 2×'); P(W * 0.6, 150, 'socket', 1100, 'фартук 2×');
-      P(150, L * 0.5, 'socket', 150, 'встройка 3×'); P(W - 150, L - 400, 'socket', 300, 'стол'); break; }
+      // Entry: 2-gang switch
+      P(doorPos.x, doorPos.y, 'switch', 900, 'выкл. 2-кл.', { gang: 2 });
+      // Per-appliance sockets
+      P(W * 0.12, 150, 'socket', 150, 'холодильник 1×');
+      P(W * 0.26, 150, 'socket', 150, 'посудомойка IP44', { ip44: true });
+      P(W * 0.42, 150, 'socket', 150, 'плита 16А', { amps: 16 });
+      P(W * 0.58, 150, 'socket', 150, 'духовой шкаф 16А', { amps: 16 });
+      P(W * 0.72, 150, 'socket', 1550, 'микроволновка встроенная');
+      P(W * 0.40, 260, 'socket', 2100, 'вытяжка 1×');
+      // Backsplash fartuk: 3×
+      P(W * 0.22, 260, 'socket', 1100, 'фартук 1×');
+      P(W * 0.45, 260, 'socket', 1100, 'фартук 1×');
+      P(W * 0.65, 260, 'socket', 1100, 'фартук 1×');
+      P(W - 150, L - 400, 'socket', 300, 'стол');
+      break;
+    }
+
     case 'kids': {
+      P(doorPos.x, doorPos.y, 'switch', 900, 'выкл. 2-кл.', { gang: 2 });
       P(1500, 150, 'socket', 900, 'стол: блок 4× + LAN');
-      P(300, 500, 'socket', 600, 'кровать'); break; }
+      P(300, 500, 'socket', 600, 'кровать');
+      P(Math.min(W - 200, doorPos.x + 300), doorPos.y, 'sensor', 1800, 'датчик движения', { smart: true });
+      P(200, L - 200, 'vacuum', 150, 'база робота-пылесоса', { smart: true });
+      break;
+    }
+
     case 'bathroom': {
-      P(W - 400, L - 150, 'socket', 1100, 'IP44 фен/бритва'); P(W - 150, 400, 'socket', 600, 'вывод полот.суш.'); break; }
-    case 'hallway': { P(W - 300, 150, 'socket', 300, 'банкетка/сушка'); break; }
-    default: P(500, 150, 'socket', 300, 'розетка');
+      P(doorPos.x, doorPos.y, 'switch', 900, 'выкл.');
+      P(W - 400, L - 150, 'socket', 1100, 'IP44 фен/бритва', { ip44: true });
+      P(W - 150, 400, 'socket', 600, 'вывод полот.суш.');
+      // Heated towel rail socket
+      P(W - 150, L * 0.55, 'socket', 600, 'полотенцесушитель IP44', { ip44: true });
+      // PIR + humidity sensor
+      P(W * 0.5, 200, 'sensor', 1800, 'датчик движ./влажн.', { smart: true });
+      break;
+    }
+
+    case 'hallway': {
+      // 3-gang panel: hall light / coat area / street
+      P(doorPos.x, doorPos.y, 'switch', 900, 'выкл. 3-кл.', { gang: 3 });
+      P(W - 300, 150, 'socket', 300, 'банкетка/сушка');
+      // Washing machine
+      P(150, L * 0.3, 'socket', 900, 'стиральная машина IP44', { ip44: true });
+      // Smart: PIR sensor
+      P(W * 0.5, L * 0.5, 'sensor', 1800, 'датчик движения', { smart: true });
+      // Smart: hub in hallway closet
+      P(200, L - 200, 'hub', 1800, 'хаб умного дома', { smart: true, hidden: true });
+      break;
+    }
+
+    default: {
+      P(doorPos.x, doorPos.y, 'switch', 900, 'выкл.');
+      P(500, 150, 'socket', 300, 'розетка');
+    }
   }
+
   return pts;
 }
 
@@ -889,6 +998,44 @@ function sconceFor(room, wallKey) {
   return sc;
 }
 
+// ── kitchenEquipFor: возвращает массив объектов техники для кухонной развёртки ──
+function kitchenEquipFor(room, wallKey) {
+  if (!(room.type === 'living-kitchen' || room.type === 'kitchen') || wallKey !== 'A') return [];
+  const kStart = 100;
+  const kEnd   = room.w - 200;
+  const kW     = kEnd - kStart;
+  return [
+    { type: 'fridge',     xMm: kStart,                          wMm: 600, hMm: 2000, bottomMm: 0,          fillColor: '#E8EDEB', strokeColor: '#3D8A6E', label: 'Холодильник' },
+    { type: 'counter',    xMm: kStart + 600,                    wMm: kW - 600,        hMm: 870,  bottomMm: 0,          fillColor: '#D4C9A8', strokeColor: '#8A7A5A', label: '' },
+    { type: 'upper',      xMm: kStart + 600,                    wMm: kW - 600 - 350,  hMm: 700,  bottomMm: room.h - 900, fillColor: '#D4C9A8', strokeColor: '#8A7A5A', label: '' },
+    { type: 'dishwasher', xMm: kStart + 620,                    wMm: 600, hMm: 860,  bottomMm: 0,          fillColor: '#E0E8ED', strokeColor: '#3D6A8A', label: 'ПМ' },
+    { type: 'hob',        xMm: kStart + Math.round(kW * 0.50),  wMm: 600, hMm: 40,   bottomMm: 870,        fillColor: '#2E2A26', strokeColor: '#2E2A26', label: 'Плита' },
+    { type: 'hood',       xMm: kStart + Math.round(kW * 0.50),  wMm: 600, hMm: 380,  bottomMm: room.h - 900, fillColor: '#9A9A9A', strokeColor: '#555',    label: 'Вытяжка' },
+    { type: 'oven',       xMm: kStart + Math.round(kW * 0.75),  wMm: 600, hMm: 600,  bottomMm: 870,        fillColor: '#555',    strokeColor: '#333',    label: 'Духовой' },
+    { type: 'microwave',  xMm: kStart + Math.round(kW * 0.75),  wMm: 600, hMm: 380,  bottomMm: 1450,       fillColor: '#555',    strokeColor: '#333',    label: 'СВЧ' },
+    { type: 'sink',       xMm: kStart + Math.round(kW * 0.38),  wMm: 600, hMm: 200,  bottomMm: 670,        fillColor: '#A0C4D8', strokeColor: '#4A8AAA', label: 'Мойка' },
+  ];
+}
+
+// ── bathroomEquipFor: возвращает сантехнику для развёртки ванной ──
+function bathroomEquipFor(room, wallKey) {
+  if (room.type !== 'bathroom') return [];
+  const hasDoor   = key => (room.doors   || []).some(d => d.wall === key);
+  const hasWindow = key => (room.windows || []).some(w => w.wall === key);
+  const preferred = ['B', 'C', 'A', 'D'];
+  let mainWall = preferred.find(k => !hasWindow(k) && !hasDoor(k));
+  if (!mainWall) mainWall = preferred.find(k => !hasWindow(k));
+  if (!mainWall) mainWall = 'B';
+  if (wallKey !== mainWall) return [];
+  const wallLen = (wallKey === 'A' || wallKey === 'C') ? room.w : room.l;
+  return [
+    { type: 'mirror', xMm: wallLen / 2 - 400, wMm: 800, hMm: 600, bottomMm: room.h - 1800, fillColor: '#B8D4E0', strokeColor: '#4A7A8A', label: 'Зеркало' },
+    { type: 'basin',  xMm: wallLen / 2 - 250, wMm: 500, hMm: 200, bottomMm: 840,           fillColor: '#D0E8F0', strokeColor: '#4A8AAA', label: 'Раковина' },
+    { type: 'tap',    xMm: wallLen / 2 - 30,  wMm:  60, hMm: 250, bottomMm: 840,           fillColor: '#CCC',    strokeColor: '#888',    label: 'Смеситель' },
+    { type: 'towel',  xMm: wallLen - 380,      wMm: 300, hMm: 500, bottomMm: 900,           fillColor: 'none',    strokeColor: '#CCC',    label: 'ПС 300' },
+  ];
+}
+
 // ---------- развертка стены (премиум: карниз, электрика, бра, подоконник, перемычки) ----------
 function drawElevation(room, wallKey, sheet) {
   const len = (wallKey === 'A' || wallKey === 'C') ? room.w : room.l;
@@ -933,6 +1080,42 @@ function drawElevation(room, wallKey, sheet) {
     nicheLabels += `<text x="${tcx}" y="${ny + px(nch.h) / 2}" font-size="9" fill="#57514A" text-anchor="middle">${l1}</text>`;
     nicheLabels += `<text x="${tcx}" y="${ny + px(nch.h) / 2 + 12}" font-size="8" fill="#8A6A3B" text-anchor="middle">${esc(nch.label)}</text>`;
     b += `<text x="${nx + px(nch.w) / 2}" y="${ny - 5}" font-size="9" fill="#7A756D" text-anchor="middle">низ +${(nch.sill / 1000).toFixed(3).replace('.', ',')}</text>`;
+  }
+
+  // ── кухонная техника + сантехника на развёртке ──────────────────
+  const kitEquip  = kitchenEquipFor(room, wallKey);
+  const bathEquip = bathroomEquipFor(room, wallKey);
+  for (const eq of [...kitEquip, ...bathEquip]) {
+    const ex = M + px(eq.xMm), ey = M + h - px(eq.bottomMm + eq.hMm);
+    const ew = px(eq.wMm),     eh = px(eq.hMm);
+    if (eq.type === 'hood') {
+      b += `<path d="M ${ex} ${ey+eh} L ${ex+ew*0.15} ${ey} L ${ex+ew*0.85} ${ey} L ${ex+ew} ${ey+eh} Z" fill="${eq.fillColor}" stroke="${eq.strokeColor}" stroke-width="1.2"/>`;
+    } else {
+      b += `<rect x="${ex}" y="${ey}" width="${ew}" height="${eh}" fill="${eq.fillColor}" stroke="${eq.strokeColor}" stroke-width="1.2" rx="2"/>`;
+    }
+    if (eq.type === 'hob') {
+      const boffsets = [[0.18,0.35],[0.5,0.35],[0.18,0.65],[0.5,0.65]];
+      for (const [bx,by] of boffsets) b += `<circle cx="${ex+ew*bx}" cy="${ey+eh*by*6}" r="4" fill="none" stroke="#C29A5B" stroke-width="1.2"/>`;
+    } else if (eq.type === 'upper' || eq.type === 'counter') {
+      const nDoors = Math.max(1, Math.round(eq.wMm / 450));
+      for (let d = 1; d < nDoors; d++) b += `<line x1="${ex + ew*d/nDoors}" y1="${ey+4}" x2="${ex + ew*d/nDoors}" y2="${ey+eh-4}" stroke="${eq.strokeColor}" stroke-width="0.7"/>`;
+      for (let d = 0; d < nDoors; d++) b += `<circle cx="${ex + ew*(d+0.5)/nDoors}" cy="${ey+eh*0.5}" r="2" fill="${eq.strokeColor}"/>`;
+    } else if (eq.type === 'mirror') {
+      b += `<line x1="${ex+4}" y1="${ey+4}" x2="${ex+ew-4}" y2="${ey+eh-4}" stroke="${eq.strokeColor}" stroke-width="0.8" opacity="0.5"/>`;
+      b += `<line x1="${ex+ew-4}" y1="${ey+4}" x2="${ex+4}" y2="${ey+eh-4}" stroke="${eq.strokeColor}" stroke-width="0.8" opacity="0.5"/>`;
+    } else if (eq.type === 'tap') {
+      const tc = ex + ew/2, tmid = ey + eh*0.4;
+      b += `<line x1="${tc-8}" y1="${tmid}" x2="${tc+8}" y2="${tmid}" stroke="#888" stroke-width="2"/>`;
+      b += `<line x1="${tc}" y1="${tmid-8}" x2="${tc}" y2="${tmid+8}" stroke="#888" stroke-width="2"/>`;
+      b += `<path d="M ${tc} ${tmid+8} Q ${tc+12} ${tmid+16} ${tc+12} ${ey+eh}" fill="none" stroke="#888" stroke-width="1.4"/>`;
+    } else if (eq.type === 'towel') {
+      const tw2 = px(eq.wMm), th2 = px(eq.hMm);
+      b += `<line x1="${ex+6}" y1="${ey}" x2="${ex+6}" y2="${ey+th2}" stroke="#BBBBBB" stroke-width="3"/>`;
+      b += `<line x1="${ex+tw2-6}" y1="${ey}" x2="${ex+tw2-6}" y2="${ey+th2}" stroke="#BBBBBB" stroke-width="3"/>`;
+      const rungs = Math.max(2, Math.round(eq.hMm/80));
+      for (let ri=0; ri<=rungs; ri++) b += `<line x1="${ex+6}" y1="${ey+th2*ri/rungs}" x2="${ex+tw2-6}" y2="${ey+th2*ri/rungs}" stroke="#BBBBBB" stroke-width="2"/>`;
+    }
+    if (eq.label && eh > 14) b += `<text x="${ex + ew/2}" y="${ey + eh/2 + 4}" font-size="8" fill="${eq.strokeColor}" text-anchor="middle" font-weight="600">${esc(eq.label)}</text>`;
   }
 
   // ── 5. окна + профиль подоконника + радиатор ──────────────────
@@ -1103,26 +1286,43 @@ function wrapText(t, n) { const out = []; let cur = ''; for (const word of t.spl
 const mark = mm => '+' + (mm / 1000).toFixed(3).replace('.', ',');
 function drawCeiling(room, sheet) {
   const M = 90, WT = 12, w = px(room.w), l = px(room.l);
-  const Wd = Math.max(760, w + M * 2 + 60), Hd = l + M * 2 + 150;
+  const Wd = Math.max(760, w + M * 2 + 60), Hd = l + M * 2 + 220;
   const L = lightsFor(room);
   const lv = ceilingLevelsFor(room);
   const drop = 120; // перепад уровня, мм
   let islandLabel = '';
-  let b = roomWalls(M, WT, room, sheet, '#E9E4D8'); // уровень 2 (короб по периметру) — базовая заливка
+  let b = roomWalls(M, WT, room, sheet, '#E9E4D8');
   // уровень 1 (базовый потолок) — внутренняя зона
   const bx = M + px(lv.box), by = M + px(lv.box), bw = w - 2 * px(lv.box), bl = l - 2 * px(lv.box);
   b += `<rect x="${bx}" y="${by}" width="${bw}" height="${bl}" fill="#F6F3EC" stroke="#57514A" stroke-width="1.2"/>`;
   // LED по внутреннему контуру короба
   b += `<rect x="${bx + 4}" y="${by + 4}" width="${bw - 8}" height="${bl - 8}" fill="none" stroke="#C29A5B" stroke-width="1.4" stroke-dasharray="6 4"/>`;
-  // отметки уровней (по углам, чтобы не пересекались с нишами и треком)
-  // плашку уровня ставим в позицию без светильников и вне полосы ниши штор
+
+  // --- ZONE RECTANGLES для умного освещения ---
+  if (room.type === 'living-kitchen') {
+    const kzH = px(600);
+    b += `<rect x="${M}" y="${M}" width="${w}" height="${kzH}" fill="#F0EDE280" stroke="none"/>`;
+    b += `<text x="${M + 6}" y="${M + kzH - 5}" font-size="8" fill="#7A756D">Зона 1: кухня</text>`;
+  }
+  if (room.type === 'bedroom') {
+    const hwall = bedWallFor(room);
+    const rzD = px(800);
+    let rzX = M, rzY = M, rzW = w, rzH = rzD;
+    if (hwall === 'C') { rzY = M + l - rzD; }
+    else if (hwall === 'B') { rzX = M + w - rzD; rzW = rzD; rzH = l; }
+    else if (hwall === 'D') { rzW = rzD; rzH = l; }
+    b += `<rect x="${rzX}" y="${rzY}" width="${rzW}" height="${rzH}" fill="#EFF0F580" stroke="none"/>`;
+    b += `<text x="${rzX + 6}" y="${rzY + 14}" font-size="8" fill="#7A756D">Зона 2: чтение</text>`;
+  }
+
+  // отметки уровней
   const spotsPx = L.spots.map(sp => ({ x: M + px(sp.x), y: M + px(sp.y) }));
   const nicheBottom = room.windows.some(o => o.wall === 'C'), nicheTop = room.windows.some(o => o.wall === 'A');
   const cands2 = [];
   for (let yy = M + 26; yy <= M + l - 26; yy += 10) for (const xx of [M + 8, M + w - 146]) cands2.push([xx, yy]);
-  cands2.sort((a, b) => Math.abs(a[1] - (M + l - 30)) - Math.abs(b[1] - (M + l - 30))); // ближе к низу плана
+  cands2.sort((a, c) => Math.abs(a[1] - (M + l - 30)) - Math.abs(c[1] - (M + l - 30)));
   const cands2f = cands2.filter(c => !(nicheTop && c[1] < M + 44) && !(nicheBottom && c[1] > M + l - 44));
-  const busy = [{ x: bx + bw - 96, y: by + bl - 26, w: 88, h: 16 }]; // плашка «1 ур.»
+  const busy = [{ x: bx + bw - 96, y: by + bl - 26, w: 88, h: 16 }];
   const freeRect = (list, bw2, bh) => list.find(c =>
     !spotsPx.some(sp => sp.x > c[0] - 8 && sp.x < c[0] + bw2 + 8 && sp.y > c[1] - 8 && sp.y < c[1] + bh + 8)
     && !busy.some(r => c[0] < r.x + r.w + 6 && c[0] + bw2 > r.x - 6 && c[1] < r.y + r.h + 6 && c[1] + bh > r.y - 6)
@@ -1131,16 +1331,30 @@ function drawCeiling(room, sheet) {
   const p2 = freeRect(cands2f.length ? cands2f : cands2, w2, 16);
   let levelPlates = `<g font-size="10" fill="#2E2A26"><rect x="${p2[0]}" y="${p2[1]}" width="${w2}" height="16" fill="#FFFFFFE6" stroke="#57514A" stroke-width="0.6"/><text x="${p2[0] + 6}" y="${p2[1] + 12}">${t2}</text>`;
   levelPlates += `<rect x="${bx + bw - 96}" y="${by + bl - 26}" width="88" height="16" fill="#FFFFFFE6" stroke="#57514A" stroke-width="0.6"/><text x="${bx + bw - 90}" y="${by + bl - 14}">1 ур. ${mark(room.h)}</text></g>`;
-  // уровень 3 — «парящий остров»
+
+  // уровень 3 — «парящий остров» с Phase 2 расширениями
   if (lv.three && lv.island) {
     const i = lv.island;
-    b += `<rect x="${M + px(i.x)}" y="${M + px(i.y)}" width="${px(i.w)}" height="${px(i.l)}" fill="#E0D9C9" stroke="#57514A" stroke-width="1.2"/>`;
-    b += `<rect x="${M + px(i.x) + 4}" y="${M + px(i.y) + 4}" width="${px(i.w) - 8}" height="${px(i.l) - 8}" fill="none" stroke="#C29A5B" stroke-width="1.4" stroke-dasharray="6 4"/>`;
-    const ic = [[M + px(i.x), M + px(i.y) - 24], [M + px(i.x), M + px(i.y + i.l) + 8], [M + px(i.x) + px(i.w) - 188, M + px(i.y) - 24], [M + px(i.x) + 8, M + px(i.y) + 8]];
+    const ix = M + px(i.x), iy = M + px(i.y), iw = px(i.w), ih = px(i.l);
+    b += `<rect x="${ix}" y="${iy}" width="${iw}" height="${ih}" fill="#E0D9C9" stroke="#57514A" stroke-width="1.2"/>`;
+    b += `<rect x="${ix + 4}" y="${iy + 4}" width="${iw - 8}" height="${ih - 8}" fill="none" stroke="#C29A5B" stroke-width="1.4" stroke-dasharray="6 4"/>`;
+    // дополнительная внутренняя LED-полоса
+    b += `<rect x="${ix + 10}" y="${iy + 10}" width="${iw - 20}" height="${ih - 20}" fill="none" stroke="#F5C842" stroke-width="0.9" stroke-dasharray="3 6" opacity="0.65"/>`;
+    // размерная стрелка вдоль верхней грани острова
+    const arY = iy - 14;
+    b += `<g stroke="#57514A" stroke-width="0.8" fill="#57514A">`;
+    b += `<line x1="${ix}" y1="${arY}" x2="${ix + iw}" y2="${arY}"/>`;
+    b += `<line x1="${ix}" y1="${arY - 3}" x2="${ix}" y2="${arY + 3}"/>`;
+    b += `<line x1="${ix + iw}" y1="${arY - 3}" x2="${ix + iw}" y2="${arY + 3}"/>`;
+    b += `<text x="${(ix + iw / 2).toFixed(1)}" y="${arY - 2}" font-size="8" text-anchor="middle">${i.w}</text>`;
+    b += `</g>`;
+    const ic = [[ix, iy - 24], [ix, iy + ih + 8], [ix + iw - 188, iy - 24], [ix + 8, iy + 8]];
     const ip = freeRect(ic, 188, 16);
     busy.push({ x: ip[0], y: ip[1], w: 188, h: 16 });
     islandLabel = `<g font-size="10" fill="#2E2A26"><rect x="${ip[0]}" y="${ip[1]}" width="188" height="16" fill="#FFFFFFE6" stroke="#57514A" stroke-width="0.6"/><text x="${ip[0] + 6}" y="${ip[1] + 12}">3 ур. ${mark(room.h - 2 * drop)} · парящий, щель 10</text></g>`;
+    islandLabel += `<text x="${(ix + iw / 2).toFixed(1)}" y="${(iy + ih / 2 + 4).toFixed(1)}" font-size="8" fill="#57514A" text-anchor="middle">${i.w}×${i.l} мм, 3 ур.</text>`;
   }
+
   // ниша штор вдоль стены с окном: длина = проём + 2×250, ширина 200
   for (const o of room.windows) {
     const nl = px(o.w + 500), no = px(Math.max(0, o.off - 250));
@@ -1150,22 +1364,84 @@ function drawCeiling(room, sheet) {
     b += `<rect x="${nx}" y="${ny}" width="${nw}" height="${nh}" fill="#DCD5C6" stroke="#8A8478" stroke-width="0.7" stroke-dasharray="4 3"/>`;
     b += `<text x="${nx + 6}" y="${ny + 13}" font-size="8.5" fill="#7A756D">ниша штор 200, кромка −30</text>`;
   }
-  // свет
-  for (const s of L.spots) b += `<g stroke="#57514A" stroke-width="1"><circle cx="${M + px(s.x)}" cy="${M + px(s.y)}" r="5" fill="#FFF"/><line x1="${M + px(s.x) - 7}" y1="${M + px(s.y)}" x2="${M + px(s.x) + 7}" y2="${M + px(s.y)}"/><line x1="${M + px(s.x)}" y1="${M + px(s.y) - 7}" x2="${M + px(s.x)}" y2="${M + px(s.y) + 7}"/></g>`;
-  if (L.pendant) b += `<circle cx="${M + w / 2}" cy="${M + l / 2}" r="11" fill="none" stroke="#2E2A26" stroke-width="1.6"/><circle cx="${M + w / 2}" cy="${M + l / 2}" r="3" fill="#2E2A26"/>`;
-  if (L.track) b += `<line x1="${M + px(400)}" y1="${M + px(850)}" x2="${M + w - px(400)}" y2="${M + px(850)}" stroke="#2E2A26" stroke-width="3"/><text x="${M + px(420)}" y="${M + px(850) - 8}" font-size="9" fill="#57514A">трек-система</text>`;
+
+  // --- SPOTS с подписями групп ---
+  const half = Math.ceil(L.spots.length / 2);
+  const isKitchenHallway = room.type === 'kitchen' || room.type === 'hallway';
+  for (let si = 0; si < L.spots.length; si++) {
+    const s = L.spots[si];
+    const scx = M + px(s.x), scy = M + px(s.y);
+    b += `<g stroke="#57514A" stroke-width="1"><circle cx="${scx}" cy="${scy}" r="5" fill="#FFF"/><line x1="${scx - 7}" y1="${scy}" x2="${scx + 7}" y2="${scy}"/><line x1="${scx}" y1="${scy - 7}" x2="${scx}" y2="${scy + 7}"/></g>`;
+    if (isKitchenHallway) {
+      b += `<text x="${scx + 7}" y="${scy - 3}" font-size="6.5" fill="#7A756D">D=90 4000K</text>`;
+    }
+    if (si === 0 || si === half) {
+      const grp = si === 0 ? 1 : 2;
+      b += `<text x="${scx + 7}" y="${scy + 8}" font-size="7" fill="#7A756D">GR-${grp}</text>`;
+    }
+  }
+
+  // --- PENDANT улучшенный (люстра/подвес) ---
+  if (L.pendant) {
+    const pcx = M + w / 2, pcy = M + l / 2;
+    b += `<circle cx="${pcx}" cy="${pcy}" r="13" fill="#F5E14C44" stroke="#2E2A26" stroke-width="1.6"/>`;
+    for (let ang = 0; ang < 360; ang += 45) {
+      const rad = ang * Math.PI / 180;
+      b += `<line x1="${(pcx + 4 * Math.cos(rad)).toFixed(1)}" y1="${(pcy + 4 * Math.sin(rad)).toFixed(1)}" x2="${(pcx + 13 * Math.cos(rad)).toFixed(1)}" y2="${(pcy + 13 * Math.sin(rad)).toFixed(1)}" stroke="#2E2A26" stroke-width="0.8"/>`;
+    }
+    b += `<circle cx="${pcx}" cy="${pcy}" r="4" fill="#2E2A26"/>`;
+    const plabel = (room.type === 'bedroom' || room.type === 'kids') ? 'подвес' : 'люстра';
+    b += `<text x="${pcx}" y="${pcy + 24}" font-size="8" fill="#57514A" text-anchor="middle">${plabel}</text>`;
+  }
+
+  // --- TRACK улучшенный с насечками ---
+  if (L.track) {
+    const trX1 = M + px(400), trY = M + px(850), trX2 = M + w - px(400);
+    b += `<line x1="${trX1}" y1="${trY}" x2="${trX2}" y2="${trY}" stroke="#2E2A26" stroke-width="3.5"/>`;
+    const tLen = trX2 - trX1;
+    const notchStep = 80;
+    const nCount = Math.max(0, Math.floor(tLen / notchStep));
+    for (let ni = 0; ni <= nCount; ni++) {
+      const tnx = trX1 + ni * notchStep;
+      if (tnx > trX2 + 1) break;
+      b += `<line x1="${tnx}" y1="${trY - 7}" x2="${tnx}" y2="${trY + 7}" stroke="#2E2A26" stroke-width="1.2"/>`;
+      b += `<circle cx="${tnx}" cy="${trY}" r="3" fill="white" stroke="#2E2A26" stroke-width="0.8"/>`;
+    }
+    b += `<text x="${trX1}" y="${trY - 10}" font-size="9" fill="#57514A">трек 48В · ${nCount + 1} св.</text>`;
+  }
+
   b += levelPlates + islandLabel;
   b += `<text x="${M - WT}" y="${M - 46}" font-size="16" font-weight="700" fill="#2E2A26">План потолка · ${esc(room.name)}</text>`;
   b += `<text x="${M - WT}" y="${M - 28}" font-size="11" fill="#7A756D">${esc(style.ceiling)} · ${lv.three ? '3 уровня' : '2 уровня'} · перепад ${drop} мм · LED ${lv.ledLen} м.п. · отметки от чистого пола</text>`;
   b += dimH(M, M + w, M + l + 34, String(room.w));
   b += dimV(M + w + 34, M, M + l, String(room.l));
+
   const ly = M + l + 56;
-  b += `<g font-size="10" fill="#57514A"><circle cx="${M + 6}" cy="${ly - 3}" r="5" fill="#FFF" stroke="#57514A"/><text x="${M + 18}" y="${ly}">точечный — ${L.spots.length} шт.</text>`;
-  if (L.pendant) b += `<circle cx="${M + 146}" cy="${ly - 3}" r="6" fill="none" stroke="#2E2A26" stroke-width="1.4"/><text x="${M + 158}" y="${ly}">подвес — 1</text>`;
-  if (L.track) b += `<line x1="${M + 260}" y1="${ly - 4}" x2="${M + 290}" y2="${ly - 4}" stroke="#2E2A26" stroke-width="3"/><text x="${M + 298}" y="${ly}">трек — 1</text>`;
-  b += `<line x1="${M + 380}" y1="${ly - 4}" x2="${M + 412}" y2="${ly - 4}" stroke="#C29A5B" stroke-width="1.4" stroke-dasharray="6 4"/><text x="${M + 420}" y="${ly}">LED 3000K скрытая — ${lv.ledLen} м.п.</text></g>`;
-  b += `<text x="${M - WT}" y="${ly + 22}" font-size="9" fill="#8A8478">Короб 2-го уровня: ГКЛ 12,5 по каркасу ПП 60×27 шаг 600 · LED-полка 100, бортик 50, зазор 70 (узел — лист «Узел А») · закладные под подвесные светильники</text>`;
-  b += stamp(M - WT, l + M * 2 + 86, w + 2 * WT + 40, `Потолок. ${room.name}`, sheet);
+  const totalW = L.spots.length * 7 + (L.pendant ? 40 : 0) + Math.round(lv.ledLen * 5);
+  const numGrps = L.spots.length > 0 ? 2 : 1;
+
+  // --- ЛЕГЕНДА (2 строки) ---
+  b += `<g font-size="10" fill="#57514A">`;
+  // строка 1: светильники
+  b += `<circle cx="${M + 6}" cy="${ly - 3}" r="5" fill="#FFF" stroke="#57514A"/><text x="${M + 18}" y="${ly}">точечный — ${L.spots.length} шт.</text>`;
+  if (L.pendant) {
+    b += `<circle cx="${M + 146}" cy="${ly - 3}" r="6" fill="#F5E14C44" stroke="#2E2A26" stroke-width="1.4"/>`;
+    b += `<circle cx="${M + 146}" cy="${ly - 3}" r="2" fill="#2E2A26"/>`;
+    b += `<text x="${M + 158}" y="${ly}">подвес — 1</text>`;
+  }
+  if (L.track) b += `<line x1="${M + 260}" y1="${ly - 4}" x2="${M + 290}" y2="${ly - 4}" stroke="#2E2A26" stroke-width="3.5"/><text x="${M + 298}" y="${ly}">трек — 1</text>`;
+  b += `<line x1="${M + 380}" y1="${ly - 4}" x2="${M + 412}" y2="${ly - 4}" stroke="#C29A5B" stroke-width="1.4" stroke-dasharray="6 4"/><text x="${M + 420}" y="${ly}">LED 3000K скрытая — ${lv.ledLen} м.п.</text>`;
+  // строка 2: диммер + мощность
+  b += `<circle cx="${M + 6}" cy="${ly + 17}" r="7" fill="none" stroke="#57514A" stroke-width="1"/>`;
+  b += `<text x="${M + 6}" y="${ly + 21}" font-size="8" text-anchor="middle" fill="#57514A">D</text>`;
+  b += `<text x="${M + 18}" y="${ly + 22}">диммер — все группы GR-1…GR-${numGrps}</text>`;
+  b += `<text x="${M + 300}" y="${ly + 22}" font-weight="600" fill="#2E2A26">≈ ${totalW} Вт</text>`;
+  b += `</g>`;
+
+  b += `<text x="${M - WT}" y="${ly + 38}" font-size="9" fill="#8A8478">Короб 2-го уровня: ГКЛ 12,5 по каркасу ПП 60×27 шаг 600 · LED-полка 100, бортик 50, зазор 70 (узел — лист «Узел А») · закладные под подвесные светильники</text>`;
+  b += `<text x="${M - WT}" y="${ly + 52}" font-size="8.5" fill="#8A8478">все группы на диммерах Schneider Sedna / Legrand Valena Life</text>`;
+  b += `<text x="${M - WT}" y="${ly + 66}" font-size="8.5" fill="#8A8478">Умный дом: группы 1–${numGrps} на диммерах, управление через Яндекс Алиса / Tuya. Цветовая температура: споты 2700К, подсветка 3000К, кухня 4000К.</text>`;
+  b += stamp(M - WT, l + M * 2 + 155, w + 2 * WT + 40, `Потолок. ${room.name}`, sheet);
   return svgDoc(Wd + 20, Hd + 10, b);
 }
 
@@ -1208,7 +1484,7 @@ function drawNode(sheet) {
 // ---------- план электрики ----------
 function drawElectro(room, sheet) {
   const M = 90, WT = 12, w = px(room.w), l = px(room.l);
-  const Wd = Math.max(760, w + M * 2 + 60), Hd = l + M * 2 + 150;
+  const Wd = Math.max(760, w + M * 2 + 60), Hd = l + M * 2 + 210;
   const pts = electroFor(room);
   let b = roomWalls(M, WT, room, sheet, CAD.paper);
   for (const o of room.windows) b += openingPlan(o, 'window', M, WT, room);
@@ -1260,14 +1536,265 @@ function drawElectro(room, sheet) {
   b += dimH(M, M + w, M + l + 34, String(room.w));
   b += dimV(M + w + 34, M, M + l, String(room.l));
   const ly = M + l + 56;
-  b += `<g font-size="10" fill="#57514A"><circle cx="${M + 6}" cy="${ly - 3}" r="6" fill="#FFF" stroke="#2E2A26"/><line x1="${M}" y1="${ly - 11}" x2="${M + 12}" y2="${ly - 11}" stroke="#2E2A26"/><text x="${M + 18}" y="${ly}">розетка (блок)</text>`;
-  b += `<circle cx="${M + 146}" cy="${ly - 3}" r="5" fill="#2E2A26"/><text x="${M + 158}" y="${ly}">выключатель</text>`;
-  b += `<circle cx="${M + 286}" cy="${ly - 3}" r="6" fill="#E8F0E8" stroke="#2E2A26" stroke-width="1.2"/><text x="${M + 286}" y="${ly}" font-size="6.5" font-weight="700" text-anchor="middle" fill="#27703F">TV</text><text x="${M + 298}" y="${ly}">слаботочная (TV/LAN)</text>`;
-  b += `<circle cx="${M + 456}" cy="${ly - 3}" r="6" fill="#FFF" stroke="#2E2A26" stroke-width="1.2"/><circle cx="${M + 456}" cy="${ly - 3}" r="9" fill="none" stroke="#2E2A26" stroke-width="0.8"/><text x="${M + 470}" y="${ly}">IP44 (влажная зона)</text></g>`;
-  b += `<text x="${M - WT}" y="${ly + 14}" font-size="8.5" fill="#57514A">В подписи после названия — привязка L/H: расстояние до ближайшей стены / высота установки от чистого пола, мм.</text>`;
-  b += `<text x="${M - WT}" y="${ly + 30}" font-size="9.5" font-weight="600" fill="#B0483A">* Розетки — h=300 от чистого пола по умолчанию; отклонения подписаны у позиций. Выключатели — h=900.</text>`;
-  b += `<text x="${M - WT}" y="${ly + 44}" font-size="9" fill="#8A8478">Санузлы: линии через УЗО 30 мА, розетки IP44 · выключатели со стороны ручки двери, ≥100 мм от проёма · привязки уточняются инженерным проектом</text>`;
-  b += stamp(M - WT, l + M * 2 + 100, w + 2 * WT + 40, `Электрика. ${room.name}`, sheet);
+  // — Row 1: socket · switch · слаботочная · IP44 ———————————————————
+  b += `<g font-size="9.5" fill="#57514A">`;
+  b += `<circle cx="${M+6}" cy="${ly-3}" r="6" fill="#FFF" stroke="#2E2A26" stroke-width="1.4"/>`;
+  b += `<line x1="${M}" y1="${ly-11}" x2="${M+12}" y2="${ly-11}" stroke="#2E2A26" stroke-width="1.4"/>`;
+  b += `<line x1="${M-2}" y1="${ly-14}" x2="${M+14}" y2="${ly-14}" stroke="#2E2A26" stroke-width="1.4"/>`;
+  b += `<text x="${M+18}" y="${ly}">розетка (блок)</text>`;
+  b += `<circle cx="${M+148}" cy="${ly-3}" r="5" fill="#2E2A26"/>`;
+  b += `<line x1="${M+148}" y1="${ly-8}" x2="${M+155}" y2="${ly-15}" stroke="#2E2A26" stroke-width="1.4"/>`;
+  b += `<line x1="${M+155}" y1="${ly-15}" x2="${M+160}" y2="${ly-12}" stroke="#2E2A26" stroke-width="1.4"/>`;
+  b += `<text x="${M+166}" y="${ly}">выключатель</text>`;
+  b += `<circle cx="${M+288}" cy="${ly-3}" r="6" fill="#E8F0E8" stroke="#2E2A26" stroke-width="1.2"/>`;
+  b += `<text x="${M+288}" y="${ly}" font-size="6" font-weight="700" text-anchor="middle" fill="#27703F">TV</text>`;
+  b += `<text x="${M+300}" y="${ly}">слаботочная (TV/LAN)</text>`;
+  b += `<circle cx="${M+462}" cy="${ly-3}" r="6" fill="#FFF" stroke="#2E2A26" stroke-width="1.2"/>`;
+  b += `<circle cx="${M+462}" cy="${ly-3}" r="9" fill="none" stroke="#2E2A26" stroke-width="0.8"/>`;
+  b += `<line x1="${M+456}" y1="${ly-11}" x2="${M+468}" y2="${ly-11}" stroke="#2E2A26" stroke-width="1.4"/>`;
+  b += `<text x="${M+476}" y="${ly}">IP44 (влажная зона)</text>`;
+  b += `</g>`;
+  // — Row 2: проходной · многоклавишный · 16А · стиральная IP44 ———
+  const ly2 = ly + 22;
+  b += `<g font-size="9.5" fill="#57514A">`;
+  b += `<circle cx="${M+6}" cy="${ly2-3}" r="5" fill="#2E2A26"/>`;
+  b += `<line x1="${M+6}" y1="${ly2-8}" x2="${M+13}" y2="${ly2-15}" stroke="#2E2A26" stroke-width="1.4"/>`;
+  b += `<line x1="${M+13}" y1="${ly2-15}" x2="${M+18}" y2="${ly2-12}" stroke="#2E2A26" stroke-width="1.4"/>`;
+  b += `<line x1="${M+8}" y1="${ly2-10}" x2="${M+15}" y2="${ly2-17}" stroke="#2E2A26" stroke-width="1.1"/>`;
+  b += `<text x="${M+22}" y="${ly2}">проходной выкл.</text>`;
+  b += `<circle cx="${M+148}" cy="${ly2-3}" r="5" fill="#2E2A26"/>`;
+  b += `<line x1="${M+148}" y1="${ly2-8}" x2="${M+155}" y2="${ly2-15}" stroke="#2E2A26" stroke-width="1.4"/>`;
+  b += `<line x1="${M+155}" y1="${ly2-15}" x2="${M+160}" y2="${ly2-12}" stroke="#2E2A26" stroke-width="1.4"/>`;
+  b += `<text x="${M+148}" y="${ly2-11}" font-size="6" font-weight="700" text-anchor="middle" fill="#FFF">N</text>`;
+  b += `<text x="${M+166}" y="${ly2}">N-кл. (2/3/4 gang)</text>`;
+  b += `<circle cx="${M+312}" cy="${ly2-3}" r="6" fill="#FFF" stroke="#B0483A" stroke-width="1.4"/>`;
+  b += `<line x1="${M+306}" y1="${ly2-11}" x2="${M+318}" y2="${ly2-11}" stroke="#B0483A" stroke-width="1.4"/>`;
+  b += `<text x="${M+312}" y="${ly2+1}" font-size="5.5" font-weight="700" text-anchor="middle" fill="#B0483A">16</text>`;
+  b += `<text x="${M+326}" y="${ly2}">силовая 16А (плита/духовой)</text>`;
+  b += `<circle cx="${M+510}" cy="${ly2-3}" r="6" fill="#FFF" stroke="#2E2A26" stroke-width="1.2"/>`;
+  b += `<circle cx="${M+510}" cy="${ly2-3}" r="9" fill="none" stroke="#2E2A26" stroke-width="0.8"/>`;
+  b += `<text x="${M+510}" y="${ly2+1}" font-size="5" font-weight="700" text-anchor="middle" fill="#2E2A26">IP</text>`;
+  b += `<text x="${M+524}" y="${ly2}">стиральная машина IP44</text>`;
+  b += `</g>`;
+  // — Row 3: smart home types ——————————————————————————————————————
+  const ly3 = ly + 44;
+  b += `<g font-size="9.5" fill="#57514A">`;
+  // PIR sensor — blue diamond
+  b += `<polygon points="${M+6},${ly3-10} ${M+12},${ly3-3} ${M+6},${ly3+4} ${M},${ly3-3}" fill="#4A90D9" stroke="#2A5A8A" stroke-width="1.2"/>`;
+  b += `<text x="${M+18}" y="${ly3}">датчик движ./влажн.</text>`;
+  // Thermostat — blue rectangle
+  b += `<rect x="${M+141}" y="${ly3-10}" width="14" height="13" rx="2" fill="#4A90D9" stroke="#2A5A8A" stroke-width="1.2"/>`;
+  b += `<line x1="${M+143}" y1="${ly3-5}" x2="${M+153}" y2="${ly3-5}" stroke="#FFF" stroke-width="1"/>`;
+  b += `<line x1="${M+143}" y1="${ly3-1}" x2="${M+153}" y2="${ly3-1}" stroke="#FFF" stroke-width="1"/>`;
+  b += `<text x="${M+162}" y="${ly3}">термостат (умный)</text>`;
+  // Robot vacuum dock — circle with arrow
+  b += `<circle cx="${M+300}" cy="${ly3-3}" r="7" fill="none" stroke="#4A90D9" stroke-width="1.5"/>`;
+  b += `<line x1="${M+300}" y1="${ly3-9}" x2="${M+300}" y2="${ly3+1}" stroke="#4A90D9" stroke-width="1.5"/>`;
+  b += `<polygon points="${M+296},${ly3-1} ${M+300},${ly3+5} ${M+304},${ly3-1}" fill="#4A90D9"/>`;
+  b += `<text x="${M+313}" y="${ly3}">база робота-пылесоса</text>`;
+  // Smart hub — filled square with antenna
+  b += `<rect x="${M+465}" y="${ly3-9}" width="11" height="11" fill="#4A90D9" stroke="#2A5A8A" stroke-width="1.2"/>`;
+  b += `<line x1="${M+470}" y1="${ly3-9}" x2="${M+470}" y2="${ly3-15}" stroke="#4A90D9" stroke-width="1.5"/>`;
+  b += `<circle cx="${M+470}" cy="${ly3-16}" r="2" fill="#4A90D9"/>`;
+  b += `<text x="${M+482}" y="${ly3}">хаб умного дома (скрытый)</text>`;
+  b += `</g>`;
+  // — Notes —————————————————————————————————————————————————————————
+  b += `<text x="${M-WT}" y="${ly3+16}" font-size="8.5" fill="#57514A">В подписи после названия — привязка L/H: расстояние до ближайшей стены / высота установки от чистого пола, мм.</text>`;
+  b += `<text x="${M-WT}" y="${ly3+30}" font-size="9.5" font-weight="600" fill="#B0483A">* Розетки — h=300 по умолчанию; 16А (плита/духовой) — h=150; вытяжка — h=2100; фартук — h=1100; отклонения подписаны у позиций.</text>`;
+  b += `<text x="${M-WT}" y="${ly3+44}" font-size="9" fill="#8A8478">Санузлы: УЗО 30 мА, IP44 · выключатели ≥100 мм от проёма · умные устройства (синие символы) — 220 В + слаботочный шлейф · привязки уточняются инженерным проектом</text>`;
+  b += stamp(M - WT, l + M * 2 + 160, w + 2 * WT + 40, `Электрика. ${room.name}`, sheet);
+  return svgDoc(Wd + 20, Hd + 10, b);
+}
+
+// ---------- умный дом: список устройств ----------
+function smartHomeFor(room) {
+  const W = room.w, L = room.l, pts = [];
+  const D = (x, y, type, hh, label, extra) => pts.push(Object.assign(
+    { x: Math.max(100, Math.min(W - 100, x)), y: Math.max(100, Math.min(L - 100, y)), type, h: hh, label },
+    extra || {}
+  ));
+  const door = room.doors[0] || { wall: 'C', off: 200, w: 900 };
+  const dwall = door.wall, doff = door.off, dw = door.w;
+  let swx, swy;
+  if (dwall === 'A') { swx = doff + dw + 150; swy = 150; }
+  else if (dwall === 'C') { swx = doff + dw + 150; swy = L - 150; }
+  else if (dwall === 'B') { swx = W - 150; swy = doff + dw + 150; }
+  else { swx = 150; swy = doff + dw + 150; }
+  D(swx, swy, 'smartswitch', 900, 'умн. выкл.', { gang: 1 });
+  // PIR-датчик движения
+  D(W * 0.15, L * 0.15, 'sensor', 1800, 'PIR датчик');
+  if (W * L > 12e6) D(W * 0.85, L * 0.85, 'sensor', 1800, 'PIR датчик');
+  // термостат
+  if (['bedroom', 'living', 'kids', 'living-kitchen', 'kitchen', 'cabinet'].includes(room.type)) {
+    const thx = room.windows.some(o => o.wall === 'B') ? W * 0.3 : W - 150;
+    D(thx, L * 0.5, 'thermostat', 1400, 'термостат');
+  }
+  // хаб в углу без окон
+  const winWalls = new Set(room.windows.map(o => o.wall));
+  const freeCorn = [
+    !winWalls.has('A') && !winWalls.has('D') ? [W * 0.1, L * 0.1] : null,
+    !winWalls.has('A') && !winWalls.has('B') ? [W * 0.9, L * 0.1] : null,
+    !winWalls.has('C') && !winWalls.has('D') ? [W * 0.1, L * 0.9] : null,
+    !winWalls.has('C') && !winWalls.has('B') ? [W * 0.9, L * 0.9] : null,
+  ].filter(Boolean);
+  const hc = freeCorn[0] || [W * 0.85, L * 0.5];
+  D(hc[0], hc[1], 'hub', 1800, 'smart hub');
+  // база пылесоса-робота — в жилых зонах
+  if (['living', 'bedroom', 'living-kitchen', 'kids'].includes(room.type)) {
+    D(W - 300, L - 200, 'vacuum', 150, 'база пылесоса');
+  }
+  if (W * L > 15e6) D(W * 0.5, L - 150, 'smartswitch', 900, 'умн. выкл.', { gang: 2 });
+  return pts;
+}
+
+// ---------- план умного дома ----------
+function drawSmartHome(room, sheet) {
+  const M = 90, WT = 12, w = px(room.w), l = px(room.l);
+  const SPEC_X = M + w + 24, SPEC_W = 280;
+  const Wd = Math.max(860, w + M * 2 + SPEC_W + 40), Hd = l + M * 2 + 150;
+  const pts = smartHomeFor(room);
+  let b = roomWalls(M, WT, room, sheet, CAD.paper);
+  for (const o of room.windows) b += openingPlan(o, 'window', M, WT, room);
+  for (const o of room.doors) b += openingPlan(o, 'door', M, WT, room);
+  // мебель призраком
+  for (const f of furnitureFor(room)) b += `<rect x="${M + px(f.x)}" y="${M + px(f.y)}" width="${px(f.w)}" height="${px(f.h)}" fill="none" stroke="#C5BFB2" stroke-width="0.8" rx="2"/>`;
+  // символы устройств + подписи
+  let labs = '';
+  for (const p of pts) {
+    const x = M + px(p.x), y = M + px(p.y);
+    if (p.type === 'sensor') {
+      b += `<path d="M ${x - 8} ${y + 6} L ${x} ${y - 8} L ${x + 8} ${y + 6} Z" fill="#D44B4B" stroke="#A33030" stroke-width="0.8"/>`;
+      b += `<text x="${x}" y="${y + 4}" font-size="5.5" font-weight="700" text-anchor="middle" fill="#FFF">PIR</text>`;
+    } else if (p.type === 'thermostat') {
+      b += `<circle cx="${x}" cy="${y}" r="9" fill="#EBF3FC" stroke="#3A7ABD" stroke-width="1.4"/>`;
+      b += `<text x="${x}" y="${y + 4}" font-size="9" font-weight="700" text-anchor="middle" fill="#3A7ABD">T</text>`;
+    } else if (p.type === 'vacuum') {
+      b += `<circle cx="${x}" cy="${y}" r="9" fill="#27703F" stroke="#1B5030" stroke-width="0.8"/>`;
+      b += `<text x="${x}" y="${y + 4}" font-size="9" font-weight="700" text-anchor="middle" fill="#FFF">V</text>`;
+      b += `<rect x="${x - 9}" y="${y + 9}" width="18" height="6" rx="2" fill="#27703F" stroke="#1B5030" stroke-width="0.7"/>`;
+    } else if (p.type === 'hub') {
+      b += `<path d="M ${x} ${y - 11} L ${x + 9} ${y} L ${x} ${y + 11} L ${x - 9} ${y} Z" fill="#E8A000" stroke="#B07500" stroke-width="0.8"/>`;
+      b += `<text x="${x}" y="${y + 4}" font-size="8" font-weight="700" text-anchor="middle" fill="#FFF">H</text>`;
+    } else if (p.type === 'smartswitch') {
+      const gang = p.gang || 1;
+      b += `<rect x="${x - 7}" y="${y - 5}" width="14" height="10" rx="2" fill="#2E2A26" stroke="#111" stroke-width="0.7"/>`;
+      b += `<text x="${x}" y="${y + 3}" font-size="7" font-weight="700" text-anchor="middle" fill="#FFF">${gang}</text>`;
+    }
+    const lx2 = x + 13, ly2 = y - 6;
+    const txt = `${p.label} · h${p.h}`;
+    const tw2 = txt.length * 4.8 + 6;
+    labs += `<rect x="${lx2 - 3}" y="${ly2 - 9}" width="${tw2}" height="12" fill="#FBFAF6D9"/>`;
+    labs += `<text x="${lx2}" y="${ly2}" font-size="8" fill="#57514A">${esc(txt)}</text>`;
+  }
+  b += labs;
+
+  // ---- панель спецификации (правая сторона) ----
+  const nSensor = pts.filter(p => p.type === 'sensor').length;
+  const nTherm  = pts.filter(p => p.type === 'thermostat').length;
+  const swPts   = pts.filter(p => p.type === 'smartswitch');
+  const nVac    = pts.filter(p => p.type === 'vacuum').length;
+  const nHub    = pts.filter(p => p.type === 'hub').length;
+  const totalGangs = swPts.reduce((a, p) => a + (p.gang || 1), 0);
+  const sx = SPEC_X;
+  let ry = M;
+
+  b += `<text x="${sx}" y="${ry + 17}" font-size="14" font-weight="700" fill="#2E2A26">Умный дом · ${esc(room.name)}</text>`;
+  b += `<line x1="${sx}" y1="${ry + 24}" x2="${sx + SPEC_W}" y2="${ry + 24}" stroke="#3A7ABD" stroke-width="1.2"/>`;
+  ry += 38;
+
+  if (nSensor > 0) {
+    b += `<path d="M ${sx + 6} ${ry + 2} L ${sx + 14} ${ry - 10} L ${sx + 22} ${ry + 2} Z" fill="#D44B4B"/>`;
+    b += `<text x="${sx + 26}" y="${ry}" font-size="10" fill="#2E2A26">PIR датчик</text>`;
+    b += `<text x="${sx + SPEC_W - 60}" y="${ry}" font-size="10" fill="#57514A">${nSensor} шт.</text>`;
+    b += `<text x="${sx + SPEC_W - 8}" y="${ry}" font-size="9" fill="#8A8478" text-anchor="end">h=1800</text>`;
+    ry += 18;
+  }
+  if (nTherm > 0) {
+    b += `<circle cx="${sx + 12}" cy="${ry - 5}" r="7" fill="#EBF3FC" stroke="#3A7ABD" stroke-width="1.2"/>`;
+    b += `<text x="${sx + 12}" y="${ry - 2}" font-size="7" font-weight="700" text-anchor="middle" fill="#3A7ABD">T</text>`;
+    b += `<text x="${sx + 26}" y="${ry}" font-size="10" fill="#2E2A26">Термостат</text>`;
+    b += `<text x="${sx + SPEC_W - 60}" y="${ry}" font-size="10" fill="#57514A">${nTherm} шт.</text>`;
+    b += `<text x="${sx + SPEC_W - 8}" y="${ry}" font-size="9" fill="#8A8478" text-anchor="end">h=1400</text>`;
+    ry += 18;
+  }
+  if (swPts.length > 0) {
+    b += `<rect x="${sx + 5}" y="${ry - 10}" width="14" height="10" rx="2" fill="#2E2A26"/>`;
+    b += `<text x="${sx + 12}" y="${ry - 2}" font-size="7" font-weight="700" text-anchor="middle" fill="#FFF">${totalGangs}</text>`;
+    b += `<text x="${sx + 26}" y="${ry}" font-size="10" fill="#2E2A26">Умная панель (${totalGangs}кл.)</text>`;
+    b += `<text x="${sx + SPEC_W - 60}" y="${ry}" font-size="10" fill="#57514A">${swPts.length} шт.</text>`;
+    b += `<text x="${sx + SPEC_W - 8}" y="${ry}" font-size="9" fill="#8A8478" text-anchor="end">h=900</text>`;
+    ry += 18;
+  }
+  if (nVac > 0) {
+    b += `<circle cx="${sx + 12}" cy="${ry - 5}" r="7" fill="#27703F"/>`;
+    b += `<text x="${sx + 12}" y="${ry - 2}" font-size="7" font-weight="700" text-anchor="middle" fill="#FFF">V</text>`;
+    b += `<text x="${sx + 26}" y="${ry}" font-size="10" fill="#2E2A26">База пылесоса</text>`;
+    b += `<text x="${sx + SPEC_W - 60}" y="${ry}" font-size="10" fill="#57514A">${nVac} шт.</text>`;
+    b += `<text x="${sx + SPEC_W - 8}" y="${ry}" font-size="9" fill="#8A8478" text-anchor="end">h=150</text>`;
+    ry += 18;
+  }
+  if (nHub > 0) {
+    b += `<path d="M ${sx + 12} ${ry - 12} L ${sx + 20} ${ry - 5} L ${sx + 12} ${ry + 2} L ${sx + 4} ${ry - 5} Z" fill="#E8A000"/>`;
+    b += `<text x="${sx + 12}" y="${ry - 2}" font-size="6" font-weight="700" text-anchor="middle" fill="#FFF">H</text>`;
+    b += `<text x="${sx + 26}" y="${ry}" font-size="10" fill="#2E2A26">Smart Hub</text>`;
+    b += `<text x="${sx + SPEC_W - 60}" y="${ry}" font-size="10" fill="#57514A">${nHub} шт.</text>`;
+    b += `<text x="${sx + SPEC_W - 8}" y="${ry}" font-size="9" fill="#8A8478" text-anchor="end">h=1800</text>`;
+    ry += 18;
+  }
+
+  ry += 8;
+  b += `<text x="${sx}" y="${ry}" font-size="11" font-weight="700" fill="#2E2A26">Зоны автоматизации</text>`;
+  ry += 8;
+  const ZONES = [
+    ['#DAEAF833', 'Зона 1: Свет', 'выключатели + диммеры'],
+    ['#FFF3CC44', 'Зона 2: Климат', 'термостаты + вентиляция'],
+    ['#FDEAEA44', 'Зона 3: Безопасность', 'PIR + датчики'],
+    ['#E2F4E944', 'Зона 4: Бытовая техника', 'робот + умные розетки'],
+  ];
+  for (const [fill, ztitle, zdesc] of ZONES) {
+    b += `<rect x="${sx}" y="${ry}" width="${SPEC_W}" height="30" rx="4" fill="${fill}" stroke="#DDD8D0" stroke-width="0.7"/>`;
+    b += `<text x="${sx + 8}" y="${ry + 13}" font-size="10" font-weight="700" fill="#2E2A26">${esc(ztitle)}</text>`;
+    b += `<text x="${sx + 8}" y="${ry + 26}" font-size="9" fill="#57514A">${esc(zdesc)}</text>`;
+    ry += 36;
+  }
+
+  ry += 4;
+  const NOTES = [
+    'Протокол: Zigbee 3.0 / Z-Wave',
+    'Хаб: Яндекс Алиса или Tuya Smart Life',
+    'Голосовое управление и приложение',
+    'Кабель КВВГнг 3×2,5 мм²',
+    'Выключатели Schneider Electric Atlas Design',
+  ];
+  for (const ln of NOTES) {
+    b += `<text x="${sx}" y="${ry}" font-size="8.5" fill="#8A8478">${esc(ln)}</text>`;
+    ry += 12;
+  }
+
+  // легенда снизу плана
+  const lyS = M + l + 56;
+  b += `<g font-size="10" fill="#57514A">`;
+  b += `<path d="M ${M + 6} ${lyS + 2} L ${M + 14} ${lyS - 10} L ${M + 22} ${lyS + 2} Z" fill="#D44B4B"/>`;
+  b += `<text x="${M + 28}" y="${lyS}">PIR датчик</text>`;
+  b += `<circle cx="${M + 140}" cy="${lyS - 4}" r="7" fill="#EBF3FC" stroke="#3A7ABD" stroke-width="1.2"/>`;
+  b += `<text x="${M + 140}" y="${lyS - 1}" font-size="7" font-weight="700" text-anchor="middle" fill="#3A7ABD">T</text>`;
+  b += `<text x="${M + 153}" y="${lyS}">Термостат</text>`;
+  b += `<circle cx="${M + 254}" cy="${lyS - 4}" r="7" fill="#27703F"/>`;
+  b += `<text x="${M + 254}" y="${lyS - 1}" font-size="7" font-weight="700" text-anchor="middle" fill="#FFF">V</text>`;
+  b += `<text x="${M + 267}" y="${lyS}">База робота</text>`;
+  b += `<path d="M ${M + 380} ${lyS - 11} L ${M + 389} ${lyS - 4} L ${M + 380} ${lyS + 3} L ${M + 371} ${lyS - 4} Z" fill="#E8A000"/>`;
+  b += `<text x="${M + 380}" y="${lyS - 1}" font-size="6" font-weight="700" text-anchor="middle" fill="#FFF">H</text>`;
+  b += `<text x="${M + 395}" y="${lyS}">Smart Hub</text>`;
+  b += `<rect x="${M + 474}" y="${lyS - 11}" width="14" height="10" rx="2" fill="#2E2A26"/>`;
+  b += `<text x="${M + 481}" y="${lyS - 3}" font-size="7" font-weight="700" text-anchor="middle" fill="#FFF">N</text>`;
+  b += `<text x="${M + 494}" y="${lyS}">Умная панель</text>`;
+  b += `</g>`;
+
+  b += dimH(M, M + w, M + l + 34, String(room.w));
+  b += dimV(M + w + 34, M, M + l, String(room.l));
+  b += `<text x="${M - WT}" y="${M - 46}" font-size="16" font-weight="700" fill="#2E2A26">Умный дом · ${esc(room.name)}</text>`;
+  b += `<text x="${M - WT}" y="${M - 28}" font-size="11" fill="#7A756D">Автоматизация: ${pts.length} устройств · Zigbee 3.0 / Z-Wave · высоты от чистого пола, мм</text>`;
+  b += stamp(M - WT, l + M * 2 + 100, w + 2 * WT + 40, `Умный дом. ${room.name}`, sheet);
   return svgDoc(Wd + 20, Hd + 10, b);
 }
 
@@ -2312,6 +2839,7 @@ for (const r of rooms) for (const wk of ['A', 'B', 'C', 'D']) { sheetOut(`04-raz
 for (const r of rooms) { sheetOut(`05-potolki/potolok-${SL(r)}.svg`, n => drawCeiling(r, n), `План потолка. ${RN(r)}`); counts.ceil++; }
 sheetOut(`05-potolki/uzel-A-korob-led.svg`, n => drawNode(n), 'Узел А. Короб с LED-подсветкой', '1:20');
 for (const r of rooms) { sheetOut(`09-elektrika/elektrika-${SL(r)}.svg`, n => drawElectro(r, n), `Электрика. ${RN(r)}`); counts.electro++; }
+for (const r of rooms) { sheetOut(`09-elektrika/smarthome-${SL(r)}.svg`, n => drawSmartHome(r, n), `Умный дом. ${RN(r)}`); counts.electro++; }
 // рендеры: подхватываем, если сгенерированы (06-koncept/renders/*.jpg|png)
 let renders = [];
 try {
