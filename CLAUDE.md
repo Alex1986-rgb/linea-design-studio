@@ -29,7 +29,7 @@
 - `LINEA_DEBUG_FIT=1 node engine/generate.js …` — печатает по каждому листу габарит содержимого, выбранный масштаб и процент заполнения поля.
 
 ## Публикация
-Сайт публикуется на GitHub Pages из папки `site/` через Actions (`.github/workflows/pages.yml`): пуш в `main`, затрагивающий `site/**`, сам собирает и заливает артефакт. Ручной запуск — `gh workflow run pages.yml`, статус — `gh run list --workflow=pages.yml -L 1`. Старая схема (`git subtree split --prefix site -b gh-pages` + Jekyll-сборка ветки) отменена: legacy-сборщик падал на альбомах в сотни SVG даже с `.nojekyll`. Живой адрес — https://alex1986-rgb.github.io/linea-design-studio/
+Сайт публикуется на GitHub Pages из папки `site/` через Actions (`.github/workflows/pages.yml`): пуш в `main`, затрагивающий `site/**`, сам собирает и заливает артефакт. На практике push-события в этом репозитории workflow не запускают (ни разу не создалось ни одного run с event=push), поэтому **после пуша деплой запускать вручную**: `gh workflow run pages.yml`, статус — `gh run list --workflow=pages.yml -L 1`. Сборка занимает около минуты. Старая схема (`git subtree split --prefix site -b gh-pages` + Jekyll-сборка ветки) отменена: legacy-сборщик падал на альбомах в сотни SVG даже с `.nojekyll`. Живой адрес — https://alex1986-rgb.github.io/linea-design-studio/
 
 ## Канон чертежей
 Правила самих чертежей — `docs/cad-canon.md` (нормативная база СПДС/ЕСКД с пунктами, анатомия листа, чек-листы по каждому типу листа, нормируемые зазоры). Регламент работы — навык `cad-drawings`. Роли: агент `draftsman` (правит движок), `cad-normcontrol` (нормоконтроль), `cad-acceptance` (приёмка перед выдачей).
