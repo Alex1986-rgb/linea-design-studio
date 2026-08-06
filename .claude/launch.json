@@ -1,0 +1,12 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "linea-site",
+      "runtimeExecutable": "python3",
+      "runtimeArgs": ["-m", "http.server", "8141", "--directory", "site"],
+      "port": 8141,
+      "autoPort": false
+    }
+  ]
+}

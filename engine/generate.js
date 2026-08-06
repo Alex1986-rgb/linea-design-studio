@@ -3544,10 +3544,12 @@ function drawFlatAC(sheetNo) {
 
 // Правая колонка листа сантехники: условные обозначения + ведомость привязок,
 // куда уходят приборы, для которых на плане не хватило места под выноску.
-function plumbColumn(x, y, w, legendSvg) {
+function plumbColumn(x, y, w, legendSvg, legendRows) {
   const rows = drawFlatPlumbing.marks || [];
   if (!rows.length) return legendSvg;
-  const ly = y + 5 * 22 + 44;
+  // высота легенды считается по фактическому числу строк: с зашитой пятёркой
+  // ведомость привязок прилипала к рамке легенды
+  const ly = y + (legendRows || 5) * 22 + 56;
   let s = legendSvg;
   s += `<rect x="${x}" y="${ly}" width="${w}" height="${rows.length * 13 + 32}" fill="none" stroke="#8A8478" stroke-width="0.8"/>`;
   s += `<text x="${x + 10}" y="${ly + 17}" font-size="10" font-weight="700" fill="#2E2A26">Ведомость привязок сантехники</text>`;
@@ -3615,9 +3617,9 @@ function drawFlatPlumbing(sheetNo) {
         const wl = base.fx(r.pos.x), wt = base.fy(r.pos.y);
         const dimGap = 14;
         const distH = Math.round(f.x + f.w / 2);
-        if (distH > 0) s += dimH(wl, fcx, fy2 + fh + dimGap, String(distH));
+        if (distH > 0) { s += dimH(wl, fcx, fy2 + fh + dimGap, String(distH)); ink.add((wl + fcx) / 2 - 26, fy2 + fh + dimGap - 14, 52, 18); }
         const distV = Math.round(f.y + f.h / 2);
-        if (distV > 0) s += dimV(fx2 - dimGap, wt, fcy, String(distV));
+        if (distV > 0) { s += dimV(fx2 - dimGap, wt, fcy, String(distV)); ink.add(fx2 - dimGap - 6, (wt + fcy) / 2 - 26, 20, 52); }
       }
       const plFurns = furns.filter(ff => ['wc', 'sink', 'bath', 'kitchen'].includes(ff.key));
       if (plFurns.length && r.doors.length) {
@@ -3646,13 +3648,16 @@ function drawFlatPlumbing(sheetNo) {
         + `<text x="${t.x}" y="${t.y + 3}" font-size="7.6" font-weight="700" text-anchor="middle" fill="${CAD.plumb}">${mk}</text>`;
     });
     return s + flatRoomMarks(base.fx, base.fy, false);
-  }, (x, y, w) => plumbColumn(x, y, w, flatLegendBox(x, y, w, 'Условные обозначения', [
+  }, (x, y, w) => {
+    const rows = [
     { sym: (sx, sy) => `<rect x="${sx}" y="${sy - 10}" width="10" height="14" fill="#E0F0FF" stroke="${CAD.plumb}" stroke-width="0.9"/><ellipse cx="${sx + 5}" cy="${sy + 1}" rx="3.5" ry="2.5" fill="#FFF" stroke="${CAD.plumb}" stroke-width="0.7"/>`, text: 'унитаз 400×680' },
     { sym: (sx, sy) => `<ellipse cx="${sx + 8}" cy="${sy - 3}" rx="7" ry="5" fill="#E0F0FF" stroke="${CAD.plumb}" stroke-width="0.9"/><circle cx="${sx + 8}" cy="${sy - 3}" r="1.5" fill="${CAD.plumb}"/>`, text: 'раковина 600×450' },
     { sym: (sx, sy) => `<rect x="${sx}" y="${sy - 9}" width="16" height="10" fill="#E0F0FF" stroke="${CAD.plumb}" stroke-width="0.9" rx="2"/><circle cx="${sx + 8}" cy="${sy - 2}" r="1.8" fill="none" stroke="${CAD.plumb}" stroke-width="0.7"/>`, text: 'ванна 1700×700 / душ 900×900' },
     { sym: (sx, sy) => `<rect x="${sx}" y="${sy - 9}" width="16" height="10" fill="#E0F0FF" stroke="${CAD.plumb}" stroke-width="0.9" rx="2"/><circle cx="${sx + 5}" cy="${sy - 4}" r="1.5" fill="${CAD.plumb}"/><circle cx="${sx + 11}" cy="${sy - 4}" r="1.5" fill="${CAD.plumb}"/>`, text: 'мойка кухонная двойная 600×500' },
     { sym: (sx, sy) => `<line x1="${sx}" y1="${sy - 4}" x2="${sx + 16}" y2="${sy - 4}" stroke="${CAD.plumb}" stroke-width="0.9" stroke-dasharray="6 3"/>`, text: 'трасса ГВС/ХВС от стояка' },
-  ])), [
+    ].concat(RISERS.length ? [{ sym: (sx, sy) => `<g stroke="#2E6FA8" stroke-width="1.1" fill="#E8F2FC"><circle cx="${sx + 8}" cy="${sy - 3}" r="5"/><line x1="${sx + 3}" y1="${sy - 3}" x2="${sx + 13}" y2="${sy - 3}"/><line x1="${sx + 8}" y1="${sy - 8}" x2="${sx + 8}" y2="${sy + 2}"/></g>`, text: 'стояки: канализация Ø110, вода Ø32 — существующие, зона обслуживания 250 мм' }] : []);
+    return plumbColumn(x, y, w, flatLegendBox(x, y, w, 'Условные обозначения', rows), rows.length);
+  }, [
     'Привязки от оси прибора; уточнить после укладки плитки ±5 мм.',
     'Сантехника монтируется после завершения чистовой отделки.',
     'Уклоны канализации ≥2% (20 мм/пог.м) в направлении стояка.',

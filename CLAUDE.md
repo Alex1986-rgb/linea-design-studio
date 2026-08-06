@@ -6,7 +6,8 @@
 - `engine/generate.js` — генератор папки проекта (Node, без зависимостей). Запуск: `node engine/generate.js <brief.json> <outdir>`
 - `engine/presets.js` — 6 стилей, тарифы, расценки работ и мебели
 - `site/` — статический сайт: index.html (лендинг), brief.html + js/brief.js (визард брифа), portfolio/demo/ (демо-проект, генерируется движком)
-- `examples/demo-brief.json` — эталон схемы брифа (размеры в метрах; стены A/B/C/D = верх/право/низ/лево)
+- `examples/demo-brief.json` — эталон схемы брифа (размеры в метрах; стены A/B/C/D = верх/право/низ/лево; конструктив: `object.structure {houseType, extWall, intWall, slab}`, `object.bearing[]`, `object.risers[]`, `room.walls`)
+- `examples/fixtures/*.json` — краевые случаи для регрессий: студия 24 м², Г-образная, панель с несущими и стояками, заведомо кривой бриф
 - `examples/house-brief.json` — второй эталон: дом 120 м² в два этажа (`rooms[].level`, `rooms[].stairs`)
 - `clients/<slug>/` — рабочие папки клиентов (brief.json, отчёты, project/)
 - `.claude/agents/` — 7 агентов конвейера; `.claude/commands/` — /new-client, /regen, /qa-project
@@ -33,4 +34,5 @@
 - Полный регламент конвейера — скилл `design-pipeline`; канон самих чертежей — скилл `cad-drawings` (читать перед любой правкой листов).
 - Демо-проекты: `node engine/generate.js examples/demo-brief.json site/portfolio/demo` и `node engine/generate.js examples/house-brief.json site/portfolio/dom-120`.
 - Сайт: премиальный тон, тёмная тема, дизайн-токены в `site/css/main.css`; на каждой странице canonical + OG + schema.org.
-- Просмотр сайта: любой статический сервер из `site/` (движку сервер не нужен).
+- Просмотр сайта: любой статический сервер из `site/` (движку сервер не нужен); конфиг превью — `.claude/launch.json` (имя `linea-site`, порт 8141).
+- Смотреть отдельный лист: `http://localhost:8141/_dev-view.html?f=portfolio/demo/<путь>.svg` — обёртка нужна потому, что голый SVG браузерная панель рендерит мелко, а Chrome headless на этих файлах зависает.

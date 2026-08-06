@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html lang="ru"><head><meta charset="utf-8">
+<title>LINEA · просмотр листа</title>
+<!-- Служебная страница разработки: браузерная панель рендерит голый SVG мелко,
+     а Chrome headless на этих файлах зависает. Открывать так:
+     http://localhost:8141/_dev-view.html?f=portfolio/demo/01-kvartira/kvartira-04-mebel.svg -->
+<meta name="robots" content="noindex">
+<style>
+  html,body{margin:0;background:#fff;font:12px/1.4 Inter,system-ui,sans-serif;color:#57514A}
+  #bar{padding:6px 10px;border-bottom:1px solid #E5E0D6;background:#FAF9F6}
+  #bar input{width:min(680px,70vw);font:inherit;padding:3px 6px;border:1px solid #D8D2C6;border-radius:3px}
+  img{width:100vw;height:auto;display:block}
+</style></head>
+<body>
+<div id="bar"><label>лист: <input id="f" placeholder="portfolio/demo/01-kvartira/kvartira-01-obmer.svg"></label></div>
+<img id="i" alt="лист альбома">
+<script>
+  var q = new URLSearchParams(location.search).get('f') || '';
+  var f = document.getElementById('f'), i = document.getElementById('i');
+  f.value = q; if (q) i.src = q;
+  f.addEventListener('change', function () { location.search = '?f=' + encodeURIComponent(f.value); });
+</script>
+</body></html>
