@@ -285,9 +285,16 @@ function legendRowsFor(layer) {
   return [];
 }
 
-function notesBlock(x, y, items) {
+function notesBlock(x, y, items, wrapAt) {
   let s = `<g data-el="notes"></g><text x="${x}" y="${y}" font-size="9.5" font-weight="700" fill="#2E2A26">Примечания:</text>`;
-  items.forEach((t, i) => { s += `<text x="${x}" y="${y + 14 + i * 12}" font-size="8.6" fill="#57514A">${i + 1}. ${esc(t)}</text>`; });
+  let line = 0;
+  items.forEach((t, i) => {
+    // длинные примечания переносим по словам: иначе строка уезжает на соседние блоки листа
+    wrapText(String(t), wrapAt || 95).forEach((ln, k) => {
+      s += `<text x="${x}" y="${y + 14 + line * 12}" font-size="8.6" fill="#57514A">${k ? '    ' : (i + 1) + '. '}${esc(ln)}</text>`;
+      line++;
+    });
+  });
   return s;
 }
 
@@ -1419,6 +1426,41 @@ function livingEquipFor(room, wallKey) {
   ];
 }
 
+// Раскладка настенной плитки. Сетка «от нуля» декоративна: плиточник начнёт откуда
+// захочет и подрезка вылезет на видовую стену. Здесь считается стартовый ряд, подрезка
+// по вертикали и горизонтали, штуки и площадь — те же числа идут в ведомость на листе.
+function tileLayout(room, wallKey, lenMm, hMm, M, h) {
+  const TW = 600, TH = 300;                 // формат настенной плитки, мм
+  const fullRows = Math.floor(hMm / TH), cutTop = hMm - fullRows * TH;
+  const nFull = Math.floor(lenMm / TW), cutSide = lenMm - nFull * TW;
+  // подрезка меньше половины плитки — раскладываем от центра, чтобы по краям
+  // остались симметричные куски, а не тонкая полоска на видовой стене
+  const fromCenter = cutSide > 0 && cutSide < TW / 2;
+  const x0 = fromCenter ? -(TW - cutSide) / 2 : 0;
+  let svg = '', full = 0, cut = 0;
+  const cols = [];
+  for (let x = x0; x < lenMm - 1; x += TW) cols.push(x);
+  for (let r = 0; r < fullRows + (cutTop > 20 ? 1 : 0); r++) {
+    const rowH = (r === fullRows) ? cutTop : TH;
+    for (const cx of cols) {
+      const w0 = Math.min(cx + TW, lenMm) - Math.max(cx, 0);
+      if (w0 < 20) continue;
+      const isCut = w0 < TW - 1 || rowH < TH - 1;
+      if (isCut) cut++; else full++;
+      const X = M + px(Math.max(cx, 0)), Y = M + h - px(r * TH + rowH);
+      svg += `<rect x="${X + 0.4}" y="${Y + 0.4}" width="${px(w0) - 0.8}" height="${px(rowH) - 0.8}" fill="${isCut ? '#EBE5DB' : '#F2EEE8'}" stroke="#C8C0B4" stroke-width="0.5"/>`;
+      if (isCut) svg += `<line x1="${X}" y1="${Y + px(rowH)}" x2="${X + px(w0)}" y2="${Y}" stroke="#C0B6A6" stroke-width="0.5"/>`;
+    }
+  }
+  // стартовый ряд и стартовый шов — от них ведут кладку
+  svg += `<line x1="${M}" y1="${M + h - px(TH)}" x2="${M + px(lenMm)}" y2="${M + h - px(TH)}" stroke="#8A7A5A" stroke-width="1.4"/>`;
+  const sx0 = M + px(Math.max(x0 + TW, 0));
+  svg += `<line x1="${sx0}" y1="${M + h}" x2="${sx0}" y2="${M + h - px(hMm)}" stroke="#8A7A5A" stroke-width="1.2" stroke-dasharray="6 3"/>`;
+  svg += `<text x="${sx0 + 4}" y="${M + h - px(TH) - 5}" font-size="8" fill="#8A6A3B">стартовый шов${fromCenter ? ' (раскладка от центра)' : ''}</text>`;
+  const area = +(lenMm * hMm / 1e6).toFixed(1);
+  return { svg, full, cut, area, cutTop: Math.round(cutTop), cutSide: Math.round(cutSide), fromCenter, TW, TH };
+}
+
 // ---------- развертка стены (премиум: карниз, электрика, бра, подоконник, перемычки) ----------
 function drawElevation(room, wallKey, sheet) {
   const len = (wallKey === 'A' || wallKey === 'C') ? room.w : room.l;
@@ -1431,13 +1473,10 @@ function drawElevation(room, wallKey, sheet) {
 
   // ── 1. фон стены ──────────────────────────────────────────────
   let b = `<rect x="${M}" y="${M}" width="${w}" height="${h}" fill="${style.wall.color}" stroke="#2E2A26" stroke-width="2"/>`;
-  if (room.type === 'bathroom') { // настенная плитка 600×300 (горизонтальная укладка)
-    const WTILE_W = 600, WTILE_H = 300;
-    for (let ty = 0; ty < room.h; ty += WTILE_H) {
-      for (let tx = 0; tx < len; tx += WTILE_W) {
-        b += `<rect x="${M + px(tx) + 0.5}" y="${M + h - px(ty + WTILE_H) + 0.5}" width="${px(WTILE_W) - 1}" height="${px(WTILE_H) - 1}" fill="#F2EEE8" stroke="#C8C0B4" stroke-width="0.6"/>`;
-      }
-    }
+  let tile = null;
+  if (room.type === 'bathroom' || room.type === 'wc') {
+    tile = tileLayout(room, wallKey, len, room.h, M, h);
+    b += tile.svg;
   }
 
   // ── 2. карниз с подсветкой (у потолка) ───────────────────────
@@ -1445,7 +1484,9 @@ function drawElevation(room, wallKey, sheet) {
   b += `<rect x="${M}" y="${M}" width="${w}" height="${cornHpx}" fill="#D8D4CC" stroke="#57514A" stroke-width="1" stroke-dasharray="5 3"/>`;
   b += `<line x1="${M + 6}" y1="${M + cornHpx * 0.64}" x2="${M + w - 6}" y2="${M + cornHpx * 0.64}" stroke="#C29A5B" stroke-width="2.5" stroke-dasharray="9 5"/>`;
   b += `<text x="${M + 8}" y="${M + cornHpx * 0.42}" font-size="8" fill="#7A756D">Карниз ГКЛ ${CORN_H}×60 мм</text>`;
-  b += `<text x="${M + w - 8}" y="${M + cornHpx * 0.42}" font-size="7.5" fill="#8A6A3B" text-anchor="end">LED 3000К · ${style.skus.led.split('·')[0].trim()}</text>`;
+  // на узкой стене вторая подпись не влезает — LED уходит во вторую строку
+  if (w > 300) b += `<text x="${M + w - 8}" y="${M + cornHpx * 0.42}" font-size="7.5" fill="#8A6A3B" text-anchor="end">LED 3000К · ${style.skus.led.split('·')[0].trim()}</text>`;
+  else b += `<text x="${M + 8}" y="${M + cornHpx * 0.42 + 10}" font-size="7.5" fill="#8A6A3B">LED 3000К · ${style.skus.led.split('·')[0].trim()}</text>`;
 
   // ── 3. плинтус ────────────────────────────────────────────────
   b += `<rect x="${M}" y="${M + h - px(PLIN_H)}" width="${w}" height="${px(PLIN_H)}" fill="#CFC9BD" stroke="#57514A" stroke-width="0.8"/>`;
@@ -1623,7 +1664,7 @@ function drawElevation(room, wallKey, sheet) {
     const lv = [{ mm: 0, t: 'чистый пол' }, { mm: room.h, t: 'потолок' }];
     for (const f of wallFurn) lv.push({ mm: f.base + f.h, t: '' });
     const seen = new Set();
-    lv.filter(v => { const k = Math.round(v.mm / 10); if (seen.has(k)) return false; seen.add(k); return true; })
+    lv.filter(v => { const k = Math.round(v.mm / 120); if (seen.has(k)) return false; seen.add(k); return true; })
       .sort((a, b) => a.mm - b.mm)
       .forEach(v => { b += levelMark(M - 6, M + h - px(v.mm), v.mm, -1, { shelf: 46 }); });
   }
@@ -1753,6 +1794,17 @@ function drawElevation(room, wallKey, sheet) {
 
   // артикул LED
   cy += 6;
+  // Ведомость раскладки: те же числа, что нарисованы на стене — плиточник считает
+  // по ним закупку, а не «на глаз» (канон, чек-лист elevation)
+  if (tile) {
+    cy += 8;
+    b += `<rect x="${ax}" y="${cy}" width="${SPEC_W - 4}" height="62" fill="#FBF9F4" stroke="#C8C0B4" stroke-width="0.8"/>`;
+    b += `<text x="${ax + 8}" y="${cy + 15}" font-size="9.5" font-weight="700" fill="#2E2A26">Раскладка плитки ${tile.TW}×${tile.TH}</text>`;
+    b += `<text x="${ax + 8}" y="${cy + 28}" font-size="8.4" fill="#57514A">целых ${tile.full} шт. · подрезка ${tile.cut} шт. · ${(tile.area * 1.1).toFixed(1)} м² (+10%)</text>`;
+    b += `<text x="${ax + 8}" y="${cy + 40}" font-size="8.4" fill="#57514A">верхний ряд ${tile.cutTop || tile.TH} мм · подрезка по длине ${tile.cutSide || 0} мм</text>`;
+    b += `<text x="${ax + 8}" y="${cy + 53}" font-size="8.2" fill="#8A6A3B">${tile.fromCenter ? 'от центра стены, симметричная подрезка по краям' : 'от левого угла, подрезка в дальний угол'}</text>`;
+    cy += 72;
+  }
   b += `<text x="${ax}" y="${cy}" font-size="8" fill="#8A8478">Арт.: ${esc(style.skus.led)}</text>`;
   cy += 18;
 
@@ -1768,11 +1820,12 @@ function drawElevation(room, wallKey, sheet) {
   // ── 11. заголовок и штамп ─────────────────────────────────────
   b += `<text x="${M}" y="${M - 40}" font-size="16" font-weight="700" fill="#2E2A26">Развертка · ${esc(room.name)} · стена ${wallKey}</text>`;
   b += `<text x="${M}" y="${M - 24}" font-size="11" fill="#7A756D">Вид изнутри помещения · отметки от чистого пола · М 1:50</text>`;
+  // ширина примечаний ограничена левой зоной листа: правее начинается колонка ведомостей
   b += notesBlock(M, Hd - 132, [
     'Схема мебели на чертеже не является технической документацией для производства мебели: чертежи разрабатывает изготовитель после контрольного замера на объекте.',
     'Отметки даны от уровня чистого пола 0,000; привязки розеток и выключателей выдержать строго.',
     room.type === 'bathroom' ? 'Раскладку плитки начинать от указанного ряда; подрезку уводить в зону, скрытую сантехникой.' : 'Границы типов отделки — по маркам ведомости отделки на этом листе.',
-  ]);
+  ], Math.max(40, Math.floor((ax - M - 14) / 4.7)));
   b += stamp(M, Hd - 60, Math.min(w + 220, ax - M - 24), `Развертка ${room.name}, стена ${wallKey}`, sheet);
   return svgDoc(Wd, Hd + 10, b);
 }
