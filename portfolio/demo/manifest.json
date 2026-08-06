@@ -1,5 +1,5 @@
 {
-  "generated": "2026-08-06T12:25:50.807Z",
+  "generated": "2026-08-06T12:49:04.780Z",
   "issues": {
     "errors": [],
     "warnings": []
@@ -106,6 +106,12 @@
     "05-potolki/potolok-04-sanuzel.svg",
     "05-potolki/potolok-05-prihozhaya.svg",
     "05-potolki/uzel-A-korob-led.svg",
+    "10-uzly/razrez-1-1.svg",
+    "10-uzly/razrez-2-2.svg",
+    "10-uzly/uzel-B-pol-suhoy.svg",
+    "10-uzly/uzel-V-pol-mokryy.svg",
+    "10-uzly/uzel-G-styk-pokrytiy.svg",
+    "10-uzly/uzel-D-plintus-shov.svg",
     "09-elektrika/elektrika-01-gostinaya-kuhnya.svg",
     "09-elektrika/elektrika-02-spalnya.svg",
     "09-elektrika/elektrika-03-detskaya.svg",
