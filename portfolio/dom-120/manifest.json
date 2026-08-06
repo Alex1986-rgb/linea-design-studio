@@ -1,5 +1,5 @@
 {
-  "generated": "2026-08-06T14:11:58.486Z",
+  "generated": "2026-08-06T19:00:00.883Z",
   "issues": {
     "errors": [],
     "warnings": [
@@ -83,6 +83,7 @@
     }
   ],
   "files": [
+    "00-pasport/plan-prezentatsiya.svg",
     "01-kvartira/kvartira-et1-01-obmer.svg",
     "01-kvartira/kvartira-et1-02-demontazh.svg",
     "01-kvartira/kvartira-et1-03-montazh.svg",
@@ -289,6 +290,7 @@
     "08-smeta/smeta.html",
     "00-pasport/zamechaniya.html",
     "08-smeta/smeta.csv",
+    "presentation.html",
     "print.html",
     "index.html"
   ]

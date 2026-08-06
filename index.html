@@ -14,7 +14,7 @@
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' fill='%230F0E0C'/><text x='50' y='68' font-size='52' text-anchor='middle' fill='%23C29A5B' font-family='Georgia'>L</text></svg>">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;600&family=Inter:wght@400;600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/main.css">
+<link rel="stylesheet" href="css/main.css?v=7">
 <script type="application/ld+json">
 {"@context":"https://schema.org","@type":"ProfessionalService","name":"LINEA — студия дизайна интерьера","description":"Дизайн-проект интерьера квартиры и дома за 48 часов: планировки, развертки стен, потолки, спецификации, смета.","areaServed":"RU","makesOffer":[{"@type":"Offer","name":"Дизайн-проект интерьера (открытое тестирование)","price":"0","priceCurrency":"RUB","availability":"https://schema.org/LimitedAvailability"}]}
 </script>
@@ -42,23 +42,137 @@
   </div>
 </header>
 
-<section class="hero" style="background:linear-gradient(90deg,#0F0E0Cf2 0%,#0F0E0Cd8 45%,#0F0E0C66 100%),url('assets/hero.jpg') center/cover no-repeat">
-  <div class="wrap">
-    <div class="kicker">Студия дизайна интерьера · Автоматизированный конвейер</div>
-    <h1>Дизайн-проект интерьера <em>за&nbsp;48&nbsp;часов</em> — от обмеров до сметы</h1>
-    <p class="lead">Загрузите план, размеры и фото квартиры — получите альбом рабочей документации в стандарте проектных бюро: чертежи, по которым работает бригада, визуализации и смета. Алгоритмы чертят, дизайнер отвечает за вкус.</p>
-    <div class="cta-row">
-      <a class="btn" href="brief.html">Заполнить бриф — 7 минут</a>
-      <a class="btn ghost" href="portfolio/demo/index.html">Смотреть демо-проект</a>
+<!-- HERO-ФИЛЬМ: кадры перебираются по прокрутке (scroll scrubbing).
+     Кадры — визуализации демо-проекта; если появится настоящая раскадровка,
+     положите её в assets/frames/ вместе с manifest.json — скрипт возьмёт её. -->
+<section class="film" id="film">
+  <div class="screen">
+    <canvas id="filmCanvas" aria-hidden="true"></canvas>
+    <div class="veil"></div>
+    <div class="stage">
+      <div class="wrap">
+        <div class="kicker">Студия дизайна интерьера · автоматизированный конвейер</div>
+        <h1>Дизайн-проект интерьера <em>за&nbsp;48&nbsp;часов</em> — от обмеров до сметы</h1>
+        <p class="lead">Прокрутите — и пройдите по квартире, собранной конвейером студии. Загрузите план, размеры и фото — получите альбом рабочей документации в стандарте проектных бюро: чертежи, по которым работает бригада, визуализации и смета.</p>
+        <div class="cta-row">
+          <a class="btn" href="brief.html">Заполнить бриф — 7 минут</a>
+          <a class="btn ghost" href="portfolio/demo/presentation.html">Листать альбом проекта</a>
+        </div>
+        <div class="stats">
+          <div><b>48 ч</b><span>от брифа до папки проекта</span></div>
+          <div><b>93</b><span>листа в демо-альбоме</span></div>
+          <div><b>11</b><span>визуализаций помещений</span></div>
+          <div><b>16</b><span>сводных планов квартиры</span></div>
+        </div>
+      </div>
     </div>
-    <div class="stats">
-      <div><b>48 ч</b><span>от брифа до папки проекта</span></div>
-      <div><b>74</b><span>листа чертежей в демо-альбоме</span></div>
-      <div><b>11</b><span>визуализаций — 2–3 ракурса на комнату</span></div>
-      <div><b>13</b><span>сводных планов квартиры — канон рабочих альбомов</span></div>
-    </div>
+    <div class="frame-cap"><b id="filmRoom">Прихожая</b> <span id="filmNote">— вход, зона хранения</span></div>
+    <div class="progress"><i id="filmBar"></i></div>
+    <div class="hint"><span>прокрутите вниз</span></div>
   </div>
 </section>
+
+<script>
+(function () {
+  var CV = document.getElementById('filmCanvas');
+  if (!CV) return;
+  var ctx = CV.getContext('2d');
+  var sec = document.getElementById('film');
+  var bar = document.getElementById('filmBar');
+  var roomEl = document.getElementById('filmRoom'), noteEl = document.getElementById('filmNote');
+  var BASE = 'portfolio/demo/06-koncept/renders/';
+  // порядок кадров — как проход по квартире: вход → общая зона → приватные → санузел
+  var FRAMES = [
+    { f: '05-prihozhaya.jpg',              room: 'Прихожая',        note: '— вход, зона хранения' },
+    { f: '01-gostinaya-kuhnya.jpg',        room: 'Гостиная-кухня',  note: '— единое пространство 20,8 м²' },
+    { f: '01b-gostinaya-stolovaya.jpg',    room: 'Обеденная зона',  note: '— граница зон держится светом' },
+    { f: '01c-kuhnya-detail.jpg',          room: 'Кухня',           note: '— фронт 5 м, фартук с подсветкой' },
+    { f: '02-spalnya.jpg',                 room: 'Спальня',         note: '— изголовье к стене без окна' },
+    { f: '02b-spalnya-vid-ot-krovati.jpg', room: 'Спальня',         note: '— вид от кровати' },
+    { f: '03-detskaya.jpg',                room: 'Детская',         note: '— сон, работа, игра' },
+    { f: '03b-detskaya-stol.jpg',          room: 'Рабочее место',   note: '— у окна, свет слева' },
+    { f: '04-sanuzel.jpg',                 room: 'Санузел',         note: '— мокрая зона, отметка −0,020' },
+    { f: '04b-sanuzel-zerkalo.jpg',        room: 'Санузел',         note: '— зеркало с подсветкой' },
+    { f: '05b-prihozhaya-vhod.jpg',        room: 'Готово',          note: '— альбом можно отдавать бригаде' }
+  ];
+  var imgs = [], loaded = 0, ready = false, dpr = Math.min(2, window.devicePixelRatio || 1);
+  var reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  function fit() {
+    var r = CV.getBoundingClientRect();
+    CV.width = Math.round(r.width * dpr); CV.height = Math.round(r.height * dpr);
+    draw();
+  }
+  // рисуем кадр по принципу background-size:cover
+  function cover(im, alpha, zoom) {
+    if (!im || !im.width) return;
+    var cw = CV.width, ch = CV.height;
+    var k = Math.max(cw / im.width, ch / im.height) * (zoom || 1);
+    var w = im.width * k, h = im.height * k;
+    ctx.globalAlpha = alpha;
+    ctx.drawImage(im, (cw - w) / 2, (ch - h) / 2, w, h);
+    ctx.globalAlpha = 1;
+  }
+  function progress() {
+    if (reduce) return 0;
+    var r = sec.getBoundingClientRect();
+    var total = sec.offsetHeight - window.innerHeight;
+    if (total <= 0) return 0;
+    return Math.max(0, Math.min(1, -r.top / total));
+  }
+  // ближайший загруженный кадр: тяжёлый кадр в середине тура догружается позже,
+  // и без этого экран оставался чёрным до его загрузки
+  function readyAt(i) {
+    for (var d = 0; d < imgs.length; d++) {
+      if (imgs[i + d] && imgs[i + d].width) return imgs[i + d];
+      if (imgs[i - d] && imgs[i - d].width) return imgs[i - d];
+    }
+    return null;
+  }
+  function draw() {
+    if (!ready) return;
+    var p = progress();
+    var f = p * (FRAMES.length - 1);
+    var i = Math.floor(f), t = f - i;
+    ctx.clearRect(0, 0, CV.width, CV.height);
+    // лёгкий наезд камеры внутри кадра + кроссфейд с соседним: 11 кадров
+    // без этого читались бы как рывки
+    var a = readyAt(i), bimg = (imgs[i + 1] && imgs[i + 1].width) ? imgs[i + 1] : null;
+    cover(a, 1, 1 + 0.04 * t);
+    if (bimg && t > 0.001) cover(bimg, t, 1.04 - 0.04 * t);
+    if (bar) bar.style.width = (p * 100).toFixed(1) + '%';
+    var cur = FRAMES[Math.round(f)];
+    if (cur && roomEl.textContent !== cur.room) roomEl.textContent = cur.room;
+    if (cur && noteEl.textContent !== cur.note) noteEl.textContent = cur.note;
+  }
+  var raf = 0;
+  function onScroll() { if (!raf) raf = requestAnimationFrame(function () { raf = 0; draw(); }); }
+
+  // если появится настоящая раскадровка — берём её: assets/frames/manifest.json
+  // {"base":"assets/frames/","frames":["0001.jpg", ...]}
+  function boot(list, base) {
+    imgs = list.map(function (it) {
+      var im = new Image();
+      im.decoding = 'async';
+      im.src = base + (it.f || it);
+      im.onload = function () { loaded++; if (!ready) { ready = true; fit(); } draw(); };
+      return im;
+    });
+  }
+  fetch('assets/frames/manifest.json', { cache: 'no-cache' })
+    .then(function (r) { return r.ok ? r.json() : null; })
+    .then(function (m) {
+      if (m && m.frames && m.frames.length) {
+        FRAMES = m.frames.map(function (f, k) { return { f: f, room: (m.captions && m.captions[k] && m.captions[k].room) || '', note: (m.captions && m.captions[k] && m.captions[k].note) || '' }; });
+        boot(FRAMES, m.base || 'assets/frames/');
+      } else boot(FRAMES, BASE);
+    })
+    .catch(function () { boot(FRAMES, BASE); });
+
+  window.addEventListener('scroll', onScroll, { passive: true });
+  window.addEventListener('resize', fit);
+})();
+</script>
 
 <section class="blk" id="process">
   <div class="wrap">
@@ -93,7 +207,7 @@
   <div class="wrap">
     <div class="kicker">Портфолио</div>
     <h2>Два демо-проекта: квартира 56 м² и дом 120 м² в два этажа</h2>
-    <p class="sub">Реальный результат работы конвейера — без ретуши: 74 листа чертежей (13 сводных планов квартиры как в проектной документации + детализация: обмер, демонтаж, монтаж, планы, полы, развертки, потолки, электрика), 11 визуализаций, ведомость, спецификация с артикулами и смета — всё собрано автоматически по брифу.</p>
+    <p class="sub">Реальный результат работы конвейера — без ретуши: 93 листа чертежей (13 сводных планов квартиры как в проектной документации + детализация: обмер, демонтаж, монтаж, планы, полы, развертки, потолки, электрика), 11 визуализаций, ведомость, спецификация с артикулами и смета — всё собрано автоматически по брифу.</p>
     <div class="grid g3" style="margin-bottom:22px">
       <a class="pcard" href="portfolio/demo/index.html#rendery"><img src="portfolio/demo/06-koncept/renders/01-gostinaya-kuhnya.jpg" alt="Гостиная-кухня в стиле джапанди — визуализация LINEA" loading="lazy"><span>Гостиная-кухня · ТВ-ниша с LED, потолок 3 уровня</span></a>
       <a class="pcard" href="portfolio/demo/index.html#rendery"><img src="portfolio/demo/06-koncept/renders/02-spalnya.jpg" alt="Спальня джапанди с нишей изголовья — визуализация LINEA" loading="lazy"><span>Спальня · ниша изголовья с подсветкой</span></a>
@@ -102,11 +216,11 @@
     <div class="grid g3">
       <div class="card"><h3>2-комнатная, ЖК «Северный парк»</h3>
         <ul>
-          <li>5 помещений · 74 листа чертежей</li>
+          <li>5 помещений · 93 листа чертежей</li>
           <li>Обмер, демонтаж, монтаж, полы, развертки, потолки, электрика</li>
           <li>Смета «Бизнес»: ≈ 3 млн ₽ под ключ</li>
         </ul>
-        <p style="margin-top:18px"><a class="btn sm" href="portfolio/demo/index.html">Открыть папку проекта →</a></p>
+        <p style="margin-top:18px"><a class="btn sm" href="portfolio/demo/presentation.html">Листать альбом — 93 листа →</a> <a class="btn sm ghost" href="portfolio/demo/index.html">Открыть папку файлов</a> <a class="btn sm ghost" href="portfolio/demo/print.html" target="_blank" rel="noopener">Версия на печать</a></p>
       </div>
       <div class="card"><h3>Дом 120 м², КП «Сосновый бор»</h3>
         <ul>
@@ -173,7 +287,7 @@
       <p>Премиальный дизайн-проект интерьера,<br>собранный автоматизированным конвейером<br>под контролем дизайнера.</p>
     </div>
     <div>
-      <p><a href="brief.html">Бриф</a> · <a href="portfolio/demo/index.html">Демо-проект</a> · <a href="#price">Условия теста</a></p>
+      <p><a href="brief.html">Бриф</a> · <a href="portfolio/demo/presentation.html">Альбом-презентация</a> · <a href="portfolio/demo/index.html">Демо-проект</a> · <a href="#price">Условия теста</a></p>
       <p>© LINEA studio, 2026</p>
     </div>
   </div>
