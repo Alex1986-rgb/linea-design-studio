@@ -133,7 +133,7 @@ function sheetStampBlock(x, y, w, h, st) {
   s += lbl(c2 + 7, r1 + 13, 'Масштаб') + val(c2 + 7, r1 + 30, 'М 1:' + st.ratio, 12, 600);
   s += lbl(c3 + 7, r1 + 13, 'Лист') + val(c3 + 7, r1 + 30, String(st.sheet), 12, 600);
   s += lbl(c4 + 7, r1 + 13, 'Листов') + val(c4 + 7, r1 + 30, String(TOTAL_SHEETS || '—'), 12, 600);
-  s += `<text x="${x + w - 7}" y="${y + h - 6}" font-size="9.5" fill="#8A8478" text-anchor="end">${DATE}</text>`;
+  s += `<text x="${x + w - 7}" y="${y + h - 6}" font-size="9.5" fill="#8A8478" text-anchor="end">${MONO ? 'ч/б · ' : ''}${DATE}</text>`;
   return s;
 }
 
@@ -187,6 +187,31 @@ function contentBox(body) {
   return { x0: x0 - 14, y0: y0 - 14, x1: x1 + 14, y1: y1 + 14 };
 }
 
+// ---------- ч/б режим (--mono) ----------
+// Бригада печатает альбом на офисном лазернике: розетки #2E9E4F, ТП #CD110F и
+// четыре цвета групп света сливаются в один серый, и лист теряет смысл там, где
+// он нужен на объекте. Флаг переводит палитру в серую шкалу по яркости, но с
+// гарантированным контрастом: линии и текст не светлее 45%, заливки не темнее 78%.
+const MONO = !!FLAGS.mono;
+function greyOf(hex) {
+  let h = hex.replace('#', '');
+  if (h.length === 3) h = h[0] + h[0] + h[1] + h[1] + h[2] + h[2];
+  const a = h.length === 8 ? h.slice(6) : '';           // альфа сохраняем как есть
+  const r = parseInt(h.slice(0, 2), 16), g = parseInt(h.slice(2, 4), 16), b = parseInt(h.slice(4, 6), 16);
+  if ([r, g, b].some(isNaN)) return hex;
+  const lum = 0.2126 * r + 0.7152 * g + 0.0722 * b;
+  const sat = Math.max(r, g, b) - Math.min(r, g, b);
+  // насыщенный цвет — это смысловой слой: уводим его в тёмный серый, чтобы он
+  // остался акцентом; ненасыщенные тона просто обесцвечиваем
+  const v = sat > 40 ? Math.min(lum, 116) : lum;
+  const q = Math.round(Math.max(0, Math.min(255, v)));
+  const hx = q.toString(16).padStart(2, '0');
+  return '#' + hx + hx + hx + a;
+}
+function monoize(svg) {
+  return svg.replace(/(fill|stroke|stop-color)="(#[0-9A-Fa-f]{3,8})"/g, (m, k, c) => `${k}="${greyOf(c)}"`);
+}
+
 // ---------- перо и типографика в миллиметрах бумаги (ГОСТ 2.303 / 2.304) ----------
 const PXMM = 1587 / 420;          // px листа на 1 мм бумаги (A3 при 96 dpi)
 const PEN_MM = { cut: 0.7, cutSecondary: 0.5, visible: 0.35, thin: 0.25, aux: 0.18 };
@@ -230,7 +255,7 @@ function svgDoc(wPx, hPx, body, bg) {
   const ctrl = 1000 * S * k;
   s += `<g stroke="#1C1C1C" stroke-width="1"><line x1="${fx + 14}" y1="${fy + fh - 22}" x2="${fx + 14 + ctrl}" y2="${fy + fh - 22}"/><line x1="${fx + 14}" y1="${fy + fh - 27}" x2="${fx + 14}" y2="${fy + fh - 17}"/><line x1="${fx + 14 + ctrl}" y1="${fy + fh - 27}" x2="${fx + 14 + ctrl}" y2="${fy + fh - 17}"/></g>`;
   s += `<text x="${fx + 14}" y="${fy + fh - 32}" font-size="9.5" fill="#57514A">контроль: 1000 мм · печать 1:1, без подгонки под лист</text>`;
-  return s + `</svg>`;
+  return (MONO ? monoize(s) : s) + `</svg>`;
 }
 let TOTAL_SHEETS = 0; // проставляется до генерации листов
 // Тип текущего листа (obmer, demolition, furniture, …) — пишется в data-sheet корня SVG,
@@ -3416,6 +3441,7 @@ function drawFlatCeiling(sheetNo) {
 // 5. План электрики (общий)
 function drawFlatElectro(sheetNo) {
   const GRN = '#1F8A4C';                      // цвет активного слоя электрики
+  const tieInk = inkMap();                    // занятость под подписи привязок
   return flatSheet(sheetNo, 'План розеток 220 В и выводов с привязками', 'Привязки L/H: от угла или проёма / от чистого пола, мм', base => {
     let s = '';
     // подложка: мебель бледно-серым, только для привязки
@@ -3430,9 +3456,19 @@ function drawFlatElectro(sheetNo) {
         s += `<g stroke="${GRN}" stroke-width="1.2" fill="none"><path d="M ${x - 5} ${y} a 5 5 0 0 1 10 0" fill="${ip44 ? GRN : '#FFF'}"/><line x1="${x - 6}" y1="${y}" x2="${x + 6}" y2="${y}"/><line x1="${x}" y1="${y}" x2="${x}" y2="${y + 4}"/></g>`;
         if (weak) s += `<text x="${x + 8}" y="${y + 7}" font-size="5.5" font-weight="700" fill="${GRN}">it</text>`;
       } else s += `<g stroke="${GRN}" stroke-width="1.2"><circle cx="${x}" cy="${y}" r="3.4" fill="${GRN}"/><line x1="${x}" y1="${y - 3.4}" x2="${x + 6}" y2="${y - 9}"/></g>`;
-      // компактная привязка L/H у символа
+      // компактная привязка L/H: место подбираем вокруг символа, иначе при кучной
+      // расстановке подписи наезжают друг на друга и читаются как мусор
       const dl = Math.round(Math.min(p.x, r.w - p.x, p.y, r.l - p.y) / 10);
-      s += `<text x="${x + 7}" y="${y - 5}" font-size="6.2" fill="#2A2A2A">${dl}/${Math.round(p.h / 10)}</text>`;
+      const tieLab = `${dl}/${Math.round(p.h / 10)}`;
+      const lw = tieLab.length * 3.6 + 3, lh = 8;
+      let placed = false;
+      for (const [ox, oy] of [[7, -5], [7, 9], [-lw - 7, -5], [-lw - 7, 9], [7, -14], [-lw - 7, -14], [7, 18], [-lw - 7, 18]]) {
+        if (!tieInk.free(x + ox, y + oy - lh, lw, lh)) continue;
+        tieInk.add(x + ox, y + oy - lh, lw, lh);
+        s += `<text x="${x + ox}" y="${y + oy}" font-size="6.2" fill="#2A2A2A">${tieLab}</text>`;
+        placed = true; break;
+      }
+      if (!placed) s += `<circle cx="${x}" cy="${y}" r="1.4" fill="#B0483A"/>`;   // место занято — точка отмечена, привязка в ведомости
       if (/полот|аквастор|стирал|кондиц|встройк/.test(lab)) outs.push({ x, y, t: p.label });
     }
     // выноски к спецвыводам по периметру плана
