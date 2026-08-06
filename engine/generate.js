@@ -48,8 +48,36 @@ const rooms = (brief.rooms || []).map((r, i) => {
   const doors = (r.doors || [{ wall: 'C', offset: 0.2, width: 0.9 }])
     .map(o => ({ wall: o.wall, off: Math.round(o.offset * 1000), w: Math.round(o.width * 1000), h: Math.round((o.height || 2.05) * 1000) }));
   return { idx: i + 1, id: r.id || 'room' + (i + 1), name: r.name, type: r.type || 'living', w, l, h, windows, doors, area: +(r.width * r.length).toFixed(1), level: r.level || 1, stairs: r.stairs || null,
-    pos: r.pos ? { x: Math.round(r.pos.x * 1000), y: Math.round(r.pos.y * 1000) } : null };
+    pos: r.pos ? { x: Math.round(r.pos.x * 1000), y: Math.round(r.pos.y * 1000) } : null,
+    walls: r.walls || null };
 });
+// ---------- конструктив объекта ----------
+// Раньше толщина стены была одной константой на все случаи, а несущие и стояки
+// в модели отсутствовали вовсе: лист демонтажа обещал «несущие не затрагиваются»,
+// не имея признака несущей стены, а сантехника не могла привязаться к стояку.
+const _obj = brief.object || {}, _flat = _obj.flat || {};
+const STRUCT = Object.assign(
+  { houseType: 'brick', extWall: _flat.extWall || 0.2, intWall: _flat.intWall || 0.15, slab: 0.2 },
+  _obj.structure || {});
+const EXT_MM = Math.round((STRUCT.extWall || 0.2) * 1000);
+const INT_MM = Math.round((STRUCT.intWall || 0.15) * 1000);
+const HOUSE = STRUCT.houseType || 'brick';
+const SLAB_MM = Math.round((STRUCT.slab || 0.2) * 1000);
+// несущие стены отрезками в координатах объекта и стояки (мм)
+const BEARING = (_obj.bearing || []).filter(b => b && b.from && b.to).map(b => ({
+  x1: Math.round(b.from[0] * 1000), y1: Math.round(b.from[1] * 1000),
+  x2: Math.round(b.to[0] * 1000), y2: Math.round(b.to[1] * 1000),
+  t: Math.round((b.t || STRUCT.extWall) * 1000)
+}));
+const RISERS = (_obj.risers || []).filter(r => r && r.x != null).map(r => ({
+  x: Math.round(r.x * 1000), y: Math.round(r.y * 1000),
+  d: Math.round((r.d || 0.11) * 1000), kind: r.kind || 'sewer'
+}));
+// в панельном доме ниши глубже 60 мм в стенах не выполняются
+const NICHE_DEPTH = HOUSE === 'panel' ? 60 : 100;
+const HOUSE_RU = { panel: 'панель', brick: 'кирпич', monolith: 'монолит', block: 'блок' };
+
+
 const totalArea = (brief.object && brief.object.area) || +rooms.reduce((s, r) => s + r.area, 0).toFixed(1);
 const styleKey = (brief.style && !brief.style.byStudio && brief.style.name && STYLES[brief.style.name]) ? brief.style.name : pickStyle(brief);
 const style = STYLES[styleKey];
@@ -285,13 +313,35 @@ function doorZones(room) {
 }
 const hits = (a, b) => a.x < b.x + b.w && a.x + a.w > b.x && a.y < b.y + b.h && a.y + a.h > b.y;
 
+// Препятствия помещения: радиаторы под окнами, подоконная зона, стояки и вентшахты.
+// Раньше мебель их не видела — гарнитур становился на радиатор, шкаф закрывал стояк.
+function obstacles(room) {
+  const out = [];
+  for (const o of room.windows) {     // радиатор под окном: ширина проёма − 100, вылет 130 от стены
+    const rw = Math.max(400, o.w - 100), d = 130;
+    if (o.wall === 'A') out.push({ x: o.off + 50, y: 0, w: rw, h: d, why: 'радиатор' });
+    else if (o.wall === 'C') out.push({ x: o.off + 50, y: room.l - d, w: rw, h: d, why: 'радиатор' });
+    else if (o.wall === 'D') out.push({ x: 0, y: o.off + 50, w: d, h: rw, why: 'радиатор' });
+    else out.push({ x: room.w - d, y: o.off + 50, w: d, h: rw, why: 'радиатор' });
+  }
+  for (const r of risersIn(room)) {   // стояк + зона обслуживания
+    const s0 = Math.max(r.d, 250);
+    out.push({ x: r.x - s0 / 2, y: r.y - s0 / 2, w: s0, h: s0, why: 'стояк' });
+  }
+  return out;
+}
+
 function furnitureFor(room) {
   const W = room.w, L = room.l, it = [];
   const zones = doorZones(room);
-  // мебель не пересекает другую мебель и не блокирует открывание дверей
+  const obst = obstacles(room);
+  // мебель не пересекает другую мебель, не блокирует двери и не встаёт на радиатор/стояк
   const add = (key, name, x, y, w, h) => {
     if (!(x >= 0 && y >= 0 && x + w <= W && y + h <= L)) return false;
     const r = { x, y, w, h };
+    // ковёр и кухонный фронт под окном допустимы: у ковра нет корпуса, столешница
+    // проходит над радиатором — остальное на радиатор и стояк ставить нельзя
+    if (!['rug', 'kitchen', 'kitchen_ext'].includes(key) && obst.some(z => hits(r, z))) return false;
     if (key !== 'rug' && (it.some(f => f.key !== 'rug' && hits(r, f)) || zones.some(z => hits(r, z)))) return false;
     it.push({ key, name, x, y, w, h });
     return true;
@@ -359,7 +409,26 @@ function furnitureFor(room) {
       break; }
     case 'kids': {
       add('kidbed', 'Кровать 900×2000', 100, 100, 900, 2000);
-      add('desk', 'Стол у окна', 1300, 100, Math.min(1200, W - 1400), 600);
+      // Рабочее место — у окна, свет слева. Раньше стол стоял в одной жёсткой точке
+      // и, попадая в зону открывания двери, просто не размещался: детская выходила
+      // без рабочего места. Теперь перебираем позиции вдоль стены с окном.
+      {
+        const win = room.windows[0];
+        const dw = Math.min(1200, Math.max(800, W - 1400)), dd = 600;
+        const cands = [];
+        if (win) {
+          const along = (win.wall === 'A' || win.wall === 'C');
+          const c0 = win.off, len = along ? W : L;
+          for (const off of [c0, c0 + win.w - dw, c0 - dw - 100, c0 + win.w + 100, 100, len - dw - 100]) {
+            const o = Math.max(80, Math.min((along ? W : L) - dw - 80, off));
+            if (win.wall === 'A') cands.push([o, 100]);
+            else if (win.wall === 'C') cands.push([o, L - dd - 100]);
+            else if (win.wall === 'D') cands.push([100, o]);
+            else cands.push([W - dd - 100, o]);
+          }
+        }
+        addScan('desk', `Стол ${dw}×${dd}`, dw, dd, cands);
+      }
       add('wardrobe', 'Шкаф', W - 700, L - 1600, 600, 1500);
       add('rug', 'Ковёр игровой', 1300, 1000, Math.min(1500, W - 1700), Math.min(1200, L - 1200));
       break; }
@@ -385,15 +454,29 @@ function furnitureFor(room) {
 }
 
 // ---------- свет ----------
-function lightsFor(room) {
-  const inset = 500, step = 1150, spots = [];
+// Свет и мебель обязаны знать друг о друге: спот в шкафу или над кроватью — брак,
+// а точка ближе 150 мм к кромке короба не даёт вырезать отверстие Ø75 (канон, раздел 5).
+function lightsFor(room, furn) {
+  const lv = ceilingLevelsFor(room);
+  const inset = Math.max(600, (lv.box || 0) + 150);
+  const step = 1150;
+  let spots = [];
   const nx = Math.max(2, Math.round((room.w - 2 * inset) / step) + 1);
   const ny = Math.max(2, Math.round((room.l - 2 * inset) / step) + 1);
   for (let i = 0; i < nx; i++) for (let j = 0; j < ny; j++)
     spots.push({ x: inset + i * (room.w - 2 * inset) / (nx - 1), y: inset + j * (room.l - 2 * inset) / (ny - 1) });
+  // корпусная мебель и спальные места: над ними точечный свет не ставим
+  const BLOCK = new Set(['wardrobe', 'hallwardrobe', 'shelf', 'dresser', 'bed', 'kidbed', 'fridge', 'kitchen', 'kitchen_ext']);
+  const blockers = (furn || furnitureFor(room)).filter(f => BLOCK.has(f.key));
+  const kept = spots.filter(s => !blockers.some(f =>
+    s.x > f.x - 150 && s.x < f.x + f.w + 150 && s.y > f.y - 150 && s.y < f.y + f.h + 150));
+  if (kept.length >= 2) spots = kept;   // если выбросили всё — оставляем сетку, лист не должен пустеть
   const pendant = ['living', 'bedroom', 'living-kitchen'].includes(room.type);
   const track = ['kitchen', 'living-kitchen'].includes(room.type);
-  return { spots, pendant, track };
+  const ip = room.type === 'bathroom' || room.type === 'wc';
+  // оценочная освещённость: 9 Вт на точку, ~90 лм/Вт, коэффициент использования 0,7
+  const lux = Math.round(spots.length * 9 * 90 * 0.7 / (room.w * room.l / 1e6) / 10) * 10;
+  return { spots, pendant, track, ip, lux };
 }
 
 // ---------- размерные цепочки (ярус 1 = сегменты, ярус 2 = габарит) ----------
@@ -462,7 +545,7 @@ function drawObmer(room, sheet) {
 <text x="${lbx}" y="${lby + 20}" font-size="10" fill="#57514A">P=${per} м · h=${room.h}</text></g>`;
   b += openLabels;
   b += `<text x="${M - WT}" y="${M - 104}" font-size="16" font-weight="700" fill="#2E2A26">Обмерный план · ${esc(room.name)}</text>`;
-  b += `<text x="${M - WT}" y="${M - 86}" font-size="11" fill="#7A756D">Все размеры в мм · Вп — высота подоконника, Н.пр — высота проёма · перегородки 150</text>`;
+  b += `<text x="${M - WT}" y="${M - 86}" font-size="11" fill="#7A756D">Все размеры в мм · Вп — высота подоконника, Н.пр — высота проёма · перегородки ${INT_MM}</text>`;
   // ключевые высоты — красной рамкой (по образцу проф. альбомов)
   const kw = room.windows[0], kd = room.doors[0];
   const keyH = `H=${room.h}${kw ? ` · Вп=${kw.sill} · Н.пр=${kw.h}` : ''}${kd ? ` · дверь ${kd.w}/${kd.h}` : ''} · без учёта отделочного слоя`;
@@ -727,7 +810,7 @@ function nichesFor(room) {
       pos = alts.find(a => a >= 0 && a + w <= len && !clash(wall, a, w));
       if (pos == null) return; // свободного участка нет — ниша не размещается
     }
-    n.push({ wall, off: pos, w, h, sill, depth: 100, label });
+    n.push({ wall, off: pos, w, h, sill, depth: NICHE_DEPTH, label });
   };
   switch (room.type) {
     case 'living-kitchen': add('D', (L - Math.min(2400, L - 800)) / 2, Math.min(2400, L - 800), 1500, 400, 'ТВ-ниша ГКЛ, LED 3000K по контуру'); break;
@@ -758,9 +841,24 @@ function nichesFor(room) {
 function ceilingLevelsFor(room) {
   const per = 2 * (room.w + room.l) / 1000;
   const three = ['living', 'living-kitchen'].includes(room.type) && room.w >= 3600 && room.l >= 3200;
-  const box = 450; // ширина короба 2-го уровня
+  // Короб 450 мм по периметру съедал санузел 1,85×2,6 целиком, а при ширине < 900
+  // прямоугольник вырождался. Ширина короба — от габарита помещения; в мокрых зонах,
+  // прихожих и на площади меньше 8 м² короб не строится: один уровень и люк у стояка.
+  const area = room.w * room.l / 1e6;
+  const minDim = Math.min(room.w, room.l);
+  const noBox = ['bathroom', 'wc', 'hallway'].includes(room.type) || area < 8 || minDim < 2400;
+  const box = noBox ? 0 : Math.max(300, Math.min(450, Math.round(minDim * 0.12 / 10) * 10));
   const inW = room.w - 2 * box, inL = room.l - 2 * box;
-  const lv = { box, boxLen: +(2 * (inW + inL) / 1000).toFixed(1), three, ledLen: 0, island: null };
+  const lv = { box, boxLen: box ? +(2 * (inW + inL) / 1000).toFixed(1) : 0, three: three && !noBox, ledLen: 0, island: null, oneLevel: noBox, hatch: null };
+  if (noBox) {
+    // ревизионный люк 300×300 у стояка (или в углу у входа, если стояков нет)
+    const rr = risersIn(room)[0];
+    lv.hatch = rr
+      ? { x: Math.max(60, Math.min(room.w - 360, rr.x - 150)), y: Math.max(60, Math.min(room.l - 360, rr.y - 150)), s: 300 }
+      : { x: room.w - 400, y: 100, s: 300 };
+    lv.ledLen = +(per * 0.35).toFixed(1);   // подсветка только по одной зоне
+    return lv;
+  }
   lv.ledLen = lv.boxLen; // LED по внутреннему контуру короба
   if (three) {
     const iw = Math.round(inW * 0.55), il = Math.round(inL * 0.55);
@@ -968,6 +1066,37 @@ function openingPlan(o, kind, M, WT, room) {
 }
 
 // CAD-подложка помещения: серые стены, штриховка по наружным (там, где окна)
+// Тип стены: сначала явное указание в брифе (room.walls), затем отрезки несущих
+// из object.bearing, затем эвристика: стена с окном — наружная несущая.
+function wallKind(room, wall) {
+  if (room.walls && room.walls[wall]) return room.walls[wall];
+  if (room.pos && BEARING.length) {
+    const horiz = wall === 'A' || wall === 'C';
+    const line = horiz ? room.pos.y + (wall === 'A' ? 0 : room.l) : room.pos.x + (wall === 'D' ? 0 : room.w);
+    const a0 = horiz ? room.pos.x : room.pos.y, a1 = a0 + (horiz ? room.w : room.l);
+    const hit = BEARING.some(b => {
+      const bh = Math.abs(b.y1 - b.y2) < 1;
+      if (bh !== horiz) return false;
+      const bl = bh ? b.y1 : b.x1;
+      if (Math.abs(bl - line) > 300) return false;
+      const b0 = Math.min(bh ? b.x1 : b.y1, bh ? b.x2 : b.y2), b1 = Math.max(bh ? b.x1 : b.x2, bh ? b.y1 : b.y2);
+      return a0 < b1 && a1 > b0;
+    });
+    if (hit) return 'bearing';
+  }
+  return room.windows.some(o => o.wall === wall) ? 'bearing' : 'partition';
+}
+// толщина стены помещения по её типу
+const wallThick = (room, wall) => wallKind(room, wall) === 'bearing' ? EXT_MM : INT_MM;
+
+// стояки, попадающие в помещение (координаты — от угла помещения)
+function risersIn(room) {
+  if (!room.pos) return [];
+  return RISERS.filter(r => r.x >= room.pos.x - 100 && r.x <= room.pos.x + room.w + 100
+                         && r.y >= room.pos.y - 100 && r.y <= room.pos.y + room.l + 100)
+    .map(r => ({ x: r.x - room.pos.x, y: r.y - room.pos.y, d: r.d, kind: r.kind }));
+}
+
 function roomWalls(M, WT, room, id, insideFill) {
   const w = px(room.w), l = px(room.l);
   let s = `<defs><pattern id="rh${id}" width="7" height="7" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="7" height="7" fill="${CAD.wallFill}"/><line x1="0" y1="0" x2="0" y2="7" stroke="${CAD.hatch}" stroke-width="2"/></pattern></defs>`;
@@ -1661,6 +1790,14 @@ function drawCeiling(room, sheet) {
   let b = roomWalls(M, WT, room, sheet, '#E9E4D8');
   // уровень 1 (базовый потолок) — внутренняя зона
   const bx = M + px(lv.box), by = M + px(lv.box), bw = w - 2 * px(lv.box), bl = l - 2 * px(lv.box);
+  // Одноуровневый потолок (мокрая зона, прихожая, площадь < 8 м²): короб не строится,
+  // вместо него — ревизионный люк 300×300 у стояка. Короб 450 по периметру в санузле
+  // 1,85 м съедал всё поле, а при ширине < 900 прямоугольник вырождался.
+  const oneLevelSvg = lv.oneLevel && lv.hatch
+    ? `<rect x="${M + px(lv.hatch.x)}" y="${M + px(lv.hatch.y)}" width="${px(lv.hatch.s)}" height="${px(lv.hatch.s)}" fill="none" stroke="#57514A" stroke-width="1.1" stroke-dasharray="4 2"/>`
+      + `<line x1="${M + px(lv.hatch.x)}" y1="${M + px(lv.hatch.y)}" x2="${M + px(lv.hatch.x + lv.hatch.s)}" y2="${M + px(lv.hatch.y + lv.hatch.s)}" stroke="#57514A" stroke-width="0.6"/>`
+      + `<text x="${M + px(lv.hatch.x + lv.hatch.s / 2)}" y="${M + px(lv.hatch.y + lv.hatch.s) + 11}" font-size="8" fill="#57514A" text-anchor="middle">люк ревизии 300×300</text>`
+    : '';
   b += `<rect x="${bx}" y="${by}" width="${bw}" height="${bl}" fill="#F6F3EC" stroke="#57514A" stroke-width="1.2"/>`;
   // LED по внутреннему контуру короба
   b += `<rect x="${bx + 4}" y="${by + 4}" width="${bw - 8}" height="${bl - 8}" fill="none" stroke="#C29A5B" stroke-width="1.4" stroke-dasharray="6 4"/>`;
@@ -1694,10 +1831,12 @@ function drawCeiling(room, sheet) {
     !spotsPx.some(sp => sp.x > c[0] - 8 && sp.x < c[0] + bw2 + 8 && sp.y > c[1] - 8 && sp.y < c[1] + bh + 8)
     && !busy.some(r => c[0] < r.x + r.w + 6 && c[0] + bw2 > r.x - 6 && c[1] < r.y + r.h + 6 && c[1] + bh > r.y - 6)
   ) || list[0] || [M + 8, M + l - 24];
-  const t2 = `2 ур. · короб ${lv.box}`, w2 = t2.length * 5.6 + 14;
+  const t2 = lv.oneLevel ? '1 ур. · ГКЛ по периметру' : `2 ур. · короб ${lv.box}`, w2 = t2.length * 5.6 + 14;
   const p2 = freeRect(cands2f.length ? cands2f : cands2, w2, 16);
-  let levelPlates = levelPlan(p2[0], p2[1], room.h - drop, t2) + `<g font-size="10" fill="#2E2A26">`;
-  levelPlates += `</g>` + levelPlan(bx + bw - 108, by + bl - 26, room.h, '1 ур.');
+  let levelPlates = lv.oneLevel
+    ? levelPlan(p2[0], p2[1], room.h - CEIL_DROP1, 'чистовой потолок, ГКЛ по периметру') + `<g font-size="10" fill="#2E2A26">`
+    : levelPlan(p2[0], p2[1], room.h - CEIL_DROP1 - drop, t2) + `<g font-size="10" fill="#2E2A26">`;
+  levelPlates += `</g>` + (lv.oneLevel ? '' : levelPlan(bx + bw - 108, by + bl - 26, room.h - CEIL_DROP1, '1 ур.'));
 
   // уровень 3 — «парящий остров» с Phase 2 расширениями
   if (lv.three && lv.island) {
@@ -1779,9 +1918,9 @@ function drawCeiling(room, sheet) {
 
   b += chainDimH(M, M + l + 34, room.w, [], true);
   b += chainDimV(M + w + 34, M, room.l, [], true);
-  b += levelPlates + islandLabel;
+  b += oneLevelSvg + levelPlates + islandLabel;
   b += `<text x="${M - WT}" y="${M - 46}" font-size="16" font-weight="700" fill="#2E2A26">План потолка · ${esc(room.name)}</text>`;
-  b += `<text x="${M - WT}" y="${M - 28}" font-size="11" fill="#7A756D">${esc(style.ceiling)} · ${lv.three ? '3 уровня' : '2 уровня'} · перепад ${drop} мм · LED ${lv.ledLen} м.п. · отметки от чистого пола</text>`;
+  b += `<text x="${M - WT}" y="${M - 28}" font-size="11" fill="#7A756D">${esc(style.ceiling)} · ${lv.oneLevel ? 'один уровень, люк ревизии 300×300' : (lv.three ? '3 уровня' : '2 уровня') + ' · перепад ' + drop + ' мм'} · LED ${lv.ledLen} м.п. · отметки от чистого пола</text>`;
   b += dimH(M, M + w, M + l + 34, String(room.w));
   b += dimV(M + w + 34, M, M + l, String(room.l));
 
@@ -1807,7 +1946,7 @@ function drawCeiling(room, sheet) {
   b += `<text x="${M + 300}" y="${ly + 22}" font-weight="600" fill="#2E2A26">≈ ${totalW} Вт</text>`;
   b += `</g>`;
 
-  b += `<text x="${M - WT}" y="${ly + 38}" font-size="9" fill="#8A8478">Короб 2-го уровня: ГКЛ 12,5 по каркасу ПП 60×27 шаг 600 · LED-полка 100, бортик 50, зазор 70 (узел — лист «Узел А») · закладные под подвесные светильники</text>`;
+  b += `<text x="${M - WT}" y="${ly + 38}" font-size="9" fill="#8A8478">${lv.oneLevel ? 'Потолок в один уровень: ГКЛ 12,5 по каркасу ПП 60×27 шаг 600, ревизионный люк у стояка' : 'Короб 2-го уровня: ГКЛ 12,5 по каркасу ПП 60×27 шаг 600 · LED-полка 100, бортик 50, зазор 70 (узел — лист «Узел А»)'} · закладные под подвесные светильники</text>`;
   b += `<text x="${M - WT}" y="${ly + 52}" font-size="8.5" fill="#8A8478">все группы на диммерах Schneider Sedna / Legrand Valena Life</text>`;
   b += `<text x="${M - WT}" y="${ly + 66}" font-size="8.5" fill="#8A8478">Умный дом: группы 1–${numGrps} на диммерах, управление через Яндекс Алиса / Tuya. Цветовая температура: споты 2700К, подсветка 3000К, кухня 4000К.</text>`;
   b += stamp(M - WT, l + M * 2 + 155, w + 2 * WT + 40, `Потолок. ${room.name}`, sheet);
@@ -2496,7 +2635,7 @@ const CAD = {
 // раскладываем помещения рядами по ширине «полосы», жилые сверху, служебные снизу —
 // это даёт связную планировку для сводных листов вместо их пропуска.
 function autoLayout(level) {
-  const INT = 150; // перегородка между помещениями, мм
+  const INT = INT_MM; // перегородка между помещениями по конструктиву объекта, мм
   const order = rooms.filter(r => (r.level || 1) === (level || 1)).sort((a, b) => {
     const rank = t => ({ 'living-kitchen': 0, living: 1, kitchen: 2, bedroom: 3, kids: 4, cabinet: 5, hallway: 6, bathroom: 7, wc: 8 }[t] ?? 9);
     return rank(a.type) - rank(b.type) || b.area - a.area;
@@ -2537,8 +2676,12 @@ function setLevel(lv) {
   FLAT.W = FLAT.x1 - FLAT.x0; FLAT.H = FLAT.y1 - FLAT.y0;
 }
 setLevel(LEVELS[0]);
-const EXT = 200; // наружная стена, мм
-const BASE_H = rooms.length ? rooms[0].h : 2700; // высота потолка объекта, мм
+const EXT = EXT_MM; // наружная стена по конструктиву объекта, мм
+// Первый уровень потолка ниже плиты на толщину подвесной системы (ПП 60×27 + ГКЛ 12,5
+// плюс зазор). Раньше «+2,700» ставили по низу плиты, что противоречило собственному
+// узлу А (−180 мм) — и за этой ошибкой ехали высоты дверей, ниш и разверток.
+const CEIL_DROP1 = 90;
+const BASE_H = (rooms.length ? rooms[0].h : 2700) - CEIL_DROP1; // отметка 1-го уровня потолка, мм
 
 function flatLayer(MX, MY, opts) {
   opts = opts || {};
@@ -2584,6 +2727,28 @@ function flatLayer(MX, MY, opts) {
     s += `<rect x="${rx}" y="${ry}" width="${rw2}" height="${rh2}" fill="${CAD.paper}" stroke="${CAD.wallStroke}" stroke-width="1"/>`;
     if (horiz) { const my = ry + rh2 / 2; s += `<line x1="${rx}" y1="${my - 2.2}" x2="${rx + rw2}" y2="${my - 2.2}" stroke="${CAD.window}" stroke-width="1.6"/><line x1="${rx}" y1="${my + 2.2}" x2="${rx + rw2}" y2="${my + 2.2}" stroke="${CAD.wallStroke}" stroke-width="0.7"/>`; }
     else { const mx = rx + rw2 / 2; s += `<line x1="${mx - 2.2}" y1="${ry}" x2="${mx - 2.2}" y2="${ry + rh2}" stroke="${CAD.window}" stroke-width="1.6"/><line x1="${mx + 2.2}" y1="${ry}" x2="${mx + 2.2}" y2="${ry + rh2}" stroke="${CAD.wallStroke}" stroke-width="0.7"/>`; }
+  }
+  // ---- несущие стены: сплошная заливка по ГОСТ 2.306 (сечение ж/б) вместо серого ----
+  // Без признака несущей стены лист демонтажа обещает то, чего не знает.
+  if (BEARING.length && opts.bearing !== false) {
+    s += `<defs><pattern id="bh${opts.id || 0}" width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="6" height="6" fill="${pale ? '#D2D2D2' : '#8A8A8A'}"/><line x1="0" y1="0" x2="0" y2="6" stroke="${pale ? '#AFAFAF' : '#3C3C3C'}" stroke-width="2.4"/></pattern></defs>`;
+    for (const b of BEARING) {
+      const horiz = Math.abs(b.y1 - b.y2) < 1;
+      const t = px(b.t);
+      const x0 = fx(Math.min(b.x1, b.x2)), y0 = fy(Math.min(b.y1, b.y2));
+      const w0 = horiz ? px(Math.abs(b.x2 - b.x1)) : t, h0 = horiz ? t : px(Math.abs(b.y2 - b.y1));
+      s += `<rect x="${x0 - (horiz ? 0 : t / 2)}" y="${y0 - (horiz ? t / 2 : 0)}" width="${w0}" height="${h0}" fill="url(#bh${opts.id || 0})" stroke="${wallS}" stroke-width="${pale ? 0.8 : 1.2}"/>`;
+    }
+  }
+  // ---- стояки: без них невозможна ни сантехника, ни расстановка мебели ----
+  if (RISERS.length && opts.risers !== false) {
+    for (const r of RISERS) {
+      const cx = fx(r.x), cy = fy(r.y), rr = Math.max(2.5, px(r.d) / 2);
+      const col = r.kind === 'vent' ? '#7A756D' : r.kind === 'water' ? '#2E9BD8' : '#2E6FA8';
+      s += `<circle cx="${cx}" cy="${cy}" r="${rr}" fill="${pale ? '#FFF' : '#E8F2FC'}" stroke="${col}" stroke-width="1.1"/>`;
+      s += `<line x1="${cx - rr}" y1="${cy}" x2="${cx + rr}" y2="${cy}" stroke="${col}" stroke-width="0.7"/>`;
+      s += `<line x1="${cx}" y1="${cy - rr}" x2="${cx}" y2="${cy + rr}" stroke="${col}" stroke-width="0.7"/>`;
+    }
   }
   return { s, fx, fy };
 }
@@ -2728,7 +2893,7 @@ function drawFlatObmer(sheetNo) {
     for (let i = 0; i + 1 < ys.length; i++) if (ys[i + 1] - ys[i] > 60) chY += dimV(xr, base.fy(ys[i]), base.fy(ys[i + 1]), String(ys[i + 1] - ys[i]));
     chY += dimV(xr + 24, base.fy(FLAT.y0) - px(EXT), base.fy(FLAT.y1) + px(EXT), String(FLAT.H + 2 * EXT));
     s += `<g data-el="chain">${chX}</g><g data-el="chain">${chY}</g>`;
-    s += `<g><rect x="${base.fx(FLAT.x0) - px(EXT)}" y="${base.fy(FLAT.y0) - px(EXT) - 26}" width="430" height="18" fill="#FFF6F4" stroke="#B0483A" stroke-width="1.1"/><text x="${base.fx(FLAT.x0) - px(EXT) + 8}" y="${base.fy(FLAT.y0) - px(EXT) - 13}" font-size="10" font-weight="600" fill="#B0483A">H=${BASE_H} · наружные стены 200, перегородки 150 · без учёта отделочного слоя</text></g>`;
+    s += `<g><rect x="${base.fx(FLAT.x0) - px(EXT)}" y="${base.fy(FLAT.y0) - px(EXT) - 26}" width="430" height="18" fill="#FFF6F4" stroke="#B0483A" stroke-width="1.1"/><text x="${base.fx(FLAT.x0) - px(EXT) + 8}" y="${base.fy(FLAT.y0) - px(EXT) - 13}" font-size="10" font-weight="600" fill="#B0483A">H=${BASE_H + CEIL_DROP1} · ${HOUSE_RU[HOUSE] || HOUSE} · наружные и несущие ${EXT_MM}, перегородки ${INT_MM} · без учёта отделочного слоя</text></g>`;
     return s;
   }, (x, y, w) => {
     let s = `<rect x="${x}" y="${y}" width="${w}" height="${flatRooms.length * 20 + 58}" fill="none" stroke="#8A8478" stroke-width="0.8"/>`;
@@ -2751,7 +2916,8 @@ function drawFlatObmer(sheetNo) {
       { sym: (sx, sy) => `<g stroke="${CAD.wallStroke}" stroke-width="0.8" fill="none"><rect x="${sx}" y="${sy - 8}" width="17" height="9" fill="${CAD.paper}"/><line x1="${sx}" y1="${sy - 5}" x2="${sx + 17}" y2="${sy - 5}" stroke="${CAD.window}" stroke-width="1.4"/></g>`, text: 'оконный проём: ширина × высота, отметка подоконника' },
       { sym: (sx, sy) => `<g stroke="${CAD.doorArc}" stroke-width="0.9" fill="none"><line x1="${sx}" y1="${sy}" x2="${sx}" y2="${sy - 12}"/><path d="M ${sx} ${sy - 12} A 12 12 0 0 1 ${sx + 12} ${sy}" stroke-dasharray="2 2"/></g>`, text: 'дверной проём, дуга — сторона открывания (ГОСТ 21.201)' },
       { sym: (sx, sy) => `<g stroke="#2A2A2A" stroke-width="0.8" fill="none"><line x1="${sx}" y1="${sy - 4}" x2="${sx + 17}" y2="${sy - 4}"/><line x1="${sx + 1}" y1="${sy - 1}" x2="${sx + 5}" y2="${sy - 7}"/><line x1="${sx + 13}" y1="${sy - 1}" x2="${sx + 17}" y2="${sy - 7}"/></g>`, text: 'размерная цепочка, засечки 45° (ГОСТ 2.307)' },
-    ]);
+    ].concat(BEARING.length ? [{ sym: (sx, sy) => `<g><rect x="${sx}" y="${sy - 9}" width="17" height="11" fill="#8A8A8A" stroke="#1C1C1C" stroke-width="0.9"/><line x1="${sx}" y1="${sy + 2}" x2="${sx + 17}" y2="${sy - 9}" stroke="#3C3C3C" stroke-width="1.4"/></g>`, text: `несущая стена ${EXT_MM} мм — штробление и проёмы только по проекту` }] : [])
+     .concat(RISERS.length ? [{ sym: (sx, sy) => `<g stroke="#2E6FA8" stroke-width="1.1" fill="#E8F2FC"><circle cx="${sx + 8}" cy="${sy - 3}" r="5"/><line x1="${sx + 3}" y1="${sy - 3}" x2="${sx + 13}" y2="${sy - 3}"/><line x1="${sx + 8}" y1="${sy - 8}" x2="${sx + 8}" y2="${sy + 2}"/></g>`, text: 'стояк (канализация / вода / вентиляция) — существующий' }] : []));
     return s;
   }, ['Все размеры даны в мм по внутренним поверхностям стен, без учёта отделочного слоя.', 'Размеры проверять по месту; допуск обмера ±5 мм в зонах встроенной мебели и санузлов.', 'За отметку 0,000 принят уровень чистового пола.']);
 }
@@ -2966,7 +3132,7 @@ function drawFlatCeiling(sheetNo) {
     let s = '';
     for (const r of flatRooms) {
       const lv = ceilingLevelsFor(r);
-      s += levelPlan(base.fx(r.pos.x + r.w / 2) - 30, base.fy(r.pos.y + r.l / 2) + 16, r.h - (lv.box ? 120 : 0), lv.box ? '2 ур.' : '1 ур.');
+      s += levelPlan(base.fx(r.pos.x + r.w / 2) - 30, base.fy(r.pos.y + r.l / 2) + 16, r.h - CEIL_DROP1 - (lv.box ? 120 : 0), lv.box ? '2 ур.' : '1 ур.');
     }
     return s;
   };
@@ -2977,7 +3143,11 @@ function drawFlatCeiling(sheetNo) {
       const rx = base.fx(r.pos.x), ry = base.fy(r.pos.y), rw2 = px(r.w), rh2 = px(r.l);
       s += `<rect x="${rx}" y="${ry}" width="${rw2}" height="${rh2}" fill="#E9E4D8"/>`;
       const off = px(lv.box);
-      s += `<rect x="${rx + off}" y="${ry + off}" width="${rw2 - 2 * off}" height="${rh2 - 2 * off}" fill="#F6F3EC" stroke="#57514A" stroke-width="0.9"/>`;
+      if (lv.oneLevel && lv.hatch) {
+        s += `<rect x="${rx + px(lv.hatch.x)}" y="${ry + px(lv.hatch.y)}" width="${px(lv.hatch.s)}" height="${px(lv.hatch.s)}" fill="none" stroke="#57514A" stroke-width="1" stroke-dasharray="4 2"/>`;
+        s += `<line x1="${rx + px(lv.hatch.x)}" y1="${ry + px(lv.hatch.y)}" x2="${rx + px(lv.hatch.x + lv.hatch.s)}" y2="${ry + px(lv.hatch.y + lv.hatch.s)}" stroke="#57514A" stroke-width="0.6"/>`;
+      }
+      s += `<rect x="${rx + off}" y="${ry + off}" width="${rw2 - 2 * off}" height="${rh2 - 2 * off}" fill="#F6F3EC" stroke="#57514A" stroke-width="${lv.oneLevel ? 0 : 0.9}"/>`;
       s += `<rect x="${rx + off + 3}" y="${ry + off + 3}" width="${rw2 - 2 * off - 6}" height="${rh2 - 2 * off - 6}" fill="none" stroke="#C29A5B" stroke-width="1.1" stroke-dasharray="5 3"/>`;
       if (lv.three && lv.island) s += `<rect x="${base.fx(r.pos.x + lv.island.x)}" y="${base.fy(r.pos.y + lv.island.y)}" width="${px(lv.island.w)}" height="${px(lv.island.l)}" fill="#E0D9C9" stroke="#57514A" stroke-width="0.9"/>`;
       for (const sp of lightsFor(r).spots) s += `<circle cx="${base.fx(r.pos.x + sp.x)}" cy="${base.fy(r.pos.y + sp.y)}" r="3" fill="#FFF" stroke="#57514A" stroke-width="0.8"/>`;
@@ -3514,7 +3684,10 @@ function buildSmeta() {
     R('Черновые работы', r.name, WORK_RATES.screed.name, 'м²', g.floor, WORK_RATES.screed.rate * tier.k);
     R('Черновые работы', r.name, WORK_RATES.plaster.name, 'м²', g.walls, WORK_RATES.plaster.rate * tier.k);
     R('Черновые работы', r.name, WORK_RATES.ceilGkl.name + ' (1-й уровень)', 'м²', g.floor, WORK_RATES.ceilGkl.rate * tier.k);
-    R('Черновые работы', r.name, 'Короб потолка 2-го уровня с LED-полкой (ГКЛ, каркас)', 'м.п.', lv.boxLen, 1450 * tier.k);
+    // короб начисляем только там, где он есть: в мокрых зонах, прихожих и на площади
+    // меньше 8 м² потолок одноуровневый — вместо короба ревизионный люк
+    if (lv.boxLen > 0) R('Черновые работы', r.name, 'Короб потолка 2-го уровня с LED-полкой (ГКЛ, каркас)', 'м.п.', lv.boxLen, 1450 * tier.k);
+    else R('Черновые работы', r.name, 'Ревизионный люк 300×300 в потолке у стояка', 'шт.', 1, 4200 * tier.k);
     if (lv.three && lv.island) R('Черновые работы', r.name, '3-й уровень: «парящий» остров с теневой щелью', 'м²', lv.island.w * lv.island.l / 1e6, 2100 * tier.k);
     for (const n of niches) R('Черновые работы', r.name, `${n.label} (${n.w}×${n.h}, глуб. ${n.depth})`, 'шт.', 1, (/панель/i.test(n.label) ? 9500 : 6500) * tier.k);
     R('Черновые работы', r.name, WORK_RATES.electro.name + ` (свет ${L.spots.length + (L.pendant ? 1 : 0) + (L.track ? 1 : 0)} + розетки/выкл. ${epts.length})`, 'точка', L.spots.length + (L.pendant ? 1 : 0) + (L.track ? 1 : 0) + epts.length, WORK_RATES.electro.rate * tier.k);
