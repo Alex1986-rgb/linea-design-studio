@@ -64,6 +64,9 @@ const RULES = {
   node:             { need: { stamp: 1, level: 1 }, want: { leader: 1, sheetRef: 1 }, scales: SCALES_NODE },
   // разрез: конструкции в сечении, отметки уровней, габариты помещений по линии сечения
   section:          { need: { stamp: 1, level: 3, dim: 2, notes: 1 }, want: { leader: 1, chain: 1 }, scales: SCALES_PLAN },
+  // лестница: два плана по ГОСТ 21.201-2011 (табл. 6), развёртка марша с цепочкой
+  // подъёмов, отметки этажей и площадки, ведомость параметров и нормативные примечания
+  stairs:           { need: { stamp: 1, level: 2, chain: 2, spec: 1, notes: 1 }, want: { leader: 2, dim: 4 }, scales: SCALES_PLAN },
   // щит: однолинейка с аппаратами защиты и кабельный журнал с длинами
   panel:            { need: { stamp: 1, notes: 1, spec: 1 }, want: { legend: 1 }, scales: SCALES_PLAN },
   // презентационный лист для клиента: намеренно без размерных цепочек и привязок

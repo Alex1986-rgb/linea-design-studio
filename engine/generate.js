@@ -4291,6 +4291,232 @@ function drawFlatSection(axis, sheetNo) {
 }
 
 // ================================================================
+// ЛЕСТНИЦА
+// До этого листа лестница жила на планах как «мебель»: марш со стрелкой и без
+// единого размера. Строить по такому нельзя — нужны число подъёмов, высота
+// ступени, заложение и ограждение.
+// Нормативная рамка:
+//  · ГОСТ 21.201-2011, 4.6 и таблица 6 — обозначения маршей на планах и разрезах,
+//    стрелкой указывают направление подъёма, нижний марш показывают с линией обрыва;
+//  · СП 55.13330.2016, 7.5 — в двухэтажном доме внутренняя открытая лестница
+//    2-го типа: ширина и уклон не нормируются, размеры принимаем из удобства;
+//  · СП 55.13330.2016, 8.2 — ступени разной высоты в одном марше не допускаются;
+//  · СП 55.13330.2016, 8.3 — ограждение непрерывное, не ниже 0,9 м, с поручнем,
+//    рассчитанное на горизонтальную нагрузку не менее 0,3 кН/м;
+//  · формула удобства (Блондель) 2h + b = 600…640 мм — практика, не норматив.
+// ================================================================
+function stairsGeom() {
+  const up = rooms.find(r => r.stairs === 'up');
+  if (!up) return null;
+  const H = Math.round(up.h + SLAB_MM);                 // от чистого пола до чистого пола
+  // Число подъёмов подбираем так, чтобы высота ступени легла в 150–180 мм,
+  // а сами подъёмы остались одинаковыми (СП 55.13330.2016, 8.2).
+  let n = Math.max(3, Math.round(H / 175));
+  while (H / n > 180) n++;
+  while (H / n < 150 && n > 3) n--;
+  const h = Math.round(H / n * 10) / 10;
+  let b = Math.round((620 - 2 * h) / 5) * 5;            // 2h + b = 600…640
+  b = Math.min(320, Math.max(250, b));
+  const width = Math.min(1100, Math.max(900, Math.min(up.w, up.l) - 1200));
+  const along = Math.max(up.w, up.l) - 300;             // сколько длины помещения можно занять
+  const single = (n - 1) * b <= along;
+  const n1 = single ? n : Math.ceil(n / 2), n2 = single ? 0 : n - n1;
+  const landing = single ? 0 : Math.max(width, 900);    // площадка не уже марша
+  return {
+    room: up, H, n, h, b, width, single, n1, n2, landing,
+    goA: (n1 - 1) * b, goB: n2 ? (n2 - 1) * b : 0,
+    angle: Math.round(Math.atan(h / b) * 180 / Math.PI),
+    blondel: Math.round(2 * h + b),
+    upper: rooms.find(r => r.stairs === 'down' && (r.level || 1) === (up.level || 1) + 1) || null,
+  };
+}
+
+// План марша. which: 'lower' — план нижнего этажа (восходящий марш с линией обрыва),
+// 'upper' — план верхнего (нисходящий марш). Координаты локальные, в модельных единицах.
+function stairPlanBlock(ox, oy, g, which) {
+  const W = px(g.width), GAP = px(100), LAND = px(g.landing);
+  const goA = px(g.goA), goB = px(g.goB), bb = px(g.b);
+  const Wt = g.single ? W : 2 * W + GAP;
+  const Lt = LAND + Math.max(goA, goB);
+  let s = '', up = which === 'lower';
+  // на плане этажа секущая плоскость проходит на 1/3 высоты этажа (ГОСТ 21.501-2018, 5.3.1):
+  // ниже неё марш виден, выше — обрывается
+  const cut = Math.max(2, Math.min(g.n1 - 1, Math.round((g.H / 3) / g.h)));
+  const thin = `stroke="${CAD.wallStroke}" stroke-width="0.8"`;   // без fill: заливку задаёт вызывающий
+  // контур площадки
+  if (!g.single) s += `<rect x="${ox}" y="${oy}" width="${Wt}" height="${LAND}" fill="#F2EFE8" ${thin}/>`;
+  // марш A — восходящий, слева; марш B — нисходящий, справа
+  const flight = (fx, go, steps, from, dir, cut) => {
+    let t = `<rect x="${fx}" y="${oy + LAND}" width="${W}" height="${go}" fill="#F7F5F0" ${thin}/>`;
+    // ступени внутри марша
+    for (let i = 1; i < steps; i++) {
+      const y = dir > 0 ? oy + LAND + i * bb : oy + LAND + go - i * bb;
+      if (cut && ((dir > 0 && i > cut) || (dir < 0 && i > cut))) continue;
+      t += `<line x1="${fx}" y1="${y}" x2="${fx + W}" y2="${y}" ${thin} fill="none"/>`;
+      t += `<text x="${fx + W - px(60)}" y="${y - px(30)}" font-size="7" fill="#7A756D" text-anchor="end">${from + i}</text>`;
+    }
+    if (!cut) {
+      const yl = dir > 0 ? oy + LAND + go : oy + LAND;
+      t += `<text x="${fx + W - px(60)}" y="${yl + (dir > 0 ? -px(30) : px(150))}" font-size="7" fill="#7A756D" text-anchor="end">${from + steps}</text>`;
+    }
+    return t;
+  };
+  const xA = ox, xB = ox + Wt - W;
+  if (up) {
+    s += flight(xA, goA, g.n1, 0, -1, cut);
+    // линия обрыва по ГОСТ 21.201-2011, таблица 6 — наклонная под 30°
+    const yc = oy + LAND + goA - cut * bb;
+    s += `<g data-el="leader" stroke="${CAD.wallStroke}" stroke-width="1.1"><line x1="${xA - px(60)}" y1="${yc + px(220)}" x2="${xA + W + px(60)}" y2="${yc - px(220)}"/></g>`;
+    s += `<text x="${xA + W + px(90)}" y="${yc - px(200)}" font-size="7.4" fill="#7A756D">линия обрыва марша</text>`;
+  } else {
+    if (!g.single) s += flight(xB, goB, g.n2, g.n1, 1, 0);
+    else s += flight(xA, goA, g.n1, 0, 1, 0);
+    // проём в перекрытии над нижним маршем
+    s += `<rect x="${xA}" y="${oy + LAND}" width="${W}" height="${goA}" fill="none" stroke="${CAD.wallStroke}" stroke-width="0.7" stroke-dasharray="6 4"/>`;
+    s += `<text x="${xA + W / 2}" y="${oy + LAND + goA / 2}" font-size="7.4" fill="#9A948A" text-anchor="middle">проём в перекрытии</text>`;
+  }
+  // стрелка направления подъёма/спуска: кружок в начале пути (ГОСТ 21.201-2011, таблица 6)
+  const cA = xA + W / 2, cB = xB + W / 2;
+  const arrow = (x1, y1, x2, y2, mid) => {
+    // mid — точка перелома на площадке; путь идёт строго по осям марша,
+    // диагональ через оба марша читалась бы как ошибка
+    const prev = mid ? [mid[0] === x1 ? x2 : x1, mid[1]] : [x1, y1];
+    const a = Math.atan2(y2 - prev[1], x2 - prev[0]), L = px(90);
+    let t = `<g data-el="leader" stroke="${CAD.furn}" stroke-width="1.2" fill="none"><circle cx="${x1}" cy="${y1}" r="${px(70)}"/>`;
+    t += mid ? `<polyline points="${x1},${y1} ${mid[0]},${mid[1]} ${x2},${mid[1]} ${x2},${y2}"/>` : `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}"/>`;
+    t += `<line x1="${x2}" y1="${y2}" x2="${x2 - L * Math.cos(a - 0.4)}" y2="${y2 - L * Math.sin(a - 0.4)}"/>`;
+    t += `<line x1="${x2}" y1="${y2}" x2="${x2 - L * Math.cos(a + 0.4)}" y2="${y2 - L * Math.sin(a + 0.4)}"/></g>`;
+    return t;
+  };
+  if (up) {
+    // подъём: кружок у первой ступени, стрелка обрывается вместе с маршем
+    const y0 = oy + LAND + goA - px(80);
+    const yc = oy + LAND + goA - cut * bb;
+    s += arrow(cA, y0, cA, yc + px(150));
+    s += `<text x="${xA + px(120)}" y="${y0 - px(40)}" font-size="8" font-weight="600" fill="${CAD.furn}">ВВЕРХ</text>`;
+  } else {
+    // спуск: кружок у кромки перекрытия верхнего этажа, стрелка — до площадки
+    const src = g.single ? cA : cB;
+    const goSelf = g.single ? goA : goB;
+    s += arrow(src, oy + LAND + goSelf - px(80), src, oy + LAND + px(120));
+    s += `<text x="${(g.single ? xA : xB) + px(120)}" y="${oy + LAND + goSelf - px(40)}" font-size="8" font-weight="600" fill="${CAD.furn}">ВНИЗ</text>`;
+  }
+  // ограждение по свободной стороне марша
+  const rail = (x) => `<line x1="${x}" y1="${oy + LAND}" x2="${x}" y2="${oy + Lt}" stroke="${CAD.furn}" stroke-width="1.4"/>`;
+  s += rail(g.single ? xA + W : xA + W);
+  if (!g.single) s += rail(xB);
+  return { svg: s, w: Wt, h: Lt };
+}
+
+function drawStairs(sheetNo) {
+  const g = stairsGeom();
+  const M = 120, num = v => String(Math.round(v * 10) / 10).replace('.', ',');
+  let b = '', ink = inkMap(), chain = '';
+  const W = px(g.width), LAND = px(g.landing);
+  const Wt = g.single ? W : 2 * W + px(100);
+  const Lt = LAND + Math.max(px(g.goA), px(g.goB));
+
+  // ---- два плана: нижний и верхний этаж (ГОСТ 21.201-2011, таблица 6) ----
+  const p1 = stairPlanBlock(M, M + px(300), g, 'lower');
+  const p2x = M + Wt + px(1400);
+  const p2 = stairPlanBlock(p2x, M + px(300), g, 'upper');
+  b += p1.svg + p2.svg;
+  b += `<text x="${M}" y="${M + px(120)}" font-size="12" font-weight="700" fill="#2E2A26">План на отм. 0,000</text>`;
+  b += `<text x="${p2x}" y="${M + px(120)}" font-size="12" font-weight="700" fill="#2E2A26">План на отм. ${mark(g.H)}</text>`;
+
+  // цепочки на плане: ширина марша, зазор, заложение, площадка
+  const yTop = M + px(300), yBot = yTop + Lt;
+  chain += dimH(M, M + W, yBot + px(220), String(g.width));
+  if (!g.single) {
+    chain += dimH(M + W, M + W + px(100), yBot + px(220), '100');
+    chain += dimH(M + W + px(100), M + Wt, yBot + px(220), String(g.width));
+    chain += dimH(M, M + Wt, yBot + px(520), String(Math.round(2 * g.width + 100)));
+    chain += dimV(M - px(260), yTop, yTop + LAND, String(g.landing));
+  }
+  chain += dimV(M - px(560), yTop + LAND, yBot, `${g.n1 - 1}×${g.b} = ${g.goA}`);
+  chain += dimV(M - px(880), yTop, yBot, String(g.landing + g.goA));
+  b += `<g data-el="chain">${chain}</g>`;
+
+  // ---- ведомость параметров: правее планов, чтобы не легла на разрез ----
+  const tx = p2x + Wt + px(900), ty = M + px(420);
+
+  // ---- развёрнутый разрез по маршу ----
+  const sy = yBot + px(1700), sx = M;
+  const hh = px(g.h), bb = px(g.b), SLAB = px(SLAB_MM);
+  const base = sy + px(g.H);                       // уровень чистого пола нижнего этажа
+  let prof = `M ${sx} ${base}`;                    // профиль ступеней слева направо
+  let cx = sx, cy = base;
+  const nose = [];
+  for (let i = 1; i <= g.n1; i++) { cy -= hh; prof += ` L ${cx} ${cy}`; nose.push([cx, cy]); if (i < g.n1) { cx += bb; prof += ` L ${cx} ${cy}`; } }
+  if (!g.single) { cx += LAND; prof += ` L ${cx} ${cy}`; nose.push([cx, cy]); }
+  for (let i = 1; i <= g.n2; i++) { cy -= hh; prof += ` L ${cx} ${cy}`; nose.push([cx, cy]); if (i < g.n2) { cx += bb; prof += ` L ${cx} ${cy}`; } }
+  const runEnd = cx;
+  b += `<path d="${prof}" fill="none" stroke="${CAD.wallStroke}" stroke-width="1.6"/>`;
+  // косоур/плита марша толщиной 160 мм под линией носков
+  b += `<path d="${prof} L ${runEnd} ${cy + px(160)} L ${sx} ${base + px(160)} Z" fill="#EDE9E0" stroke="${CAD.wallStroke}" stroke-width="0.9"/>`;
+  // перекрытия: нижнее и верхнее
+  b += `<rect x="${sx - px(900)}" y="${base}" width="${px(900)}" height="${SLAB}" fill="#B9B2A4" stroke="${CAD.wallStroke}" stroke-width="1.2"/>`;
+  b += `<rect x="${runEnd}" y="${base - px(g.H)}" width="${px(1100)}" height="${SLAB}" fill="#B9B2A4" stroke="${CAD.wallStroke}" stroke-width="1.2"/>`;
+  // ограждение 900 мм от проступи с поручнем и стойками
+  const RH = px(900);
+  b += `<path d="${nose.map((p, i) => `${i ? 'L' : 'M'} ${p[0]} ${p[1] - RH}`).join(' ')}" fill="none" stroke="${CAD.furn}" stroke-width="1.4"/>`;
+  for (let i = 0; i < nose.length; i += 2) b += `<line x1="${nose[i][0]}" y1="${nose[i][1]}" x2="${nose[i][0]}" y2="${nose[i][1] - RH}" stroke="${CAD.furn}" stroke-width="0.8"/>`;
+  const nr = nose[Math.max(1, Math.floor(nose.length / 4))];
+  const lr = leader(ink, nr[0], nr[1] - RH, 'ограждение h=900 от проступи, поручень непрерывный', { size: 8.4, arms: [40, 90, 150], shelf: 60 });
+  if (lr) b += lr;
+  const ls = leader(ink, sx + bb * 2, base - hh * 2 + px(60), `ступень ${num(g.h)}×${g.b}, свес проступи 20–40`, { size: 8.4, arms: [40, 90, 150], shelf: 60 });
+  if (ls) b += ls;
+
+  // отметки и цепочки разреза
+  b += levelMark(sx - px(500), base, 0, -1, { shelf: 56 });
+  b += levelMark(runEnd + px(500), base - px(g.H), g.H, 1, { shelf: 56 });
+  if (!g.single) b += levelMark(sx + px(g.goA) + px(200), base - hh * g.n1, Math.round(g.h * g.n1), 1, { shelf: 56 });
+  let sc = dimV(sx - px(1100), base - px(g.H), base, `${g.n} × ${num(g.h)} = ${g.H}`);
+  sc += dimH(sx, runEnd, base + SLAB + px(320), `${g.single ? g.n - 1 : (g.n1 - 1) + (g.n2 - 1)}×${g.b}${g.single ? '' : ' + площадка ' + g.landing} = ${Math.round(runEnd / S - sx / S)}`);
+  sc += dimV(sx - px(1600), base - hh * g.n1, base, `${g.n1} × ${num(g.h)} = ${Math.round(g.h * g.n1)}`);
+  b += `<g data-el="chain">${sc}</g>`;
+  b += `<text x="${sx}" y="${sy - px(260)}" font-size="12" font-weight="700" fill="#2E2A26">Разрез по маршу (развёртка марша)</text>`;
+
+  // ---- ведомость параметров лестницы ----
+  const rowsT = [
+    ['Тип лестницы', g.single ? 'одномаршевая прямая' : 'двухмаршевая с промежуточной площадкой'],
+    ['Высота этажа (пол — пол)', `${g.H} мм`],
+    ['Число подъёмов', `${g.n} (${g.single ? g.n : g.n1 + ' + ' + g.n2}), все одинаковые`],
+    ['Высота подступенка h', `${num(g.h)} мм`],
+    ['Ширина проступи b', `${g.b} мм`],
+    ['Формула удобства 2h + b', `${g.blondel} мм (норма удобства 600–640)`],
+    ['Уклон марша', `${g.angle}° ≈ 1:${(g.b / g.h).toFixed(2).replace('.', ',')}`],
+    ['Ширина марша в свету', `${g.width} мм`],
+    ['Промежуточная площадка', g.single ? 'не требуется' : `${g.landing} мм, не уже марша`],
+    ['Ограждение', 'непрерывное, h = 900 мм, поручень по всей длине'],
+    ['Помещение', `${g.room.name}${LEVEL_NAME(g.room.level || 1)}`],
+  ];
+  let tb = `<text x="${tx}" y="${ty - px(120)}" font-size="12" font-weight="700" fill="#2E2A26">Ведомость параметров лестницы</text>`;
+  const rowH = px(230), colW = px(2400);
+  rowsT.forEach((r, i) => {
+    const y = ty + i * rowH;
+    tb += `<line x1="${tx}" y1="${y}" x2="${tx + colW + px(3400)}" y2="${y}" stroke="#B9B2A4" stroke-width="0.7"/>`;
+    tb += `<text x="${tx}" y="${y + rowH * 0.7}" font-size="8.6" fill="#7A756D">${esc(r[0])}</text>`;
+    tb += `<text x="${tx + colW}" y="${y + rowH * 0.7}" font-size="8.6" fill="#2E2A26">${esc(r[1])}</text>`;
+  });
+  tb += `<line x1="${tx}" y1="${ty + rowsT.length * rowH}" x2="${tx + colW + px(3400)}" y2="${ty + rowsT.length * rowH}" stroke="#B9B2A4" stroke-width="0.7"/>`;
+  b += `<g data-el="spec">${tb}</g>`;
+
+  b += notesBlock(M, base + SLAB + px(700), [
+    `Все подъёмы марша одинаковы, h = ${num(g.h)} мм: применение ступеней разной высоты не допускается (СП 55.13330.2016, 8.2).`,
+    'Ограждение непрерывное, высотой не менее 0,9 м, с поручнем; расчётная горизонтальная нагрузка на поручень не менее 0,3 кН/м (СП 55.13330.2016, 8.3).',
+    'Внутренняя открытая лестница 2-го типа в двухэтажном доме: ширина и уклон не нормируются (СП 55.13330.2016, 7.5) — размеры приняты из условий удобства.',
+    'Обозначения маршей на планах — по ГОСТ 21.201-2011, таблица 6: стрелка указывает направление подъёма, нижний марш показан с линией обрыва по секущей плоскости этажа.',
+    'Забежные ступени проектом не предусмотрены. При переходе на забежные: проступь по линии движения не менее 250 мм, в узкой части не менее 100 мм.',
+    'В доме с детьми просвет между стойками ограждения принимать не более 100 мм (практика; для одноквартирных домов нормой не установлен).',
+    'Отделку проступей выполнять с противоскользящей кромкой; отклонение высоты ступеней в пределах марша не более 5 мм.',
+    'Высоту прохода по маршу в свету (не менее 2000 мм) проверить по разрезу 1—1 после уточнения отметки низа перекрытия.',
+  ], 120);
+  b += stamp(M, base + SLAB + px(2100), 620, 'Лестница: планы, разрез, ведомость', sheetNo, '1:25');
+  return svgDoc(Math.max(p2x + Wt, runEnd) + px(1400), base + SLAB + px(2400), b, CAD.paper);
+}
+
+// ================================================================
 // ЩИТ И КАБЕЛЬНЫЙ ЖУРНАЛ (ГОСТ 21.608-2021: ведомость групповых щитков)
 // Электрик по планам знает, где дырки, но не знает, что покупать и какой
 // автомат ставить. Группы собираются из тех же точек, что нарисованы на планах.
@@ -4877,8 +5103,10 @@ let sheet = 2;   // лист 1 зарезервирован под титул с
 //   в полном пакете — плюс 10 покомнатных листов на помещение (обмер, демонтаж,
 //   монтаж, два плана, пол, потолок, электрика, умный дом, слаботочка).
 const PER_ROOM_FULL = 10;
+const HAS_STAIRS = rooms.some(r => r.stairs === 'up');
 TOTAL_SHEETS = 1                                   // титульный лист с перечнем
   + (FLAT ? 1 + 15 * LEVELS.length + 1 + 1 + 2 : 0) // презентация, сводные, щит, обозначение развёрток, разрезы
+  + (FLAT && HAS_STAIRS ? 1 : 0)                    // лист лестницы — только когда она есть в брифе
   + 1 + NODES.length                                // узел А + библиотека узлов
   + rooms.length * 4                                // развёртки стен
   + (FULL ? rooms.length * PER_ROOM_FULL : 0);
@@ -4888,9 +5116,13 @@ const counts = { flat: 0, obmer: 0, demo: 0, mont: 0, plans: 0, poly: 0, elev: 0
 function sheetOut(rel, maker, title, scale, type) {
   const no = sheet++;
   CUR_SHEET = type || 'other';
-  writeOut(rel, maker(no));
+  const svg = maker(no);
+  writeOut(rel, svg);
   CUR_SHEET = '';
-  reg.push({ no, title, scale: scale || '1:50', file: rel });
+  // Масштаб в ведомость берём фактический (svgDoc подбирает его по габариту
+  // содержимого), а не заявленный при регистрации — иначе перечень чертежей врёт.
+  const real = (svg.match(/data-scale="([^"]+)"/) || [])[1];
+  reg.push({ no, title, scale: real || scale || '1:50', file: rel });
 }
 const SL = r => `${nn(r.idx)}-${slug(r.name)}`;
 const RN = r => `${r.name}${LEVEL_NAME(r.level || 1)}`;
@@ -4949,6 +5181,9 @@ if (elevKeyNo) {
 if (FLAT) sheetOut('09-elektrika/schit-i-kabelnyy-zhurnal.svg', n => drawFlatPanel(n), 'Щит и кабельный журнал', '1:50', 'panel');
 // разрезы квартиры: по двум осям через середину габарита
 if (FLAT) for (const ax of ['X', 'Y']) sheetOut(`10-uzly/razrez-${ax === 'X' ? '1-1' : '2-2'}.svg`, n => drawFlatSection(ax, n), `Разрез ${ax === 'X' ? '1—1' : '2—2'}`, '1:50', 'section');
+// Лестница выпускается отдельным листом: на планах она читается как габарит,
+// строить по ней нельзя — нужны подъёмы, заложение, площадка и ограждение.
+if (FLAT && HAS_STAIRS) sheetOut('10-uzly/lestnitsa.svg', n => drawStairs(n), 'Лестница: планы, разрез, ведомость', '1:25', 'stairs');
 // библиотека узлов: пироги полов, стык покрытий, примыкание плинтуса
 for (const nd of NODES) sheetOut(`10-uzly/${nd.key}.svg`, n => drawNodePie(nd, n), nd.title.replace('Узел ', 'Узел ').replace(' · ', '. '), '1:' + nd.ratio, 'node');
 if (FULL) for (const r of rooms) { sheetOut(`09-elektrika/elektrika-${SL(r)}.svg`, n => drawElectro(r, n), `Электрика. ${RN(r)}`, '1:50', 'electro-room'); counts.electro++; }

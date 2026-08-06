@@ -1,8 +1,8 @@
 {
- "00-pasport/00-titul-perechen-chertezhey.svg": "ffc4de9f66eb024f",
+ "00-pasport/00-titul-perechen-chertezhey.svg": "89e416c69efe0312",
  "00-pasport/pasport.html": "bc80a8e7c6d75fa2",
  "00-pasport/plan-prezentatsiya.svg": "68b8efa75adbd08d",
- "00-pasport/vedomost.html": "d62309f41ea2ace5",
+ "00-pasport/vedomost.html": "fa3adb62741d35f7",
  "01-kvartira/kvartira-01-obmer.svg": "d527652cd48a5877",
  "01-kvartira/kvartira-02-demontazh.svg": "4a77eeb271231135",
  "01-kvartira/kvartira-03-montazh.svg": "f7d511fe4a7f225c",
@@ -53,6 +53,6 @@
  "10-uzly/uzel-V-pol-mokryy.svg": "b3b67f5724b6fa24",
  "index.html": "baca7ea394117f24",
  "manifest.json": "5ab1312f79145141",
- "presentation.html": "62077865d548d7ac",
- "print.html": "02954758df43cf83"
+ "presentation.html": "35ce85b036acf6eb",
+ "print.html": "b73d4f56348e8616"
 }
