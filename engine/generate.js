@@ -3254,11 +3254,35 @@ function drawFlatAC(sheetNo) {
 }
 
 // 15. Сантехника с привязками
+
+// Правая колонка листа сантехники: условные обозначения + ведомость привязок,
+// куда уходят приборы, для которых на плане не хватило места под выноску.
+function plumbColumn(x, y, w, legendSvg) {
+  const rows = drawFlatPlumbing.marks || [];
+  if (!rows.length) return legendSvg;
+  const ly = y + 5 * 22 + 44;
+  let s = legendSvg;
+  s += `<rect x="${x}" y="${ly}" width="${w}" height="${rows.length * 13 + 32}" fill="none" stroke="#8A8478" stroke-width="0.8"/>`;
+  s += `<text x="${x + 10}" y="${ly + 17}" font-size="10" font-weight="700" fill="#2E2A26">Ведомость привязок сантехники</text>`;
+  rows.forEach((r0, i2) => {
+    const ry = ly + 30 + i2 * 13;
+    s += `<rect x="${x + 7}" y="${ry - 9}" width="16" height="12" rx="2" fill="none" stroke="${CAD.plumb}" stroke-width="0.8"/>`;
+    s += `<text x="${x + 15}" y="${ry}" font-size="7.4" font-weight="700" text-anchor="middle" fill="${CAD.plumb}">${r0.mk}</text>`;
+    s += `<text x="${x + 28}" y="${ry}" font-size="7.6" fill="#2E2A26">${esc(r0.t)}</text>`;
+  });
+  return s;
+}
+
 function drawFlatPlumbing(sheetNo) {
   const plumbTypes = new Set(['bathroom', 'wc', 'kitchen', 'living-kitchen']);
   const plumbRooms = flatRooms.filter(r => plumbTypes.has(r.type));
   return flatSheet(sheetNo, 'Сантехника с привязками', 'Расположение сантехнических приборов · привязки от стен в мм', base => {
     let s = '';
+    const ink = inkMap(), ties = [];
+    for (const r of flatRooms) {   // занятость: помещения и приборы, чтобы подписи не легли на графику
+      ink.add(base.fx(r.pos.x + r.w / 2) - 40, base.fy(r.pos.y + r.l / 2) - 18, 80, 36);
+      for (const f of furnitureFor(r)) ink.add(base.fx(r.pos.x + f.x), base.fy(r.pos.y + f.y), px(f.w), px(f.h));
+    }
     for (const r of plumbRooms)
       s += `<rect x="${base.fx(r.pos.x)}" y="${base.fy(r.pos.y)}" width="${px(r.w)}" height="${px(r.l)}" fill="#E8F2FC" fill-opacity="0.55" stroke="none"/>`;
     for (const r of plumbRooms) {
@@ -3297,7 +3321,9 @@ function drawFlatPlumbing(sheetNo) {
           bath:    'смеситель h=1100 · слив Ø50 h=80',
           kitchen: 'ХВ/ГВ h=550 · слив Ø50 h=450'
         }[f.key];
-        if (TIE) s += `<text x="${fcx}" y="${fy2 - 5}" font-size="7.8" fill="${CAD.plumb}" text-anchor="middle">${TIE}</text>`;
+        // приборы в санузле стоят вплотную: подписи раскладываем выноской по ГОСТ 2.316,
+        // иначе три привязки сливаются в одну строку
+        if (TIE) ties.push({ x: fcx, y: fy2 + fh / 2, t: TIE, room: r.name });
         const wl = base.fx(r.pos.x), wt = base.fy(r.pos.y);
         const dimGap = 14;
         const distH = Math.round(f.x + f.w / 2);
@@ -3317,14 +3343,28 @@ function drawFlatPlumbing(sheetNo) {
         s += `<line x1="${dpx2}" y1="${dpy2}" x2="${base.fx(r.pos.x + ff0.x + ff0.w / 2)}" y2="${base.fy(r.pos.y + ff0.y + ff0.h / 2)}" stroke="${CAD.plumb}" stroke-width="0.8" stroke-dasharray="6 3"/>`;
       }
     }
+    // раскладка привязок: выноска по ГОСТ 2.316, а при полном отсутствии места —
+    // подпись над прибором со сдвигом, чтобы соседние не наложились
+    // Сначала выноска по ГОСТ 2.316. В тесной мокрой зоне (санузел 1,85 м на 1:50)
+    // места нет — тогда штатный путь канона: марка прибора Вn на плане, привязки
+    // в «Ведомости привязок сантехники» справа. Лист не перегружается.
+    drawFlatPlumbing.marks = [];
+    ties.forEach(t => {
+      const lead = leader(ink, t.x, t.y, t.t, { size: 7.8, arm: 26, shelf: 34 });
+      if (lead) { s += lead; return; }
+      const mk = 'В' + (drawFlatPlumbing.marks.length + 1);
+      drawFlatPlumbing.marks.push({ mk, t: t.t, room: t.room });
+      s += `<rect x="${t.x - 8}" y="${t.y - 7}" width="16" height="14" rx="2" fill="#FFFFFFEE" stroke="${CAD.plumb}" stroke-width="0.9"/>`
+        + `<text x="${t.x}" y="${t.y + 3}" font-size="7.6" font-weight="700" text-anchor="middle" fill="${CAD.plumb}">${mk}</text>`;
+    });
     return s + flatRoomMarks(base.fx, base.fy, false);
-  }, (x, y, w) => flatLegendBox(x, y, w, 'Условные обозначения', [
+  }, (x, y, w) => plumbColumn(x, y, w, flatLegendBox(x, y, w, 'Условные обозначения', [
     { sym: (sx, sy) => `<rect x="${sx}" y="${sy - 10}" width="10" height="14" fill="#E0F0FF" stroke="${CAD.plumb}" stroke-width="0.9"/><ellipse cx="${sx + 5}" cy="${sy + 1}" rx="3.5" ry="2.5" fill="#FFF" stroke="${CAD.plumb}" stroke-width="0.7"/>`, text: 'унитаз 400×680' },
     { sym: (sx, sy) => `<ellipse cx="${sx + 8}" cy="${sy - 3}" rx="7" ry="5" fill="#E0F0FF" stroke="${CAD.plumb}" stroke-width="0.9"/><circle cx="${sx + 8}" cy="${sy - 3}" r="1.5" fill="${CAD.plumb}"/>`, text: 'раковина 600×450' },
     { sym: (sx, sy) => `<rect x="${sx}" y="${sy - 9}" width="16" height="10" fill="#E0F0FF" stroke="${CAD.plumb}" stroke-width="0.9" rx="2"/><circle cx="${sx + 8}" cy="${sy - 2}" r="1.8" fill="none" stroke="${CAD.plumb}" stroke-width="0.7"/>`, text: 'ванна 1700×700 / душ 900×900' },
     { sym: (sx, sy) => `<rect x="${sx}" y="${sy - 9}" width="16" height="10" fill="#E0F0FF" stroke="${CAD.plumb}" stroke-width="0.9" rx="2"/><circle cx="${sx + 5}" cy="${sy - 4}" r="1.5" fill="${CAD.plumb}"/><circle cx="${sx + 11}" cy="${sy - 4}" r="1.5" fill="${CAD.plumb}"/>`, text: 'мойка кухонная двойная 600×500' },
     { sym: (sx, sy) => `<line x1="${sx}" y1="${sy - 4}" x2="${sx + 16}" y2="${sy - 4}" stroke="${CAD.plumb}" stroke-width="0.9" stroke-dasharray="6 3"/>`, text: 'трасса ГВС/ХВС от стояка' },
-  ]), [
+  ])), [
     'Привязки от оси прибора; уточнить после укладки плитки ±5 мм.',
     'Сантехника монтируется после завершения чистовой отделки.',
     'Уклоны канализации ≥2% (20 мм/пог.м) в направлении стояка.',
