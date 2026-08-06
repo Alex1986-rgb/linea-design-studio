@@ -92,6 +92,12 @@ const fmt = n => Math.round(n).toLocaleString('ru-RU');
 const TR = { а:'a',б:'b',в:'v',г:'g',д:'d',е:'e',ё:'e',ж:'zh',з:'z',и:'i',й:'y',к:'k',л:'l',м:'m',н:'n',о:'o',п:'p',р:'r',с:'s',т:'t',у:'u',ф:'f',х:'h',ц:'c',ч:'ch',ш:'sh',щ:'sch',ъ:'',ы:'y',ь:'',э:'e',ю:'yu',я:'ya' };
 const slug = s => String(s).toLowerCase().split('').map(c => TR[c] != null ? TR[c] : c).join('').replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
 const nn = n => String(n).padStart(2, '0');
+// согласование числительных: «1 лист», «2 листа», «94 листа», «11 листов»
+const plural = (n, one, few, many) => {
+  const a = Math.abs(n) % 100, b = a % 10;
+  const w = (a > 10 && a < 20) ? many : (b === 1 ? one : (b >= 2 && b <= 4 ? few : many));
+  return n + ' ' + w;
+};
 
 // ---------- ЛИСТ: А3 альбомный (420×297 мм при 96 dpi), рамка ГОСТ 2.301, поле подшивки 20 мм ----------
 const PAGE = { w: 1587, h: 1123, ml: 76, mr: 19, mt: 19, mb: 19 };
@@ -4029,7 +4035,7 @@ function drawFlatPresentation(sheetNo) {
   ly += 16;
   (style.palette || []).forEach((c, i) => { b += `<rect x="${LGX + i * 30}" y="${ly}" width="26" height="26" rx="3" fill="${c}" stroke="#00000018" stroke-width="0.7"/>`; });
   ly += 46;
-  b += `<text x="${LGX}" y="${ly}" font-size="12" font-weight="700" fill="${PRES.label}">Покрытия</text>`;
+  b += `<g data-el="legend"></g><text x="${LGX}" y="${ly}" font-size="12" font-weight="700" fill="${PRES.label}">Условные обозначения покрытий</text>`;
   ly += 16;
   const covers = [
     { c: style.floor.color || PRES.wood, t: esc(style.floor.name.split(',')[0]) + ' — жилые зоны' },
@@ -4086,7 +4092,7 @@ function drawFlatSection(axis, sheetNo) {
   const SLAB = px(SLAB_MM), PIE = px(60);              // плита и пирог пола в модельных единицах
   const fx = mm => M + WT + px(mm - x0);
   const floorY = M + px(H) + PIE;                      // уровень чистого пола 0,000
-  let b = '', ink = inkMap();
+  let b = '', ink = inkMap(), chainSeg = '';
 
   // плита перекрытия снизу и сверху
   b += `<rect x="${M}" y="${floorY}" width="${fx(x1) - M + WT}" height="${SLAB}" fill="#B9B2A4" stroke="${CAD.wallStroke}" stroke-width="1.2"/>`;
@@ -4134,16 +4140,27 @@ function drawFlatSection(axis, sheetNo) {
     // подпись помещения и его высота
     b += `<text x="${rx + rw / 2}" y="${floorY + SLAB + 22}" font-size="9.5" font-weight="600" fill="#2E2A26" text-anchor="middle">${esc(r.name)}</text>`;
     b += `<text x="${rx + rw / 2}" y="${floorY + SLAB + 34}" font-size="8.4" fill="#7A756D" text-anchor="middle">h=${r.h - CEIL_DROP1}${wet ? ' · пол −0,020' : ''}</text>`;
-    b += dimH(rx, rx + rw, floorY + SLAB + 52, String(along(r)));
+    chainSeg += dimH(rx, rx + rw, floorY + SLAB + 52, String(along(r)));
   });
 
+  // Пирог пола и потолок подписываем выноской всегда: секущая плоскость может
+  // не задеть мебель, и лист оставался без единой выноски.
+  {
+    const r0 = list[Math.floor(list.length / 2)] || list[0];
+    const mx = fx(start(r0) + along(r0) / 2);
+    const l1 = leader(ink, mx, floorY - PIE / 2, 'пирог пола 78 мм — узел Б (жилые) / В (мокрые)', { size: 8.4, arms: [30, 64, 110], shelf: 44 });
+    if (l1) b += l1;
+    const l2 = leader(ink, mx, floorY - px(r0.h - CEIL_DROP1) + px(6), `потолок ГКЛ ${mark(BASE_H)} — короб по узлу А`, { size: 8.4, arms: [30, 64, 110], shelf: 44 });
+    if (l2) b += l2;
+  }
   // отметки уровней по ГОСТ и вертикальная цепочка
   b += levelMark(M - 16, floorY, 0, -1, { shelf: 52 });
   b += levelMark(M - 16, floorY - px(BASE_H), BASE_H, -1, { shelf: 52 });
   b += levelMark(M - 16, floorY - px(BASE_H - 120), BASE_H - 120, -1, { shelf: 52 });
   b += levelMark(M - 16, floorY + SLAB, -(60 + SLAB_MM), -1, { shelf: 52 });
   b += dimV(M - 96, floorY - px(BASE_H), floorY, String(BASE_H));
-  b += dimH(M, fx(x1) + WT, floorY + SLAB + 76, String(x1 - x0 + 2 * EXT_MM));
+  chainSeg += dimH(M, fx(x1) + WT, floorY + SLAB + 76, String(x1 - x0 + 2 * EXT_MM));
+  b += `<g data-el="chain">${chainSeg}</g>`;   // габариты помещений по линии сечения + общий
 
   const name = axis === 'X' ? 'Разрез 1—1' : 'Разрез 2—2';
   b += `<text x="${M}" y="${M - SLAB - 40}" font-size="17" font-weight="700" fill="#2E2A26">${name}</text>`;
@@ -4235,6 +4252,24 @@ function drawFlatPanel(sheetNo) {
     b += `<text x="${x}" y="${busY + 68}" font-size="7.4" text-anchor="middle" fill="#57514A">${esc(g.breaker.split(' ')[0])}</text>`;
     b += `<line x1="${x}" y1="${busY + 54}" x2="${x}" y2="${busY + 82}" stroke="#21A366" stroke-width="1"/>`;
   });
+  // условные обозначения однолинейки (ГОСТ 21.210 — аппараты и проводки на схемах)
+  {
+    const lx = busX1 + 40, ly0 = busY - 26;
+    b += `<g data-el="legend"><rect x="${lx}" y="${ly0}" width="228" height="104" fill="none" stroke="#8A8478" stroke-width="0.8"/></g>`;
+    b += `<text x="${lx + 10}" y="${ly0 + 16}" font-size="9.6" font-weight="700" fill="#2E2A26">Условные обозначения</text>`;
+    const rows = [
+      ['QF0', 'вводной автомат, ток отключения'],
+      ['УЗО', 'устройство защитного отключения'],
+      ['дифф', 'дифференциальный автомат 30 мА'],
+      ['QFn', 'групповой автомат, тип и номинал'],
+    ];
+    rows.forEach((r0, i2) => {
+      const ry = ly0 + 34 + i2 * 17;
+      b += `<rect x="${lx + 10}" y="${ry - 10}" width="34" height="13" fill="${i2 === 1 || i2 === 2 ? '#FFF6F4' : '#F1EDE4'}" stroke="${i2 === 1 || i2 === 2 ? '#B0483A' : '#1C1C1C'}" stroke-width="0.8"/>`;
+      b += `<text x="${lx + 27}" y="${ry}" font-size="7.4" text-anchor="middle" fill="${i2 === 1 || i2 === 2 ? '#B0483A' : '#2E2A26'}">${r0[0]}</text>`;
+      b += `<text x="${lx + 52}" y="${ry}" font-size="8.2" fill="#57514A">${r0[1]}</text>`;
+    });
+  }
   // кабельный журнал
   let ty = busY + 120;
   b += `<text x="${M}" y="${ty}" font-size="12" font-weight="700" fill="#2E2A26">Кабельный журнал</text>`;
@@ -4895,8 +4930,12 @@ function presentationHTML() {
   const addr = (brief.object && brief.object.address) || 'Дизайн-проект';
   const data = JSON.stringify(slides);
   return `<!DOCTYPE html><html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>${esc(addr)} · презентация альбома — LINEA</title>
-<meta name="robots" content="noindex">
+<title>Дизайн-проект ${esc(addr)} — ${plural(reg.length, 'лист', 'листа', 'листов')} альбома | LINEA</title>
+<meta name="description" content="Альбом рабочей документации: ${esc(addr)}, ${totalArea} м², стиль «${esc(style.title)}». ${plural(reg.length, 'лист', 'листа', 'листов')} — планировочное решение, развёртки всех стен, потолки и свет, сантехника, щит, разрезы и узлы. Листайте как каталог.">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Дизайн-проект ${esc(addr)} — ${plural(reg.length, 'лист', 'листа', 'листов')}">
+<meta property="og:description" content="Планировочное решение, развёртки, потолки, электрика, сантехника, разрезы и узлы. Альбом студии LINEA.">
+<meta property="og:image" content="${(renders[0] || '06-koncept/renders/01-gostinaya-kuhnya.jpg')}">
 <style>
 :root{--bg:#0F0E0C;--panel:#17151280;--txt:#EDE7DC;--mut:#9A937F;--acc:#C6A96B}
 *{box-sizing:border-box}
@@ -4905,6 +4944,8 @@ header{position:fixed;inset:0 0 auto 0;height:56px;display:flex;align-items:cent
 .brand{font-family:Georgia,serif;letter-spacing:6px;font-size:15px}
 .meta{color:var(--mut);font-size:12px;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .count{font-variant-numeric:tabular-nums;font-size:12px;color:var(--mut)}
+.hintk{font-size:11px;color:#6E675C;letter-spacing:.06em}
+@media (max-width:820px){.hintk{display:none}}
 a.btn,button{background:#FFFFFF12;color:var(--txt);border:1px solid #FFFFFF20;border-radius:4px;padding:6px 11px;font:inherit;font-size:12px;cursor:pointer;text-decoration:none}
 button:hover,a.btn:hover{background:#FFFFFF1F}
 main{position:absolute;inset:56px 0 122px;display:flex;align-items:center;justify-content:center;padding:0 12px}
@@ -4916,17 +4957,19 @@ main{position:absolute;inset:56px 0 122px;display:flex;align-items:center;justif
 .cap{position:fixed;left:0;right:0;bottom:98px;height:22px;text-align:center;font-size:12.5px;color:var(--txt);pointer-events:none}
 .cap span{color:var(--mut)}
 footer{position:fixed;inset:auto 0 0 0;height:92px;background:var(--panel);backdrop-filter:blur(8px);border-top:1px solid #FFFFFF14;display:flex;gap:8px;align-items:center;padding:8px 12px;overflow-x:auto;scrollbar-width:thin}
-footer img{height:64px;width:auto;border-radius:2px;opacity:.5;cursor:pointer;background:#fff;flex:0 0 auto;border:1px solid transparent}
+footer img{height:64px;width:91px;object-fit:contain;border-radius:2px;opacity:.5;cursor:pointer;background:#FFFFFF14;flex:0 0 auto;border:1px solid #FFFFFF12}
 footer img.on{opacity:1;border-color:var(--acc)}
-@media (max-width:720px){footer{height:70px}footer img{height:48px}main{inset:56px 0 98px}.nav{bottom:98px}.cap{bottom:74px}}
+@media (max-width:720px){footer{height:70px}footer img{height:48px;width:68px}main{inset:56px 0 98px}.nav{bottom:98px}.cap{bottom:74px}}
 @media print{header,footer,.nav,.cap{display:none}main{position:static;inset:auto}#sheet{box-shadow:none;max-height:none}}
 </style></head><body>
 <header>
   <span class="brand">LINEA</span>
   <span class="meta">${esc(addr)} · ${totalArea} м² · стиль «${esc(style.title)}» · листов ${reg.length}</span>
   <span class="count"><b id="cur">1</b> / ${reg.length}</span>
+  <span class="hintk" title="Управление">← → пробел · свайп</span>
   <button id="full" title="Во весь экран">⛶</button>
   <a class="btn" href="print.html" target="_blank" rel="noopener">Печать</a>
+  <a class="btn" id="pdf" href="album.pdf" target="_blank" rel="noopener" style="display:none">PDF</a>
   <a class="btn" href="index.html">Все файлы</a>
 </header>
 <main><img id="sheet" alt=""></main>
@@ -4943,6 +4986,10 @@ S.forEach(function (s, k) {
   t.addEventListener('click', function () { go(k); });
   strip.appendChild(t);
 });
+function preload(k) {
+  if (k < 0 || k >= S.length) return;
+  var im = new Image(); im.src = S[k].src;
+}
 function go(k) {
   i = (k + S.length) % S.length;
   var s = S[i];
@@ -4957,7 +5004,14 @@ function go(k) {
   for (var j = 0; j < kids.length; j++) kids[j].className = (j === i ? 'on' : '');
   if (kids[i]) kids[i].scrollIntoView({ block: 'nearest', inline: 'center', behavior: 'smooth' });
   if (location.hash !== '#' + (i + 1)) history.replaceState(null, '', '#' + (i + 1));
+  // соседние листы подгружаем заранее: перелистывание должно быть без ожидания
+  preload(i + 1); preload(i - 1); preload(i + 2);
+  try { localStorage.setItem('linea-sheet', String(i + 1)); } catch (e) {}
 }
+// PDF показываем, только если файл действительно лежит рядом
+fetch('album.pdf', { method: 'HEAD' }).then(function (r) {
+  if (r.ok) document.getElementById('pdf').style.display = '';
+}).catch(function () {});
 document.getElementById('next').addEventListener('click', function () { go(i + 1); });
 document.getElementById('prev').addEventListener('click', function () { go(i - 1); });
 document.getElementById('full').addEventListener('click', function () {
@@ -4975,7 +5029,9 @@ document.addEventListener('touchend', function (e) {
   var d = e.changedTouches[0].clientX - tx;
   if (Math.abs(d) > 45) go(i + (d < 0 ? 1 : -1));
 }, { passive: true });
-go(Math.max(0, Math.min(S.length - 1, (parseInt(location.hash.slice(1), 10) || 1) - 1)));
+var startAt = parseInt(location.hash.slice(1), 10);
+if (!startAt) { try { startAt = parseInt(localStorage.getItem('linea-sheet'), 10); } catch (e) {} }
+go(Math.max(0, Math.min(S.length - 1, (startAt || 1) - 1)));
 </script>
 </body></html>`;
 }
