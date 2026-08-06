@@ -62,6 +62,8 @@ const RULES = {
   // стена без электрики их иметь не может — поэтому tie здесь замечание, а не ошибка
   elevation:        { need: { stamp: 1, level: 2, chain: 1 }, want: { tie: 1, spec: 1, notes: 1 }, scales: SCALES_PLAN },
   node:             { need: { stamp: 1, level: 1 }, want: { leader: 1, sheetRef: 1 }, scales: SCALES_NODE },
+  // разрез: конструкции в сечении, отметки уровней, габариты помещений по линии сечения
+  section:          { need: { stamp: 1, level: 3, dim: 2, notes: 1 }, want: { leader: 1, chain: 1 }, scales: SCALES_PLAN },
   'smart-room':     { need: { stamp: 1 }, want: { legend: 1 }, scales: SCALES_PLAN },
   'lowvolt-room':   { need: { stamp: 1, legend: 1 }, want: { tie: 1 }, scales: SCALES_PLAN },
 };
