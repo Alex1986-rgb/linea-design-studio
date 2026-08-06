@@ -3911,6 +3911,153 @@ function drawFlatPlumbing(sheetNo) {
 }
 
 // ================================================================
+// ПРЕЗЕНТАЦИОННЫЙ ПЛАН КВАРТИРЫ (первый лист альбома, для клиента)
+// Это НЕ чертёж: ни размерных цепочек, ни привязок. Задача листа — показать
+// квартиру после ремонта сверху: покрытия по помещениям, мебель в цвете
+// с тенью, сантехника, шторы, зелень. Все объекты — те же, что на рабочих
+// листах: одна геометрия, поэтому картинка не расходится с документацией.
+// ================================================================
+const PRES = {
+  paper: '#FBF9F5', wall: '#3C3733', wallLite: '#8D857C',
+  wood: '#C8A97A', tile: '#DCD8CF', soft: '#D8D2C4', softDark: '#BDB3A3',
+  wardrobe: '#B99C74', tech: '#8E9AA3', sanit: '#EDF3F6', green: '#7FA06A',
+  textile: '#C7BBA8', shadow: '#00000014', label: '#2E2A26', sub: '#8A8478',
+};
+
+function presFurnFill(key) {
+  if (['sofa', 'armchair', 'bed', 'kidbed'].includes(key)) return PRES.soft;
+  if (['wardrobe', 'hallwardrobe', 'shelf', 'dresser', 'nightstand', 'desk', 'table', 'dining', 'coffee', 'bench'].includes(key)) return PRES.wardrobe;
+  if (['kitchen', 'kitchen_ext'].includes(key)) return PRES.wardrobe;
+  if (['fridge', 'washer', 'tv'].includes(key)) return PRES.tech;
+  if (['bath', 'shower', 'wc', 'sink'].includes(key)) return PRES.sanit;
+  if (key === 'rug') return PRES.textile;
+  return PRES.soft;
+}
+
+function drawFlatPresentation(sheetNo) {
+  const MX = 96, MY = 118;
+  const planW = px(FLAT.W + 2 * EXT), planH = px(FLAT.H + 2 * EXT);
+  const fx = mm => MX + px(EXT + mm - FLAT.x0);
+  const fy = mm => MY + px(EXT + mm - FLAT.y0);
+  let b = '';
+  // корпус: наружные стены плотным тоном, внутренняя зона — светлая
+  b += `<rect x="${MX}" y="${MY}" width="${planW}" height="${planH}" fill="${PRES.wall}"/>`;
+  b += `<rect x="${fx(FLAT.x0)}" y="${fy(FLAT.y0)}" width="${px(FLAT.W)}" height="${px(FLAT.H)}" fill="${PRES.wallLite}"/>`;
+
+  for (const r of flatRooms) {
+    const rx = fx(r.pos.x), ry = fy(r.pos.y), rw = px(r.w), rh = px(r.l);
+    const wet = r.type === 'bathroom' || r.type === 'wc';
+    const hall = r.type === 'hallway';
+    // покрытие пола: доска «ёлкой» в жилых, керамогранит в мокрых и прихожей
+    b += `<rect x="${rx}" y="${ry}" width="${rw}" height="${rh}" fill="${wet || hall ? PRES.tile : (style.floor.color || PRES.wood)}"/>`;
+    b += `<clipPath id="pf${r.idx}"><rect x="${rx}" y="${ry}" width="${rw}" height="${rh}"/></clipPath><g clip-path="url(#pf${r.idx})">`;
+    if (wet || hall) {                     // сетка керамогранита 600×600
+      for (let gx = 0; gx < r.w; gx += 600) b += `<line x1="${rx + px(gx)}" y1="${ry}" x2="${rx + px(gx)}" y2="${ry + rh}" stroke="#00000012" stroke-width="0.6"/>`;
+      for (let gy = 0; gy < r.l; gy += 600) b += `<line x1="${rx}" y1="${ry + px(gy)}" x2="${rx + rw}" y2="${ry + px(gy)}" stroke="#00000012" stroke-width="0.6"/>`;
+    } else {                                // «ёлка»: диагональные штрихи в две стороны
+      for (let i = -Math.ceil(r.l / 300); i < (r.w + r.l) / 300; i++) {
+        const x = rx + px(i * 300);
+        b += `<line x1="${x}" y1="${ry}" x2="${x + rh}" y2="${ry + rh}" stroke="#0000000E" stroke-width="0.7"/>`;
+        b += `<line x1="${x}" y1="${ry + rh}" x2="${x + rh}" y2="${ry}" stroke="#0000000E" stroke-width="0.7"/>`;
+      }
+    }
+    b += `</g>`;
+
+    // мебель: тень, заливка по типу, лёгкая деталировка
+    for (const f of furnitureFor(r)) {
+      const X = fx(r.pos.x + f.x), Y = fy(r.pos.y + f.y), W2 = px(f.w), H2 = px(f.h);
+      if (f.key === 'rug') { b += `<rect x="${X}" y="${Y}" width="${W2}" height="${H2}" fill="${PRES.textile}" opacity="0.42" rx="3"/>`; continue; }
+      b += `<rect x="${X + 2}" y="${Y + 2.5}" width="${W2}" height="${H2}" fill="${PRES.shadow}" rx="2.5"/>`;
+      b += `<rect x="${X}" y="${Y}" width="${W2}" height="${H2}" fill="${presFurnFill(f.key)}" stroke="#00000022" stroke-width="0.7" rx="2.5"/>`;
+      if (['sofa', 'bed', 'kidbed'].includes(f.key)) {   // подушки
+        const horiz = W2 >= H2, pw = horiz ? W2 / 2 - 5 : W2 * 0.34;
+        b += `<rect x="${X + 3}" y="${Y + 3}" width="${horiz ? pw : pw}" height="${horiz ? H2 * 0.3 : H2 / 2 - 5}" fill="${PRES.softDark}" rx="2"/>`;
+        b += `<rect x="${horiz ? X + W2 / 2 + 2 : X + 3}" y="${horiz ? Y + 3 : Y + H2 / 2 + 2}" width="${pw}" height="${horiz ? H2 * 0.3 : H2 / 2 - 5}" fill="${PRES.softDark}" rx="2"/>`;
+      }
+      if (['kitchen', 'kitchen_ext'].includes(f.key)) {  // фронты и мойка
+        const nD = Math.max(2, Math.round(f.w / 600));
+        for (let d = 1; d < nD; d++) b += `<line x1="${X + W2 * d / nD}" y1="${Y}" x2="${X + W2 * d / nD}" y2="${Y + H2}" stroke="#FFFFFF33" stroke-width="0.8"/>`;
+      }
+      if (f.key === 'bath') b += `<rect x="${X + 4}" y="${Y + 4}" width="${W2 - 8}" height="${H2 - 8}" fill="#FFFFFFAA" rx="2"/>`;
+      if (['wardrobe', 'hallwardrobe'].includes(f.key)) b += `<line x1="${X}" y1="${Y + H2 * 0.5}" x2="${X + W2}" y2="${Y + H2 * 0.5}" stroke="#FFFFFF2E" stroke-width="0.8"/>`;
+    }
+
+    // зелень в жилых зонах: акцент, который делает вид «жилым»
+    if (['living', 'living-kitchen', 'bedroom', 'kids'].includes(r.type)) {
+      const gx = rx + rw - 26, gy = ry + rh - 26;
+      b += `<circle cx="${gx}" cy="${gy}" r="8" fill="${PRES.green}" opacity="0.85"/>`;
+      b += `<circle cx="${gx - 5}" cy="${gy - 6}" r="5" fill="${PRES.green}" opacity="0.6"/>`;
+    }
+
+    // шторы у окон — волна вдоль проёма
+    for (const o of r.windows) {
+      const amp = 4, stepW = 12;
+      if (o.wall === 'A' || o.wall === 'C') {
+        const yy = o.wall === 'A' ? ry + 5 : ry + rh - 5;
+        let d = `M ${fx(r.pos.x + o.off)} ${yy}`;
+        for (let x = 0; x < o.w; x += 240) d += ` q ${stepW / 2} ${amp} ${stepW} 0 q ${stepW / 2} ${-amp} ${stepW} 0`;
+        b += `<path d="${d}" fill="none" stroke="${PRES.textile}" stroke-width="3.4" stroke-linecap="round"/>`;
+      } else {
+        const xx = o.wall === 'D' ? rx + 5 : rx + rw - 5;
+        let d = `M ${xx} ${fy(r.pos.y + o.off)}`;
+        for (let y = 0; y < o.w; y += 240) d += ` q ${amp} ${stepW / 2} 0 ${stepW} q ${-amp} ${stepW / 2} 0 ${stepW}`;
+        b += `<path d="${d}" fill="none" stroke="${PRES.textile}" stroke-width="3.4" stroke-linecap="round"/>`;
+      }
+    }
+
+    // подпись зоны: имя и площадь, без размеров
+    const cx = rx + rw / 2, cy = ry + rh / 2;
+    b += `<text x="${cx}" y="${cy - 2}" font-size="12.5" font-weight="700" fill="${PRES.label}" text-anchor="middle">${esc(r.name)}</text>`;
+    b += `<text x="${cx}" y="${cy + 13}" font-size="10" fill="${PRES.sub}" text-anchor="middle">${r.area} м²</text>`;
+  }
+
+  // проёмы дверей — светлые прорези, чтобы читалась связность квартиры
+  for (const r of flatRooms) for (const o of r.doors) {
+    const t = px(INT_MM) + 2;
+    if (o.wall === 'A') b += `<rect x="${fx(r.pos.x + o.off)}" y="${fy(r.pos.y) - t / 2}" width="${px(o.w)}" height="${t}" fill="${PRES.paper}"/>`;
+    else if (o.wall === 'C') b += `<rect x="${fx(r.pos.x + o.off)}" y="${fy(r.pos.y + r.l) - t / 2}" width="${px(o.w)}" height="${t}" fill="${PRES.paper}"/>`;
+    else if (o.wall === 'D') b += `<rect x="${fx(r.pos.x) - t / 2}" y="${fy(r.pos.y + o.off)}" width="${t}" height="${px(o.w)}" fill="${PRES.paper}"/>`;
+    else b += `<rect x="${fx(r.pos.x + r.w) - t / 2}" y="${fy(r.pos.y + o.off)}" width="${t}" height="${px(o.w)}" fill="${PRES.paper}"/>`;
+  }
+
+  // шапка и правая колонка: палитра, покрытия, состав альбома
+  const LGX = MX + planW + 70, LGW = 250;
+  b += `<text x="${MX}" y="${MY - 62}" font-size="24" font-weight="700" fill="${PRES.label}">${esc((brief.object && brief.object.address) || 'Дизайн-проект')}</text>`;
+  b += `<text x="${MX}" y="${MY - 40}" font-size="12.5" fill="${PRES.sub}">Планировочное решение · ${totalArea} м² · ${rooms.length} помещений · стиль «${esc(style.title)}» · вид сверху после ремонта</text>`;
+  let ly = MY;
+  b += `<text x="${LGX}" y="${ly + 4}" font-size="12" font-weight="700" fill="${PRES.label}">Палитра проекта</text>`;
+  ly += 16;
+  (style.palette || []).forEach((c, i) => { b += `<rect x="${LGX + i * 30}" y="${ly}" width="26" height="26" rx="3" fill="${c}" stroke="#00000018" stroke-width="0.7"/>`; });
+  ly += 46;
+  b += `<text x="${LGX}" y="${ly}" font-size="12" font-weight="700" fill="${PRES.label}">Покрытия</text>`;
+  ly += 16;
+  const covers = [
+    { c: style.floor.color || PRES.wood, t: esc(style.floor.name.split(',')[0]) + ' — жилые зоны' },
+    { c: PRES.tile, t: 'керамогранит — санузел, прихожая' },
+    { c: PRES.textile, t: 'текстиль: шторы, ковры' },
+    { c: PRES.green, t: 'озеленение' },
+  ];
+  covers.forEach(cv => {
+    b += `<rect x="${LGX}" y="${ly - 9}" width="18" height="12" rx="2" fill="${cv.c}" stroke="#00000018" stroke-width="0.6"/>`;
+    b += `<text x="${LGX + 26}" y="${ly}" font-size="9.4" fill="#57514A">${cv.t}</text>`;
+    ly += 18;
+  });
+  ly += 14;
+  b += `<text x="${LGX}" y="${ly}" font-size="12" font-weight="700" fill="${PRES.label}">В альбоме</text>`;
+  ly += 16;
+  for (const t of ['обмер, демонтаж, монтаж', 'планы, полы, потолки, свет', 'развёртки всех стен', 'сантехника, климат, щит', 'разрезы и узлы', 'спецификация и смета']) {
+    b += `<text x="${LGX}" y="${ly}" font-size="9.4" fill="#57514A">— ${t}</text>`; ly += 15;
+  }
+  ly += 10;
+  b += `<text x="${LGX}" y="${ly}" font-size="9" fill="${PRES.sub}">Лист презентационный: размеры, привязки</text>`;
+  b += `<text x="${LGX}" y="${ly + 12}" font-size="9" fill="${PRES.sub}">и отметки — на рабочих листах альбома.</text>`;
+
+  const Hd = MY + planH + 90;
+  b += stamp(MX, Hd - 40, 620, 'Планировочное решение. Презентация', sheetNo, '1:50');
+  return svgDoc(Math.max(LGX + LGW + 40, MX + planW + 120), Hd, b, PRES.paper);
+}
+
+// ================================================================
 // РАЗРЕЗЫ КВАРТИРЫ (ГОСТ 21.501, 5.4)
 // Разрез — единственное место, где на одном листе встречаются пирог пола,
 // стены в сечении, уровни потолка и высоты мебели. На этих стыках бригада
@@ -4567,7 +4714,7 @@ let sheet = 1;
 // на помещение: обмер, демонтаж, монтаж, 2 плана, пол, 4 развертки, потолок, электрика,
 // умный дом, слаботочка = 14 листов; плюс узел А и 15 сводных на этаж.
 // Расхождение с фактом проверяется в конце: штамп «Листов N» обязан совпадать с ведомостью.
-TOTAL_SHEETS = rooms.length * 14 + 1 + NODES.length + (FLAT ? 15 * LEVELS.length + 3 : 0);
+TOTAL_SHEETS = rooms.length * 14 + 1 + NODES.length + (FLAT ? 15 * LEVELS.length + 4 : 0);
 const reg = []; // реестр листов для ведомости
 const counts = { flat: 0, obmer: 0, demo: 0, mont: 0, plans: 0, poly: 0, elev: 0, ceil: 0, electro: 0 };
 function sheetOut(rel, maker, title, scale, type) {
@@ -4597,6 +4744,9 @@ const FLAT_SHEETS = [
     ['14-kondicionery', drawFlatAC, 'Кондиционеры', 'climate'],
     ['15-santehnika', drawFlatPlumbing, 'Сантехника с привязками', 'plumbing'],
 ];
+// Первый лист альбома — презентационный вид квартиры сверху: клиент открывает
+// папку и сразу видит результат, а не обмерный план.
+if (FLAT) sheetOut('00-pasport/plan-prezentatsiya.svg', n => drawFlatPresentation(n), 'Планировочное решение. Презентация', '1:50', 'presentation');
 for (const lv of LEVELS) { // канон альбома: 13 сводных листов на каждый этаж
   setLevel(lv);
   if (!FLAT) continue;
@@ -4736,6 +4886,100 @@ html,body{margin:0;padding:0;background:#fff}
 ${docPages}${sheetPages}
 </body></html>`;
 }
+// ---------- презентация-листалка ----------
+// Клиент не читает 93 файла: он листает альбом как каталог. Первый слайд —
+// презентационный вид квартиры сверху, дальше листы в порядке ведомости.
+// Управление: стрелки, пробел, свайп, клик по краям, полоса миниатюр, Home/End.
+function presentationHTML() {
+  const slides = reg.map(r => ({ src: r.file, no: r.no, title: r.title, scale: r.scale }));
+  const addr = (brief.object && brief.object.address) || 'Дизайн-проект';
+  const data = JSON.stringify(slides);
+  return `<!DOCTYPE html><html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>${esc(addr)} · презентация альбома — LINEA</title>
+<meta name="robots" content="noindex">
+<style>
+:root{--bg:#0F0E0C;--panel:#17151280;--txt:#EDE7DC;--mut:#9A937F;--acc:#C6A96B}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%;background:var(--bg);color:var(--txt);font-family:Inter,system-ui,-apple-system,sans-serif;overflow:hidden}
+header{position:fixed;inset:0 0 auto 0;height:56px;display:flex;align-items:center;gap:18px;padding:0 20px;background:linear-gradient(#0F0E0CEE,#0F0E0C00);z-index:5}
+.brand{font-family:Georgia,serif;letter-spacing:6px;font-size:15px}
+.meta{color:var(--mut);font-size:12px;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.count{font-variant-numeric:tabular-nums;font-size:12px;color:var(--mut)}
+a.btn,button{background:#FFFFFF12;color:var(--txt);border:1px solid #FFFFFF20;border-radius:4px;padding:6px 11px;font:inherit;font-size:12px;cursor:pointer;text-decoration:none}
+button:hover,a.btn:hover{background:#FFFFFF1F}
+main{position:absolute;inset:56px 0 122px;display:flex;align-items:center;justify-content:center;padding:0 12px}
+#sheet{max-width:100%;max-height:100%;box-shadow:0 24px 60px #00000080;background:#fff;transition:opacity .18s ease}
+#sheet.load{opacity:.25}
+.nav{position:absolute;top:56px;bottom:122px;width:16%;cursor:pointer;z-index:3;border:0;background:transparent}
+.nav:hover{background:linear-gradient(90deg,#FFFFFF0A,transparent)}
+.nav.r{right:0;transform:scaleX(-1)}
+.cap{position:fixed;left:0;right:0;bottom:98px;height:22px;text-align:center;font-size:12.5px;color:var(--txt);pointer-events:none}
+.cap span{color:var(--mut)}
+footer{position:fixed;inset:auto 0 0 0;height:92px;background:var(--panel);backdrop-filter:blur(8px);border-top:1px solid #FFFFFF14;display:flex;gap:8px;align-items:center;padding:8px 12px;overflow-x:auto;scrollbar-width:thin}
+footer img{height:64px;width:auto;border-radius:2px;opacity:.5;cursor:pointer;background:#fff;flex:0 0 auto;border:1px solid transparent}
+footer img.on{opacity:1;border-color:var(--acc)}
+@media (max-width:720px){footer{height:70px}footer img{height:48px}main{inset:56px 0 98px}.nav{bottom:98px}.cap{bottom:74px}}
+@media print{header,footer,.nav,.cap{display:none}main{position:static;inset:auto}#sheet{box-shadow:none;max-height:none}}
+</style></head><body>
+<header>
+  <span class="brand">LINEA</span>
+  <span class="meta">${esc(addr)} · ${totalArea} м² · стиль «${esc(style.title)}» · листов ${reg.length}</span>
+  <span class="count"><b id="cur">1</b> / ${reg.length}</span>
+  <button id="full" title="Во весь экран">⛶</button>
+  <a class="btn" href="print.html" target="_blank" rel="noopener">Печать</a>
+  <a class="btn" href="index.html">Все файлы</a>
+</header>
+<main><img id="sheet" alt=""></main>
+<button class="nav l" id="prev" aria-label="Предыдущий лист"></button>
+<button class="nav r" id="next" aria-label="Следующий лист"></button>
+<div class="cap"><b id="ttl"></b> <span id="sub"></span></div>
+<footer id="strip"></footer>
+<script>
+var S = ${data}, i = 0;
+var img = document.getElementById('sheet'), strip = document.getElementById('strip');
+S.forEach(function (s, k) {
+  var t = document.createElement('img');
+  t.src = s.src; t.loading = 'lazy'; t.alt = s.title; t.title = 'АИ-' + s.no + ' · ' + s.title;
+  t.addEventListener('click', function () { go(k); });
+  strip.appendChild(t);
+});
+function go(k) {
+  i = (k + S.length) % S.length;
+  var s = S[i];
+  img.classList.add('load');
+  var pre = new Image();
+  pre.onload = function () { img.src = s.src; img.classList.remove('load'); };
+  pre.src = s.src;
+  document.getElementById('cur').textContent = i + 1;
+  document.getElementById('ttl').textContent = 'АИ-' + s.no + '. ' + s.title;
+  document.getElementById('sub').textContent = 'М ' + s.scale;
+  var kids = strip.children;
+  for (var j = 0; j < kids.length; j++) kids[j].className = (j === i ? 'on' : '');
+  if (kids[i]) kids[i].scrollIntoView({ block: 'nearest', inline: 'center', behavior: 'smooth' });
+  if (location.hash !== '#' + (i + 1)) history.replaceState(null, '', '#' + (i + 1));
+}
+document.getElementById('next').addEventListener('click', function () { go(i + 1); });
+document.getElementById('prev').addEventListener('click', function () { go(i - 1); });
+document.getElementById('full').addEventListener('click', function () {
+  if (document.fullscreenElement) document.exitFullscreen(); else document.documentElement.requestFullscreen();
+});
+document.addEventListener('keydown', function (e) {
+  if (e.key === 'ArrowRight' || e.key === 'PageDown' || e.key === ' ') { go(i + 1); e.preventDefault(); }
+  if (e.key === 'ArrowLeft' || e.key === 'PageUp') { go(i - 1); e.preventDefault(); }
+  if (e.key === 'Home') go(0);
+  if (e.key === 'End') go(S.length - 1);
+});
+var tx = 0;
+document.addEventListener('touchstart', function (e) { tx = e.touches[0].clientX; }, { passive: true });
+document.addEventListener('touchend', function (e) {
+  var d = e.changedTouches[0].clientX - tx;
+  if (Math.abs(d) > 45) go(i + (d < 0 ? 1 : -1));
+}, { passive: true });
+go(Math.max(0, Math.min(S.length - 1, (parseInt(location.hash.slice(1), 10) || 1) - 1)));
+</script>
+</body></html>`;
+}
+writeOut('presentation.html', presentationHTML());
 writeOut('print.html', printHTML());
 writeOut('index.html', viewerHTML(files.slice()));
 writeOut('manifest.json', JSON.stringify({ generated: ISSUE_DATE || new Date().toISOString(), issues: { errors: CHECK.errors, warnings: CHECK.warnings }, style: styleKey, tier: tier.key, totalArea, rooms: rooms.map(r => ({ name: r.name, type: r.type, area: r.area })), files }, null, 2));

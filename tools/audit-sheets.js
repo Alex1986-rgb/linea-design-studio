@@ -66,6 +66,8 @@ const RULES = {
   section:          { need: { stamp: 1, level: 3, dim: 2, notes: 1 }, want: { leader: 1, chain: 1 }, scales: SCALES_PLAN },
   // щит: однолинейка с аппаратами защиты и кабельный журнал с длинами
   panel:            { need: { stamp: 1, notes: 1, spec: 1 }, want: { legend: 1 }, scales: SCALES_PLAN },
+  // презентационный лист для клиента: намеренно без размерных цепочек и привязок
+  presentation:     { need: { stamp: 1, room: 0 }, want: { legend: 1 }, scales: SCALES_PLAN },
   'smart-room':     { need: { stamp: 1 }, want: { legend: 1 }, scales: SCALES_PLAN },
   'lowvolt-room':   { need: { stamp: 1, legend: 1 }, want: { tie: 1 }, scales: SCALES_PLAN },
 };
