@@ -5,7 +5,9 @@
 ## Структура
 - `engine/generate.js` — генератор папки проекта (Node, без зависимостей). Запуск: `node engine/generate.js <brief.json> <outdir>`
 - `engine/presets.js` — 6 стилей, тарифы, расценки работ и мебели
-- `site/` — статический сайт: index.html (лендинг), brief.html + js/brief.js (визард брифа), portfolio/demo/ (демо-проект, генерируется движком)
+- `site/` — статический сайт: index.html (лендинг с hero-фильмом по прокрутке), brief.html + js/brief.js (визард брифа), portfolio/demo/ и portfolio/dom-120/ (демо-проекты, генерируются движком)
+- `site/assets/frames/` — раскадровка hero (11 кадров 1600px + manifest.json); пересобрать: `sips -Z 1600 -s formatOptions 62 <рендер> --out site/assets/frames/NN.jpg`
+- В каждой папке проекта движок пишет три входа: `presentation.html` (листалка альбома для клиента), `index.html` (все файлы) и `print.html` (источник единого PDF)
 - `examples/demo-brief.json` — эталон схемы брифа (размеры в метрах; стены A/B/C/D = верх/право/низ/лево; конструктив: `object.structure {houseType, extWall, intWall, slab}`, `object.bearing[]`, `object.risers[]`, `room.walls`)
 - `examples/fixtures/*.json` — краевые случаи для регрессий: студия 24 м², Г-образная, панель с несущими и стояками, заведомо кривой бриф
 - `examples/house-brief.json` — второй эталон: дом 120 м² в два этажа (`rooms[].level`, `rooms[].stairs`)
