@@ -68,6 +68,9 @@ const RULES = {
   panel:            { need: { stamp: 1, notes: 1, spec: 1 }, want: { legend: 1 }, scales: SCALES_PLAN },
   // презентационный лист для клиента: намеренно без размерных цепочек и привязок
   presentation:     { need: { stamp: 1, room: 0 }, want: { legend: 1 }, scales: SCALES_PLAN },
+  // титул с перечнем чертежей и лист обозначения развёрток
+  title:            { need: { stamp: 1, notes: 1, spec: 1 }, want: {}, scales: SCALES_PLAN },
+  'elev-keys':      { need: { stamp: 1, legend: 1, notes: 1, room: 1 }, want: { spec: 1 }, scales: SCALES_PLAN },
   'smart-room':     { need: { stamp: 1 }, want: { legend: 1 }, scales: SCALES_PLAN },
   'lowvolt-room':   { need: { stamp: 1, legend: 1 }, want: { tie: 1 }, scales: SCALES_PLAN },
 };

@@ -1,5 +1,5 @@
 {
-  "generated": "2026-08-06T19:42:22.643Z",
+  "generated": "2026-08-06T19:57:54.778Z",
   "issues": {
     "errors": [],
     "warnings": [
@@ -236,6 +236,7 @@
     "05-potolki/potolok-10-garderobnaya.svg",
     "05-potolki/potolok-11-holl-vtorogo-etazha.svg",
     "05-potolki/uzel-A-korob-led.svg",
+    "04-razvertki/00-oboznachenie-razvertok.svg",
     "09-elektrika/schit-i-kabelnyy-zhurnal.svg",
     "10-uzly/razrez-1-1.svg",
     "10-uzly/razrez-2-2.svg",
@@ -290,6 +291,7 @@
     "08-smeta/smeta.html",
     "00-pasport/zamechaniya.html",
     "08-smeta/smeta.csv",
+    "00-pasport/00-titul-perechen-chertezhey.svg",
     "presentation.html",
     "print.html",
     "index.html"
