@@ -78,6 +78,13 @@
     selStyle = card.dataset.key;
     stylesEl.querySelectorAll('.style-card').forEach(c => c.classList.toggle('sel', c === card));
   };
+  // приход со страницы стиля: brief.html?style=japandi — карточка выбрана заранее
+  (function preselect() {
+    const want = new URLSearchParams(location.search).get('style');
+    if (!want || !STYLES.some(s => s.key === want)) return;
+    selStyle = want;
+    stylesEl.querySelectorAll('.style-card').forEach(c => c.classList.toggle('sel', c.dataset.key === want));
+  })();
 
   // сборка брифа
   function collect() {
