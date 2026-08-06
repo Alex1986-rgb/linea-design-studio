@@ -68,13 +68,17 @@ const nn = n => String(n).padStart(2, '0');
 // ---------- ЛИСТ: А3 альбомный (420×297 мм при 96 dpi), рамка ГОСТ 2.301, поле подшивки 20 мм ----------
 const PAGE = { w: 1587, h: 1123, ml: 76, mr: 19, mt: 19, mb: 19 };
 // масштабный ряд: [знаменатель, коэффициент к внутренним координатам]. S=0.08 px/мм ≈ 1:47,24 при 96 dpi
-const SCALE_SERIES = [[15, 3.1496], [20, 2.3622], [25, 1.8898], [40, 1.1811], [50, 0.9449], [75, 0.6299], [100, 0.4724], [150, 0.3150], [200, 0.2362]];
+// Ряд масштабов: только рекомендованные для планов, разрезов и развёрток интерьера
+// (ГОСТ 21.501-2018, табл. 1 + ряд ГОСТ 2.302). 1:15, 1:75 и 1:150 убраны — они
+// формально существуют, но в альбоме АИ дают «нестандартный» лист, а масштабная
+// линейка и привязки перестают читаться как у соседних листов.
+const SCALE_SERIES = [[20, 2.3622], [25, 1.8898], [40, 1.1811], [50, 0.9449], [100, 0.4724], [200, 0.2362]];
 let LAST_STAMP = null; // штамп листа, собранный draw-функцией (рисуется рамкой листа, не содержимым)
 
 function sheetStampBlock(x, y, w, h, st) {
   const r1 = y + h * 0.42, c1 = x + w * 0.24;                       // верхняя строка: студия | объект
   const b1 = x + w * 0.52, c2 = x + w * 0.63, c3 = x + w * 0.775, c4 = x + w * 0.885; // нижняя: имя | стадия | М | лист | листов
-  let s = `<g stroke="#1C1C1C" stroke-width="1" fill="none"><rect x="${x}" y="${y}" width="${w}" height="${h}"/>
+  let s = `<g data-el="stamp" stroke="#1C1C1C" stroke-width="1" fill="none"><rect x="${x}" y="${y}" width="${w}" height="${h}"/>
 <line x1="${x}" y1="${r1}" x2="${x + w}" y2="${r1}"/><line x1="${c1}" y1="${y}" x2="${c1}" y2="${r1}"/>
 <line x1="${b1}" y1="${r1}" x2="${b1}" y2="${y + h}"/>
 <line x1="${c2}" y1="${r1}" x2="${c2}" y2="${y + h}"/><line x1="${c3}" y1="${r1}" x2="${c3}" y2="${y + h}"/><line x1="${c4}" y1="${r1}" x2="${c4}" y2="${y + h}"/></g>`;
@@ -178,7 +182,7 @@ function svgDoc(wPx, hPx, body, bg) {
   // содержимое ставим по фактическим границам: слева и сверху с равным полем, без пустых зон
   const ox = fx + 12 + Math.max(0, (fieldW - cw * k) / 2) - bb.x0 * k;
   const oy = fy + 14 + Math.max(0, (fieldH - ch * k) / 2) - bb.y0 * k;
-  let s = `<svg xmlns="http://www.w3.org/2000/svg" width="${PAGE.w}" height="${PAGE.h}" viewBox="0 0 ${PAGE.w} ${PAGE.h}" font-family='${FONT}'>`;
+  let s = `<svg xmlns="http://www.w3.org/2000/svg" width="${PAGE.w}" height="${PAGE.h}" viewBox="0 0 ${PAGE.w} ${PAGE.h}" font-family='${FONT}' data-sheet="${CUR_SHEET || 'other'}" data-scale="1:${ratio}">`;
   s += `<rect width="${PAGE.w}" height="${PAGE.h}" fill="${bg || CAD.paper}"/>`;
   s += `<rect x="${fx}" y="${fy}" width="${fw}" height="${fh}" fill="none" stroke="#1C1C1C" stroke-width="1.6"/>`;
   s += `<g transform="translate(${ox} ${oy}) scale(${k.toFixed(4)})">${normalizeInk(body, k)}</g>`;
@@ -190,17 +194,43 @@ function svgDoc(wPx, hPx, body, bg) {
   return s + `</svg>`;
 }
 let TOTAL_SHEETS = 0; // проставляется до генерации листов
+// Тип текущего листа (obmer, demolition, furniture, …) — пишется в data-sheet корня SVG,
+// по нему tools/audit-sheets.js понимает, какой чек-лист канона применять.
+let CUR_SHEET = '';
 function stamp(x, y, w, drawingName, sheet, scale) {
   LAST_STAMP = { name: drawingName, sheet, scale: scale || null, y, x };
   return ''; // штамп рисуется рамкой листа (svgDoc) в едином месте
 }
 function dimH(x1, x2, y, label) {
-  return `<g stroke="#2A2A2A" stroke-width="0.8" fill="none"><line x1="${x1}" y1="${y}" x2="${x2}" y2="${y}"/><line x1="${x1}" y1="${y - 5}" x2="${x1}" y2="${y + 5}"/><line x1="${x2}" y1="${y - 5}" x2="${x2}" y2="${y + 5}"/><line x1="${x1 - 3}" y1="${y + 3}" x2="${x1 + 3}" y2="${y - 3}"/><line x1="${x2 - 3}" y1="${y + 3}" x2="${x2 + 3}" y2="${y - 3}"/></g>
+  return `<g data-el="dim" stroke="#2A2A2A" stroke-width="0.8" fill="none"><line x1="${x1}" y1="${y}" x2="${x2}" y2="${y}"/><line x1="${x1}" y1="${y - 5}" x2="${x1}" y2="${y + 5}"/><line x1="${x2}" y1="${y - 5}" x2="${x2}" y2="${y + 5}"/><line x1="${x1 - 3}" y1="${y + 3}" x2="${x1 + 3}" y2="${y - 3}"/><line x1="${x2 - 3}" y1="${y + 3}" x2="${x2 + 3}" y2="${y - 3}"/></g>
 <text x="${(x1 + x2) / 2}" y="${y - 5}" font-size="10.5" fill="#2A2A2A" text-anchor="middle">${label}</text>`;
 }
 function dimV(x, y1, y2, label) {
-  return `<g stroke="#2A2A2A" stroke-width="0.8" fill="none"><line x1="${x}" y1="${y1}" x2="${x}" y2="${y2}"/><line x1="${x - 5}" y1="${y1}" x2="${x + 5}" y2="${y1}"/><line x1="${x - 5}" y1="${y2}" x2="${x + 5}" y2="${y2}"/><line x1="${x - 3}" y1="${y1 + 3}" x2="${x + 3}" y2="${y1 - 3}"/><line x1="${x - 3}" y1="${y2 + 3}" x2="${x + 3}" y2="${y2 - 3}"/></g>
+  return `<g data-el="dim" stroke="#2A2A2A" stroke-width="0.8" fill="none"><line x1="${x}" y1="${y1}" x2="${x}" y2="${y2}"/><line x1="${x - 5}" y1="${y1}" x2="${x + 5}" y2="${y1}"/><line x1="${x - 5}" y1="${y2}" x2="${x + 5}" y2="${y2}"/><line x1="${x - 3}" y1="${y1 + 3}" x2="${x + 3}" y2="${y1 - 3}"/><line x1="${x - 3}" y1="${y2 + 3}" x2="${x + 3}" y2="${y2 - 3}"/></g>
 <text x="${x + 6}" y="${(y1 + y2) / 2}" font-size="10.5" fill="#2A2A2A" transform="rotate(-90 ${x + 6} ${(y1 + y2) / 2})" text-anchor="middle">${label}</text>`;
+}
+
+// Знак отметки уровня (ГОСТ Р 21.101-2020, 5.4.3 / ГОСТ 2.307, 5.43): на разрезах и
+// развёртках — стрелка из двух штрихов под 45° на выносной линии плюс полка с числом
+// в метрах с тремя знаками. dir: 1 — полка вправо, -1 — влево.
+function levelMark(x, y, mm, dir, opt) {
+  opt = opt || {};
+  const d = dir || 1, a = 5, shelf = opt.shelf || 40;
+  const v = (mm / 1000).toFixed(3).replace('.', ',');
+  const txt = (mm > 0 ? '+' : mm < 0 ? '' : '') + v;
+  return `<g data-el="level" stroke="${opt.color || '#2A2A2A'}" stroke-width="0.8" fill="none">`
+    + `<line x1="${x - a}" y1="${y - a}" x2="${x}" y2="${y}"/><line x1="${x}" y1="${y}" x2="${x + a}" y2="${y - a}"/>`
+    + `<line x1="${x + (d > 0 ? a : -a)}" y1="${y - a}" x2="${x + d * shelf}" y2="${y - a}"/></g>`
+    + `<text x="${x + d * (shelf - 3)}" y="${y - a - 3}" font-size="8.6" fill="${opt.color || '#2A2A2A'}" text-anchor="${d > 0 ? 'end' : 'start'}">${txt}</text>`;
+}
+
+function levelPlan(x, y, mm, prose) {
+  const v = (mm / 1000).toFixed(3).replace('.', ',');
+  const txt = (mm > 0 ? '+' : mm < 0 ? '' : '') + v;
+  const w = txt.length * 5.9 + 12;
+  return `<g data-el="level"><rect x="${x}" y="${y}" width="${w}" height="15" fill="#FFFFFFEE" stroke="#2A2A2A" stroke-width="0.7"/>`
+    + `<text x="${x + w / 2}" y="${y + 11}" font-size="9.5" font-weight="600" fill="#2A2A2A" text-anchor="middle">${txt}</text></g>`
+    + (prose ? `<text x="${x + w + 5}" y="${y + 11}" font-size="9" fill="#57514A">${esc(prose)}</text>` : '');
 }
 
 // ---------- расстановка мебели (правила по типу помещения) ----------
@@ -342,19 +372,19 @@ function chainSegments(len, openings) {
   if (cur < len - 10) segs.push({ a: cur, b: len });
   return segs;
 }
-function chainDimH(x0, y, len, openings, withTotal) {
+function chainDimH(x0, y, len, openings, withTotal) {   // data-el="chain" — замкнутая цепочка (ГОСТ 2.307, 4.13)
   const segs = chainSegments(len, openings);
   let out = '';
   if (segs.length > 1) for (const s of segs) out += dimH(x0 + px(s.a), x0 + px(s.b), y, String(Math.round(s.b - s.a)));
   if (withTotal || segs.length <= 1) out += dimH(x0, x0 + px(len), y + (segs.length > 1 ? 22 : 0), String(len));
-  return out;
+  return `<g data-el="chain">${out}</g>`;
 }
-function chainDimV(x, y0, len, openings, withTotal) {
+function chainDimV(x, y0, len, openings, withTotal) {   // data-el="chain" — замкнутая цепочка (ГОСТ 2.307, 4.13)
   const segs = chainSegments(len, openings);
   let out = '';
   if (segs.length > 1) for (const s of segs) out += dimV(x, y0 + px(s.a), y0 + px(s.b), String(Math.round(s.b - s.a)));
   if (withTotal || segs.length <= 1) out += dimV(x + (segs.length > 1 ? 22 : 0), y0, y0 + px(len), String(len));
-  return out;
+  return `<g data-el="chain">${out}</g>`;
 }
 
 // ---------- обмерный план ----------
@@ -1390,6 +1420,17 @@ function drawElevation(room, wallKey, sheet) {
   }
 
   b += radSvg;
+  // Колонка отметок уровня слева (ГОСТ Р 21.101-2020, 5.4.3): чистый пол, потолок,
+  // верх пристенной мебели и столешниц — по ним бригада ставит закладные и не перекрывает
+  // выключатели. Практика рабочих альбомов: отметки всегда слева от развёртки.
+  {
+    const lv = [{ mm: 0, t: 'чистый пол' }, { mm: room.h, t: 'потолок' }];
+    for (const f of wallFurn) lv.push({ mm: f.base + f.h, t: '' });
+    const seen = new Set();
+    lv.filter(v => { const k = Math.round(v.mm / 10); if (seen.has(k)) return false; seen.add(k); return true; })
+      .sort((a, b) => a.mm - b.mm)
+      .forEach(v => { b += levelMark(M - 6, M + h - px(v.mm), v.mm, -1, { shelf: 46 }); });
+  }
   b += furnMarks;      // подписи мебели поверх графики фронтов
   b += nicheLabels;
 
@@ -1581,10 +1622,10 @@ function drawCeiling(room, sheet) {
     !spotsPx.some(sp => sp.x > c[0] - 8 && sp.x < c[0] + bw2 + 8 && sp.y > c[1] - 8 && sp.y < c[1] + bh + 8)
     && !busy.some(r => c[0] < r.x + r.w + 6 && c[0] + bw2 > r.x - 6 && c[1] < r.y + r.h + 6 && c[1] + bh > r.y - 6)
   ) || list[0] || [M + 8, M + l - 24];
-  const t2 = `2 ур. ${mark(room.h - drop)} · короб ${lv.box}`, w2 = t2.length * 5.6 + 14;
+  const t2 = `2 ур. · короб ${lv.box}`, w2 = t2.length * 5.6 + 14;
   const p2 = freeRect(cands2f.length ? cands2f : cands2, w2, 16);
-  let levelPlates = `<g font-size="10" fill="#2E2A26"><rect x="${p2[0]}" y="${p2[1]}" width="${w2}" height="16" fill="#FFFFFFE6" stroke="#57514A" stroke-width="0.6"/><text x="${p2[0] + 6}" y="${p2[1] + 12}">${t2}</text>`;
-  levelPlates += `<rect x="${bx + bw - 96}" y="${by + bl - 26}" width="88" height="16" fill="#FFFFFFE6" stroke="#57514A" stroke-width="0.6"/><text x="${bx + bw - 90}" y="${by + bl - 14}">1 ур. ${mark(room.h)}</text></g>`;
+  let levelPlates = levelPlan(p2[0], p2[1], room.h - drop, t2) + `<g font-size="10" fill="#2E2A26">`;
+  levelPlates += `</g>` + levelPlan(bx + bw - 108, by + bl - 26, room.h, '1 ур.');
 
   // уровень 3 — «парящий остров» с Phase 2 расширениями
   if (lv.three && lv.island) {
@@ -1605,7 +1646,7 @@ function drawCeiling(room, sheet) {
     const ic = [[ix, iy - 24], [ix, iy + ih + 8], [ix + iw - 188, iy - 24], [ix + 8, iy + 8]];
     const ip = freeRect(ic, 188, 16);
     busy.push({ x: ip[0], y: ip[1], w: 188, h: 16 });
-    islandLabel = `<g font-size="10" fill="#2E2A26"><rect x="${ip[0]}" y="${ip[1]}" width="188" height="16" fill="#FFFFFFE6" stroke="#57514A" stroke-width="0.6"/><text x="${ip[0] + 6}" y="${ip[1] + 12}">3 ур. ${mark(room.h - 2 * drop)} · парящий, щель 10</text></g>`;
+    islandLabel = levelPlan(ip[0], ip[1], room.h - 2 * drop, '3 ур. · парящий, щель 10');
     islandLabel += `<text x="${(ix + iw / 2).toFixed(1)}" y="${(iy + ih / 2 + 4).toFixed(1)}" font-size="8" fill="#57514A" text-anchor="middle">${i.w}×${i.l} мм, 3 ур.</text>`;
   }
 
@@ -1731,6 +1772,10 @@ function drawNode(sheet) {
   b += dimH(X + q(450), X + q(550), y2 + q(12.5) + 34, '100');
   b += `<text x="${X}" y="${Y - 44}" font-size="16" font-weight="700" fill="#2E2A26">Узел А · Короб 2-го уровня со скрытой LED-подсветкой</text>`;
   b += `<text x="${X}" y="${Y - 26}" font-size="11" fill="#7A756D">М 1:20 · применяется на планах потолков всех помещений · блок питания LED с запасом 30% и ревизионным люком</text>`;
+  // Отметки уровня знаком по ГОСТ (разрез) + обратная ссылка на лист, откуда вынесен узел
+  b += levelMark(X - 30, y1, BASE_H, -1, { shelf: 52 });
+  b += levelMark(X - 30, y2 + q(12.5), BASE_H - 120, -1, { shelf: 52 });
+  b += `<text x="${X}" y="${y2 + q(12.5) + 52}" font-size="9.5" fill="#57514A">Узел вынесен с плана потолков — см. лист «План потолков» (раздел 01) и планы потолков помещений (раздел 05).</text>`;
   b += stamp(X, y2 + q(12.5) + 60, q(1400), 'Узел А. Короб с LED', sheet, '1:20');
   return svgDoc(Math.max(790, q(1400) + M * 2), y2 + q(12.5) + 130 + M, b);
 }
@@ -2227,6 +2272,16 @@ function drawSlabotochka(room, sheet) {
   b += `<text x="${sx}" y="${ry + 17}" font-size="14" font-weight="700" fill="#2E2A26">Слаботочка · ${esc(room.name)}</text>`;
   b += `<line x1="${sx}" y1="${ry + 24}" x2="${sx + SPEC_W}" y2="${ry + 24}" stroke="#2E4A8A" stroke-width="1.2"/>`;
   ry += 38;
+  // Условные обозначения слаботочки (ГОСТ 21.210 — символы электрооборудования на планах).
+  // Без них лист читается наугад: точки отличаются только буквой внутри.
+  b += flatLegendBox(sx, ry, SPEC_W, 'Условные обозначения', [
+    { sym: (px2, py2) => `<g stroke="#2E4A8A" fill="#FFF" stroke-width="1"><rect x="${px2}" y="${py2 - 9}" width="13" height="13" rx="2"/><text x="${px2 + 6.5}" y="${py2 + 1}" font-size="7" text-anchor="middle" fill="#2E4A8A" stroke="none">TV</text></g>`, text: 'ТВ-розетка, h=1100 (за ТВ-панелью — в нише)' },
+    { sym: (px2, py2) => `<g stroke="#2E4A8A" fill="#FFF" stroke-width="1"><rect x="${px2}" y="${py2 - 9}" width="13" height="13" rx="2"/><text x="${px2 + 6.5}" y="${py2 + 1}" font-size="6.5" text-anchor="middle" fill="#2E4A8A" stroke="none">LAN</text></g>`, text: 'розетка LAN (UTP Cat.6), h=300' },
+    { sym: (px2, py2) => `<g stroke="#2E4A8A" fill="none" stroke-width="1"><circle cx="${px2 + 6.5}" cy="${py2 - 3}" r="6"/><path d="M ${px2 + 3} ${py2 - 3} L ${px2 + 10} ${py2 - 3}"/></g>`, text: 'точка Wi-Fi / камера PoE, h=2200' },
+    { sym: (px2, py2) => `<g stroke="#2E4A8A" fill="none" stroke-width="1" stroke-dasharray="4 2"><line x1="${px2}" y1="${py2 - 3}" x2="${px2 + 16}" y2="${py2 - 3}"/></g>`, text: 'трасса слаботочного кабеля (отдельно от силовых, ≥ 100 мм)' },
+    { sym: (px2, py2) => `<g stroke="#8A8A50" fill="#F4F0E8" stroke-width="0.9"><rect x="${px2}" y="${py2 - 10}" width="16" height="14"/></g>`, text: 'мультимедиа-щиток, ниша 400×400, h=1500' },
+  ]);
+  ry += 5 * 22 + 40;
 
   const specRows = [
     nTV       > 0 ? ['tv',       'ТВ-розетка',         nTV,       1100] : null,
@@ -2475,7 +2530,7 @@ function leader(ink, tx, ty, text, opt) {
     const txx = dx > 0 ? ex + 3 : ex - 3 - tw;
     if (!ink.free(Math.min(tx, txx) - 2, Math.min(ty, by - th) - 2, Math.abs(txx - tx) + tw + 4, Math.abs(by - ty) + th + 4)) continue;
     ink.add(txx - 2, by - th + 2, tw + 4, th);         // занимаем только текст: полки тонкие, пересечение допустимо
-    return `<g stroke="${CAD.callout}" stroke-width="0.6" fill="none"><line x1="${tx}" y1="${ty}" x2="${bx}" y2="${by}"/><line x1="${bx}" y1="${by}" x2="${ex}" y2="${by}"/></g>`
+    return `<g data-el="leader" stroke="${CAD.callout}" stroke-width="0.6" fill="none"><line x1="${tx}" y1="${ty}" x2="${bx}" y2="${by}"/><line x1="${bx}" y1="${by}" x2="${ex}" y2="${by}"/></g>`
       + `<circle cx="${tx}" cy="${ty}" r="1.6" fill="${CAD.callout}" stroke="none"/>`
       + `<text x="${txx}" y="${by - 3}" font-size="${fs}" fill="${CAD.callout}">${esc(text)}</text>`;
   }
@@ -2502,7 +2557,7 @@ function callout(tx, ty, px2, py2, text) {
 }
 
 function flatRoomMarks(fx, fy, full) { // номер в кружке (+ имя и площадь на полных)
-  let s = '';
+  let s = '<g data-el="room"></g>';
   for (const r of flatRooms) {
     const cx = fx(r.pos.x + r.w / 2), cy = fy(r.pos.y + r.l / 2);
     if (full) {
@@ -2530,7 +2585,7 @@ function flatSheet(sheetNo, title, sub, layerFn, rightFn, notes, lopts) {
   let b = base.s + layerFn(base);
   b += rightFn(LGX, MY, LGW);
   let ny = MY + planH + 62;
-  b += `<text x="${MX}" y="${ny - 22}" font-size="10" font-weight="700" fill="#2E2A26">Примечания:</text>`;
+  b += `<g data-el="notes"></g><text x="${MX}" y="${ny - 22}" font-size="10" font-weight="700" fill="#2E2A26">Примечания:</text>`;
   notes.forEach((n, i) => { b += `<text x="${MX}" y="${ny - 8 + i * 14}" font-size="9" fill="#57514A">${i + 1}. ${esc(n)}</text>`; });
   const stY = ny - 16 + notes.length * 14 + 10;
   b += `<text x="${MX}" y="${MY - 52}" font-size="17" font-weight="700" fill="#2E2A26">${esc(title)}</text>`;
@@ -2546,7 +2601,7 @@ function flatLegendBox(x, y, w, title, rows) { // rows: [{sym, text}] sym = фу
   const wrapped = rows.map(r0 => wrapText(r0.text, 40));
   const heights = wrapped.map(ls => Math.max(20, ls.length * 11 + 8));
   const total = heights.reduce((a, b) => a + b, 0);
-  let s = `<rect x="${x}" y="${y}" width="${w}" height="${total + 30}" fill="none" stroke="#8A8478" stroke-width="0.8"/>`;
+  let s = `<g data-el="legend"><rect x="${x}" y="${y}" width="${w}" height="${total + 30}" fill="none" stroke="#8A8478" stroke-width="0.8"/>`;
   s += `<text x="${x + 10}" y="${y + 18}" font-size="10.5" font-weight="700" fill="#2E2A26">${esc(title)}</text>`;
   let sy = y + 34;
   rows.forEach((r0, i) => {
@@ -2554,7 +2609,7 @@ function flatLegendBox(x, y, w, title, rows) { // rows: [{sym, text}] sym = фу
     wrapped[i].forEach((line, j) => { s += `<text x="${x + 38}" y="${sy + 3 + j * 11}" font-size="8.7" fill="#57514A">${esc(line)}</text>`; });
     sy += heights[i];
   });
-  return s;
+  return s + '</g>';
 }
 
 // 1. Обмерный план квартиры: прострелы по осям + экспликация
@@ -2565,10 +2620,13 @@ function drawFlatObmer(sheetNo) {
     const xs = [...new Set(flatRooms.flatMap(r => [r.pos.x, r.pos.x + r.w]))].sort((a, b) => a - b);
     const ys = [...new Set(flatRooms.flatMap(r => [r.pos.y, r.pos.y + r.l]))].sort((a, b) => a - b);
     const yb = base.fy(FLAT.y1) + px(EXT) + 26, xr = base.fx(FLAT.x1) + px(EXT) + 26;
-    for (let i = 0; i + 1 < xs.length; i++) if (xs[i + 1] - xs[i] > 60) s += dimH(base.fx(xs[i]), base.fx(xs[i + 1]), yb, String(xs[i + 1] - xs[i]));
-    s += dimH(base.fx(FLAT.x0) - px(EXT), base.fx(FLAT.x1) + px(EXT), yb + 24, String(FLAT.W + 2 * EXT));
-    for (let i = 0; i + 1 < ys.length; i++) if (ys[i + 1] - ys[i] > 60) s += dimV(xr, base.fy(ys[i]), base.fy(ys[i + 1]), String(ys[i + 1] - ys[i]));
-    s += dimV(xr + 24, base.fy(FLAT.y0) - px(EXT), base.fy(FLAT.y1) + px(EXT), String(FLAT.H + 2 * EXT));
+    // прострелы по осям стен — замкнутые размерные цепочки (ГОСТ 2.307, 4.13)
+    let chX = '', chY = '';
+    for (let i = 0; i + 1 < xs.length; i++) if (xs[i + 1] - xs[i] > 60) chX += dimH(base.fx(xs[i]), base.fx(xs[i + 1]), yb, String(xs[i + 1] - xs[i]));
+    chX += dimH(base.fx(FLAT.x0) - px(EXT), base.fx(FLAT.x1) + px(EXT), yb + 24, String(FLAT.W + 2 * EXT));
+    for (let i = 0; i + 1 < ys.length; i++) if (ys[i + 1] - ys[i] > 60) chY += dimV(xr, base.fy(ys[i]), base.fy(ys[i + 1]), String(ys[i + 1] - ys[i]));
+    chY += dimV(xr + 24, base.fy(FLAT.y0) - px(EXT), base.fy(FLAT.y1) + px(EXT), String(FLAT.H + 2 * EXT));
+    s += `<g data-el="chain">${chX}</g><g data-el="chain">${chY}</g>`;
     s += `<g><rect x="${base.fx(FLAT.x0) - px(EXT)}" y="${base.fy(FLAT.y0) - px(EXT) - 26}" width="430" height="18" fill="#FFF6F4" stroke="#B0483A" stroke-width="1.1"/><text x="${base.fx(FLAT.x0) - px(EXT) + 8}" y="${base.fy(FLAT.y0) - px(EXT) - 13}" font-size="10" font-weight="600" fill="#B0483A">H=${BASE_H} · наружные стены 200, перегородки 150 · без учёта отделочного слоя</text></g>`;
     return s;
   }, (x, y, w) => {
@@ -2584,6 +2642,15 @@ function drawFlatObmer(sheetNo) {
     const ty = y + 42 + flatRooms.length * 20;
     s += `<line x1="${x}" y1="${ty - 14}" x2="${x + w}" y2="${ty - 14}" stroke="#8A8478" stroke-width="0.6"/>`;
     s += `<text x="${x + 34}" y="${ty}" font-size="9.5" font-weight="700" fill="#2E2A26">Итого</text><text x="${x + w - 10}" y="${ty}" font-size="9.5" font-weight="700" fill="#2E2A26" text-anchor="end">${flatRooms.reduce((a, r) => a + r.area, 0).toFixed(2)} м²</text>`;
+    // Условные обозначения обмерного плана: без них штриховка наружной стены и дуга
+    // открывания читаются наугад (ГОСТ 21.201 — изображения стен, проёмов, дверей)
+    s += flatLegendBox(x, ty + 22, w, 'Условные обозначения', [
+      { sym: (sx, sy) => `<g stroke="${CAD.wallStroke}" stroke-width="0.9"><rect x="${sx}" y="${sy - 10}" width="17" height="12" fill="${CAD.wallFill}"/><line x1="${sx}" y1="${sy + 2}" x2="${sx + 17}" y2="${sy - 10}" stroke="${CAD.hatch}" stroke-width="1"/></g>`, text: `наружная стена ${EXT} мм, штриховка — существующая конструкция` },
+      { sym: (sx, sy) => `<rect x="${sx}" y="${sy - 8}" width="17" height="9" fill="${CAD.wallFill}" stroke="${CAD.wallStroke}" stroke-width="0.9"/>`, text: 'перегородка 150 мм (существующая)' },
+      { sym: (sx, sy) => `<g stroke="${CAD.wallStroke}" stroke-width="0.8" fill="none"><rect x="${sx}" y="${sy - 8}" width="17" height="9" fill="${CAD.paper}"/><line x1="${sx}" y1="${sy - 5}" x2="${sx + 17}" y2="${sy - 5}" stroke="${CAD.window}" stroke-width="1.4"/></g>`, text: 'оконный проём: ширина × высота, отметка подоконника' },
+      { sym: (sx, sy) => `<g stroke="${CAD.doorArc}" stroke-width="0.9" fill="none"><line x1="${sx}" y1="${sy}" x2="${sx}" y2="${sy - 12}"/><path d="M ${sx} ${sy - 12} A 12 12 0 0 1 ${sx + 12} ${sy}" stroke-dasharray="2 2"/></g>`, text: 'дверной проём, дуга — сторона открывания (ГОСТ 21.201)' },
+      { sym: (sx, sy) => `<g stroke="#2A2A2A" stroke-width="0.8" fill="none"><line x1="${sx}" y1="${sy - 4}" x2="${sx + 17}" y2="${sy - 4}"/><line x1="${sx + 1}" y1="${sy - 1}" x2="${sx + 5}" y2="${sy - 7}"/><line x1="${sx + 13}" y1="${sy - 1}" x2="${sx + 17}" y2="${sy - 7}"/></g>`, text: 'размерная цепочка, засечки 45° (ГОСТ 2.307)' },
+    ]);
     return s;
   }, ['Все размеры даны в мм по внутренним поверхностям стен, без учёта отделочного слоя.', 'Размеры проверять по месту; допуск обмера ±5 мм в зонах встроенной мебели и санузлов.', 'За отметку 0,000 принят уровень чистового пола.']);
 }
@@ -2778,6 +2845,16 @@ function drawFlatFloors(sheetNo) {
 
 // 4. План потолков (общий)
 function drawFlatCeiling(sheetNo) {
+  // отметки уровней ставим на самом плане: в легенде они были, на чертеже — нет,
+  // а бригада ищет высоту там, где стоит короб (канон, чек-лист ceiling)
+  const ceilLevels = base => {
+    let s = '';
+    for (const r of flatRooms) {
+      const lv = ceilingLevelsFor(r);
+      s += levelPlan(base.fx(r.pos.x + r.w / 2) - 30, base.fy(r.pos.y + r.l / 2) + 16, r.h - (lv.box ? 120 : 0), lv.box ? '2 ур.' : '1 ур.');
+    }
+    return s;
+  };
   return flatSheet(sheetNo, 'План потолков', `2–3 уровня · перепад 120 мм · скрытая LED 3000K · отметки от чистого пола`, base => {
     let s = '';
     for (const r of flatRooms) {
@@ -2790,7 +2867,7 @@ function drawFlatCeiling(sheetNo) {
       if (lv.three && lv.island) s += `<rect x="${base.fx(r.pos.x + lv.island.x)}" y="${base.fy(r.pos.y + lv.island.y)}" width="${px(lv.island.w)}" height="${px(lv.island.l)}" fill="#E0D9C9" stroke="#57514A" stroke-width="0.9"/>`;
       for (const sp of lightsFor(r).spots) s += `<circle cx="${base.fx(r.pos.x + sp.x)}" cy="${base.fy(r.pos.y + sp.y)}" r="3" fill="#FFF" stroke="#57514A" stroke-width="0.8"/>`;
     }
-    return s + flatRoomMarks(base.fx, base.fy, false);
+    return s + ceilLevels(base) + flatRoomMarks(base.fx, base.fy, false);
   }, (x, y, w) => flatLegendBox(x, y, w, 'Условные обозначения', [
     { sym: (sx, sy) => `<rect x="${sx}" y="${sy - 8}" width="16" height="11" fill="#E9E4D8" stroke="#57514A" stroke-width="0.7"/>`, text: `короб 2-го уровня, отметка ${mark(BASE_H - 120)}` },
     { sym: (sx, sy) => `<rect x="${sx}" y="${sy - 8}" width="16" height="11" fill="#F6F3EC" stroke="#57514A" stroke-width="0.7"/>`, text: `базовый потолок, отметка ${mark(BASE_H)}` },
@@ -2936,6 +3013,17 @@ function drawFlatMontage(sheetNo) {
 }
 
 // 8. Экспликация помещений и план дверей
+// Условные обозначения дверей по ГОСТ 21.201-2011 (табл. 7): однопольная с дугой
+// открывания, откатная со стрелкой, входная. Без легенды подрядчик читает дуги наугад.
+function doorLegendRows() {
+  return [
+    { sym: (sx, sy) => `<g stroke="#2A2A2A" fill="none" stroke-width="1"><line x1="${sx}" y1="${sy - 2}" x2="${sx + 4}" y2="${sy - 2}"/><line x1="${sx + 4}" y1="${sy - 2}" x2="${sx + 4}" y2="${sy - 13}"/><path d="M ${sx + 4} ${sy - 13} A 11 11 0 0 1 ${sx + 15} ${sy - 2}" stroke-dasharray="2 2"/><line x1="${sx + 15}" y1="${sy - 2}" x2="${sx + 18}" y2="${sy - 2}"/></g>`, text: 'дверь однопольная, дуга — сторона открывания (ГОСТ 21.201, табл. 7)' },
+    { sym: (sx, sy) => `<g stroke="#2A2A2A" fill="none" stroke-width="1"><line x1="${sx}" y1="${sy - 4}" x2="${sx + 18}" y2="${sy - 4}"/><line x1="${sx + 2}" y1="${sy - 8}" x2="${sx + 12}" y2="${sy - 8}"/><path d="M ${sx + 12} ${sy - 11} L ${sx + 16} ${sy - 8} L ${sx + 12} ${sy - 5}"/></g>`, text: 'дверь откатная / в пенал, стрелка — направление сдвига' },
+    { sym: (sx, sy) => `<g stroke="#2A2A2A" fill="none" stroke-width="1.6"><rect x="${sx}" y="${sy - 11}" width="18" height="9" fill="#E8E4DC"/></g>`, text: 'входная дверь (существующая), стальная' },
+    { sym: (sx, sy) => `<text x="${sx}" y="${sy}" font-size="9" font-weight="700" fill="#2E2A26">Дn</text>`, text: 'марка проёма по ведомости дверей на этом листе' },
+  ];
+}
+
 function drawFlatDoors(sheetNo) {
   return flatSheet(sheetNo, 'Экспликация помещений и план дверей', 'Марки дверей Дn · спецификация проёмов и полотен', base => {
     let s = flatRoomMarks(base.fx, base.fy, true);
@@ -2950,6 +3038,11 @@ function drawFlatDoors(sheetNo) {
     }
     return s;
   }, (x, y, w) => {
+    // условные обозначения дверей — по канону обязательны на этом листе
+    let s0 = flatLegendBox(x, y, w, 'Условные обозначения', doorLegendRows());
+    const shift = 4 * 20 + 42;   // высота легенды: 4 строки
+    y = y + shift + 14;
+    // ниже — ведомость дверей
     const dl = flatDoorList();
     let s = `<rect x="${x}" y="${y}" width="${w}" height="${dl.length * 30 + 44}" fill="none" stroke="#8A8478" stroke-width="0.8"/>`;
     s += `<text x="${x + 10}" y="${y + 18}" font-size="10.5" font-weight="700" fill="#2E2A26">Спецификация дверей</text>`;
@@ -2960,7 +3053,7 @@ function drawFlatDoors(sheetNo) {
       s += `<text x="${x + 36}" y="${sy - 6}" font-size="8.6" fill="#2E2A26">проём ${d.o.w}×${d.o.h} · полотно ${d.leaf}</text>`;
       s += `<text x="${x + 36}" y="${sy + 6}" font-size="8.2" fill="#7A756D">${esc(d.type)} · ${esc(d.r.name)}</text>`;
     });
-    return s;
+    return s0 + s;
   }, ['Полотна скрытого монтажа, эмаль в цвет стен, магнитные замки AGB (см. спецификацию, раздел 07).', 'Размеры проёмов уточнить по месту после монтажа конструкций и стяжки.', 'Входная дверь — существующая, замена не предусмотрена.'], { roomFill: CAD.roomFill });
 }
 
@@ -3196,6 +3289,15 @@ function drawFlatPlumbing(sheetNo) {
           s += `<circle cx="${fx2 + fw * 0.27}" cy="${fcy}" r="2" fill="${CAD.plumb}"/>`;
           s += `<circle cx="${fx2 + fw * 0.75}" cy="${fcy}" r="2" fill="${CAD.plumb}"/>`;
         }
+        // Высоты водорозеток и выпусков от чистого пола — без них сантехник
+        // ставит подводку наугад и потом вскрывает плитку (канон, чек-лист plumbing)
+        const TIE = {
+          wc:      'выпуск Ø110 h=180 · ХВ h=250',
+          sink:    'ХВ/ГВ h=550 · слив Ø50 h=450',
+          bath:    'смеситель h=1100 · слив Ø50 h=80',
+          kitchen: 'ХВ/ГВ h=550 · слив Ø50 h=450'
+        }[f.key];
+        if (TIE) s += `<text x="${fcx}" y="${fy2 - 5}" font-size="7.8" fill="${CAD.plumb}" text-anchor="middle">${TIE}</text>`;
         const wl = base.fx(r.pos.x), wt = base.fy(r.pos.y);
         const dimGap = 14;
         const distH = Math.round(f.x + f.w / 2);
@@ -3659,53 +3761,55 @@ let sheet = 1;
 TOTAL_SHEETS = rooms.length * 14 + 1 + (FLAT ? 15 * LEVELS.length : 0);
 const reg = []; // реестр листов для ведомости
 const counts = { flat: 0, obmer: 0, demo: 0, mont: 0, plans: 0, poly: 0, elev: 0, ceil: 0, electro: 0 };
-function sheetOut(rel, maker, title, scale) {
+function sheetOut(rel, maker, title, scale, type) {
   const no = sheet++;
+  CUR_SHEET = type || 'other';
   writeOut(rel, maker(no));
+  CUR_SHEET = '';
   reg.push({ no, title, scale: scale || '1:50', file: rel });
 }
 const SL = r => `${nn(r.idx)}-${slug(r.name)}`;
 const RN = r => `${r.name}${LEVEL_NAME(r.level || 1)}`;
 // порядок листов — как в альбомах профессиональных студий
 const FLAT_SHEETS = [
-    ['01-obmer', drawFlatObmer, 'Обмерный план квартиры'],
-    ['02-demontazh', drawFlatDemolition, 'План демонтажа'],
-    ['03-montazh', drawFlatMontage, 'План монтажа ГКЛ-конструкций'],
-    ['04-mebel', drawFlatFurniture, 'План расстановки мебели'],
-    ['05-eksplikatsiya-dverey', drawFlatDoors, 'Экспликация помещений и план дверей'],
-    ['06-rozetki', drawFlatElectro, 'План розеток и выводов'],
-    ['07-potolki', drawFlatCeiling, 'План потолков'],
-    ['08-osveshchenie', drawFlatLighting, 'План освещения'],
-    ['09-vyklyuchateli', drawFlatSwitches, 'План выключателей'],
-    ['10-skhema-vklyucheniya', drawFlatSwitchScheme, 'Схема включения освещения'],
-    ['11-poly', drawFlatFloors, 'План напольных покрытий'],
-    ['12-otdelka-sten', drawFlatWallFinish, 'План отделки стен'],
-    ['13-teplye-poly', drawFlatHeatFloor, 'План тёплых полов'],
-    ['14-kondicionery', drawFlatAC, 'Кондиционеры'],
-    ['15-santehnika', drawFlatPlumbing, 'Сантехника с привязками'],
+    ['01-obmer', drawFlatObmer, 'Обмерный план квартиры', 'obmer'],
+    ['02-demontazh', drawFlatDemolition, 'План демонтажа', 'demolition'],
+    ['03-montazh', drawFlatMontage, 'План монтажа ГКЛ-конструкций', 'montage'],
+    ['04-mebel', drawFlatFurniture, 'План расстановки мебели', 'furniture'],
+    ['05-eksplikatsiya-dverey', drawFlatDoors, 'Экспликация помещений и план дверей', 'doors'],
+    ['06-rozetki', drawFlatElectro, 'План розеток и выводов', 'sockets'],
+    ['07-potolki', drawFlatCeiling, 'План потолков', 'ceiling'],
+    ['08-osveshchenie', drawFlatLighting, 'План освещения', 'lighting'],
+    ['09-vyklyuchateli', drawFlatSwitches, 'План выключателей', 'switches'],
+    ['10-skhema-vklyucheniya', drawFlatSwitchScheme, 'Схема включения освещения', 'switch-scheme'],
+    ['11-poly', drawFlatFloors, 'План напольных покрытий', 'floors'],
+    ['12-otdelka-sten', drawFlatWallFinish, 'План отделки стен', 'wall-finish'],
+    ['13-teplye-poly', drawFlatHeatFloor, 'План тёплых полов', 'heat-floor'],
+    ['14-kondicionery', drawFlatAC, 'Кондиционеры', 'climate'],
+    ['15-santehnika', drawFlatPlumbing, 'Сантехника с привязками', 'plumbing'],
 ];
 for (const lv of LEVELS) { // канон альбома: 13 сводных листов на каждый этаж
   setLevel(lv);
   if (!FLAT) continue;
   const pre = LEVELS.length > 1 ? `et${lv}-` : '';
-  for (const [key, fn, title] of FLAT_SHEETS) {
-    sheetOut(`01-kvartira/kvartira-${pre}${key}.svg`, n => fn(n), title + LEVEL_NAME(lv), '1:50');
+  for (const [key, fn, title, type] of FLAT_SHEETS) {
+    sheetOut(`01-kvartira/kvartira-${pre}${key}.svg`, n => fn(n), title + LEVEL_NAME(lv), '1:50', type);
     counts.flat++;
   }
 }
 setLevel(LEVELS[0]);
-for (const r of rooms) { sheetOut(`01-obmer/obmer-${SL(r)}.svg`, n => drawObmer(r, n), `Обмерный план. ${RN(r)}`); counts.obmer++; }
-for (const r of rooms) { sheetOut(`01-obmer/demo-${SL(r)}.svg`, n => drawDemolition(r, n), `Демонтаж. ${RN(r)}`); counts.demo++; }
-for (const r of rooms) { sheetOut(`01-obmer/mont-${SL(r)}.svg`, n => drawMontage(r, n), `Монтаж перегородок. ${RN(r)}`); counts.mont++; }
-for (const r of rooms) { sheetOut(`02-plany/plan-${SL(r)}.svg`, n => drawPlan(r, n, true), `План мебели с размерами. ${RN(r)}`); counts.plans++; }
-for (const r of rooms) { sheetOut(`02-plany/plan-${SL(r)}-mebel.svg`, n => drawPlan(r, n, false), `План мебели. ${RN(r)}`); counts.plans++; }
-for (const r of rooms) { sheetOut(`03-poly/pol-${SL(r)}.svg`, n => drawFloor(r, n), `План пола. ${RN(r)}`); counts.poly++; }
-for (const r of rooms) for (const wk of ['A', 'B', 'C', 'D']) { sheetOut(`04-razvertki/${SL(r)}-stena-${wk}.svg`, n => drawElevation(r, wk, n), `Развертка. ${RN(r)}, стена ${wk}`); counts.elev++; }
-for (const r of rooms) { sheetOut(`05-potolki/potolok-${SL(r)}.svg`, n => drawCeiling(r, n), `План потолка. ${RN(r)}`); counts.ceil++; }
-sheetOut(`05-potolki/uzel-A-korob-led.svg`, n => drawNode(n), 'Узел А. Короб с LED-подсветкой', '1:20');
-for (const r of rooms) { sheetOut(`09-elektrika/elektrika-${SL(r)}.svg`, n => drawElectro(r, n), `Электрика. ${RN(r)}`); counts.electro++; }
-for (const r of rooms) { sheetOut(`09-elektrika/smarthome-${SL(r)}.svg`, n => drawSmartHome(r, n), `Умный дом. ${RN(r)}`); counts.electro++; }
-for (const r of rooms) { sheetOut(`09-elektrika/slabotochka-${SL(r)}.svg`, n => drawSlabotochka(r, n), `Слаботочка. ${RN(r)}`); counts.electro++; }
+for (const r of rooms) { sheetOut(`01-obmer/obmer-${SL(r)}.svg`, n => drawObmer(r, n), `Обмерный план. ${RN(r)}`, '1:50', 'obmer-room'); counts.obmer++; }
+for (const r of rooms) { sheetOut(`01-obmer/demo-${SL(r)}.svg`, n => drawDemolition(r, n), `Демонтаж. ${RN(r)}`, '1:50', 'demolition-room'); counts.demo++; }
+for (const r of rooms) { sheetOut(`01-obmer/mont-${SL(r)}.svg`, n => drawMontage(r, n), `Монтаж перегородок. ${RN(r)}`, '1:50', 'montage-room'); counts.mont++; }
+for (const r of rooms) { sheetOut(`02-plany/plan-${SL(r)}.svg`, n => drawPlan(r, n, true), `План мебели с размерами. ${RN(r)}`, '1:50', 'plan-dims'); counts.plans++; }
+for (const r of rooms) { sheetOut(`02-plany/plan-${SL(r)}-mebel.svg`, n => drawPlan(r, n, false), `План мебели. ${RN(r)}`, '1:50', 'plan'); counts.plans++; }
+for (const r of rooms) { sheetOut(`03-poly/pol-${SL(r)}.svg`, n => drawFloor(r, n), `План пола. ${RN(r)}`, '1:50', 'floor-room'); counts.poly++; }
+for (const r of rooms) for (const wk of ['A', 'B', 'C', 'D']) { sheetOut(`04-razvertki/${SL(r)}-stena-${wk}.svg`, n => drawElevation(r, wk, n), `Развертка. ${RN(r)}, стена ${wk}`, '1:50', 'elevation'); counts.elev++; }
+for (const r of rooms) { sheetOut(`05-potolki/potolok-${SL(r)}.svg`, n => drawCeiling(r, n), `План потолка. ${RN(r)}`, '1:50', 'ceiling-room'); counts.ceil++; }
+sheetOut(`05-potolki/uzel-A-korob-led.svg`, n => drawNode(n), 'Узел А. Короб с LED-подсветкой', '1:20', 'node');
+for (const r of rooms) { sheetOut(`09-elektrika/elektrika-${SL(r)}.svg`, n => drawElectro(r, n), `Электрика. ${RN(r)}`, '1:50', 'electro-room'); counts.electro++; }
+for (const r of rooms) { sheetOut(`09-elektrika/smarthome-${SL(r)}.svg`, n => drawSmartHome(r, n), `Умный дом. ${RN(r)}`, '1:50', 'smart-room'); counts.electro++; }
+for (const r of rooms) { sheetOut(`09-elektrika/slabotochka-${SL(r)}.svg`, n => drawSlabotochka(r, n), `Слаботочка. ${RN(r)}`, '1:50', 'lowvolt-room'); counts.electro++; }
 // рендеры: подхватываем, если сгенерированы (06-koncept/renders/*.jpg|png)
 let renders = [];
 try {
