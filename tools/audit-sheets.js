@@ -87,7 +87,7 @@ function counts(svg) {
   const byEl = (name) => (svg.match(new RegExp(`data-el="${name}"`, 'g')) || []).length;
   for (const k of ['chain', 'dim', 'legend', 'notes', 'stamp', 'room', 'level', 'leader', 'spec']) c[k] = byEl(k);
   // текстовые детекторы — то, что рисуется без отдельной метки
-  const texts = [...svg.matchAll(/>([^<>]{1,80})</g)].map(m => m[1]);
+  const texts = [...svg.matchAll(/>([^<>]{1,300})</g)].map(m => m[1]);
   const has = re => texts.filter(t => re.test(t)).length;
   c.level += has(/^[+−-]?\d{1,2},\d{3}$/);                       // отметки вида +2,700 / −0,020
   c.tie = has(/(^|\s)(h=|H=)\s*\d{2,4}/) + has(/\d{2,4}\s*\/\s*\d{2,4}/); // высоты и привязки L/H
