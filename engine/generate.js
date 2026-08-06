@@ -881,7 +881,54 @@ function ceilingLevelsFor(room) {
 }
 
 // ---------- электрика — Phase 2 (per-appliance, multi-gang, smart home) ----------
-function electroFor(room) {
+// Точки электрики ставились процентами от габарита и не видели мебели: розетка
+// «диван 2×» могла оказаться там, где дивана нет, или в проёме. Этот проход привязывает
+// точки к фактическим предметам и проверяет их по нормам (канон, раздел 5).
+function anchorElectro(room, pts, furn) {
+  const W = room.w, L = room.l;
+  const by = k => furn.find(f => f.key === k);
+  const near = (v, a, b) => v >= a && v <= b;
+  const openings = [...room.doors, ...room.windows];
+  const inOpening = (x, y) => openings.some(o => {
+    if (o.wall === 'A') return y < 300 && near(x, o.off - 150, o.off + o.w + 150);
+    if (o.wall === 'C') return y > L - 300 && near(x, o.off - 150, o.off + o.w + 150);
+    if (o.wall === 'D') return x < 300 && near(y, o.off - 150, o.off + o.w + 150);
+    return x > W - 300 && near(y, o.off - 150, o.off + o.w + 150);
+  });
+  const bath = by('bath');
+  for (const p of pts) {
+    // 1. якорение к предмету по смыслу подписи
+    const lab = (p.label || '').toLowerCase();
+    const tv = by('tv'), kit = by('kitchen'), desk = by('desk') || by('table');
+    if (/тв|tv/.test(lab) && tv) { p.x = tv.x + tv.w / 2; p.y = tv.y + tv.h / 2; p.hidden = true; }
+    else if (/фартук|варочн|мойк|пмм|посудомо/.test(lab) && kit) { p.x = kit.x + kit.w * 0.5; p.y = kit.y + kit.h + 60; }
+    else if (/рабоч|стол/.test(lab) && desk) { p.x = desk.x + desk.w / 2; p.y = desk.y + desk.h + 60; }
+    // 2. не в проёме и не ближе 150 мм к углу
+    p.x = Math.max(150, Math.min(W - 150, p.x));
+    p.y = Math.max(150, Math.min(L - 150, p.y));
+    if (inOpening(p.x, p.y)) {
+      for (const d of [200, -200, 400, -400, 650, -650]) {
+        const nx = Math.max(150, Math.min(W - 150, p.x + d));
+        if (!inOpening(nx, p.y)) { p.x = nx; break; }
+      }
+    }
+    // 3. не за корпусом мебели, если розетка не спрятана в нишу по проекту
+    if (!p.hidden && p.type === 'socket') {
+      const blocked = furn.find(f => ['wardrobe', 'hallwardrobe', 'shelf', 'dresser', 'fridge'].includes(f.key)
+        && p.x > f.x - 60 && p.x < f.x + f.w + 60 && p.y > f.y - 60 && p.y < f.y + f.h + 60);
+      if (blocked) p.x = Math.max(150, Math.min(W - 150, blocked.x + blocked.w + 250));
+    }
+    // 4. от борта ванны не ближе 600 мм (зона 1 по ПУЭ)
+    if (bath) {
+      const dx = Math.max(bath.x - p.x, p.x - (bath.x + bath.w), 0);
+      const dy = Math.max(bath.y - p.y, p.y - (bath.y + bath.h), 0);
+      if (Math.hypot(dx, dy) < 600) { p.ip44 = true; p.note = 'зона 1: IP44, через УЗО 30 мА'; }
+    }
+  }
+  return pts;
+}
+
+function electroFor(room, furnArg) {
   const W = room.w, L = room.l, pts = [];
   // Phase 2: expanded P helper — opts spread supplies gang/pass/ip44/amps/smart/hidden
   const P = (x, y, type, hh, label, opts) => pts.push({ x: Math.max(120, Math.min(W-120,x)), y: Math.max(120, Math.min(L-120,y)), type, h:hh, label, ...(opts||{}) });
@@ -1030,7 +1077,7 @@ function electroFor(room) {
     }
   }
 
-  return pts;
+  return anchorElectro(room, pts, furnArg || furnitureFor(room));
 }
 
 // ---------- план с мебелью ----------
@@ -3963,6 +4010,124 @@ function drawFlatSection(axis, sheetNo) {
   return svgDoc(fx(x1) + WT + 220, floorY + SLAB + 240, b, CAD.paper);
 }
 
+// ================================================================
+// ЩИТ И КАБЕЛЬНЫЙ ЖУРНАЛ (ГОСТ 21.608-2021: ведомость групповых щитков)
+// Электрик по планам знает, где дырки, но не знает, что покупать и какой
+// автомат ставить. Группы собираются из тех же точек, что нарисованы на планах.
+// ================================================================
+function panelGroups() {
+  const groups = [];
+  const add = (g) => groups.push(Object.assign({ no: groups.length + 1 }, g));
+  // освещение: одна группа на помещение (или на два малых), автомат C10, кабель 3×1,5
+  let lightBatch = [], lightCount = 0;
+  for (const r of flatRooms) {
+    const L = lightsFor(r);
+    const nfix = L.spots.length + (L.pendant ? 1 : 0) + (L.track ? 1 : 0);
+    lightBatch.push(r); lightCount += nfix;
+    if (lightCount >= 10 || r === flatRooms[flatRooms.length - 1]) {
+      add({ kind: 'light', title: 'Освещение: ' + lightBatch.map(x => x.name).join(', '),
+        breaker: 'C10/1P', cable: 'ВВГнг-LS 3×1,5', rooms: lightBatch.slice(), points: lightCount });
+      lightBatch = []; lightCount = 0;
+    }
+  }
+  // розетки: группа на помещение, C16, 3×2,5
+  for (const r of flatRooms) {
+    const pts = electroFor(r).filter(p => p.type === 'socket');
+    if (!pts.length) continue;
+    const wet = r.type === 'bathroom' || r.type === 'wc';
+    add({ kind: 'socket', title: `Розетки: ${r.name}`, breaker: 'C16/1P' + (wet ? ' + УЗО 30 мА' : ''),
+      cable: 'ВВГнг-LS 3×2,5', rooms: [r], points: pts.length, rcd: wet });
+  }
+  // выделенные линии кухни и мокрых зон
+  for (const r of flatRooms) {
+    const f = furnitureFor(r);
+    if (f.some(x => x.key === 'kitchen')) {
+      add({ kind: 'power', title: `Варочная панель: ${r.name}`, breaker: 'C32/2P', cable: 'ВВГнг-LS 3×6', rooms: [r], points: 1 });
+      add({ kind: 'power', title: `Посудомоечная машина: ${r.name}`, breaker: 'C16/1P + дифф 30 мА', cable: 'ВВГнг-LS 3×2,5', rooms: [r], points: 1, rcd: true });
+    }
+    if (r.type === 'bathroom' || r.type === 'wc') {
+      add({ kind: 'power', title: `Стиральная машина: ${r.name}`, breaker: 'C16/1P + дифф 30 мА', cable: 'ВВГнг-LS 3×2,5', rooms: [r], points: 1, rcd: true });
+      add({ kind: 'heat', title: `Тёплый пол: ${r.name}`, breaker: 'C16/1P + УЗО 30 мА', cable: 'ВВГнг-LS 3×2,5', rooms: [r], points: 1, rcd: true });
+    }
+  }
+  return groups;
+}
+
+// длина кабеля: манхэттен от щита до дальней точки группы плюс 15% на спуски и запас
+function cableLen(g, panelPos) {
+  let max = 0;
+  for (const r of g.rooms) {
+    const cx = r.pos.x + r.w / 2, cy = r.pos.y + r.l / 2;
+    const d = Math.abs(cx - panelPos.x) + Math.abs(cy - panelPos.y) + BASE_H;
+    if (d > max) max = d;
+  }
+  return Math.round(max * 1.15 / 100) / 10;   // м с одним знаком
+}
+
+function drawFlatPanel(sheetNo) {
+  const num1 = v => v.toFixed(1).replace('.', ',');   // десятичная запятая: лист русский
+  const groups = panelGroups();
+  const hall = flatRooms.find(r => r.type === 'hallway') || flatRooms[0];
+  const panelPos = { x: hall.pos.x + 300, y: hall.pos.y + 300 };
+  const M = 90, ROW = 30;
+  const busY = M + 70, busX0 = M + 40, busX1 = busX0 + Math.max(620, groups.length * 62);
+  let b = '';
+  // ввод, счётчик, вводной автомат, УЗО и шина
+  b += `<text x="${M}" y="${M + 16}" font-size="17" font-weight="700" fill="#2E2A26">Щит квартирный · однолинейная схема</text>`;
+  b += `<text x="${M}" y="${M + 34}" font-size="11" fill="#7A756D">Ввод 220 В, 1 фаза · вводной автомат C40/2P · счётчик · противопожарное УЗО 300 мА · шина PE/N · ${groups.length} групп</text>`;
+  b += `<g stroke="#1C1C1C" stroke-width="1.4" fill="none"><line x1="${M}" y1="${busY}" x2="${busX1}" y2="${busY}"/></g>`;
+  b += `<rect x="${M}" y="${busY - 26}" width="86" height="22" fill="#F1EDE4" stroke="#1C1C1C" stroke-width="1"/><text x="${M + 43}" y="${busY - 11}" font-size="8.6" text-anchor="middle" fill="#2E2A26">QF0 C40/2P</text>`;
+  b += `<circle cx="${M + 120}" cy="${busY - 15}" r="11" fill="none" stroke="#1C1C1C" stroke-width="1"/><text x="${M + 120}" y="${busY - 12}" font-size="8" text-anchor="middle" fill="#2E2A26">кВт·ч</text>`;
+  b += `<rect x="${M + 150}" y="${busY - 26}" width="104" height="22" fill="#FFF6F4" stroke="#B0483A" stroke-width="1"/><text x="${M + 202}" y="${busY - 11}" font-size="8.4" text-anchor="middle" fill="#B0483A">УЗО 300 мА, сел.</text>`;
+  // отводы групп
+  groups.forEach((g, i) => {
+    const x = busX0 + i * ((busX1 - busX0 - 40) / Math.max(1, groups.length - 1 || 1));
+    b += `<line x1="${x}" y1="${busY}" x2="${x}" y2="${busY + 34}" stroke="#1C1C1C" stroke-width="1.1"/>`;
+    b += `<rect x="${x - 21}" y="${busY + 34}" width="42" height="20" fill="${g.rcd ? '#FFF6F4' : '#F1EDE4'}" stroke="${g.rcd ? '#B0483A' : '#1C1C1C'}" stroke-width="0.9"/>`;
+    b += `<text x="${x}" y="${busY + 48}" font-size="7.6" text-anchor="middle" fill="${g.rcd ? '#B0483A' : '#2E2A26'}">QF${g.no}</text>`;
+    b += `<text x="${x}" y="${busY + 68}" font-size="7.4" text-anchor="middle" fill="#57514A">${esc(g.breaker.split(' ')[0])}</text>`;
+    b += `<line x1="${x}" y1="${busY + 54}" x2="${x}" y2="${busY + 82}" stroke="#21A366" stroke-width="1"/>`;
+  });
+  // кабельный журнал
+  let ty = busY + 120;
+  b += `<text x="${M}" y="${ty}" font-size="12" font-weight="700" fill="#2E2A26">Кабельный журнал</text>`;
+  ty += 10;
+  const cols = [0, 34, 300, 402, 540, 606, 664];
+  const head = ['№', 'Назначение группы', 'Аппарат защиты', 'Кабель', 'Длина, м', 'Точек'];
+  b += `<line x1="${M}" y1="${ty + 4}" x2="${M + cols[6]}" y2="${ty + 4}" stroke="#8A8478" stroke-width="0.8"/>`;
+  head.forEach((h, i) => { b += `<text x="${M + cols[i] + 4}" y="${ty}" font-size="8.4" fill="#7A756D">${h}</text>`; });
+  let totalLen = 0;
+  const bySection = {};
+  groups.forEach((g, i) => {
+    const y = ty + 20 + i * 15;
+    const len = cableLen(g, panelPos);
+    totalLen += len;
+    const sec = g.cable.split('×')[1];
+    bySection[sec] = +( (bySection[sec] || 0) + len ).toFixed(1);
+    b += `<text x="${M + cols[0] + 4}" y="${y}" font-size="8.2" fill="#2E2A26">QF${g.no}</text>`;
+    b += `<text x="${M + cols[1] + 4}" y="${y}" font-size="8.2" fill="#2E2A26">${esc(g.title.length > 46 ? g.title.slice(0, 45) + '…' : g.title)}</text>`;
+    b += `<text x="${M + cols[2] + 4}" y="${y}" font-size="8.2" fill="${g.rcd ? '#B0483A' : '#57514A'}">${esc(g.breaker)}</text>`;
+    b += `<text x="${M + cols[3] + 4}" y="${y}" font-size="8.2" fill="#57514A">${esc(g.cable)}</text>`;
+    b += `<text x="${M + cols[5] - 6}" y="${y}" font-size="8.2" fill="#2E2A26" text-anchor="end">${num1(len)}</text>`;
+    b += `<text x="${M + cols[6] - 6}" y="${y}" font-size="8.2" fill="#57514A" text-anchor="end">${g.points}</text>`;
+    b += `<line x1="${M}" y1="${y + 4}" x2="${M + cols[6]}" y2="${y + 4}" stroke="#EDEBE4" stroke-width="0.5"/>`;
+  });
+  let sy = ty + 30 + groups.length * 15;
+  b += `<line x1="${M}" y1="${sy - 12}" x2="${M + cols[6]}" y2="${sy - 12}" stroke="#8A8478" stroke-width="0.8"/>`;
+  b += `<text x="${M + cols[1] + 4}" y="${sy}" font-size="8.6" font-weight="700" fill="#2E2A26">Итого кабеля</text>`;
+  b += `<text x="${M + cols[5] - 6}" y="${sy}" font-size="8.6" font-weight="700" fill="#2E2A26" text-anchor="end">${num1(totalLen)}</text>`;
+  sy += 16;
+  b += `<text x="${M + cols[1] + 4}" y="${sy}" font-size="8.2" fill="#57514A">по сечениям: ${Object.entries(bySection).sort((a, b) => parseFloat(a[0].replace(',', '.')) - parseFloat(b[0].replace(',', '.'))).map(([k, v]) => `3×${k} — ${num1(v)} м`).join(' · ')}</text>`;
+  b += notesBlock(M, sy + 30, [
+    'Длина кабеля — манхэттен от щита до дальней точки группы плюс высота помещения и 15% на спуски и запас; уточняется по факту прокладки.',
+    'Мокрые зоны, стиральная и посудомоечная машины — через дифференциальные автоматы 30 мА; групповые линии освещения и розеток разделены.',
+    'Щит устанавливается в прихожей, ниша 400×600, h=1600; перед щитом свободная зона 700 мм.',
+    'Кабель прокладывать в гофре: за подвесным потолком и в подготовке пола в зоне 150 мм от стен; штробление несущих конструкций запрещено.',
+  ], 118);
+  b += stamp(M, sy + 96, 640, 'Щит и кабельный журнал', sheetNo, '1:50');
+  return svgDoc(Math.max(900, busX1 + 120), sy + 170, b, CAD.paper);
+}
+
 // ---------- смета ----------
 function roomGeometry(r) {
   const floor = r.w * r.l / 1e6;
@@ -4014,6 +4179,16 @@ function buildSmeta() {
   if (pendants) R('Освещение', '—', 'Подвесы/люстры', 'шт.', pendants, FURN_PRICES.pendant * tier.kFurn);
   if (tracks) R('Освещение', '—', 'Трек-системы со спотами', 'шт.', tracks, FURN_PRICES.track * tier.kFurn);
   if (totalLed) R('Освещение', '—', 'LED-лента 3000K + алюм. профиль с рассеивателем + БП (запас 30%)', 'м.п.', totalLed, 1900 * tier.kFurn);
+  // Кабель — из кабельного журнала листа щита: одна геометрия, одни числа
+  if (FLAT) {
+    const hall = flatRooms.find(r => r.type === 'hallway') || flatRooms[0];
+    const pp = { x: hall.pos.x + 300, y: hall.pos.y + 300 };
+    const gs = panelGroups();
+    const len = gs.reduce((a, g) => a + cableLen(g, pp), 0);
+    R('Черновые работы', 'Квартира', `Кабель ВВГнг-LS по кабельному журналу (${gs.length} групп)`, 'м', +len.toFixed(1), 180 * tier.k);
+    R('Черновые работы', 'Квартира', 'Щит квартирный: корпус, автоматы, УЗО, сборка', 'шт.', 1, 42000 * tier.k);
+  }
+
   return rows;
 }
 function smetaHTML(rows) {
@@ -4392,7 +4567,7 @@ let sheet = 1;
 // на помещение: обмер, демонтаж, монтаж, 2 плана, пол, 4 развертки, потолок, электрика,
 // умный дом, слаботочка = 14 листов; плюс узел А и 15 сводных на этаж.
 // Расхождение с фактом проверяется в конце: штамп «Листов N» обязан совпадать с ведомостью.
-TOTAL_SHEETS = rooms.length * 14 + 1 + NODES.length + (FLAT ? 15 * LEVELS.length + 2 : 0);
+TOTAL_SHEETS = rooms.length * 14 + 1 + NODES.length + (FLAT ? 15 * LEVELS.length + 3 : 0);
 const reg = []; // реестр листов для ведомости
 const counts = { flat: 0, obmer: 0, demo: 0, mont: 0, plans: 0, poly: 0, elev: 0, ceil: 0, electro: 0 };
 function sheetOut(rel, maker, title, scale, type) {
@@ -4441,6 +4616,8 @@ for (const r of rooms) { sheetOut(`03-poly/pol-${SL(r)}.svg`, n => drawFloor(r, 
 for (const r of rooms) for (const wk of ['A', 'B', 'C', 'D']) { sheetOut(`04-razvertki/${SL(r)}-stena-${wk}.svg`, n => drawElevation(r, wk, n), `Развертка. ${RN(r)}, стена ${wk}`, '1:50', 'elevation'); counts.elev++; }
 for (const r of rooms) { sheetOut(`05-potolki/potolok-${SL(r)}.svg`, n => drawCeiling(r, n), `План потолка. ${RN(r)}`, '1:50', 'ceiling-room'); counts.ceil++; }
 sheetOut(`05-potolki/uzel-A-korob-led.svg`, n => drawNode(n), 'Узел А. Короб с LED-подсветкой', '1:20', 'node');
+// щит и кабельный журнал: группы собираются из точек, нарисованных на планах
+if (FLAT) sheetOut('09-elektrika/schit-i-kabelnyy-zhurnal.svg', n => drawFlatPanel(n), 'Щит и кабельный журнал', '1:50', 'panel');
 // разрезы квартиры: по двум осям через середину габарита
 if (FLAT) for (const ax of ['X', 'Y']) sheetOut(`10-uzly/razrez-${ax === 'X' ? '1-1' : '2-2'}.svg`, n => drawFlatSection(ax, n), `Разрез ${ax === 'X' ? '1—1' : '2—2'}`, '1:50', 'section');
 // библиотека узлов: пироги полов, стык покрытий, примыкание плинтуса

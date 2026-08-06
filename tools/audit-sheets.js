@@ -64,6 +64,8 @@ const RULES = {
   node:             { need: { stamp: 1, level: 1 }, want: { leader: 1, sheetRef: 1 }, scales: SCALES_NODE },
   // разрез: конструкции в сечении, отметки уровней, габариты помещений по линии сечения
   section:          { need: { stamp: 1, level: 3, dim: 2, notes: 1 }, want: { leader: 1, chain: 1 }, scales: SCALES_PLAN },
+  // щит: однолинейка с аппаратами защиты и кабельный журнал с длинами
+  panel:            { need: { stamp: 1, notes: 1, spec: 1 }, want: { legend: 1 }, scales: SCALES_PLAN },
   'smart-room':     { need: { stamp: 1 }, want: { legend: 1 }, scales: SCALES_PLAN },
   'lowvolt-room':   { need: { stamp: 1, legend: 1 }, want: { tie: 1 }, scales: SCALES_PLAN },
 };
@@ -100,7 +102,8 @@ function counts(svg) {
   c.nodeRef = has(/узел|л\.\s?\d+/i);
   c.sheetRef = has(/лист\s?\d+|см\.\s?лист/i);
   c.mark = has(/^М\d+$/);
-  c.spec += has(/спецификац|ведомост|экспликац/i) ? 1 : 0;
+  // кабельный журнал — такой же табличный документ на листе, как ведомость (ГОСТ 21.608)
+  c.spec += has(/спецификац|ведомост|экспликац|журнал/i) ? 1 : 0;
   return c;
 }
 
