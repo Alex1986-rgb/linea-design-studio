@@ -346,3 +346,116 @@ code{font-family:ui-monospace,Menlo,monospace;font-size:.92em;color:var(--gold2)
 .art-hero{margin:0 0 40px}
 .art-hero img{width:100%;height:auto;max-height:420px;object-fit:cover;border:1px solid var(--line);border-radius:4px;display:block}
 .art-hero figcaption{color:var(--dim);font-size:12.5px;margin-top:10px;letter-spacing:.02em}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   v16 · ПРЕМИАЛЬНЫЙ СЛОЙ
+   Роскошь на сайте — это не золотые вензеля, а воздух, тонкие линии,
+   благородная типографика и материальность фона. Всё ниже работает
+   на каждой странице, потому что подключено к общим классам каркаса.
+   ═══════════════════════════════════════════════════════════════════════ */
+
+/* 1. Материя: едва различимое зерно поверх фона — экран перестаёт быть плоским */
+body::before{
+  content:'';position:fixed;inset:0;z-index:1;pointer-events:none;opacity:.05;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)'/%3E%3C/svg%3E");
+  mix-blend-mode:overlay}
+header.site,.sticky-cta,.beta{position:relative;z-index:2}
+
+/* 2. Свет: тёплое золотое свечение в верхнем углу секции — как отражение лампы */
+.blk{isolation:isolate}
+.blk::before{
+  content:'';position:absolute;inset:0;pointer-events:none;z-index:-1;
+  background:radial-gradient(120% 60% at 8% 0%,#C29A5B0F 0%,transparent 62%)}
+
+/* 3. Волосяная золотая линия между секциями вместо резкой границы */
+.blk + .blk::after{
+  content:'';position:absolute;left:5vw;right:5vw;top:0;height:1px;
+  background:linear-gradient(90deg,transparent,#C29A5B3D 18%,#C29A5B26 50%,transparent)}
+
+/* 4. Типографика: оптический ритм и старые добрые лигатуры */
+body{font-feature-settings:"kern" 1,"liga" 1,"calt" 1;text-rendering:optimizeLegibility}
+h1,h2,h3,.logo{font-variant-ligatures:common-ligatures}
+.blk h2{letter-spacing:-.015em}
+.hero-page h1{letter-spacing:-.018em}
+.stats b,.proof b,.tile .tile-figs i b{font-variant-numeric:lining-nums tabular-nums}
+
+/* 5. Буквица в статьях журнала — сразу читается как «издание», а не блог */
+.article > .wrap > p:first-of-type::first-letter{
+  float:left;font-family:var(--serif);font-size:4.05em;line-height:.86;
+  padding:.06em .12em 0 0;color:var(--gold2);font-weight:500}
+
+/* 6. Кнопка: тёплый блик, проходящий по золоту при наведении */
+.btn{position:relative;overflow:hidden}
+.btn::after{
+  content:'';position:absolute;inset:0;transform:translateX(-120%);
+  background:linear-gradient(105deg,transparent 20%,#FFFFFF59 48%,transparent 76%);
+  transition:transform .7s cubic-bezier(.22,.61,.36,1)}
+.btn:hover::after{transform:translateX(120%)}
+.btn.ghost::after{background:linear-gradient(105deg,transparent 20%,#C29A5B33 48%,transparent 76%)}
+
+/* 7. Ссылки в тексте: подчёркивание вырастает, а не мигает */
+.article p a,.tbl a,.blk p.sub a{
+  background-image:linear-gradient(var(--gold2),var(--gold2));
+  background-size:0 1px;background-repeat:no-repeat;background-position:0 100%;
+  border-bottom:1px solid #C29A5B40;transition:background-size .35s ease,color .2s}
+.article p a:hover,.tbl a:hover,.blk p.sub a:hover{background-size:100% 1px;border-bottom-color:transparent}
+
+/* 8. Карточки и плитки: медленный наезд картинки, золотая кромка */
+.tile img{transition:transform .9s cubic-bezier(.22,.61,.36,1),filter .5s;filter:saturate(.94) contrast(1.02)}
+.tile:hover img{transform:scale(1.035);filter:saturate(1) contrast(1.04)}
+.tile{box-shadow:0 1px 0 #FFFFFF08 inset}
+.tile:hover{box-shadow:0 1px 0 #C29A5B33 inset,0 18px 46px -28px #000}
+.card{box-shadow:0 1px 0 #FFFFFF08 inset}
+.card:hover{box-shadow:0 1px 0 #C29A5B2E inset,0 16px 40px -30px #000}
+
+/* 9. Таблицы: строка подсвечивается, цифры выравниваются */
+.tbl tr{transition:background .25s}
+.tbl tbody tr:hover,.tbl tr:hover{background:#C29A5B08}
+.tbl td:first-child{font-weight:600;letter-spacing:.005em}
+
+/* 10. Лента фактов: золотая линия сверху и разрядка подписей */
+.proof{position:relative}
+.proof::before{content:'';position:absolute;left:0;right:0;top:-1px;height:1px;
+  background:linear-gradient(90deg,transparent,#C29A5B5C 30%,#C29A5B5C 70%,transparent)}
+.proof span{letter-spacing:.015em}
+
+/* 11. Монограмма-разделитель перед подвалом */
+footer.site{position:relative;padding-top:76px}
+footer.site::before{
+  content:'✦';position:absolute;top:26px;left:50%;transform:translateX(-50%);
+  color:#C29A5B7A;font-size:13px;letter-spacing:.4em}
+footer.site::after{
+  content:'';position:absolute;top:33px;left:5vw;right:5vw;height:1px;z-index:-1;
+  background:linear-gradient(90deg,transparent,#C29A5B26 22%,#C29A5B26 78%,transparent)}
+
+/* 12. Мелочи, которые замечают: выделение текста, полоса прокрутки, фокус */
+::selection{background:#C29A5B;color:#14120E}
+html{scrollbar-color:#C29A5B66 #14120E;scrollbar-width:thin}
+::-webkit-scrollbar{width:10px;height:10px}
+::-webkit-scrollbar-track{background:#14120E}
+::-webkit-scrollbar-thumb{background:#3A342A;border-radius:8px;border:2px solid #14120E}
+::-webkit-scrollbar-thumb:hover{background:#5C5140}
+a:focus-visible,.btn:focus-visible,summary:focus-visible{outline:1px solid var(--gold);outline-offset:3px}
+
+/* 13. Аккордеон FAQ в благородной подаче */
+details{border-bottom:1px solid var(--line);padding:18px 0}
+details summary{cursor:pointer;list-style:none;font-size:16px;letter-spacing:.005em;
+  display:flex;justify-content:space-between;gap:20px;align-items:baseline}
+details summary::-webkit-details-marker{display:none}
+details summary::after{content:'+';color:var(--gold);font-size:19px;line-height:1;transition:transform .3s}
+details[open] summary::after{content:'—';font-size:13px}
+details p{color:var(--mut);margin:12px 0 0;max-width:46em;line-height:1.66}
+
+/* 14. Заголовок страницы въезжает мягко — один раз, без назойливости */
+@media (prefers-reduced-motion:no-preference){
+  .hero-page h1{animation:riseIn .9s cubic-bezier(.22,.61,.36,1) both}
+  .hero-page .lead-page{animation:riseIn .9s .12s cubic-bezier(.22,.61,.36,1) both}
+  .hero-page .kicker{animation:riseIn .7s cubic-bezier(.22,.61,.36,1) both}
+}
+@keyframes riseIn{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+
+@media (max-width:760px){
+  body::before{opacity:.04}
+  .article > .wrap > p:first-of-type::first-letter{font-size:3.2em}
+  footer.site{padding-top:64px}
+}
