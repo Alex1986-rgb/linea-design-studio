@@ -31,6 +31,16 @@ const SECTIONS = [
   { key: 'reviews', title: 'Отзывы', href: 'reviews/' },
 ];
 
+// Описание для сниппета: длиннее ~160 знаков поисковик всё равно обрежет,
+// причём в произвольном месте. Режем сами — по границе слова.
+function clamp(str, n) {
+  n = n || 158;
+  str = String(str).replace(/\s+/g, ' ').trim();
+  if (str.length <= n) return str;
+  const cut = str.slice(0, n);
+  return cut.slice(0, Math.max(cut.lastIndexOf(' '), n - 24)).replace(/[\s,;:.—-]+$/, '') + '…';
+}
+
 const esc = s => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 
 // active — key раздела: его ссылка ведёт на './' (мы уже внутри)
@@ -56,8 +66,11 @@ const sticky = u => `<div class="sticky-cta">
   <a class="btn ghost" href="tel:${AUTHOR.tel}">Позвонить</a>
 </div>`;
 
+// в подвале к разделам добавляются служебные страницы
+const FOOTER_EXTRA = [{ title: 'О студии', href: 'about/' }, { title: 'Контакты', href: 'contacts/' }];
 function footer(u, active) {
-  const links = SECTIONS.map(s => `<a href="${s.key === active ? './' : u + s.href}">${s.title}</a>`).join(' · ');
+  const links = SECTIONS.map(s => `<a href="${s.key === active ? './' : u + s.href}">${s.title}</a>`)
+    .concat(FOOTER_EXTRA.map(s => `<a href="${u + s.href}">${s.title}</a>`)).join(' · ');
   return `<footer class="site">
   <div class="wrap cols">
     <div>
@@ -81,7 +94,7 @@ const crumbsLd = items => ({
 const head = (u, { title, desc, canonical, ogTitle, ogDesc, ogType, extra }) => `<meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>${esc(title)}</title>
-<meta name="description" content="${esc(desc)}">
+<meta name="description" content="${esc(clamp(desc))}">
 <link rel="canonical" href="${canonical}">
 <meta property="og:type" content="${ogType || 'website'}">
 <meta property="og:title" content="${esc(ogTitle || title)}">
@@ -93,4 +106,4 @@ const head = (u, { title, desc, canonical, ogTitle, ogDesc, ogType, extra }) => 
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;600&family=Inter:wght@400;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="${u}css/main.css?${CSSV}">${extra || ''}`;
 
-module.exports = { AUTHOR, BASE, CSSV, SECTIONS, esc, header, footer, beta, sticky, crumbsLd, head };
+module.exports = { AUTHOR, BASE, CSSV, SECTIONS, esc, clamp, header, footer, beta, sticky, crumbsLd, head };

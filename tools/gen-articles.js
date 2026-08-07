@@ -33,7 +33,7 @@ function shell({ file, title, desc, h1, crumb, lead, body, jsonld }) {
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>${esc(title)}</title>
-<meta name="description" content="${esc(desc)}">
+<meta name="description" content="${esc(SHELL.clamp(desc))}">
 <link rel="canonical" href="${canonical}">
 <meta property="og:type" content="article">
 <meta property="og:title" content="${esc(h1)}">
@@ -225,7 +225,7 @@ const crumbsLd = items => ({
 /* хаб */
 w('journal/index.html', shell({
   file: 'journal/index.html',
-  title: 'Журнал LINEA — о дизайн-проектах, чертежах и смете без воды',
+  title: 'Журнал LINEA — о чертежах, инженерии и смете',
   desc: 'Статьи о том, из чего состоит рабочий альбом интерьера: развёртки стен, электрика и зоны ПУЭ, пирог пола, смета вместо цены за метр. С пунктами ГОСТ и СП.',
   h1: 'Журнал: как устроена документация интерьера',
   crumb: 'Журнал',
@@ -235,6 +235,22 @@ w('journal/index.html', shell({
     { '@context': 'https://schema.org', '@type': 'ItemList', itemListElement: ARTICLES.map((a, i) => ({ '@type': 'ListItem', position: i + 1, name: a.title, url: `${BASE}/journal/${a.slug}.html` })) }
   ],
   body: `<section class="blk">
+  <div class="wrap">
+    <div class="kicker">О разделе</div>
+    <h2>Документация интерьера без мифов</h2>
+    <p class="sub">В интернете о дизайн-проектах пишут двумя способами: либо «10 идей для маленькой кухни», либо перепечатки СНиПов, отменённых десять лет назад. Мы пишем третьим: берём вопрос, который реально возникает при ремонте, и отвечаем на него так, как отвечали бы подрядчику — с нормой и пунктом, если норма есть, и с честной пометкой «это практика», если нормы нет.</p>
+    <table class="tbl">
+      <tr><th>Статья</th><th>Отвечает на вопрос</th><th>Нормативная опора</th></tr>
+      <tr><td><a href="sostav-dizayn-proekta.html">Состав дизайн-проекта</a></td><td>какие листы должны быть и как проверить комплект</td><td>ГОСТ 21.507-81, ГОСТ 21.501-2018</td></tr>
+      <tr><td><a href="razvertki-sten.html">Развёртки стен</a></td><td>что на них изображают и как читать перед стройкой</td><td>ГОСТ 21.507-81 п. 8, ГОСТ 2.302-68, ГОСТ Р 21.101-2020</td></tr>
+      <tr><td><a href="elektrika-v-proekte.html">Электрика в проекте</a></td><td>где ставить розетки и что нельзя в санузле</td><td>ПУЭ гл. 7.1, практика эргономики</td></tr>
+      <tr><td><a href="pirog-pola.html">Пирог пола</a></td><td>из чего состоит пол и где нужна гидроизоляция</td><td>СП 29.13330.2011, СП 30.13330.2020</td></tr>
+      <tr><td><a href="smeta-remonta.html">Смета ремонта</a></td><td>как считать бюджет и что забывают включить</td><td>практика сметного расчёта</td></tr>
+    </table>
+  </div>
+</section>
+
+<section class="blk">
   <div class="wrap">
     <div class="kicker">Статьи</div>
     <h2>${ARTICLES.length} разбора по документации</h2>
@@ -260,7 +276,7 @@ ARTICLES.forEach((a, idx) => {
     <p>${s[1]}</p>`).join('\n');
   w(`journal/${a.slug}.html`, shell({
     file: `journal/${a.slug}.html`,
-    title: `${a.title} — журнал LINEA`,
+    title: `${a.title.length > 44 ? a.title.slice(0, 43) + '…' : a.title} — журнал LINEA`,
     desc: a.lead,
     h1: esc(a.title),
     crumb: `<a href="./">Журнал</a> · ${esc(a.tag)} · ${esc(a.read)}`,

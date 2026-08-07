@@ -38,7 +38,7 @@ function page({ file, title, desc, h1, kicker, lead, body, crumb, jsonld, up, se
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>${esc(title)}</title>
-<meta name="description" content="${esc(desc)}">
+<meta name="description" content="${esc(SHELL.clamp(desc))}">
 <link rel="canonical" href="${canonical}">
 <meta property="og:type" content="article">
 <meta property="og:title" content="${esc(h1)}">
@@ -204,7 +204,7 @@ const w = (rel, html) => { const p = path.join(SITE, rel); fs.mkdirSync(path.dir
 
 /* --- кейсы --- */
 const caseCards = CASES.map(c => `      <a class="tile" href="${c.slug}.html">
-        <img src="../portfolio/${c.project}/06-koncept/renders/${c.renders[0]}" alt="${esc(c.name)} — визуализация" loading="lazy">
+        <img src="../portfolio/${c.project}/06-koncept/renders/${c.renders[0]}" alt="${esc(c.name)} — визуализация" width="1200" height="800" loading="lazy" decoding="async">
         <div class="tile-body">
           <span class="tag">${esc(c.style)}</span>
           <b>${esc(c.name)}</b>
@@ -215,7 +215,7 @@ const caseCards = CASES.map(c => `      <a class="tile" href="${c.slug}.html">
 
 w('cases/index.html', page({
   file: 'cases/index.html',
-  title: 'Кейсы студии LINEA — разбор проектов от задачи до альбома',
+  title: 'Кейсы LINEA — разбор проектов от задачи до альбома',
   desc: 'Два проекта конвейера LINEA разобраны по шагам: задача, принятые решения, конкретные листы альбома и цифры сметы. Квартира 56 м² и дом 120 м² в два этажа.',
   h1: 'Кейсы: от задачи до альбома, который можно отдать бригаде',
   kicker: 'Кейсы', crumb: 'Кейсы · разбор проектов',
@@ -229,6 +229,45 @@ w('cases/index.html', page({
 ${caseCards}
     </div>
   </div>
+</section>
+
+<section class="blk">
+  <div class="wrap">
+    <div class="kicker">Что в разборе</div>
+    <h2>Одинаковая структура — чтобы можно было сравнивать</h2>
+    <p class="sub">Кейс не рассказывает, «как красиво получилось». Он показывает цепочку: задача заказчика → принятое решение → лист, на котором это решение зафиксировано. По такой структуре видно, чем один проект отличается от другого и что вообще входит в работу студии.</p>
+    <table class="tbl">
+      <tr><th>Блок кейса</th><th>Что в нём</th><th>Зачем это вам</th></tr>
+      <tr><td>Цифры проекта</td><td>площадь, число листов, развёрток, визуализаций, итог сметы</td><td>сразу понятен объём работы и порядок бюджета</td></tr>
+      <tr><td>Задача</td><td>что просил заказчик и какие были ограничения</td><td>найти свою ситуацию: площадь, состав семьи, бюджет</td></tr>
+      <tr><td>Решения</td><td>пять решений с объяснением, почему именно так в геометрии</td><td>видно логику, а не вкусовщину</td></tr>
+      <tr><td>Визуализации</td><td>кадры по фактической расстановке и материалам проекта</td><td>картинка и чертёж не расходятся</td></tr>
+      <tr><td>Документация</td><td>ссылки на настоящие листы: план, развёртка, розетки, узел, щит</td><td>можно открыть и проверить качество чертежа</td></tr>
+    </table>
+  </div>
+</section>
+
+<section class="blk">
+  <div class="wrap">
+    <div class="kicker">Разные объекты</div>
+    <h2>Квартира и дом: чем отличается работа</h2>
+    <p class="sub">Состав разделов одинаков, но у дома добавляется вертикальная связь этажей — и это меняет и планировку, и инженерию, и объём альбома почти вдвое.</p>
+    <div class="scroll-x">
+      <table class="tbl">
+        <tr><th>Параметр</th><th>Квартира 56 м²</th><th>Дом 120 м², 2 этажа</th></tr>
+        <tr><td>Листов в альбоме</td><td>46</td><td>86</td></tr>
+        <tr><td>Развёрток стен</td><td>20</td><td>44</td></tr>
+        <tr><td>Инженерные листы</td><td>один комплект</td><td>по комплекту на этаж</td></tr>
+        <tr><td>Лестница</td><td>—</td><td>отдельный лист с расчётом подъёмов</td></tr>
+        <tr><td>Разрезы</td><td>2</td><td>2, через самые крупные помещения обоих уровней</td></tr>
+        <tr><td>Срок выпуска</td><td>48 часов</td><td>48–72 часа</td></tr>
+      </table>
+    </div>
+    <div class="cta-row" style="margin-top:26px">
+      <a class="btn ghost" href="../catalog/dizayn-proekt-kvartiry.html">Проект квартиры в каталоге</a>
+      <a class="btn ghost" href="../catalog/dizayn-proekt-doma.html">Проект дома в каталоге</a>
+    </div>
+  </div>
 </section>`
 }));
 
@@ -236,10 +275,10 @@ for (const c of CASES) {
   const figs = c.figures.map(f => `<div><b>${f[0]}</b><span>${f[1]}</span></div>`).join('');
   const dec = c.decisions.map((d, i) => `      <div class="card"><div class="num">${String(i + 1).padStart(2, '0')}</div><h3>${esc(d[0])}</h3><p>${esc(d[1])}</p></div>`).join('\n');
   const album = c.album.map(a => `      <tr><td><a href="../portfolio/${c.project}/${a[1]}" target="_blank" rel="noopener">${esc(a[0])}</a></td><td>${esc(a[2])}</td></tr>`).join('\n');
-  const rend = c.renders.map(r => `      <img src="../portfolio/${c.project}/06-koncept/renders/${r}" alt="${esc(c.name)} — визуализация" loading="lazy">`).join('\n');
+  const rend = c.renders.map(r => `      <img src="../portfolio/${c.project}/06-koncept/renders/${r}" alt="${esc(c.name)} — визуализация" width="1200" height="800" loading="lazy" decoding="async">`).join('\n');
   w(`cases/${c.slug}.html`, page({
     file: `cases/${c.slug}.html`,
-    title: `${c.name} — кейс студии LINEA: решения, чертежи, смета`,
+    title: `${c.name} — кейс LINEA: решения и чертежи`,
     desc: `${c.lead} Разбор решений, ссылки на листы альбома и смета проекта.`,
     h1: esc(c.name),
     kicker: 'Кейс', crumb: `<a href="./">Кейсы</a> · ${esc(c.style)}`,
@@ -303,7 +342,7 @@ const tierRows = ['econom', 'business', 'premium'].map(k => {
 
 w('compare/index.html', page({
   file: 'compare/index.html',
-  title: 'Сравнение: LINEA против планировщиков, студий и бюро',
+  title: 'Сравнение: планировщик, студия, бюро и LINEA',
   desc: 'Честное сравнение по 11 критериям: онлайн-планировщик, типовая студия, бюро полного цикла и LINEA. Плюс разбор пакетов альбома и трёх тарифов.',
   h1: 'С чем сравнивать: планировщик, студия, бюро и мы',
   kicker: 'Сравнение', crumb: 'Сравнение',
@@ -373,13 +412,26 @@ ${tierRows}
 /* --- истории --- */
 w('stories/index.html', page({
   file: 'stories/index.html',
-  title: 'Истории студии LINEA — как устроен конвейер дизайн-проектов',
+  title: 'Истории LINEA — как устроен конвейер проектов',
   desc: 'Разборы изнутри: как из плана застройщика получается альбом за 48 часов и почему мы урезали альбом с 94 листов до 46.',
   h1: 'Истории: как это работает изнутри',
   kicker: 'Истории', crumb: 'Истории',
   lead: 'Не блог «5 трендов года», а разборы решений, которые мы принимали в конвейере, — с причинами, ошибками и последствиями.',
   jsonld: [crumbs([['LINEA', BASE + '/'], ['Истории', BASE + '/stories/']])],
   body: `<section class="blk">
+  <div class="wrap">
+    <div class="kicker">О разделе</div>
+    <h2>Зачем студии писать про свои ошибки</h2>
+    <p class="sub">Дизайн-студии обычно показывают только результат. Мы описываем и решения, и промахи: почему альбом пришлось урезать вдвое, из-за чего наезжали подписи на чертежах, где нормативная ссылка оказалась на отменённый документ. Причина простая — по этим текстам видно, как устроен процесс, а значит, чего от него ждать. Заодно они экономят время тем, кто строит похожий конвейер.</p>
+    <table class="tbl">
+      <tr><th>Разбор</th><th>О чём</th><th>Кому полезно</th></tr>
+      <tr><td><a href="kak-sobiraetsya-albom.html">Как собирается альбом за 48 часов</a></td><td>шесть шагов конвейера: бриф, планировка, инженерия, чертежи, проверки, роль человека</td><td>заказчику — понять, что происходит после брифа</td></tr>
+      <tr><td><a href="pochemu-46-listov.html">Почему альбом урезали с 94 листов до 46</a></td><td>разведка рынка, диагноз, пакеты base и full, найденный побочный дефект</td><td>тем, кто выбирает состав проекта и считает, что «чем больше листов, тем лучше»</td></tr>
+    </table>
+  </div>
+</section>
+
+<section class="blk">
   <div class="wrap">
     <div class="kicker">Разборы</div>
     <h2>Что почитать</h2>
@@ -425,7 +477,7 @@ ${st.steps.map(s => `      <li><h3>${esc(s[0])}</h3><p>${esc(s[1])}</p></li>`).j
 /* --- отзывы: честный статус вместо выдуманных цитат --- */
 w('reviews/index.html', page({
   file: 'reviews/index.html',
-  title: 'Отзывы о студии LINEA — как мы их собираем и публикуем',
+  title: 'Отзывы о студии LINEA — как мы их собираем',
   desc: 'Студия в открытом тестировании: первые проекты в работе, отзывов пока нет. Здесь — как мы собираем обратную связь и что публикуем, когда она появится.',
   h1: 'Отзывы: пока их нет, и мы не будем их выдумывать',
   kicker: 'Отзывы', crumb: 'Отзывы',

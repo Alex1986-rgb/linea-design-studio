@@ -33,7 +33,7 @@ function shell({ file, title, desc, h1, crumb, lead, body, jsonld }) {
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>${esc(title)}</title>
-<meta name="description" content="${esc(desc)}">
+<meta name="description" content="${esc(SHELL.clamp(desc))}">
 <link rel="canonical" href="${canonical}">
 <meta property="og:type" content="website">
 <meta property="og:title" content="${esc(h1)}">
@@ -249,7 +249,7 @@ const w = (rel, html) => { const p = path.join(SITE, rel); fs.mkdirSync(path.dir
 /* хаб каталога */
 w('catalog/index.html', shell({
   file: 'catalog/index.html',
-  title: 'Каталог услуг студии LINEA — дизайн-проекты, документация, смета',
+  title: 'Каталог услуг LINEA — проекты, документация, смета',
   desc: 'Шесть услуг студии: полный дизайн-проект квартиры и дома, только рабочая документация, планировочное решение, визуализации, смета и комплектация. Состав, сроки и условия.',
   h1: 'Каталог: что именно можно заказать',
   crumb: 'Каталог услуг',
@@ -264,7 +264,7 @@ w('catalog/index.html', shell({
     <h2>Полный альбом, часть альбома или отдельный документ</h2>
     <div class="tiles">
 ${SERVICES.map(s => `      <a class="tile" href="${s.slug}.html">
-        <img src="${s.cover}" alt="${esc(s.name)}" loading="lazy">
+        <img src="${s.cover}" alt="${esc(s.name)}" width="1200" height="800" loading="lazy" decoding="async">
         <div class="tile-body">
           <span class="tag">${esc(s.tag)}</span>
           <b>${esc(s.name)}</b>
@@ -313,7 +313,7 @@ SERVICES.forEach(s => {
   const others = SERVICES.filter(x => x.slug !== s.slug).slice(0, 3);
   w(`catalog/${s.slug}.html`, shell({
     file: `catalog/${s.slug}.html`,
-    title: `${s.name} — состав, сроки и условия | LINEA`,
+    title: `${s.name} — состав, сроки, условия | LINEA`,
     desc: `${s.lead} Срок ${s.term}, объём ${s.vol}.`,
     h1: esc(s.name),
     crumb: `<a href="./">Каталог</a> · ${esc(s.tag)}`,

@@ -168,8 +168,8 @@ function stylePage(key) {
 <html lang="ru">
 <head>
 ${HEAD_COMMON}
-<title>Дизайн-проект в стиле «${s.title}» — палитра, материалы, цены | LINEA</title>
-<meta name="description" content="${esc(s.title)} в дизайн-проекте LINEA: палитра, отделка стен и пола, потолок, двери и плинтус, конкретные артикулы в спецификации и ориентир по стоимости материалов. ${esc(c.lead)}">
+<title>Интерьер в стиле «${s.title}» — палитра и материалы | LINEA</title>
+<meta name="description" content="${esc(SHELL.clamp(`${esc(s.title)} в дизайн-проекте LINEA: палитра, отделка стен и пола, потолок, двери и плинтус, конкретные артикулы в спецификации и ориентир по стоимости материалов. ${esc(c.lead)}`))}">
 <link rel="canonical" href="${url}">
 <meta property="og:type" content="article">
 <meta property="og:title" content="Интерьер в стиле «${esc(s.title)}» — что попадёт в ваш проект">
@@ -301,8 +301,8 @@ function hubPage() {
 <html lang="ru">
 <head>
 ${HEAD_COMMON}
-<title>Стили интерьера в проектах LINEA — 6 направлений с палитрами и ценами</title>
-<meta name="description" content="Шесть стилей, в которых студия собирает дизайн-проект: джапанди, скандинавский, минимализм, современный, неоклассика, лофт. По каждому — палитра, отделка, артикулы в спецификации и ориентир по стоимости материалов.">
+<title>Стили интерьера в проектах LINEA — 6 направлений</title>
+<meta name="description" content="${esc(SHELL.clamp(`Шесть стилей, в которых студия собирает дизайн-проект: джапанди, скандинавский, минимализм, современный, неоклассика, лофт. По каждому — палитра, отделка, артикулы в спецификации и ориентир по стоимости материалов.`))}">
 <link rel="canonical" href="${url}">
 <meta property="og:type" content="website">
 <meta property="og:title" content="Стили интерьера в проектах LINEA">

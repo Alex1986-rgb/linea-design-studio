@@ -32,7 +32,8 @@ for (const file of ['index.html', 'brief.html']) {
   out = out.replace(/<nav class="links">[\s\S]*?<\/nav>/, nav.replace(/\n\s{4}/g, '\n    '));
 
   // подвал: колонка ссылок (вторая), контакты автора не трогаем
-  const links = SHELL.SECTIONS.map(s => `<a href="${s.href}">${s.title}</a>`).join(' · ');
+  const links = SHELL.SECTIONS.map(s => `<a href="${s.href}">${s.title}</a>`)
+    .concat(['<a href="about/">О студии</a>', '<a href="contacts/">Контакты</a>']).join(' · ');
   const line = `<p><a href="brief.html">Бриф</a> · ${links}${EXTRA[file] || ''}</p>`;
   out = out.replace(/<p><a href="brief\.html">Бриф<\/a>[\s\S]*?<\/p>/, line);
 
