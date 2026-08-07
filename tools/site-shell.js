@@ -18,7 +18,7 @@ const AUTHOR = {
 };
 
 const BASE = 'https://alex1986-rgb.github.io/linea-design-studio';
-const CSSV = 'v=16';
+const CSSV = 'v=17';
 
 // Разделы сайта в порядке меню. Добавили раздел — правится только здесь.
 const SECTIONS = [
@@ -73,10 +73,35 @@ const FOOTER_EXTRA = [
   { title: 'О студии', href: 'about/' }, { title: 'Контакты', href: 'contacts/' },
   { title: 'Карта сайта', href: 'sitemap/' }, { title: 'Обработка данных', href: 'policy/' },
 ];
+// Воронка сайта: три состояния посетителя. Полоса стоит перед подвалом на
+// каждой странице и всегда показывает, где человек сейчас и что дальше.
+const FUNNEL = [
+  { key: 'look', title: 'Посмотреть', text: 'альбомы целиком, лист за листом', href: 'portfolio-hub/', on: ['cases', 'stories', 'reviews', 'style'] },
+  { key: 'check', title: 'Сравнить', text: 'состав, сроки и условия с рынком', href: 'compare/', on: ['compare', 'catalog', 'journal'] },
+  { key: 'start', title: 'Начать', text: 'бриф — семь минут, дальше мы', href: 'brief.html', on: [] },
+];
+function funnel(u, active) {
+  const cur = FUNNEL.findIndex(f => f.on.includes(active));
+  const i0 = cur < 0 ? 0 : cur;
+  return `<section class="funnel" aria-label="Что дальше">
+  <div class="wrap">
+${FUNNEL.map((f, i) => `    <a class="fstep${i === i0 ? ' on' : ''}${i < i0 ? ' done' : ''}" href="${u + f.href}">
+      <span class="fnum">${String(i + 1).padStart(2, '0')}</span>
+      <span class="ftitle">${f.title}</span>
+      <span class="ftext">${f.text}</span>
+    </a>`).join('\n')}
+  </div>
+</section>`;
+}
+
 function footer(u, active) {
   const links = SECTIONS.map(s => `<a href="${s.key === active ? './' : u + s.href}">${s.title}</a>`)
     .concat(FOOTER_EXTRA.map(s => `<a href="${u + s.href}">${s.title}</a>`)).join(' · ');
-  return `<footer class="site">
+  return `${funnel(u, active)}
+
+<a class="to-top" href="#" aria-label="Наверх">↑</a>
+
+<footer class="site">
   <div class="wrap cols">
     <div>
       <div class="logo">LINE<i>A</i></div>
@@ -89,6 +114,13 @@ function footer(u, active) {
     </div>
   </div>
 </footer>`;
+}
+
+// Видимые хлебные крошки: и навигация, и сигнал структуры для поиска
+function crumbsBar(u, items) {
+  return `<nav class="crumbs" aria-label="Хлебные крошки"><div class="wrap">`
+    + `<a href="${u}">Главная</a>` + items.map(it => it[1] ? `<a href="${it[1]}">${esc(it[0])}</a>` : `<span>${esc(it[0])}</span>`).join('')
+    + `</div></nav>`;
 }
 
 const crumbsLd = items => ({
@@ -111,4 +143,4 @@ const head = (u, { title, desc, canonical, ogTitle, ogDesc, ogType, extra }) => 
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;600&family=Inter:wght@400;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="${u}css/main.css?${CSSV}">${extra || ''}`;
 
-module.exports = { AUTHOR, BASE, CSSV, SECTIONS, FOOTER_EXTRA, esc, clamp, header, footer, beta, sticky, crumbsLd, head };
+module.exports = { AUTHOR, BASE, CSSV, SECTIONS, FOOTER_EXTRA, FUNNEL, funnel, crumbsBar, esc, clamp, header, footer, beta, sticky, crumbsLd, head };

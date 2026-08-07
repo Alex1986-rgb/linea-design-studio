@@ -21,7 +21,7 @@ const { AUTHOR, BASE, esc, crumbsLd } = SHELL;
 const out = [];
 const w = (rel, html) => { const p = path.join(SITE, rel); fs.mkdirSync(path.dirname(p), { recursive: true }); fs.writeFileSync(p, html); out.push(rel); };
 
-function page({ file, title, desc, h1, crumb, lead, body, jsonld, noindex }) {
+function page({ file, title, desc, h1, crumb, lead, body, jsonld, noindex, sec }) {
   const u = '../';
   const ld = (jsonld || []).map(o => `<script type="application/ld+json">${JSON.stringify(o)}</script>`).join('\n');
   return `<!DOCTYPE html>
@@ -47,7 +47,7 @@ ${body}
 
 ${SHELL.sticky(u)}
 
-${SHELL.footer(u, null)}
+${SHELL.footer(u, sec || null)}
 </body>
 </html>
 `;
@@ -56,6 +56,7 @@ ${SHELL.footer(u, null)}
 /* ---------------------------------------------------------- портфолио */
 w('portfolio-hub/index.html', page({
   file: 'portfolio-hub/index.html',
+  sec: 'cases',
   title: 'Портфолио LINEA — два альбома целиком, лист за листом',
   desc: 'Демо-проекты студии открыты полностью: квартира 56 м² на 46 листов и дом 120 м² на 86 листов. Листалка, единый PDF, спецификация и смета — всё доступно без запроса.',
   h1: 'Портфолио: альбомы открыты целиком',
@@ -97,6 +98,7 @@ w('portfolio-hub/index.html', page({
 /* ---------------------------------------------------------- процесс */
 w('process/index.html', page({
   file: 'process/index.html',
+  sec: 'compare',
   title: 'Как проходит работа над проектом — этапы LINEA',
   desc: 'Пять этапов от брифа до выдачи альбома: что происходит на каждом, сколько занимает, что требуется от заказчика и чем этап заканчивается.',
   h1: 'Как проходит работа',
@@ -158,6 +160,7 @@ w('process/index.html', page({
 /* ---------------------------------------------------------- условия и цены */
 w('price/index.html', page({
   file: 'price/index.html',
+  sec: 'compare',
   title: 'Стоимость дизайн-проекта — условия студии LINEA',
   desc: 'Сколько стоит дизайн-проект в LINEA: на время открытого тестирования проектирование бесплатно, предоплаты нет. Что входит, за что платить не нужно и как считается смета реализации.',
   h1: 'Стоимость и условия',
@@ -222,6 +225,7 @@ const FAQ = [
 ];
 w('faq/index.html', page({
   file: 'faq/index.html',
+  sec: 'compare',
   title: 'Вопросы и ответы о дизайн-проекте — LINEA',
   desc: 'Десять частых вопросов о работе студии: что входит в проект, почему 48 часов, правда ли бесплатно, что нужно от заказчика, как вносятся правки и что со сметой.',
   h1: 'Вопросы и ответы',

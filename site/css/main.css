@@ -459,3 +459,89 @@ details p{color:var(--mut);margin:12px 0 0;max-width:46em;line-height:1.66}
   .article > .wrap > p:first-of-type::first-letter{font-size:3.2em}
   footer.site{padding-top:64px}
 }
+
+/* ═══════════════════════════════════════════════════════════════════
+   v17 · ЛОСК И ВОРОНКА
+   Блеск здесь работает на дело: стекло и градиент выделяют то, по чему
+   человек должен пройти дальше, а полоса воронки говорит, где он сейчас.
+   ═══════════════════════════════════════════════════════════════════ */
+
+/* 1. Стекло: шапка и липкая панель перестают быть плашками */
+header.site{background:#0F0E0Cd9;backdrop-filter:blur(16px) saturate(1.25);-webkit-backdrop-filter:blur(16px) saturate(1.25)}
+.beta{background:linear-gradient(100deg,#C29A5B,#D9B87E 42%,#C29A5B);color:#14120E}
+
+/* 2. Золото как материал: градиентная заливка акцентов */
+.hero-page h1 em,.film h1 em,.blk h2 em,.proof b,.stats b{
+  background:linear-gradient(96deg,#C29A5B 0%,#E6CE9E 44%,#B4884A 100%);
+  -webkit-background-clip:text;background-clip:text;color:transparent}
+
+/* 3. Меню: подчёркивание растёт из центра */
+.nav .links a{position:relative;padding-bottom:4px}
+.nav .links a::after{content:'';position:absolute;left:50%;right:50%;bottom:0;height:1px;
+  background:var(--gold);transition:left .3s ease,right .3s ease}
+.nav .links a:hover::after,.nav .links a[aria-current]::after{left:0;right:0}
+.nav .links a[aria-current]{color:var(--gold2)}
+
+/* 4. Полоса воронки: путь из трёх шагов перед подвалом */
+.funnel{border-top:1px solid var(--line);background:linear-gradient(180deg,#131109,#0F0E0C)}
+.funnel .wrap{display:grid;grid-template-columns:repeat(3,1fr);gap:0}
+.fstep{display:block;padding:38px 30px 40px;border-right:1px solid var(--line);color:var(--ink);position:relative;transition:.3s}
+.fstep:last-child{border-right:0}
+.fstep:hover{background:#C29A5B0A}
+.fnum{display:block;font-family:var(--serif);font-size:13px;letter-spacing:.2em;color:var(--dim);margin-bottom:12px}
+.ftitle{display:block;font-family:var(--serif);font-size:23px;color:var(--ink);margin-bottom:8px}
+.ftext{display:block;color:var(--mut);font-size:13.5px;line-height:1.5}
+.fstep.done .fnum::after{content:' ✓';color:var(--gold)}
+.fstep.on{background:linear-gradient(180deg,#C29A5B12,transparent 70%)}
+.fstep.on::before{content:'';position:absolute;left:0;right:0;top:-1px;height:2px;
+  background:linear-gradient(90deg,transparent,var(--gold),transparent)}
+.fstep.on .ftitle{color:var(--gold2)}
+
+/* 5. Кнопка «наверх»: появляется сама, когда страница уехала вниз */
+.to-top{position:fixed;right:22px;bottom:26px;z-index:55;width:44px;height:44px;border-radius:50%;
+  display:grid;place-items:center;color:var(--gold);font-size:17px;
+  background:#14120Ecc;border:1px solid var(--line);backdrop-filter:blur(8px);
+  opacity:0;pointer-events:none;transform:translateY(10px);transition:.35s}
+@supports (animation-timeline:scroll()){
+  .to-top{animation:showTop linear both;animation-timeline:scroll(root);animation-range:200px 460px}
+  @keyframes showTop{to{opacity:1;pointer-events:auto;transform:none}}
+}
+.to-top:hover{border-color:var(--gold);background:#1B1812e6}
+
+/* 6. Хлебные крошки */
+.crumbs{border-bottom:1px solid var(--line);background:#100F0C}
+.crumbs .wrap{padding-block:13px;font-size:12.5px;color:var(--dim);display:flex;flex-wrap:wrap;gap:8px 0}
+.crumbs a,.crumbs span{color:var(--mut)}
+.crumbs a:hover{color:var(--gold2)}
+.crumbs a::after,.crumbs span:not(:last-child)::after{content:'/';color:#4A4438;margin:0 10px}
+.crumbs :last-child{color:var(--dim)}
+
+/* 7. Блок-цитата: крупная мысль, которая держит страницу */
+.quote{border-left:2px solid var(--gold);padding:6px 0 6px 28px;margin:38px 0;max-width:40em}
+.quote p{font-family:var(--serif);font-size:clamp(19px,2vw,25px);line-height:1.42;color:var(--ink);margin:0}
+.quote cite{display:block;margin-top:12px;font-style:normal;color:var(--mut);font-size:13px;letter-spacing:.04em}
+
+/* 8. Шильдик премиум-сегмента */
+.badge{display:inline-flex;align-items:center;gap:8px;padding:7px 14px;border-radius:2px;
+  border:1px solid #C29A5B4D;background:#C29A5B0F;color:var(--gold2);
+  font-size:11.5px;letter-spacing:.14em;text-transform:uppercase}
+.badge::before{content:'✦';font-size:10px}
+
+/* 9. Главная кнопка светится, когда на неё смотрят */
+.btn:not(.ghost){box-shadow:0 10px 30px -18px #C29A5B}
+.btn:not(.ghost):hover{box-shadow:0 14px 38px -16px #C29A5Bcc}
+
+/* 10. Тонкая полоса прогресса чтения статьи */
+@supports (animation-timeline:scroll()){
+  .article::before{content:'';position:fixed;left:0;top:0;height:2px;width:100%;z-index:60;transform-origin:0 50%;
+    background:linear-gradient(90deg,#C29A5B,#E6CE9E);animation:readBar linear both;animation-timeline:scroll(root)}
+  @keyframes readBar{from{transform:scaleX(0)}to{transform:scaleX(1)}}
+}
+
+@media (max-width:760px){
+  .funnel .wrap{grid-template-columns:1fr}
+  .fstep{border-right:0;border-bottom:1px solid var(--line);padding:26px 24px}
+  .to-top{right:14px;bottom:88px;width:40px;height:40px}
+  .crumbs .wrap{font-size:11.5px}
+}
+@media (prefers-reduced-motion:reduce){.to-top{opacity:1;pointer-events:auto;transform:none;animation:none}}
