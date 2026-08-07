@@ -256,7 +256,7 @@ details.raw pre{max-height:320px;overflow:auto;font-size:11px;color:var(--mut);b
 @media (max-width:760px){
   header.site .nav>.btn.sm{display:none}
   .nav{gap:14px;row-gap:6px;flex-wrap:wrap;padding:14px 5vw}
-  .nav .links{gap:12px 14px;font-size:11px;letter-spacing:.1em}
+  .nav .links{gap:10px 13px;font-size:10.5px;letter-spacing:.08em}
   .sticky-cta{display:flex;position:fixed;left:0;right:0;bottom:0;z-index:60;gap:10px;
     padding:10px 14px calc(10px + env(safe-area-inset-bottom));
     background:#0F0E0Cf2;backdrop-filter:blur(10px);border-top:1px solid var(--line)}

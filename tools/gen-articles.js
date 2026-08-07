@@ -17,7 +17,7 @@ const path = require('path');
 const ROOT = path.join(__dirname, '..');
 const SITE = path.join(ROOT, 'site');
 const BASE = 'https://alex1986-rgb.github.io/linea-design-studio';
-const CSSV = 'v=13';
+const CSSV = 'v=14';
 const AUTHOR = { name: 'Кырлан Александр', role: 'дизайнер-архитектор', phone: '+7 925 733-86-40', tel: '+79257338640', email: 'optteem@mail.ru' };
 
 const esc = s => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
@@ -52,6 +52,7 @@ ${ld}
   <div class="nav">
     <a class="logo" href="../">LINE<i>A</i></a>
     <nav class="links">
+      <a href="../catalog/">Каталог</a>
       <a href="../cases/">Кейсы</a>
       <a href="../compare/">Сравнение</a>
       <a href="../style/">Стили</a>
@@ -99,7 +100,7 @@ ${body}
       <p>${AUTHOR.role} <b>${AUTHOR.name}</b><br><a href="tel:${AUTHOR.tel}">${AUTHOR.phone}</a> · <a href="mailto:${AUTHOR.email}">${AUTHOR.email}</a></p>
     </div>
     <div>
-      <p><a href="../brief.html">Бриф</a> · <a href="../cases/">Кейсы</a> · <a href="../compare/">Сравнение</a> · <a href="../style/">Стили</a> · <a href="./">Журнал</a> · <a href="../stories/">Истории</a> · <a href="../reviews/">Отзывы</a></p>
+      <p><a href="../brief.html">Бриф</a> · <a href="../catalog/">Каталог</a> · <a href="../cases/">Кейсы</a> · <a href="../compare/">Сравнение</a> · <a href="../style/">Стили</a> · <a href="./">Журнал</a> · <a href="../stories/">Истории</a> · <a href="../reviews/">Отзывы</a></p>
       <p>© LINEA studio, 2026</p>
     </div>
   </div>

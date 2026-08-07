@@ -101,7 +101,7 @@ const HEAD_COMMON = `<meta charset="utf-8">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' fill='%230F0E0C'/><text x='50' y='68' font-size='52' text-anchor='middle' fill='%23C29A5B' font-family='Georgia'>L</text></svg>">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;600&family=Inter:wght@400;600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="../css/main.css?v=13">`;
+<link rel="stylesheet" href="../css/main.css?v=14">`;
 
 /* Локальные стили страниц раздела: не трогаем main.css, чтобы не сбрасывать кеш всему сайту. */
 const LOCAL_CSS = `<style>
@@ -132,13 +132,13 @@ const header = () => `<header class="site">
   <div class="nav">
     <a class="logo" href="../">LINE<i>A</i></a>
     <nav class="links">
+      <a href="../catalog/">Каталог</a>
       <a href="../cases/">Кейсы</a>
       <a href="../compare/">Сравнение</a>
       <a href="./">Стили</a>
       <a href="../journal/">Журнал</a>
-      <a href="../journal/">Журнал</a> · <a href="../stories/">Истории</a>
+      <a href="../stories/">Истории</a>
       <a href="../reviews/">Отзывы</a>
-      <a href="../#faq">FAQ</a>
     </nav>
     <a class="btn sm" href="../brief.html">Заполнить бриф</a>
   </div>
@@ -152,7 +152,7 @@ const footer = () => `<footer class="site">
       <p>${AUTHOR.role} <b>${AUTHOR.name}</b><br><a href="tel:${AUTHOR.tel}">${AUTHOR.phone}</a> · <a href="mailto:${AUTHOR.email}">${AUTHOR.email}</a></p>
     </div>
     <div>
-      <p><a href="../brief.html">Бриф</a> · <a href="../cases/">Кейсы</a> · <a href="../compare/">Сравнение</a> · <a href="./">Стили</a> · <a href="../stories/">Истории</a> · <a href="../reviews/">Отзывы</a></p>
+      <p><a href="../brief.html">Бриф</a> · <a href="../catalog/">Каталог</a> · <a href="../cases/">Кейсы</a> · <a href="../compare/">Сравнение</a> · <a href="./">Стили</a> · <a href="../stories/">Истории</a> · <a href="../reviews/">Отзывы</a></p>
       <p>© LINEA studio, 2026</p>
     </div>
   </div>
