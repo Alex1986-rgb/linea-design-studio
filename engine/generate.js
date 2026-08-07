@@ -126,7 +126,9 @@ function sheetStampBlock(x, y, w, h, st) {
 <line x1="${c2}" y1="${r1}" x2="${c2}" y2="${y + h}"/><line x1="${c3}" y1="${r1}" x2="${c3}" y2="${y + h}"/><line x1="${c4}" y1="${r1}" x2="${c4}" y2="${y + h}"/></g>`;
   const lbl = (tx, ty, t) => `<text x="${tx}" y="${ty}" font-size="9.5" fill="#7A756D">${esc(t)}</text>`;
   const val = (tx, ty, t, sz, w2) => `<text x="${tx}" y="${ty}" font-size="${sz || 11}" font-weight="${w2 || 400}" fill="#1C1C1C">${esc(t)}</text>`;
-  s += lbl(x + 7, y + 13, 'Студия') + val(x + 7, y + 30, 'LINEA', 15, 700) + lbl(x + 7, y + 43, 'Дизайн интерьера');
+  const sm = (tx, ty, t) => `<text x="${tx}" y="${ty}" font-size="8.2" fill="#57514A">${esc(t)}</text>`;
+  s += lbl(x + 7, y + 11, 'Разработал') + val(x + 7, y + 26, AUTHOR.name, 12, 700);
+  s += sm(x + 7, y + 37, `${AUTHOR.role} · LINEA`) + sm(x + 7, y + 47, AUTHOR.phone) + sm(x + 7, y + 57, AUTHOR.email);
   s += lbl(c1 + 7, y + 13, 'Объект') + val(c1 + 7, y + 30, (brief.object && brief.object.address) || 'Объект', 12, 600);
   s += lbl(c1 + 7, y + 43, `${(brief.object && brief.object.type) || 'квартира'} · ${totalArea} м² · стиль «${style.title}»`);
   s += lbl(x + 7, r1 + 13, 'Наименование листа');
@@ -223,6 +225,18 @@ const TEXT_MM = { h5: 5, h35: 3.5, h25: 2.5 };
 // коэффициентом k (см. SCALE_SERIES). Из-за этого один и тот же font-size давал на бумаге
 // от 1,5 до 5,6 мм — альбом читался как склейка из разных проектов. Нормализация держит
 // толщины и кегли постоянными на бумаге: делим на k и подпираем минимумами ГОСТ.
+// Автор проекта: подставляется в основную надпись каждого листа, в титул,
+// в паспорт, в обложку PDF и во все HTML-входы альбома.
+const AUTHOR = {
+  name: 'Кырлан Александр',
+  short: 'Кырлан А.',
+  role: 'дизайнер-архитектор',
+  phone: '+7 925 733-86-40',
+  tel: '+79257338640',
+  email: 'optteem@mail.ru',
+};
+const AUTHOR_LINE = `${AUTHOR.role} ${AUTHOR.name} · ${AUTHOR.phone} · ${AUTHOR.email}`;
+
 const K_REF = 1.05;               // опорный коэффициент: font-size 9 → 2,5 мм на бумаге
 
 // Фактический масштабный коэффициент листа. На первом проходе он неизвестен (масштаб
@@ -5008,7 +5022,7 @@ tr.big td{font-size:15px}
 .note{color:#7A756D;font-size:12px;border-top:1px solid #E5E0D6;padding-top:14px;margin-top:28px}
 footer{max-width:900px;margin:14px auto 0;color:#9A937F;font-size:11px;letter-spacing:2px}
 @media print{body{padding:0}main{border:0;padding:24px}}
-</style></head><body><main>${body}</main><footer>LINEA · СТУДИЯ ДИЗАЙНА ИНТЕРЬЕРА · ${DATE}</footer></body></html>`;
+</style></head><body><main>${body}</main><footer>LINEA · ${esc(AUTHOR.role)} ${esc(AUTHOR.name)} · <a href="tel:${AUTHOR.tel}">${esc(AUTHOR.phone)}</a> · <a href="mailto:${AUTHOR.email}">${esc(AUTHOR.email)}</a> · ${DATE}</footer></body></html>`;
 }
 
 // ---------- просмотрщик папки ----------
@@ -5117,7 +5131,7 @@ ${sec('razv', '04 · Развертки стен', 'Каждая стена: н�
 ${sec('pot', '05 · Потолки', 'Уровни, скрытая LED-подсветка, ниши штор, узел короба М 1:20', grp('05-potolki'))}
 ${sec('elektro', '09 · Электрика', 'Розетки и выключатели с привязками L/H, слаботочные и влагозащищённые позиции', grp('09-elektrika'))}
 <div class="cta"><h3>Такая же папка по вашей квартире — за 48 часов</h3><p>Заполните бриф: размеры, фото, пожелания по стилю. Остальное сделает конвейер студии под контролем дизайнера.</p><a class="btn" href="../../brief.html">Заполнить бриф — 7 минут</a> <a class="btn ghost" href="../../index.html">О студии</a></div>
-<footer>LINEA · СТУДИЯ ДИЗАЙНА ИНТЕРЬЕРА — комплект сформирован автоматически конвейером студии</footer>
+<footer>LINEA · ${esc(AUTHOR.role)} ${esc(AUTHOR.name)} · <a href="tel:${AUTHOR.tel}">${esc(AUTHOR.phone)}</a> · <a href="mailto:${AUTHOR.email}">${esc(AUTHOR.email)}</a></footer>
 <div id="lb"><button class="x" aria-label="Закрыть">✕</button><button class="p" aria-label="Предыдущий">‹</button><button class="n" aria-label="Следующий">›</button><img alt=""><div class="cap"></div></div>
 <script>
 (function(){var sh=[].slice.call(document.querySelectorAll('.sh')),lb=document.getElementById('lb'),im=lb.querySelector('img'),cp=lb.querySelector('.cap'),i=0;
@@ -5275,6 +5289,7 @@ function drawTitleSheet(sheetNo) {
   const colH = Math.ceil(sorted.length / 3);
   let b = '';
   b += `<text x="${M}" y="${M}" font-size="12" letter-spacing="6" fill="#8A8478">LINEA · СТУДИЯ ДИЗАЙНА ИНТЕРЬЕРА</text>`;
+  b += `<text x="${M}" y="${M + 20}" font-size="10.5" fill="#57514A">${esc(AUTHOR_LINE)}</text>`;
   b += `<text x="${M}" y="${M + 52}" font-size="30" font-weight="700" fill="#2E2A26">Альбом рабочей документации</text>`;
   b += `<text x="${M}" y="${M + 84}" font-size="16" fill="#2E2A26">${esc(addr)}</text>`;
   b += `<text x="${M}" y="${M + 106}" font-size="11.5" fill="#7A756D">${esc((brief.object && brief.object.type) || 'квартира')} · ${totalArea} м² · помещений ${rooms.length} · стиль «${esc(style.title)}» · стадия РП · выпуск ${DATE}</text>`;
@@ -5293,7 +5308,7 @@ function drawTitleSheet(sheetNo) {
   const bottom = M + 188 + colH * 14 + 30;
   // подписи сторон: лист должен выглядеть документом для согласования
   b += `<line x1="${M}" y1="${bottom}" x2="${M + 3 * colW - 40}" y2="${bottom}" stroke="#D8D2C6" stroke-width="0.8"/>`;
-  [['Заказчик', (brief.client && brief.client.name) || ''], ['Главный архитектор проекта', 'LINEA'], ['Дата выпуска', DATE]].forEach((c, i) => {
+  [['Заказчик', (brief.client && brief.client.name) || ''], [`${AUTHOR.role[0].toUpperCase()}${AUTHOR.role.slice(1)} проекта`, AUTHOR.name], ['Дата выпуска', DATE]].forEach((c, i) => {
     const x = M + i * colW;
     b += `<text x="${x}" y="${bottom + 22}" font-size="9" fill="#7A756D">${c[0]}</text>`;
     b += `<text x="${x}" y="${bottom + 40}" font-size="10.5" fill="#2E2A26">${esc(c[1] || '—')}</text>`;
@@ -5327,7 +5342,7 @@ function vedomostHTML() {
 <h1>Ведомость чертежей</h1>
 <p class="sub">${esc((brief.object && brief.object.address) || 'Объект')} · ${totalArea} м² · всего листов: ${reg.length} · ${DATE}</p>
 <table><thead><tr><th>Лист</th><th>Наименование</th><th>Масштаб</th><th>Раздел</th></tr></thead><tbody>${docsRows}${rows}</tbody></table>
-<p class="note">Нумерация сквозная АИ-N (архитектура интерьера). Все чертежи выполнены автоматически конвейером LINEA и проверены главным архитектором студии.</p>`);
+<p class="note">Нумерация сквозная АИ-N (архитектура интерьера). Чертежи выполнены конвейером студии LINEA и проверены автором проекта: ${esc(AUTHOR.role)} ${esc(AUTHOR.name)}, тел. ${esc(AUTHOR.phone)}, ${esc(AUTHOR.email)}.</p>`);
 }
 // ---------- замечания к исходным данным ----------
 // Лист выпускается только когда валидатору есть что сказать: он объясняет заказчику,
@@ -5406,7 +5421,7 @@ html,body{margin:0;padding:0;background:#fff}
 .doc .inner thead{display:table-header-group}
 .doc .inner img{max-width:100%;height:auto}
 </style></head><body>
-<section class="page cover"><p class="mark">LINEA</p><p class="sub">студия дизайна интерьера</p>
+<section class="page cover"><p class="mark">LINEA</p><p class="sub">студия дизайна интерьера · ${esc(AUTHOR.role)} ${esc(AUTHOR.name)} · ${esc(AUTHOR.phone)} · ${esc(AUTHOR.email)}</p>
 <p class="obj">${esc(addr)}</p>
 <p class="meta">${esc((brief.object && brief.object.type) || 'квартира')} · ${totalArea} м² · помещений ${rooms.length} · стиль «${esc(style.title)}»</p>
 <p class="meta">Альбом рабочей документации · листов ${reg.length} · документов ${DOCS.length}</p>
@@ -5460,7 +5475,7 @@ footer img.on{opacity:1;border-color:var(--acc)}
 </style></head><body>
 <header>
   <span class="brand">LINEA</span>
-  <span class="meta">${esc(addr)} · ${totalArea} м² · стиль «${esc(style.title)}» · листов ${reg.length}</span>
+  <span class="meta">${esc(addr)} · ${totalArea} м² · стиль «${esc(style.title)}» · листов ${reg.length} · ${esc(AUTHOR.role)} ${esc(AUTHOR.name)}, ${esc(AUTHOR.phone)}, ${esc(AUTHOR.email)}</span>
   <span class="count"><b id="cur">1</b> / ${reg.length}</span>
   <span class="hintk" title="Управление">← → пробел · свайп</span>
   <button id="full" title="Во весь экран">⛶</button>

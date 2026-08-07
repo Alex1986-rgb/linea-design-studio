@@ -18,6 +18,8 @@ const { STYLES, TIERS } = require('../engine/presets.js');
 const ROOT = path.join(__dirname, '..');
 const OUT = path.join(ROOT, 'site', 'style');
 const BASE = 'https://alex1986-rgb.github.io/linea-design-studio';
+// Автор проекта — тот же, что в основной надписи листов альбома
+const AUTHOR = { name: 'Кырлан Александр', role: 'дизайнер-архитектор', phone: '+7 925 733-86-40', tel: '+79257338640', email: 'optteem@mail.ru' };
 
 /* Редакторская часть: то, чего в пресете нет и быть не должно —
    кому стиль подходит, на чём в нём экономить нельзя, где обычно ошибаются. */
@@ -145,6 +147,7 @@ const footer = () => `<footer class="site">
     <div>
       <div class="logo">LINE<i>A</i></div>
       <p>Премиальный дизайн-проект интерьера,<br>собранный автоматизированным конвейером<br>под контролем дизайнера.</p>
+      <p>${AUTHOR.role} <b>${AUTHOR.name}</b><br><a href="tel:${AUTHOR.tel}">${AUTHOR.phone}</a> · <a href="mailto:${AUTHOR.email}">${AUTHOR.email}</a></p>
     </div>
     <div>
       <p><a href="../brief.html">Бриф</a> · <a href="./">Стили</a> · <a href="../portfolio/demo/presentation.html">Альбом-презентация</a> · <a href="../portfolio/demo/index.html">Демо-проект</a></p>
@@ -166,6 +169,11 @@ function stylePage(key) {
       { '@type': 'ListItem', position: 2, name: 'Стили интерьера', item: BASE + '/style/' },
       { '@type': 'ListItem', position: 3, name: s.title, item: url }
     ]
+  };
+  const author = {
+    '@context': 'https://schema.org', '@type': 'Person',
+    name: AUTHOR.name, jobTitle: AUTHOR.role, telephone: AUTHOR.tel, email: AUTHOR.email,
+    worksFor: { '@type': 'ProfessionalService', name: 'LINEA', url: BASE + '/' }
   };
   const faq = {
     '@context': 'https://schema.org', '@type': 'FAQPage',
@@ -192,6 +200,7 @@ ${HEAD_COMMON}
 <meta property="og:image" content="${BASE}/assets/hero.jpg">
 <script type="application/ld+json">${JSON.stringify(crumbs)}</script>
 <script type="application/ld+json">${JSON.stringify(faq)}</script>
+<script type="application/ld+json">${JSON.stringify(author)}</script>
 ${LOCAL_CSS}
 </head>
 <body>
@@ -290,7 +299,10 @@ ${header()}
     </div>
     <div class="cta-row" style="margin-top:28px">
       <a class="btn" href="../brief.html?style=${key}">Заполнить бриф в стиле «${s.title}»</a>
+      <a class="btn ghost" href="tel:${AUTHOR.tel}">${AUTHOR.phone}</a>
+      <a class="btn ghost" href="mailto:${AUTHOR.email}">${AUTHOR.email}</a>
     </div>
+    <p class="hint" style="margin-top:14px">${AUTHOR.role} ${AUTHOR.name} — автор проектов студии.</p>
   </div>
 </section>
 
@@ -331,7 +343,7 @@ ${header()}
   <div class="wrap">
     <div class="kicker">Направления</div>
     <h1>Стили, в которых студия собирает проект</h1>
-    <p class="sub">Стиль в LINEA — не картинка для настроения, а набор конкретных решений: краска с артикулом, покрытие пола, тип потолка, плинтус, двери и текстиль. Выбранное направление движок подставляет в развёртки, план отделки, спецификацию и смету. Если направления нет — отметьте «на усмотрение студии», подберём по ответам в брифе.</p>
+    <p class="sub">Стиль в LINEA — не картинка для настроения, а набор конкретных решений: краска с артикулом, покрытие пола, тип потолка, плинтус, двери и текстиль. Выбранное направление движок подставляет в развёртки, план отделки, спецификацию и смету. Если направления нет — отметьте «на усмотрение студии», подберём по ответам в брифе. Автор проектов — ${AUTHOR.role} ${AUTHOR.name}, ${AUTHOR.phone}, ${AUTHOR.email}.</p>
     <div class="slist">
       ${Object.keys(STYLES).map(k => {
     const s = STYLES[k];

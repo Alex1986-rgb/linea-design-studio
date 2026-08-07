@@ -142,7 +142,7 @@
       a.download = 'brief.json';
       a.click();
     };
-    $('mailto').href = 'mailto:hello@linea.studio?subject=' +
+    $('mailto').href = 'mailto:optteem@mail.ru?subject=' +
       encodeURIComponent('Бриф на дизайн-проект — ' + (brief.client.name || 'клиент')) +
       '&body=' + encodeURIComponent('Бриф во вложении (файл brief.json) или ниже:\n\n' + json.slice(0, 1500));
     try { localStorage.setItem('linea_brief', json); } catch (e) {}
