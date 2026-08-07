@@ -151,7 +151,7 @@ details.raw pre{max-height:320px;overflow:auto;font-size:11px;color:var(--mut);b
 .film{position:relative;height:420vh;background:#0F0E0C}
 .film .screen{position:sticky;top:0;height:100vh;overflow:hidden}
 .film canvas{position:absolute;inset:0;width:100%;height:100%;display:block}
-.film .veil{position:absolute;inset:0;background:linear-gradient(90deg,#0F0E0Cf2 0%,#0F0E0Cd0 46%,#0F0E0C4D 100%)}
+.film .veil{position:absolute;inset:0;background:linear-gradient(90deg,#0F0E0Cfa 0%,#0F0E0Ceb 44%,#0F0E0C73 78%,#0F0E0C40 100%),linear-gradient(180deg,#0F0E0Ccc 0%,#0F0E0C00 26%,#0F0E0C00 62%,#0F0E0Ce0 100%)}
 .film .stage{position:absolute;inset:0;display:flex;align-items:center}
 .film .stage .wrap{width:100%}
 .film .kicker{color:var(--acc,#C29A5B);letter-spacing:.18em;text-transform:uppercase;font-size:12px;margin-bottom:18px}
@@ -179,4 +179,88 @@ details.raw pre{max-height:320px;overflow:auto;font-size:11px;color:var(--mut);b
   .film{height:auto}
   .film .screen{position:relative;height:88vh}
   .film .hint,.film .progress{display:none}
+}
+
+/* ================= v9 · единый «киношный» стиль страницы =================
+   Первый экран задаёт тон: тёмный фон, крупная антиква, золотая деталь,
+   много воздуха. Ниже — те же приёмы, чтобы страница читалась одним куском. */
+
+/* сцены hero: текст меняется вместе с кадром */
+.film .scenes{position:relative;min-height:clamp(320px,44vh,440px)}
+.film .scene{position:absolute;inset:0;opacity:0;transform:translateY(14px);
+  transition:opacity .55s ease,transform .55s ease;pointer-events:none}
+.film .scene.on{opacity:1;transform:none;pointer-events:auto}
+.film .dots{position:absolute;left:6%;bottom:44px;display:flex;gap:8px}
+.film .dots i{width:22px;height:2px;background:#FFFFFF26;display:block;transition:.3s}
+.film .dots i.on{background:var(--gold);width:34px}
+@media (prefers-reduced-motion:reduce){
+  .film .scene{transition:none}
+}
+
+/* лента фактов под первым экраном */
+.proof{border-block:1px solid var(--line);background:linear-gradient(180deg,#14120E,#100F0C)}
+.proof .wrap{display:grid;grid-template-columns:repeat(4,1fr);gap:0;padding-block:0}
+.proof .wrap>div{padding:34px 26px 32px;border-right:1px solid var(--line)}
+.proof .wrap>div:last-child{border-right:0}
+.proof b{display:block;font-family:var(--serif);font-size:clamp(24px,2.6vw,34px);color:var(--gold2);font-weight:500;line-height:1.1}
+.proof span{display:block;margin-top:8px;color:var(--mut);font-size:13.5px;line-height:1.45}
+
+/* ритм секций: чередуем тон, заголовок отбиваем волосяной линией */
+.blk{padding:clamp(72px,9vw,124px) 0;position:relative}
+.blk:nth-of-type(even){background:linear-gradient(180deg,#100F0C,#0F0E0C)}
+.blk .kicker{position:relative;padding-left:52px}
+.blk .kicker::before{content:'';position:absolute;left:0;top:50%;width:38px;height:1px;background:var(--gold);opacity:.7}
+.blk h2{letter-spacing:-.01em}
+.blk h2 em{font-style:italic;color:var(--gold2)}
+
+/* карточки — как панели на первом экране */
+.card{background:linear-gradient(180deg,#1B1812,#161410);position:relative;overflow:hidden}
+.card::after{content:'';position:absolute;left:0;top:0;height:2px;width:0;background:var(--gold);transition:width .35s ease}
+.card:hover::after{width:100%}
+.card:hover{transform:translateY(-2px)}
+
+/* «как обычно / как у нас» */
+.pas-grid{display:grid;grid-template-columns:1fr 1fr;gap:22px}
+.pas-col{border:1px solid var(--line);border-radius:4px;padding:30px 28px;background:var(--panel)}
+.pas-col h3{margin:0 0 16px;font-size:16px;letter-spacing:.06em;text-transform:uppercase}
+.pas-col ul{margin:0;padding:0;list-style:none;color:var(--mut);font-size:14.5px;line-height:1.55}
+.pas-col li{position:relative;padding-left:26px;margin:11px 0}
+.pas-col li::before{position:absolute;left:0;top:0;font-size:14px}
+.pas-col.bad{background:#16120F}
+.pas-col.bad h3{color:#9A8C7A}
+.pas-col.bad li::before{content:'✕';color:#8A6A5A}
+.pas-col.good{border-color:#4a4132}
+.pas-col.good h3{color:var(--gold2)}
+.pas-col.good li::before{content:'✓';color:var(--gold)}
+.pas-col.good li{color:#CFC8B8}
+.pas-col.good i{font-style:italic;color:var(--gold2)}
+
+/* блок про нормативы */
+.gost .cards .card p{font-size:13.6px}
+
+/* появление секций при прокрутке */
+.reveal{opacity:0;transform:translateY(18px);transition:opacity .7s ease,transform .7s ease}
+.reveal.in{opacity:1;transform:none}
+@media (prefers-reduced-motion:reduce){.reveal{opacity:1;transform:none;transition:none}}
+
+@media (max-width:900px){
+  .proof .wrap{grid-template-columns:1fr 1fr}
+  .proof .wrap>div:nth-child(2){border-right:0}
+  .proof .wrap>div:nth-child(-n+2){border-bottom:1px solid var(--line)}
+  .pas-grid{grid-template-columns:1fr}
+  .film .scenes{min-height:340px}
+}
+
+/* мобильный: кнопка из шапки уезжала за экран — на телефоне ведём в липкую панель снизу */
+.sticky-cta{display:none}
+@media (max-width:760px){
+  header.site .nav>.btn.sm{display:none}
+  .nav{gap:14px;row-gap:6px;flex-wrap:wrap;padding:14px 5vw}
+  .nav .links{gap:12px 14px;font-size:11px;letter-spacing:.1em}
+  .sticky-cta{display:flex;position:fixed;left:0;right:0;bottom:0;z-index:60;gap:10px;
+    padding:10px 14px calc(10px + env(safe-area-inset-bottom));
+    background:#0F0E0Cf2;backdrop-filter:blur(10px);border-top:1px solid var(--line)}
+  .sticky-cta .btn{flex:1;text-align:center;padding:13px 10px;font-size:13px}
+  body{padding-bottom:72px}
+  .film .dots{bottom:38px}
 }

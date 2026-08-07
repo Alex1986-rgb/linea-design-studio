@@ -14,7 +14,7 @@
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' fill='%230F0E0C'/><text x='50' y='68' font-size='52' text-anchor='middle' fill='%23C29A5B' font-family='Georgia'>L</text></svg>">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;600&family=Inter:wght@400;600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/main.css?v=8">
+<link rel="stylesheet" href="css/main.css?v=11">
 <link rel="preload" as="image" href="assets/frames/01.jpg" fetchpriority="high">
 <script type="application/ld+json">
 {"@context":"https://schema.org","@type":"ProfessionalService","name":"LINEA — студия дизайна интерьера","description":"Дизайн-проект интерьера квартиры и дома за 48 часов: планировки, развертки стен, потолки, спецификации, смета.","areaServed":"RU","telephone":"+79257338640","email":"optteem@mail.ru","founder":{"@type":"Person","name":"Кырлан Александр","jobTitle":"дизайнер-архитектор","telephone":"+79257338640","email":"optteem@mail.ru"},"makesOffer":[{"@type":"Offer","name":"Дизайн-проект интерьера (открытое тестирование)","price":"0","priceCurrency":"RUB","availability":"https://schema.org/LimitedAvailability"}]}
@@ -34,6 +34,7 @@
     <div class="logo">LINE<i>A</i></div>
     <nav class="links">
       <a href="#process">Процесс</a>
+      <a href="#why">Почему быстрее</a>
       <a href="#kit">Комплект</a>
       <a href="style/">Стили</a>
       <a href="#portfolio">Портфолио</a>
@@ -53,23 +54,50 @@
     <div class="veil"></div>
     <div class="stage">
       <div class="wrap">
-        <div class="kicker">Студия дизайна интерьера · автоматизированный конвейер</div>
-        <h1>Дизайн-проект интерьера <em>за&nbsp;48&nbsp;часов</em> — от обмеров до сметы</h1>
-        <p class="lead">Прокрутите — и пройдите по квартире, собранной конвейером студии. Загрузите план, размеры и фото — получите альбом рабочей документации в стандарте проектных бюро: чертежи, по которым работает бригада, визуализации и смета.</p>
+        <!-- Сцены: текст меняется вместе с кадром по мере прокрутки. Каждая сцена —
+             свой шаг воронки: оффер → чертежи → инженерия → деньги → результат. -->
+        <div class="scenes" id="scenes">
+          <div class="scene on">
+            <div class="kicker">Студия дизайна интерьера · автор проекта Кырлан Александр</div>
+            <h1>Дизайн-проект интерьера <em>за&nbsp;48&nbsp;часов</em> — от обмеров до сметы</h1>
+            <p class="lead">Прокрутите — и пройдите по квартире, собранной конвейером студии. Загрузите план, размеры и фото: на выходе альбом рабочей документации в стандарте проектных бюро.</p>
+          </div>
+          <div class="scene">
+            <div class="kicker">Не картинки, а рабочие чертежи</div>
+            <h1>Каждая стена — <em>с размерами</em>, а не «примерно вот так»</h1>
+            <p class="lead">Развёртка каждой стены с высотами и привязками, планы полов и потолков, узлы М 1:20. По такому альбому бригада работает без звонков дизайнеру.</p>
+          </div>
+          <div class="scene">
+            <div class="kicker">Инженерия посчитана заранее</div>
+            <h1>Розетки, свет и щит — <em>до того</em>, как штробят стены</h1>
+            <p class="lead">Точки привязаны к фактической мебели, санузел — по зонам ПУЭ, щит и кабельный журнал с длинами. Переделок «забыли розетку у кровати» не будет.</p>
+          </div>
+          <div class="scene">
+            <div class="kicker">Бюджет виден сразу</div>
+            <h1>Смета <em>по вашим метрам</em>, а не по средней цене за м²</h1>
+            <p class="lead">Работы, материалы, мебель и свет — построчно, из той же геометрии, что и чертежи. Три тарифа: один интерьер можно собрать в трёх бюджетах.</p>
+          </div>
+          <div class="scene">
+            <div class="kicker">Результат</div>
+            <h1>Альбом, который <em>можно отдать бригаде</em> в тот же день</h1>
+            <p class="lead">46 листов A3, единый PDF, визуализации каждого помещения и спецификация с артикулами. Всё в одной папке — ничего не нужно досогласовывать.</p>
+          </div>
+        </div>
         <div class="cta-row">
           <a class="btn" href="brief.html">Заполнить бриф — 7 минут</a>
           <a class="btn ghost" href="portfolio/demo/presentation.html">Листать альбом проекта</a>
         </div>
         <div class="stats">
           <div><b>48 ч</b><span>от брифа до папки проекта</span></div>
-          <div><b>93</b><span>листа в демо-альбоме</span></div>
+          <div><b>46</b><span>листов A3 в базовом альбоме</span></div>
           <div><b>11</b><span>визуализаций помещений</span></div>
-          <div><b>16</b><span>сводных планов квартиры</span></div>
+          <div><b>0 ₽</b><span>на время открытого теста</span></div>
         </div>
       </div>
     </div>
     <div class="frame-cap"><b id="filmRoom">Прихожая</b> <span id="filmNote">— вход, зона хранения</span></div>
     <div class="progress"><i id="filmBar"></i></div>
+    <div class="dots" id="filmDots" aria-hidden="true"><i class="on"></i><i></i><i></i><i></i><i></i></div>
     <div class="hint"><span>прокрутите вниз</span></div>
   </div>
 </section>
@@ -97,7 +125,7 @@
     { f: '04b-sanuzel-zerkalo.jpg',        room: 'Санузел',         note: '— зеркало с подсветкой' },
     { f: '05b-prihozhaya-vhod.jpg',        room: 'Готово',          note: '— альбом можно отдавать бригаде' }
   ];
-  var imgs = [], loaded = 0, ready = false, dpr = Math.min(2, window.devicePixelRatio || 1);
+  var imgs = [], loaded = 0, ready = false, curScene = 0, dpr = Math.min(2, window.devicePixelRatio || 1);
   var reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
   function fit() {
@@ -131,9 +159,22 @@
     }
     return null;
   }
+  // Сцена = равная доля прокрутки: текст меняется вместе с кадром и работает
+  // даже до загрузки картинок — прокрутка доступна раньше, чем кадры.
+  var SCENES = document.querySelectorAll('#scenes .scene');
+  var DOTS = document.querySelectorAll('#filmDots i');
+  function paintScenes(p) {
+    if (!SCENES.length) return;
+    var si = Math.min(SCENES.length - 1, Math.floor(p * SCENES.length * 0.999));
+    if (si === curScene) return;
+    curScene = si;
+    for (var q = 0; q < SCENES.length; q++) SCENES[q].classList.toggle('on', q === si);
+    for (var d2 = 0; d2 < DOTS.length; d2++) DOTS[d2].classList.toggle('on', d2 === si);
+  }
   function draw() {
-    if (!ready) return;
     var p = progress();
+    paintScenes(p);
+    if (!ready) return;
     var f = p * (FRAMES.length - 1);
     var i = Math.floor(f), t = f - i;
     ctx.clearRect(0, 0, CV.width, CV.height);
@@ -148,7 +189,12 @@
     if (cur && noteEl.textContent !== cur.note) noteEl.textContent = cur.note;
   }
   var raf = 0;
-  function onScroll() { if (!raf) raf = requestAnimationFrame(function () { raf = 0; draw(); }); }
+  function onScroll() {
+    // текст сцены переключаем сразу: он не зависит от отрисовки кадра и должен
+    // работать даже там, где кадры анимации придушены (фон, экономия энергии)
+    paintScenes(progress());
+    if (!raf) raf = requestAnimationFrame(function () { raf = 0; draw(); });
+  }
 
   // если появится настоящая раскадровка — берём её: assets/frames/manifest.json
   // {"base":"assets/frames/","frames":["0001.jpg", ...]}
@@ -188,6 +234,67 @@
   window.addEventListener('resize', fit);
 })();
 </script>
+
+<!-- Лента фактов: первое, что видит человек после hero — что он получит и на каких условиях -->
+<section class="proof" aria-label="Коротко о главном">
+  <div class="wrap">
+    <div><b>48 часов</b><span>от брифа до готовой папки проекта</span></div>
+    <div><b>46 листов</b><span>A3 в базовом альбоме, чертежи по ГОСТ</span></div>
+    <div><b>0 ₽</b><span>сейчас, на время открытого тестирования</span></div>
+    <div><b>1 человек</b><span>ведёт проект: автор, а не менеджер</span></div>
+  </div>
+</section>
+
+<!-- Проблема → решение: до оффера нужно назвать боль словами клиента -->
+<section class="blk pas" id="why">
+  <div class="wrap">
+    <div class="kicker">Почему обычно долго и дорого</div>
+    <h2>Три месяца ожидания, а бригада всё равно звонит с вопросами</h2>
+    <p class="sub">Так выглядит типичный путь заказчика — и так его проходит клиент студии.</p>
+    <div class="pas-grid">
+      <div class="pas-col bad">
+        <h3>Как обычно</h3>
+        <ul>
+          <li>2–3 месяца до первых чертежей, оплата вперёд</li>
+          <li>Красивые визуализации — и десяток листов «на глаз»</li>
+          <li>Развёрток нет: плитку и мебель бригада режет по месту</li>
+          <li>Розетки размечают уже после штробления</li>
+          <li>Смета «примерно по 15 000 за м²» и сюрприз в конце</li>
+          <li>Каждая правка — новая итерация на неделю</li>
+        </ul>
+      </div>
+      <div class="pas-col good">
+        <h3>Как у нас</h3>
+        <ul>
+          <li>48 часов до полного альбома, оплата после приёмки</li>
+          <li>Визуализации <i>и</i> 46 листов рабочей документации</li>
+          <li>Развёртка каждой стены с раскладкой плитки и высотами</li>
+          <li>Электрика привязана к мебели до начала работ</li>
+          <li>Смета построчно из вашей геометрии, три тарифа</li>
+          <li>Правка — перегенерация альбома целиком за минуты</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Отстройка: главное доказательство — чертежи проверяются машиной по нормативам -->
+<section class="blk gost" id="gost">
+  <div class="wrap">
+    <div class="kicker">Чем это отличается от «дизайн-проекта из инстаграма»</div>
+    <h2>Чертежи проверяются по нормативам — автоматически, каждый лист</h2>
+    <p class="sub">У нас записан канон чертежей с пунктами ГОСТ и СП, а три программы проверяют альбом перед выдачей. Ни один лист не уходит клиенту с нарушением.</p>
+    <div class="cards g3">
+      <div class="card"><div class="num">01</div><h3>Бумага</h3><p>Формат A3, основная надпись, кегль не мельче 2,5 мм и перо не тоньше 0,18 мм — по ГОСТ 2.304 и 2.303. Проверяет линтер.</p></div>
+      <div class="card"><div class="num">02</div><h3>Содержание</h3><p>Замкнутые цепочки размеров, отметки уровня, привязки, легенды, спецификации и примечания — по ГОСТ 21.501, Р 21.101 и 21.507. Проверяет аудит по типу листа.</p></div>
+      <div class="card"><div class="num">03</div><h3>Выпуск</h3><p>Сквозная нумерация «Лист N из M», честный масштаб в штампе, контрольный отрезок 1000 мм на каждом листе. Проверяет сквозной контроль выпуска.</p></div>
+    </div>
+    <div class="cta-row" style="margin-top:32px">
+      <a class="btn ghost" href="portfolio/demo/01-kvartira/kvartira-04-mebel.svg" target="_blank" rel="noopener">Открыть реальный лист альбома</a>
+      <a class="btn ghost" href="portfolio/dom-120/10-uzly/lestnitsa.svg" target="_blank" rel="noopener">Лист лестницы с расчётом</a>
+    </div>
+  </div>
+</section>
 
 <section class="blk" id="process">
   <div class="wrap">
@@ -287,7 +394,8 @@
   <div class="wrap">
     <div class="kicker">Контакты</div>
     <h2>Начнём с брифа</h2>
-    <p class="sub">Самый быстрый путь — заполнить бриф: мы вернёмся с уточняющими вопросами и стартуем конвейер. Или свяжитесь напрямую: дизайнер-архитектор <b>Кырлан Александр</b>, +7 925 733-86-40, optteem@mail.ru.</p>
+    <p class="sub">Заполните бриф за 7 минут — этого хватит, чтобы запустить конвейер. Через 48 часов у вас на руках альбом; понравится — работаем дальше, нет — альбом всё равно остаётся у вас. Предоплаты нет.</p>
+    <p class="sub">Или свяжитесь напрямую: дизайнер-архитектор <b>Кырлан Александр</b>, +7 925 733-86-40, optteem@mail.ru.</p>
     <div class="cta-row">
       <a class="btn" href="brief.html">Заполнить бриф</a>
       <a class="btn ghost" href="tel:+79257338640">+7 925 733-86-40</a>
@@ -295,6 +403,12 @@
     </div>
   </div>
 </section>
+
+<!-- На телефоне кнопка из шапки не помещается: действие держим в липкой панели -->
+<div class="sticky-cta">
+  <a class="btn" href="brief.html">Заполнить бриф</a>
+  <a class="btn ghost" href="tel:+79257338640">Позвонить</a>
+</div>
 
 <footer class="site">
   <div class="wrap cols">
@@ -310,5 +424,29 @@
   </div>
 </footer>
 
+<script>
+// Мягкое появление секций. Важное условие: эффект не должен прятать контент.
+// Класс .reveal вешаем только если браузер реально выдаёт кадры анимации
+// (в фоновой вкладке и при экономии энергии их нет — тогда текст просто виден),
+// а через 2,5 с страховка снимает класс совсем.
+(function () {
+  var m = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)');
+  if (m && m.matches) return;
+  var els = document.querySelectorAll('.blk .wrap > *, .proof .wrap > div');
+  if (!('IntersectionObserver' in window) || !els.length) return;
+  function unhide() { for (var k = 0; k < els.length; k++) els[k].classList.remove('reveal'); }
+  var framed = false;
+  requestAnimationFrame(function () { framed = true; });
+  setTimeout(function () {
+    if (!framed) return;                       // кадров нет — эффект не включаем вовсе
+    var io = new IntersectionObserver(function (rows) {
+      rows.forEach(function (r) { if (r.isIntersecting) { r.target.classList.add('in'); io.unobserve(r.target); } });
+    }, { rootMargin: '0px 0px -12% 0px', threshold: 0.05 });
+    for (var i = 0; i < els.length; i++) { els[i].classList.add('reveal'); io.observe(els[i]); }
+    setTimeout(unhide, 2500);                  // страховка: контент виден в любом случае
+    window.addEventListener('beforeprint', unhide);
+  }, 60);
+})();
+</script>
 </body>
 </html>
