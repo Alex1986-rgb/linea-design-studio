@@ -19,7 +19,7 @@ const { STYLES, TIERS } = require('../engine/presets.js');
 const ROOT = path.join(__dirname, '..');
 const SITE = path.join(ROOT, 'site');
 const BASE = 'https://alex1986-rgb.github.io/linea-design-studio';
-const CSSV = 'v=12';
+const CSSV = 'v=13';
 const AUTHOR = { name: 'Кырлан Александр', role: 'дизайнер-архитектор', phone: '+7 925 733-86-40', tel: '+79257338640', email: 'optteem@mail.ru' };
 
 const esc = s => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
@@ -59,7 +59,8 @@ ${ld}
       <a href="${u}cases/">Кейсы</a>
       <a href="${u}compare/">Сравнение</a>
       <a href="${u}style/">Стили</a>
-      <a href="${u}stories/">Истории</a>
+      <a href="${u}journal/">Журнал</a>
+      <a href="${u}journal/">Журнал</a> · <a href="${u}stories/">Истории</a>
       <a href="${u}reviews/">Отзывы</a>
       <a href="${u}#faq">FAQ</a>
     </nav>
