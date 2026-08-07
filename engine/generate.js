@@ -106,7 +106,10 @@ const PAGE = { w: 1587, h: 1123, ml: 76, mr: 19, mt: 19, mb: 19 };
 // (ГОСТ 21.501-2018, табл. 1 + ряд ГОСТ 2.302). 1:15, 1:75 и 1:150 убраны — они
 // формально существуют, но в альбоме АИ дают «нестандартный» лист, а масштабная
 // линейка и привязки перестают читаться как у соседних листов.
-const SCALE_SERIES = [[20, 2.3622], [25, 1.8898], [40, 1.1811], [50, 0.9449], [100, 0.4724], [200, 0.2362]];
+// 1:75 в ряду нужен: без него лист, не влезающий в 1:50, падает сразу в 1:100 и
+// занимает треть поля. Масштаб из ряда ГОСТ 2.302-68, к которому ГОСТ 21.507-81
+// (п. 13) отсылает для чертежей интерьеров.
+const SCALE_SERIES = [[20, 2.3622], [25, 1.8898], [40, 1.1811], [50, 0.9449], [75, 0.6299], [100, 0.4724], [200, 0.2362]];
 // Узлы печатаются крупнее планов. Раньше узел рисовался в собственном коэффициенте
 // (S2 = 0.28), а штамп подписывал «М 1:20» — фактически выходило около 1:4, то есть
 // масштаб в штампе был неправдой. Теперь узлы рисуются в тех же модельных единицах,
@@ -221,6 +224,21 @@ const TEXT_MM = { h5: 5, h35: 3.5, h25: 2.5 };
 // от 1,5 до 5,6 мм — альбом читался как склейка из разных проектов. Нормализация держит
 // толщины и кегли постоянными на бумаге: делим на k и подпираем минимумами ГОСТ.
 const K_REF = 1.05;               // опорный коэффициент: font-size 9 → 2,5 мм на бумаге
+
+// Фактический масштабный коэффициент листа. На первом проходе он неизвестен (масштаб
+// подбирается по габариту содержимого), на втором — известен и подставляется сюда.
+// Без него вёрстка блоков считалась по НОМИНАЛЬНОМУ кеглю, а normalizeInk на мелких
+// масштабах поднимал текст до 2,5 мм — строки и колонки наезжали друг на друга.
+let INK_K = null;
+// Кегль, который реально окажется на листе после normalizeInk
+function effFont(f) {
+  if (!INK_K) return f;
+  const c = Math.max(0.35, Math.min(1.35, K_REF / INK_K));
+  return Math.max(f * c, TEXT_MM.h25 * PXMM / INK_K);
+}
+const lineH = (f, mul) => effFont(f) * (mul || 1.38);          // межстрочное расстояние
+const charW = f => effFont(f) * 0.53;                          // средняя ширина знака
+const fitChars = (f, wPx) => Math.max(6, Math.floor(wPx / charW(f)));   // сколько знаков влезет
 function normalizeInk(body, k) {
   const c = Math.max(0.35, Math.min(1.35, K_REF / k));   // границы: не даём тексту распухнуть на мелких масштабах
   const minText = TEXT_MM.h25 * PXMM / k;                // 2,5 мм — ниже ГОСТ 2.304 не выводим
@@ -265,13 +283,23 @@ function stamp(x, y, w, drawingName, sheet, scale) {
   LAST_STAMP = { name: drawingName, sheet, scale: scale || null, y, x };
   return ''; // штамп рисуется рамкой листа (svgDoc) в едином месте
 }
+let DIM_TIER = 0;   // ярус выноса размерного числа: чередуется на коротких отрезках
 function dimH(x1, x2, y, label) {
-  return `<g data-el="dim" stroke="#2A2A2A" stroke-width="0.8" fill="none"><line x1="${x1}" y1="${y}" x2="${x2}" y2="${y}"/><line x1="${x1}" y1="${y - 5}" x2="${x1}" y2="${y + 5}"/><line x1="${x2}" y1="${y - 5}" x2="${x2}" y2="${y + 5}"/><line x1="${x1 - 3}" y1="${y + 3}" x2="${x1 + 3}" y2="${y - 3}"/><line x1="${x2 - 3}" y1="${y + 3}" x2="${x2 + 3}" y2="${y - 3}"/></g>
-<text x="${(x1 + x2) / 2}" y="${y - 5}" font-size="10.5" fill="#2A2A2A" text-anchor="middle">${label}</text>`;
+  const F = 10.5, need = String(label).length * charW(F);
+  // число шире отрезка — выносим его выше линии и чередуем ярус, иначе соседние
+  // числа коротких участков (перегородки 150 мм) наезжают друг на друга
+  const tight = need > Math.abs(x2 - x1) - 4;
+  const dy = tight ? -5 - (DIM_TIER++ % 2 ? effFont(F) * 1.15 : 0) - effFont(F) * 0.2 : -5;
+  return `<g data-el="dim" stroke="#2A2A2A" stroke-width="0.8" fill="none"><line x1="${x1}" y1="${y}" x2="${x2}" y2="${y}"/><line x1="${x1}" y1="${y - 5}" x2="${x1}" y2="${y + 5}"/><line x1="${x2}" y1="${y - 5}" x2="${x2}" y2="${y + 5}"/><line x1="${x1 - 3}" y1="${y + 3}" x2="${x1 + 3}" y2="${y - 3}"/><line x1="${x2 - 3}" y1="${y + 3}" x2="${x2 + 3}" y2="${y - 3}"/>${tight ? `<line x1="${(x1 + x2) / 2}" y1="${y}" x2="${(x1 + x2) / 2}" y2="${y + dy + 3}" stroke-width="0.5"/>` : ''}</g>
+<text x="${(x1 + x2) / 2}" y="${y + dy}" font-size="${F}" fill="#2A2A2A" text-anchor="middle">${label}</text>`;
 }
 function dimV(x, y1, y2, label) {
-  return `<g data-el="dim" stroke="#2A2A2A" stroke-width="0.8" fill="none"><line x1="${x}" y1="${y1}" x2="${x}" y2="${y2}"/><line x1="${x - 5}" y1="${y1}" x2="${x + 5}" y2="${y1}"/><line x1="${x - 5}" y1="${y2}" x2="${x + 5}" y2="${y2}"/><line x1="${x - 3}" y1="${y1 + 3}" x2="${x + 3}" y2="${y1 - 3}"/><line x1="${x - 3}" y1="${y2 + 3}" x2="${x + 3}" y2="${y2 - 3}"/></g>
-<text x="${x + 6}" y="${(y1 + y2) / 2}" font-size="10.5" fill="#2A2A2A" transform="rotate(-90 ${x + 6} ${(y1 + y2) / 2})" text-anchor="middle">${label}</text>`;
+  const F = 10.5, need = String(label).length * charW(F);
+  const tight = need > Math.abs(y2 - y1) - 4;
+  const dx = tight ? 6 + (DIM_TIER++ % 2 ? effFont(F) * 1.15 : 0) + effFont(F) * 0.2 : 6;
+  const my = (y1 + y2) / 2;
+  return `<g data-el="dim" stroke="#2A2A2A" stroke-width="0.8" fill="none"><line x1="${x}" y1="${y1}" x2="${x}" y2="${y2}"/><line x1="${x - 5}" y1="${y1}" x2="${x + 5}" y2="${y1}"/><line x1="${x - 5}" y1="${y2}" x2="${x + 5}" y2="${y2}"/><line x1="${x - 3}" y1="${y1 + 3}" x2="${x + 3}" y2="${y1 - 3}"/><line x1="${x - 3}" y1="${y2 + 3}" x2="${x + 3}" y2="${y2 - 3}"/>${tight ? `<line x1="${x}" y1="${my}" x2="${x + dx - 3}" y2="${my}" stroke-width="0.5"/>` : ''}</g>
+<text x="${x + dx}" y="${my}" font-size="${F}" fill="#2A2A2A" transform="rotate(-90 ${x + dx} ${my})" text-anchor="middle">${label}</text>`;
 }
 
 // Знак отметки уровня (ГОСТ Р 21.101-2020, 5.4.3 / ГОСТ 2.307, 5.43): на разрезах и
@@ -322,12 +350,16 @@ function legendRowsFor(layer) {
 }
 
 function notesBlock(x, y, items, wrapAt) {
+  const F = 8.6, LH = lineH(F), top = Math.max(14, lineH(9.5));
+  // ширину колонки держим в БУМАЖНЫХ единицах: сколько знаков влезет — зависит от
+  // фактического кегля листа, иначе на мелком масштабе строка уезжает за поле
+  const cols = Math.max(24, fitChars(F, (wrapAt || 95) * 8.6 * 0.53));
   let s = `<g data-el="notes"></g><text x="${x}" y="${y}" font-size="9.5" font-weight="700" fill="#2E2A26">Примечания:</text>`;
   let line = 0;
   items.forEach((t, i) => {
     // длинные примечания переносим по словам: иначе строка уезжает на соседние блоки листа
-    wrapText(String(t), wrapAt || 95).forEach((ln, k) => {
-      s += `<text x="${x}" y="${y + 14 + line * 12}" font-size="8.6" fill="#57514A">${k ? '    ' : (i + 1) + '. '}${esc(ln)}</text>`;
+    wrapText(String(t), cols).forEach((ln, k) => {
+      s += `<text x="${x}" y="${y + top + line * LH}" font-size="${F}" fill="#57514A">${k ? '    ' : (i + 1) + '. '}${esc(ln)}</text>`;
       line++;
     });
   });
@@ -3139,15 +3171,18 @@ function flatSheet(sheetNo, title, sub, layerFn, rightFn, notes, lopts) {
 
 function flatLegendBox(x, y, w, title, rows) { // rows: [{sym, text}] sym = функция (sx, sy) => svg
   // высота строки зависит от числа переносов — многострочные записи не наезжают на соседние
-  const wrapped = rows.map(r0 => wrapText(r0.text, 40));
-  const heights = wrapped.map(ls => Math.max(20, ls.length * 11 + 8));
+  const F = 8.7, LH = lineH(F);
+  const cols = Math.max(14, fitChars(F, 40 * 8.7 * 0.53));
+  const wrapped = rows.map(r0 => wrapText(r0.text, cols));
+  const heights = wrapped.map(ls => Math.max(LH + 8, ls.length * LH + 8));
   const total = heights.reduce((a, b) => a + b, 0);
+  flatLegendBox.lastH = total + 30;   // фактическая высота: следующий блок встаёт по ней
   let s = `<g data-el="legend"><rect x="${x}" y="${y}" width="${w}" height="${total + 30}" fill="none" stroke="#8A8478" stroke-width="0.8"/>`;
   s += `<text x="${x + 10}" y="${y + 18}" font-size="10.5" font-weight="700" fill="#2E2A26">${esc(title)}</text>`;
   let sy = y + 34;
   rows.forEach((r0, i) => {
     s += r0.sym(x + 12, sy);
-    wrapped[i].forEach((line, j) => { s += `<text x="${x + 38}" y="${sy + 3 + j * 11}" font-size="8.7" fill="#57514A">${esc(line)}</text>`; });
+    wrapped[i].forEach((ln, j) => { s += `<text x="${x + 38}" y="${sy + 3 + j * LH}" font-size="${F}" fill="#57514A">${esc(ln)}</text>`; });
     sy += heights[i];
   });
   return s + '</g>';
@@ -3323,23 +3358,28 @@ function drawFlatFurniture(sheetNo) {
     // без неё номера на плане нечитаемы, а мебель не сходится со сметой.
     let s = '';
     const pos = furnPositions();
-    const rowH = 12.6, headH = 44;
+    const rowH = Math.max(12.6, lineH(8)), headH = Math.max(44, lineH(10.5) + lineH(7.4) + 14);
     const maxRows = Math.max(6, Math.floor((px(FLAT.H + 2 * EXT) - 210 - headH) / rowH));
     const shown = pos.slice(0, maxRows);
     const tblH = headH + shown.length * rowH + (pos.length > shown.length ? rowH : 0) + 8;
     s += `<rect x="${x}" y="${y}" width="${w}" height="${tblH}" fill="none" stroke="#8A8478" stroke-width="0.8"/>`;
     s += `<text x="${x + 10}" y="${y + 18}" font-size="10.5" font-weight="700" fill="#2E2A26">Спецификация мебели и оборудования</text>`;
-    s += `<text x="${x + 26}" y="${y + headH - 10}" font-size="7.4" fill="#7A756D">поз. · наименование</text>`;
-    s += `<text x="${x + w - 30}" y="${y + headH - 10}" font-size="7.4" fill="#7A756D" text-anchor="end">габарит, мм</text>`;
-    s += `<text x="${x + w - 8}" y="${y + headH - 10}" font-size="7.4" fill="#7A756D" text-anchor="end">пом.</text>`;
+    const tight = charW(7.4) * 30 > w - 40;   // на мелком масштабе кегль вырос — шапку сокращаем
+    s += `<text x="${x + 26}" y="${y + headH - 10}" font-size="7.4" fill="#7A756D">${tight ? 'поз. · наим.' : 'поз. · наименование'}</text>`;
+    s += `<text x="${x + w - 24 - charW(7.4) * 4}" y="${y + headH - 10}" font-size="7.4" fill="#7A756D" text-anchor="end">${tight ? 'габ.' : 'габарит, мм'}</text>`;
+    s += `<text x="${x + w - 4}" y="${y + headH - 10}" font-size="7.4" fill="#7A756D" text-anchor="end">пом.</text>`;
     s += `<line x1="${x}" y1="${y + headH - 6}" x2="${x + w}" y2="${y + headH - 6}" stroke="#8A8478" stroke-width="0.6"/>`;
     shown.forEach((p, i) => {
       const ry = y + headH + 8 + i * rowH;
       s += `<rect x="${x + 7}" y="${ry - 9}" width="13" height="13" rx="2" fill="none" stroke="${CAD.furn}" stroke-width="0.8"/>`;
       s += `<text x="${x + 13.5}" y="${ry}" font-size="7.6" font-weight="700" text-anchor="middle" fill="${CAD.furn}">${p.n}</text>`;
-      const nm = p.f.name.length > 28 ? p.f.name.slice(0, 27) + '…' : p.f.name;
+      // ширина колонки наименования = что осталось от габарита и номера помещения
+      const gab = `${p.f.w}×${p.f.h}`;
+      const gabW = gab.length * charW(7.6) + 10, roomW = 24;
+      const nmMax = fitChars(8, w - 26 - gabW - roomW);
+      const nm = p.f.name.length > nmMax ? p.f.name.slice(0, nmMax - 1) + '…' : p.f.name;
       s += `<text x="${x + 26}" y="${ry}" font-size="8" fill="#2E2A26">${esc(nm)}</text>`;
-      s += `<text x="${x + w - 30}" y="${ry}" font-size="7.6" fill="#57514A" text-anchor="end">${p.f.w}×${p.f.h}</text>`;
+      s += `<text x="${x + w - roomW - 4}" y="${ry}" font-size="7.6" fill="#57514A" text-anchor="end">${gab}</text>`;
       s += `<text x="${x + w - 8}" y="${ry}" font-size="7.6" fill="#7A756D" text-anchor="end">${nn(p.r.idx)}</text>`;
     });
     if (pos.length > shown.length) s += `<text x="${x + 26}" y="${y + headH + 8 + shown.length * rowH}" font-size="7.6" fill="#7A756D">…ещё ${pos.length - shown.length} поз. — в спецификации, раздел 07</text>`;
@@ -3348,14 +3388,16 @@ function drawFlatFurniture(sheetNo) {
     let nicheH = 0;
     if (nl.length) {
       const ny0 = y + tblH + 12;
-      nicheH = 26 + nl.length * rowH + 8;
+      const nRow = Math.max(rowH, lineH(7.8));
+      nicheH = 26 + nl.length * nRow + 8;
       s += `<rect x="${x}" y="${ny0}" width="${w}" height="${nicheH}" fill="none" stroke="#8A8478" stroke-width="0.8"/>`;
       s += `<text x="${x + 10}" y="${ny0 + 17}" font-size="10" font-weight="700" fill="#2E2A26">Ниши ГКЛ с подсветкой</text>`;
       nl.forEach((it, i) => {
-        const ry = ny0 + 26 + 10 + i * rowH;
+        const ry = ny0 + 26 + 10 + i * nRow;
         s += `<rect x="${x + 7}" y="${ry - 9}" width="17" height="13" rx="2" fill="none" stroke="${CAD.plumb}" stroke-width="0.8"/>`;
         s += `<text x="${x + 15.5}" y="${ry}" font-size="7.4" font-weight="700" text-anchor="middle" fill="${CAD.plumb}">${it.mk}</text>`;
-        const lbl = it.nz.label.length > 30 ? it.nz.label.slice(0, 29) + '…' : it.nz.label;
+        const lblMax = fitChars(7.8, w - 30 - 28);
+        const lbl = it.nz.label.length > lblMax ? it.nz.label.slice(0, lblMax - 1) + '…' : it.nz.label;
         s += `<text x="${x + 30}" y="${ry}" font-size="7.8" fill="#2E2A26">${esc(lbl)}</text>`;
         s += `<text x="${x + w - 8}" y="${ry}" font-size="7.6" fill="#7A756D" text-anchor="end">${nn(it.r.idx)}</text>`;
       });
@@ -3412,9 +3454,12 @@ function drawFlatFloors(sheetNo) {
       const cx = base.fx(r.pos.x + r.w / 2), cy = base.fy(r.pos.y + r.l / 2);
       const tno = wet ? 2 : 1;                       // 1 — жилая зона, 2 — мокрая
       const h = 34, half = 20;                       // равносторонний треугольник ≈ 9 мм бумаги
-      return levelPlan(cx - 26, cy + 14, wet ? -20 : 0, '')
-        + `<path d="M ${cx} ${cy - 30} L ${cx + half} ${cy - 30 + h} L ${cx - half} ${cy - 30 + h} Z" fill="#FFFFFFEE" stroke="${CAD.dim}" stroke-width="1"/>`
-        + `<text x="${cx}" y="${cy - 30 + h - 7}" font-size="9.6" font-weight="700" text-anchor="middle" fill="${CAD.dim}">${tno}</text>`;
+      // отступ считаем от фактического кегля: номер помещения и отметка стоят в центре,
+      // на мелком масштабе они крупнее и марка типа пола ложилась прямо на них
+      const up = 30 + effFont(9.6) * 1.6;
+      return levelPlan(cx - 26, cy + 14 + effFont(9.6) * 0.8, wet ? -20 : 0, '')
+        + `<path d="M ${cx} ${cy - up} L ${cx + half} ${cy - up + h} L ${cx - half} ${cy - up + h} Z" fill="#FFFFFFEE" stroke="${CAD.dim}" stroke-width="1"/>`
+        + `<text x="${cx}" y="${cy - up + h - 7}" font-size="9.6" font-weight="700" text-anchor="middle" fill="${CAD.dim}">${tno}</text>`;
     }).join('');
     return s;
   }, (x, y, w) => {
@@ -3516,19 +3561,23 @@ function drawFlatElectro(sheetNo) {
       { sym: (sx, sy) => `<rect x="${sx}" y="${sy - 8}" width="16" height="11" fill="none" stroke="#C9C9C9" stroke-width="0.8"/>`, text: 'мебель — подложка для привязки' },
     ]);
     // красные блоки-пояснения, как в рабочих альбомах
-    const boxY = y + 5 * 20 + 46;
+    const boxY = y + flatLegendBox.lastH + 10;
     const kitchen = ['Холодильник', 'Посудомоечная машина', 'Варочная панель', 'Духовой шкаф', 'Вытяжка', 'СВЧ', 'Рабочая зона фартука'];
-    s += `<rect x="${x}" y="${boxY}" width="${w}" height="${kitchen.length * 13 + 58}" fill="#FFF6F4" stroke="#B0483A" stroke-width="1"/>`;
-    s += `<text x="${x + 10}" y="${boxY + 17}" font-size="10" font-weight="700" fill="#B0483A">Розетки в кухонной зоне</text>`;
-    kitchen.forEach((t, i2) => { s += `<text x="${x + 10}" y="${boxY + 32 + i2 * 13}" font-size="8.6" fill="#2A2A2A">${i2 + 1}. ${esc(t)}</text>`; });
-    wrapText('Итоговые размеры техники запросить у заказчика до разводки.', 40).forEach((ln, i3) => {
-      s += `<text x="${x + 10}" y="${boxY + 34 + kitchen.length * 13 + i3 * 11}" font-size="8.2" fill="#B0483A">${esc(ln)}</text>`;
+    const kRow = lineH(8.6), kTop = lineH(10) + 6;
+    const warn = wrapText('Итоговые размеры техники запросить у заказчика до разводки.', Math.max(18, fitChars(8.2, 40 * 8.2 * 0.53)));
+    const kH = kTop + kitchen.length * kRow + warn.length * lineH(8.2) + 14;
+    s += `<rect x="${x}" y="${boxY}" width="${w}" height="${kH}" fill="#FFF6F4" stroke="#B0483A" stroke-width="1"/>`;
+    s += `<text x="${x + 10}" y="${boxY + lineH(10)}" font-size="10" font-weight="700" fill="#B0483A">Розетки в кухонной зоне</text>`;
+    kitchen.forEach((t, i2) => { s += `<text x="${x + 10}" y="${boxY + kTop + (i2 + 1) * kRow - 4}" font-size="8.6" fill="#2A2A2A">${i2 + 1}. ${esc(t)}</text>`; });
+    warn.forEach((ln, i3) => {
+      s += `<text x="${x + 10}" y="${boxY + kTop + kitchen.length * kRow + (i3 + 1) * lineH(8.2)}" font-size="8.2" fill="#B0483A">${esc(ln)}</text>`;
     });
-    const b2 = boxY + kitchen.length * 13 + 72;
-    s += `<rect x="${x}" y="${b2}" width="${w}" height="62" fill="#FFF6F4" stroke="#B0483A" stroke-width="1"/>`;
-    s += `<text x="${x + 10}" y="${b2 + 16}" font-size="10" font-weight="700" fill="#B0483A">Привязки L/H заданы:</text>`;
-    ['от чистого пола (высота)', 'от угла или дверного проёма (расстояние)', 'до центра блока розеток'].forEach((t, i2) => {
-      s += `<text x="${x + 10}" y="${b2 + 31 + i2 * 12}" font-size="8.6" fill="#2A2A2A">— ${esc(t)}</text>`;
+    const tie = ['от чистого пола (высота)', 'от угла или дверного проёма (расстояние)', 'до центра блока розеток'];
+    const b2 = boxY + kH + 12, tRow = lineH(8.6);
+    s += `<rect x="${x}" y="${b2}" width="${w}" height="${lineH(10) + tie.length * tRow + 12}" fill="#FFF6F4" stroke="#B0483A" stroke-width="1"/>`;
+    s += `<text x="${x + 10}" y="${b2 + lineH(10)}" font-size="10" font-weight="700" fill="#B0483A">Привязки L/H заданы:</text>`;
+    tie.forEach((t, i2) => {
+      s += `<text x="${x + 10}" y="${b2 + lineH(10) + (i2 + 1) * tRow}" font-size="8.6" fill="#2A2A2A">— ${esc(t)}</text>`;
     });
     return s;
   }, ['Все размеры даны в сантиметрах, в формате L/H.', 'Размеры даны без учёта отделочного слоя.', '* размеры уточнить после выбора мебели и техники.', '** размеры уточнить у прораба на объекте.', 'Санузлы: линии через УЗО 30 мА, механизмы IP44.', 'Электросеть прокладывать в гофрированной трубе ПВХ за подвесными потолками и в подготовке пола вдоль стен в зоне 150 мм от стен.'],
@@ -3640,18 +3689,21 @@ function drawFlatDoors(sheetNo) {
   }, (x, y, w) => {
     // условные обозначения дверей — по канону обязательны на этом листе
     let s0 = flatLegendBox(x, y, w, 'Условные обозначения', doorLegendRows());
-    const shift = 4 * 20 + 42;   // высота легенды: 4 строки
+    const shift = flatLegendBox.lastH;   // фактическая высота легенды, а не оценка по числу строк
     y = y + shift + 14;
     // ниже — ведомость дверей
     const dl = flatDoorList();
-    let s = `<rect x="${x}" y="${y}" width="${w}" height="${dl.length * 30 + 44}" fill="none" stroke="#8A8478" stroke-width="0.8"/>`;
+    const dRow = Math.max(30, lineH(8.6) + lineH(8.2) + 6);
+    let s = `<rect x="${x}" y="${y}" width="${w}" height="${dl.length * dRow + 44}" fill="none" stroke="#8A8478" stroke-width="0.8"/>`;
     s += `<text x="${x + 10}" y="${y + 18}" font-size="10.5" font-weight="700" fill="#2E2A26">Спецификация дверей</text>`;
     s += `<line x1="${x}" y1="${y + 26}" x2="${x + w}" y2="${y + 26}" stroke="#8A8478" stroke-width="0.6"/>`;
     dl.forEach((d, i) => {
-      const sy = y + 44 + i * 30;
+      const sy = y + 44 + i * dRow;
       s += `<circle cx="${x + 18}" cy="${sy - 4}" r="9" fill="none" stroke="#B0483A" stroke-width="1"/><text x="${x + 18}" y="${sy - 1}" font-size="8" font-weight="700" text-anchor="middle" fill="#B0483A">${d.mark}</text>`;
-      s += `<text x="${x + 36}" y="${sy - 6}" font-size="8.6" fill="#2E2A26">проём ${d.o.w}×${d.o.h} · полотно ${d.leaf}</text>`;
-      s += `<text x="${x + 36}" y="${sy + 6}" font-size="8.2" fill="#7A756D">${esc(d.type)} · ${esc(d.r.name)}</text>`;
+      const dl2 = lineH(8.6) * 0.55;
+      const cut = (t, f) => { const m = fitChars(f, w - 46); return t.length > m ? t.slice(0, m - 1) + '…' : t; };
+      s += `<text x="${x + 36}" y="${sy - dl2}" font-size="8.6" fill="#2E2A26">${esc(cut(`проём ${d.o.w}×${d.o.h} · полотно ${d.leaf}`, 8.6))}</text>`;
+      s += `<text x="${x + 36}" y="${sy + dl2}" font-size="8.2" fill="#7A756D">${esc(cut(`${d.type} · ${d.r.name}`, 8.2))}</text>`;
     });
     return s0 + s;
   }, ['Полотна скрытого монтажа, эмаль в цвет стен, магнитные замки AGB (см. спецификацию, раздел 07).', 'Размеры проёмов уточнить по месту после монтажа конструкций и стяжки.', 'Входная дверь — существующая, замена не предусмотрена.'], { roomFill: CAD.roomFill });
@@ -4164,13 +4216,16 @@ function drawFlatElevKeys(sheetNo) {
       { sym: (sx, sy) => `<g stroke="${CAD.dim}" stroke-width="1.2"><line x1="${sx}" y1="${sy - 3}" x2="${sx + 12}" y2="${sy - 3}"/><path d="M ${sx + 12} ${sy - 6} L ${sx + 17} ${sy - 3} L ${sx + 12} ${sy} Z" fill="${CAD.dim}" stroke="none"/></g>`, text: 'направление взгляда развёртки' },
     ]);
     // перечень развёрток по помещениям
-    const ly = y + 2 * 22 + 44;
-    s += `<rect x="${x}" y="${ly}" width="${w}" height="${flatRooms.length * 15 + 30}" fill="none" stroke="#8A8478" stroke-width="0.8"/>`;
-    s += `<text x="${x + 10}" y="${ly + 17}" font-size="10" font-weight="700" fill="#2E2A26">Развёртки по помещениям</text>`;
+    const ly = y + flatLegendBox.lastH + 12, eRow = Math.max(15, lineH(8.4));
+    s += `<rect x="${x}" y="${ly}" width="${w}" height="${flatRooms.length * eRow + 30}" fill="none" stroke="#8A8478" stroke-width="0.8"/>`;
+    s += `<text x="${x + 10}" y="${ly + Math.max(17, lineH(10))}" font-size="10" font-weight="700" fill="#2E2A26">Развёртки по помещениям</text>`;
     flatRooms.forEach((r, i) => {
-      const ry2 = ly + 30 + i * 15;
+      const ry2 = ly + 30 + i * eRow;
       const refs = ['A', 'B', 'C', 'D'].map(wk => ELEV_REF[`${r.idx}-${wk}`]).filter(Boolean);
-      s += `<text x="${x + 10}" y="${ry2}" font-size="8.4" fill="#2E2A26">${nn(r.idx)} · ${esc(r.name)}</text>`;
+      const refW = ('листы ' + refs.join(', ')).length * charW(8.2) + 12;
+      const nmMax = fitChars(8.4, w - 20 - refW);
+      const rn = `${nn(r.idx)} · ${r.name}`;
+      s += `<text x="${x + 10}" y="${ry2}" font-size="8.4" fill="#2E2A26">${esc(rn.length > nmMax ? rn.slice(0, nmMax - 1) + '…' : rn)}</text>`;
       s += `<text x="${x + w - 10}" y="${ry2}" font-size="8.2" fill="#57514A" text-anchor="end">${refs.length ? 'листы ' + refs.join(', ') : '—'}</text>`;
     });
     return s;
@@ -5116,7 +5171,20 @@ const counts = { flat: 0, obmer: 0, demo: 0, mont: 0, plans: 0, poly: 0, elev: 0
 function sheetOut(rel, maker, title, scale, type) {
   const no = sheet++;
   CUR_SHEET = type || 'other';
-  const svg = maker(no);
+  INK_K = null;
+  let svg = maker(no);
+  // Верстаем повторно, пока масштаб не устоится: блоки текста считаются под тот кегль,
+  // который реально окажется на бумаге, а изменившийся текст может сдвинуть масштаб.
+  // Три прохода хватает; если не сошлось — оставляем последний (он не хуже первого).
+  const rowOf = r => (type === 'node' ? NODE_SERIES : SCALE_SERIES).find(x => x[0] === r);
+  for (let pass = 0; pass < 3; pass++) {
+    const ratio = +((svg.match(/data-scale="1:(\d+)"/) || [])[1] || 0);
+    const row = rowOf(ratio);
+    if (!row || INK_K === row[1]) break;
+    INK_K = row[1];
+    svg = maker(no);
+  }
+  INK_K = null;
   writeOut(rel, svg);
   CUR_SHEET = '';
   // Масштаб в ведомость берём фактический (svgDoc подбирает его по габариту

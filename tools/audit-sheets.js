@@ -28,7 +28,7 @@ const JSONOUT = args.includes('--json');
 if (!dir) { console.error('Использование: node tools/audit-sheets.js <папка-проекта> [--type=elevation] [--max=N] [--json]'); process.exit(1); }
 
 // ---------- канон: масштабные ряды ----------
-const SCALES_PLAN = [20, 25, 40, 50, 100, 200];
+const SCALES_PLAN = [20, 25, 40, 50, 75, 100, 200];
 const SCALES_NODE = [5, 10, 20];
 
 // ---------- канон: требования по типам листов ----------
