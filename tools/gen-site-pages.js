@@ -14,6 +14,7 @@
 
 const fs = require('fs');
 const path = require('path');
+const SHELL = require('./site-shell.js');
 const { STYLES, TIERS } = require('../engine/presets.js');
 
 const ROOT = path.join(__dirname, '..');
@@ -26,8 +27,9 @@ const esc = s => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(
 const rub = n => n.toLocaleString('ru-RU').replace(/ /g, ' ') + ' ₽';
 
 /* ------------------------------------------------------------------ каркас */
-function page({ file, title, desc, h1, kicker, lead, body, crumb, jsonld, up }) {
+function page({ file, title, desc, h1, kicker, lead, body, crumb, jsonld, up, section }) {
   const u = up || '../';
+  section = section || (file.split('/')[0] || '');
   const canonical = `${BASE}/${file.replace(/index\.html$/, '')}`;
   const ld = (jsonld || []).map(o => `<script type="application/ld+json">${JSON.stringify(o)}</script>`).join('\n');
   return `<!DOCTYPE html>
@@ -50,23 +52,9 @@ function page({ file, title, desc, h1, kicker, lead, body, crumb, jsonld, up }) 
 ${ld}
 </head>
 <body>
-<div class="beta">Открытое тестирование студии · дизайн-проект делается бесплатно · <a href="${u}brief.html">заполнить бриф</a></div>
+${SHELL.beta(u)}
 
-<header class="site">
-  <div class="nav">
-    <a class="logo" href="${u}">LINE<i>A</i></a>
-    <nav class="links">
-      <a href="${u}catalog/">Каталог</a>
-      <a href="${u}cases/">Кейсы</a>
-      <a href="${u}compare/">Сравнение</a>
-      <a href="${u}style/">Стили</a>
-      <a href="${u}journal/">Журнал</a>
-      <a href="${u}stories/">Истории</a>
-      <a href="${u}reviews/">Отзывы</a>
-    </nav>
-    <a class="btn sm" href="${u}brief.html">Заполнить бриф</a>
-  </div>
-</header>
+${SHELL.header(u, section)}
 
 <section class="blk hero-page">
   <div class="wrap">
@@ -91,24 +79,9 @@ ${body}
   </div>
 </section>
 
-<div class="sticky-cta">
-  <a class="btn" href="${u}brief.html">Заполнить бриф</a>
-  <a class="btn ghost" href="tel:${AUTHOR.tel}">Позвонить</a>
-</div>
+${SHELL.sticky(u)}
 
-<footer class="site">
-  <div class="wrap cols">
-    <div>
-      <div class="logo">LINE<i>A</i></div>
-      <p>Премиальный дизайн-проект интерьера,<br>собранный автоматизированным конвейером<br>под контролем дизайнера.</p>
-      <p>${AUTHOR.role} <b>${AUTHOR.name}</b><br><a href="tel:${AUTHOR.tel}">${AUTHOR.phone}</a> · <a href="mailto:${AUTHOR.email}">${AUTHOR.email}</a></p>
-    </div>
-    <div>
-      <p><a href="${u}brief.html">Бриф</a> · <a href="${u}catalog/">Каталог</a> · <a href="${u}cases/">Кейсы</a> · <a href="${u}compare/">Сравнение</a> · <a href="${u}style/">Стили</a> · <a href="${u}stories/">Истории</a> · <a href="${u}reviews/">Отзывы</a></p>
-      <p>© LINEA studio, 2026</p>
-    </div>
-  </div>
-</footer>
+${SHELL.footer(u, section)}
 </body>
 </html>
 `;

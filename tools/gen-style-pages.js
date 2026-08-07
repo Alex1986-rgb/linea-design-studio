@@ -13,6 +13,7 @@
 
 const fs = require('fs');
 const path = require('path');
+const SHELL = require('./site-shell.js');
 const { STYLES, TIERS } = require('../engine/presets.js');
 
 const ROOT = path.join(__dirname, '..');
@@ -128,35 +129,9 @@ const LOCAL_CSS = `<style>
 @media(max-width:720px){.tiers{grid-template-columns:1fr}.pal i{height:56px}}
 </style>`;
 
-const header = () => `<header class="site">
-  <div class="nav">
-    <a class="logo" href="../">LINE<i>A</i></a>
-    <nav class="links">
-      <a href="../catalog/">Каталог</a>
-      <a href="../cases/">Кейсы</a>
-      <a href="../compare/">Сравнение</a>
-      <a href="./">Стили</a>
-      <a href="../journal/">Журнал</a>
-      <a href="../stories/">Истории</a>
-      <a href="../reviews/">Отзывы</a>
-    </nav>
-    <a class="btn sm" href="../brief.html">Заполнить бриф</a>
-  </div>
-</header>`;
+const header = () => `${SHELL.header(`../`, 'style')}`;
 
-const footer = () => `<footer class="site">
-  <div class="wrap cols">
-    <div>
-      <div class="logo">LINE<i>A</i></div>
-      <p>Премиальный дизайн-проект интерьера,<br>собранный автоматизированным конвейером<br>под контролем дизайнера.</p>
-      <p>${AUTHOR.role} <b>${AUTHOR.name}</b><br><a href="tel:${AUTHOR.tel}">${AUTHOR.phone}</a> · <a href="mailto:${AUTHOR.email}">${AUTHOR.email}</a></p>
-    </div>
-    <div>
-      <p><a href="../brief.html">Бриф</a> · <a href="../catalog/">Каталог</a> · <a href="../cases/">Кейсы</a> · <a href="../compare/">Сравнение</a> · <a href="./">Стили</a> · <a href="../stories/">Истории</a> · <a href="../reviews/">Отзывы</a></p>
-      <p>© LINEA studio, 2026</p>
-    </div>
-  </div>
-</footer>`;
+const footer = () => `${SHELL.footer(`../`, 'style')}`;
 
 function stylePage(key) {
   const s = STYLES[key];
@@ -206,7 +181,7 @@ ${HEAD_COMMON}
 ${LOCAL_CSS}
 </head>
 <body>
-<div class="beta">Открытое тестирование студии · дизайн-проект делается бесплатно · <a href="../brief.html">заполнить бриф</a></div>
+${SHELL.beta(`../`)}
 
 ${header()}
 

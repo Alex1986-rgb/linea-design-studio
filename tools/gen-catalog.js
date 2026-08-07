@@ -13,6 +13,7 @@
 
 const fs = require('fs');
 const path = require('path');
+const SHELL = require('./site-shell.js');
 const { STYLES } = require('../engine/presets.js');
 
 const ROOT = path.join(__dirname, '..');
@@ -46,23 +47,9 @@ function shell({ file, title, desc, h1, crumb, lead, body, jsonld }) {
 ${ld}
 </head>
 <body>
-<div class="beta">Открытое тестирование студии · дизайн-проект делается бесплатно · <a href="../brief.html">заполнить бриф</a></div>
+${SHELL.beta(`../`)}
 
-<header class="site">
-  <div class="nav">
-    <a class="logo" href="../">LINE<i>A</i></a>
-    <nav class="links">
-      <a href="./">Каталог</a>
-      <a href="../cases/">Кейсы</a>
-      <a href="../compare/">Сравнение</a>
-      <a href="../style/">Стили</a>
-      <a href="../journal/">Журнал</a>
-      <a href="../stories/">Истории</a>
-      <a href="../reviews/">Отзывы</a>
-    </nav>
-    <a class="btn sm" href="../brief.html">Заполнить бриф</a>
-  </div>
-</header>
+${SHELL.header(`../`, 'catalog')}
 
 <section class="blk hero-page">
   <div class="wrap">
@@ -87,24 +74,9 @@ ${body}
   </div>
 </section>
 
-<div class="sticky-cta">
-  <a class="btn" href="../brief.html">Заполнить бриф</a>
-  <a class="btn ghost" href="tel:${AUTHOR.tel}">Позвонить</a>
-</div>
+${SHELL.sticky(`../`)}
 
-<footer class="site">
-  <div class="wrap cols">
-    <div>
-      <div class="logo">LINE<i>A</i></div>
-      <p>Премиальный дизайн-проект интерьера,<br>собранный автоматизированным конвейером<br>под контролем дизайнера.</p>
-      <p>${AUTHOR.role} <b>${AUTHOR.name}</b><br><a href="tel:${AUTHOR.tel}">${AUTHOR.phone}</a> · <a href="mailto:${AUTHOR.email}">${AUTHOR.email}</a></p>
-    </div>
-    <div>
-      <p><a href="./">Каталог</a> · <a href="../cases/">Кейсы</a> · <a href="../compare/">Сравнение</a> · <a href="../style/">Стили</a> · <a href="../journal/">Журнал</a> · <a href="../stories/">Истории</a> · <a href="../reviews/">Отзывы</a></p>
-      <p>© LINEA studio, 2026</p>
-    </div>
-  </div>
-</footer>
+${SHELL.footer(`../`, 'catalog')}
 </body>
 </html>
 `;
