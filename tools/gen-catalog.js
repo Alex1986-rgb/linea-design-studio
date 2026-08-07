@@ -19,7 +19,7 @@ const { STYLES } = require('../engine/presets.js');
 const ROOT = path.join(__dirname, '..');
 const SITE = path.join(ROOT, 'site');
 const BASE = 'https://alex1986-rgb.github.io/linea-design-studio';
-const CSSV = 'v=17';
+const CSSV = 'v=19';
 const AUTHOR = { name: 'Кырлан Александр', role: 'дизайнер-архитектор', phone: '+7 925 733-86-40', tel: '+79257338640', email: 'optteem@mail.ru' };
 const esc = s => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 
@@ -61,18 +61,7 @@ ${SHELL.header(`../`, 'catalog')}
 
 ${body}
 
-<section class="blk cta-blk">
-  <div class="wrap">
-    <div class="kicker">Как начать</div>
-    <h2>Бриф — семь минут, дальше работает студия</h2>
-    <p class="sub">Размеры, фото, пожелания по стилю и бюджету. На время открытого тестирования проект делается бесплатно, предоплаты нет, альбом остаётся у вас независимо от решения работать дальше.</p>
-    <div class="cta-row">
-      <a class="btn" href="../brief.html">Заполнить бриф</a>
-      <a class="btn ghost" href="tel:${AUTHOR.tel}">${AUTHOR.phone}</a>
-      <a class="btn ghost" href="mailto:${AUTHOR.email}">${AUTHOR.email}</a>
-    </div>
-  </div>
-</section>
+${SHELL.ctaBlock('../', 'catalog')}
 
 ${SHELL.sticky(`../`)}
 

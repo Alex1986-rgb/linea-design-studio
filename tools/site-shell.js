@@ -18,7 +18,7 @@ const AUTHOR = {
 };
 
 const BASE = 'https://alex1986-rgb.github.io/linea-design-studio';
-const CSSV = 'v=17';
+const CSSV = 'v=19';
 
 // Разделы сайта в порядке меню. Добавили раздел — правится только здесь.
 const SECTIONS = [
@@ -94,6 +94,40 @@ ${FUNNEL.map((f, i) => `    <a class="fstep${i === i0 ? ' on' : ''}${i < i0 ? ' 
 </section>`;
 }
 
+// CTA перед воронкой: текст и второе действие зависят от того, на каком шаге
+// пути человек находится. «Посмотреть» зовёт сравнить, «Сравнить» — вернуться
+// к альбомам или начать; финал везде один — бриф.
+function ctaBlock(u, active) {
+  const step = FUNNEL.find(f => f.on.includes(active));
+  let kicker = 'Дальше', h = 'Свой проект — с того же места',
+    sub = 'Заполните бриф за 7 минут: размеры, фото, пожелания. Через 48 часов у вас альбом; предоплаты нет, альбом остаётся у вас в любом случае.',
+    second = `<a class="btn ghost" href="${u}portfolio-hub/">Посмотреть альбомы</a>`;
+  if (step && step.key === 'look') {
+    kicker = 'Понравилось?';
+    h = 'Теперь сравните — потом решайте';
+    sub = 'Не верьте на слово даже нам: рядом таблица, где то же самое разложено против планировщиков, студий и бюро. А бриф займёт семь минут, когда решите.';
+    second = `<a class="btn ghost" href="${u}compare/">Сравнить с рынком</a>`;
+  } else if (step && step.key === 'check') {
+    kicker = 'Всё сходится?';
+    h = 'Тогда дальше — бриф, семь минут';
+    sub = 'Размеры, фото, пожелания по стилю и бюджету. На время открытого тестирования проект делается бесплатно, предоплаты нет, альбом остаётся у вас в любом случае.';
+    second = `<a class="btn ghost" href="${u}portfolio-hub/">Ещё раз взглянуть на альбомы</a>`;
+  }
+  return `<section class="blk cta-blk">
+  <div class="wrap">
+    <div class="kicker">${kicker}</div>
+    <h2>${h}</h2>
+    <p class="sub">${sub}</p>
+    <div class="cta-row">
+      <a class="btn" href="${u}brief.html">Заполнить бриф</a>
+      ${second}
+      <a class="btn ghost" href="tel:${AUTHOR.tel}">${AUTHOR.phone}</a>
+    </div>
+    <p class="hint" style="margin-top:18px">Автор проекта — ${AUTHOR.role} ${AUTHOR.name}. Его подпись и контакты стоят в основной надписи каждого листа.</p>
+  </div>
+</section>`;
+}
+
 function footer(u, active) {
   const links = SECTIONS.map(s => `<a href="${s.key === active ? './' : u + s.href}">${s.title}</a>`)
     .concat(FOOTER_EXTRA.map(s => `<a href="${u + s.href}">${s.title}</a>`)).join(' · ');
@@ -143,4 +177,4 @@ const head = (u, { title, desc, canonical, ogTitle, ogDesc, ogType, extra }) => 
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;600&family=Inter:wght@400;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="${u}css/main.css?${CSSV}">${extra || ''}`;
 
-module.exports = { AUTHOR, BASE, CSSV, SECTIONS, FOOTER_EXTRA, FUNNEL, funnel, crumbsBar, esc, clamp, header, footer, beta, sticky, crumbsLd, head };
+module.exports = { AUTHOR, BASE, CSSV, SECTIONS, FOOTER_EXTRA, FUNNEL, funnel, ctaBlock, crumbsBar, esc, clamp, header, footer, beta, sticky, crumbsLd, head };

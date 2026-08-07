@@ -18,7 +18,7 @@ const SHELL = require('./site-shell.js');
 const ROOT = path.join(__dirname, '..');
 const SITE = path.join(ROOT, 'site');
 const BASE = 'https://alex1986-rgb.github.io/linea-design-studio';
-const CSSV = 'v=17';
+const CSSV = 'v=19';
 const AUTHOR = { name: 'Кырлан Александр', role: 'дизайнер-архитектор', phone: '+7 925 733-86-40', tel: '+79257338640', email: 'optteem@mail.ru' };
 
 const RU_MONTH = ['января','февраля','марта','апреля','мая','июня','июля','августа','сентября','октября','ноября','декабря'];
@@ -64,18 +64,7 @@ ${SHELL.header(`../`, 'journal')}
 
 ${body}
 
-<section class="blk cta-blk">
-  <div class="wrap">
-    <div class="kicker">Дальше</div>
-    <h2>Проверить на своей квартире</h2>
-    <p class="sub">Заполните бриф за 7 минут — через 48 часов получите альбом со всем, о чём написано выше: развёртками, электрикой, узлами и сметой. Предоплаты нет, альбом остаётся у вас.</p>
-    <div class="cta-row">
-      <a class="btn" href="../brief.html">Заполнить бриф</a>
-      <a class="btn ghost" href="../cases/">Посмотреть кейсы</a>
-      <a class="btn ghost" href="tel:${AUTHOR.tel}">${AUTHOR.phone}</a>
-    </div>
-  </div>
-</section>
+${SHELL.ctaBlock('../', 'journal')}
 
 ${SHELL.sticky(`../`)}
 

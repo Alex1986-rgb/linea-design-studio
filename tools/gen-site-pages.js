@@ -20,7 +20,7 @@ const { STYLES, TIERS } = require('../engine/presets.js');
 const ROOT = path.join(__dirname, '..');
 const SITE = path.join(ROOT, 'site');
 const BASE = 'https://alex1986-rgb.github.io/linea-design-studio';
-const CSSV = 'v=17';
+const CSSV = 'v=19';
 const AUTHOR = { name: 'Кырлан Александр', role: 'дизайнер-архитектор', phone: '+7 925 733-86-40', tel: '+79257338640', email: 'optteem@mail.ru' };
 
 const esc = s => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
@@ -66,18 +66,7 @@ ${SHELL.header(u, section)}
 
 ${body}
 
-<section class="blk cta-blk">
-  <div class="wrap">
-    <div class="kicker">Дальше</div>
-    <h2>Свой проект — с того же места</h2>
-    <p class="sub">Заполните бриф за 7 минут: размеры, фото, пожелания. Через 48 часов у вас альбом; предоплаты нет, альбом остаётся у вас в любом случае.</p>
-    <div class="cta-row">
-      <a class="btn" href="${u}brief.html">Заполнить бриф</a>
-      <a class="btn ghost" href="tel:${AUTHOR.tel}">${AUTHOR.phone}</a>
-      <a class="btn ghost" href="mailto:${AUTHOR.email}">${AUTHOR.email}</a>
-    </div>
-  </div>
-</section>
+${SHELL.ctaBlock(u, section)}
 
 ${SHELL.sticky(u)}
 
