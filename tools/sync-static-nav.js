@@ -33,9 +33,14 @@ for (const file of ['index.html', 'brief.html']) {
 
   // подвал: колонка ссылок (вторая), контакты автора не трогаем
   const links = SHELL.SECTIONS.map(s => `<a href="${s.href}">${s.title}</a>`)
-    .concat(['<a href="about/">О студии</a>', '<a href="contacts/">Контакты</a>']).join(' · ');
+    .concat(SHELL.FOOTER_EXTRA.map(s => `<a href="${s.href}">${s.title}</a>`)).join(' · ');
   const line = `<p><a href="brief.html">Бриф</a> · ${links}${EXTRA[file] || ''}</p>`;
-  out = out.replace(/<p><a href="brief\.html">Бриф<\/a>[\s\S]*?<\/p>/, line);
+  if (/<p><a href="brief\.html">Бриф<\/a>/.test(out)) {
+    out = out.replace(/<p><a href="brief\.html">Бриф<\/a>[\s\S]*?<\/p>/, line);
+  } else {
+    // на брифе колонки ссылок не было вовсе — вставляем перед копирайтом
+    out = out.replace(/<div>©\s*LINEA studio, 2026<\/div>/, `<div>${line}<p>© LINEA studio, 2026</p></div>`);
+  }
 
   if (out !== src) {
     drift++;

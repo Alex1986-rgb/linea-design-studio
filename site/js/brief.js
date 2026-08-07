@@ -142,6 +142,7 @@
       a.download = 'brief.json';
       a.click();
     };
+    $('mailto').addEventListener('click', function () { setTimeout(function () { location.href = 'thanks/'; }, 1200); });
     $('mailto').href = 'mailto:optteem@mail.ru?subject=' +
       encodeURIComponent('Бриф на дизайн-проект — ' + (brief.client.name || 'клиент')) +
       '&body=' + encodeURIComponent('Бриф во вложении (файл brief.json) или ниже:\n\n' + json.slice(0, 1500));

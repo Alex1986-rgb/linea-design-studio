@@ -67,7 +67,12 @@ const sticky = u => `<div class="sticky-cta">
 </div>`;
 
 // в подвале к разделам добавляются служебные страницы
-const FOOTER_EXTRA = [{ title: 'О студии', href: 'about/' }, { title: 'Контакты', href: 'contacts/' }];
+const FOOTER_EXTRA = [
+  { title: 'Портфолио', href: 'portfolio-hub/' }, { title: 'Условия', href: 'price/' },
+  { title: 'Процесс', href: 'process/' }, { title: 'FAQ', href: 'faq/' },
+  { title: 'О студии', href: 'about/' }, { title: 'Контакты', href: 'contacts/' },
+  { title: 'Карта сайта', href: 'sitemap/' }, { title: 'Обработка данных', href: 'policy/' },
+];
 function footer(u, active) {
   const links = SECTIONS.map(s => `<a href="${s.key === active ? './' : u + s.href}">${s.title}</a>`)
     .concat(FOOTER_EXTRA.map(s => `<a href="${u + s.href}">${s.title}</a>`)).join(' · ');
@@ -106,4 +111,4 @@ const head = (u, { title, desc, canonical, ogTitle, ogDesc, ogType, extra }) => 
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;600&family=Inter:wght@400;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="${u}css/main.css?${CSSV}">${extra || ''}`;
 
-module.exports = { AUTHOR, BASE, CSSV, SECTIONS, esc, clamp, header, footer, beta, sticky, crumbsLd, head };
+module.exports = { AUTHOR, BASE, CSSV, SECTIONS, FOOTER_EXTRA, esc, clamp, header, footer, beta, sticky, crumbsLd, head };
