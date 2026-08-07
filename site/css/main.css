@@ -341,3 +341,8 @@ code{font-family:ui-monospace,Menlo,monospace;font-size:.92em;color:var(--gold2)
 .article p a{color:var(--gold);border-bottom:1px solid #C29A5B4D}
 .article p a:hover{color:var(--gold2)}
 @media (max-width:760px){.article p{font-size:15.4px}.article h2{margin-top:34px}}
+
+/* обложка статьи журнала */
+.art-hero{margin:0 0 40px}
+.art-hero img{width:100%;height:auto;max-height:420px;object-fit:cover;border:1px solid var(--line);border-radius:4px;display:block}
+.art-hero figcaption{color:var(--dim);font-size:12.5px;margin-top:10px;letter-spacing:.02em}

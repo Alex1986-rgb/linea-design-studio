@@ -18,13 +18,16 @@ const SHELL = require('./site-shell.js');
 const ROOT = path.join(__dirname, '..');
 const SITE = path.join(ROOT, 'site');
 const BASE = 'https://alex1986-rgb.github.io/linea-design-studio';
-const CSSV = 'v=14';
+const CSSV = 'v=15';
 const AUTHOR = { name: 'Кырлан Александр', role: 'дизайнер-архитектор', phone: '+7 925 733-86-40', tel: '+79257338640', email: 'optteem@mail.ru' };
+
+const RU_MONTH = ['января','февраля','марта','апреля','мая','июня','июля','августа','сентября','октября','ноября','декабря'];
+const humanDate = iso => { const [y, m, d] = iso.split('-').map(Number); return `${d} ${RU_MONTH[m - 1]} ${y}`; };
 
 const esc = s => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 
 /* ------------------------------------------------------------------ каркас */
-function shell({ file, title, desc, h1, crumb, lead, body, jsonld }) {
+function shell({ file, title, desc, h1, crumb, lead, body, jsonld, ogImage }) {
   const canonical = `${BASE}/${file.replace(/index\.html$/, '')}`;
   const ld = (jsonld || []).map(o => `<script type="application/ld+json">${JSON.stringify(o)}</script>`).join('\n');
   return `<!DOCTYPE html>
@@ -38,7 +41,7 @@ function shell({ file, title, desc, h1, crumb, lead, body, jsonld }) {
 <meta property="og:type" content="article">
 <meta property="og:title" content="${esc(h1)}">
 <meta property="og:description" content="${esc(lead)}">
-<meta property="og:image" content="${BASE}/assets/hero.jpg">
+<meta property="og:image" content="${BASE}/${ogImage || 'assets/hero.jpg'}">
 <meta property="og:locale" content="ru_RU">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' fill='%230F0E0C'/><text x='50' y='68' font-size='52' text-anchor='middle' fill='%23C29A5B' font-family='Georgia'>L</text></svg>">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -86,6 +89,8 @@ ${SHELL.footer(`../`, 'journal')}
 const ARTICLES = [
   {
     slug: 'sostav-dizayn-proekta',
+    cover: '01-gostinaya-kuhnya.jpg',
+    date: '2026-08-02',
     title: 'Что должно быть в дизайн-проекте: полный состав альбома',
     tag: 'Состав проекта',
     lead: 'Разбираем, из каких листов состоит рабочий альбом интерьера, что в нём обязательно, что зависит от объекта и по каким признакам понятно, что вам продали красивые картинки вместо документации.',
@@ -119,6 +124,8 @@ const ARTICLES = [
   },
   {
     slug: 'razvertki-sten',
+    cover: '01c-kuhnya-detail.jpg',
+    date: '2026-08-03',
     title: 'Развёртки стен: зачем нужны и как читать',
     tag: 'Чертежи',
     lead: 'Развёртка — самый полезный и самый часто пропускаемый лист альбома. Объясняем, что на ней изображено, какие размеры обязательны и как по ней проверить решение до начала работ.',
@@ -143,6 +150,8 @@ const ARTICLES = [
   },
   {
     slug: 'elektrika-v-proekte',
+    cover: '03b-detskaya-stol.jpg',
+    date: '2026-08-04',
     title: 'Электрика в дизайн-проекте: розетки, свет и зоны в санузле',
     tag: 'Инженерия',
     lead: 'Где на самом деле нужны розетки, почему их привязывают к мебели, а не к рулетке, и какие требования действуют в санузле. С пунктами нормативов и без выдумок.',
@@ -166,6 +175,8 @@ const ARTICLES = [
   },
   {
     slug: 'pirog-pola',
+    cover: '04-sanuzel.jpg',
+    date: '2026-08-05',
     title: 'Пирог пола: как не переделывать стяжку',
     tag: 'Узлы',
     lead: 'Что такое пирог пола, чем отличается жилая зона от мокрой, где нужна гидроизоляция и почему перепад в санузле делают специально. С пунктами СП.',
@@ -188,6 +199,8 @@ const ARTICLES = [
   },
   {
     slug: 'smeta-remonta',
+    cover: '02-spalnya.jpg',
+    date: '2026-08-06',
     title: 'Смета ремонта: почему «15 000 за м²» — это не смета',
     tag: 'Деньги',
     lead: 'Как устроена настоящая смета, из каких разделов она состоит, что в неё забывают включить и как по проекту понять реальный бюджет до начала работ.',
@@ -257,7 +270,7 @@ w('journal/index.html', shell({
     <div class="tiles two">
 ${ARTICLES.map(a => `      <a class="tile plain" href="${a.slug}.html">
         <div class="tile-body">
-          <span class="tag">${esc(a.tag)} · ${esc(a.read)}</span>
+          <span class="tag">${esc(a.tag)} · ${esc(a.read)} · ${esc(humanDate(a.date))}</span>
           <b>${esc(a.title)}</b>
           <span class="tile-lead">${esc(a.lead)}</span>
           <span class="more">Читать →</span>
@@ -279,20 +292,26 @@ ARTICLES.forEach((a, idx) => {
     title: `${a.title.length > 44 ? a.title.slice(0, 43) + '…' : a.title} — журнал LINEA`,
     desc: a.lead,
     h1: esc(a.title),
-    crumb: `<a href="./">Журнал</a> · ${esc(a.tag)} · ${esc(a.read)}`,
+    crumb: `<a href="./">Журнал</a> · ${esc(a.tag)} · ${esc(a.read)} · ${esc(humanDate(a.date))}`,
     lead: esc(a.lead),
+    ogImage: `portfolio/demo/06-koncept/renders/${a.cover}`,
     jsonld: [
       crumbsLd([['LINEA', BASE + '/'], ['Журнал', BASE + '/journal/'], [a.title, `${BASE}/journal/${a.slug}.html`]]),
       {
         '@context': 'https://schema.org', '@type': 'Article', headline: a.title, description: a.lead,
         author: { '@type': 'Person', name: AUTHOR.name, jobTitle: AUTHOR.role, telephone: AUTHOR.tel, email: AUTHOR.email },
         publisher: { '@type': 'Organization', name: 'LINEA', url: BASE + '/' },
-        mainEntityOfPage: `${BASE}/journal/${a.slug}.html`, inLanguage: 'ru-RU'
+        mainEntityOfPage: `${BASE}/journal/${a.slug}.html`, inLanguage: 'ru-RU',
+        datePublished: a.date, dateModified: a.date
       },
       { '@context': 'https://schema.org', '@type': 'FAQPage', mainEntity: a.faq.map(f => ({ '@type': 'Question', name: f[0], acceptedAnswer: { '@type': 'Answer', text: f[1] } })) }
     ],
     body: `<section class="blk article">
   <div class="wrap">
+    <figure class="art-hero">
+      <img src="../portfolio/demo/06-koncept/renders/${a.cover}" alt="${esc(a.title)} — визуализация проекта LINEA" width="1200" height="800" decoding="async">
+      <figcaption>Кадр из демо-проекта студии: та же геометрия и те же материалы, что в чертежах.</figcaption>
+    </figure>
     <nav class="toc"><b>В статье</b><ol>${toc}</ol></nav>
 ${body}
   </div>
