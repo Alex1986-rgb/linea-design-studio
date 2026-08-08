@@ -628,6 +628,9 @@ a.logo:hover i,.logo:hover i{animation:logoSheen 1.1s ease}
 .burger.on i:nth-child(2){opacity:0}
 .burger.on i:nth-child(3){transform:translateY(-9px) rotate(-45deg)}
 .mnav{position:fixed;inset:0;z-index:70;background:#0F0E0Cf5;backdrop-filter:blur(18px);display:flex;flex-direction:column;justify-content:center;padding:8vh 8vw}
+/* авторский display:flex сильнее UA-правила [hidden] — возвращаем скрытие явно,
+   иначе оверлей меню перекрывал первый экран на каждой странице */
+.mnav[hidden]{display:none!important}
 .mnav nav{display:flex;flex-direction:column;gap:4px}
 .mnav nav a{font-family:var(--serif);font-size:clamp(26px,7vw,34px);color:var(--ink);padding:10px 0;border-bottom:1px solid #C29A5B22}
 .mnav nav a:hover{color:var(--gold2)}

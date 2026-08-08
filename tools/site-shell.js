@@ -18,7 +18,7 @@ const AUTHOR = {
 };
 
 const BASE = 'https://alex1986-rgb.github.io/linea-design-studio';
-const CSSV = 'v=21';
+const CSSV = 'v=22';
 
 // Разделы сайта в порядке меню. Добавили раздел — правится только здесь.
 const SECTIONS = [
