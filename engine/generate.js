@@ -272,7 +272,10 @@ function svgDoc(wPx, hPx, body, bg) {
   const cw = Math.max(40, bb.x1 - bb.x0), ch = Math.max(40, bb.y1 - bb.y0);
   const series = (st.scale === 'node') ? NODE_SERIES : SCALE_SERIES;
   let k = series[series.length - 1][1], ratio = series[series.length - 1][0];
-  for (const [r, kk] of series) { if (cw * kk <= fieldW && ch * kk <= fieldH) { k = kk; ratio = r; break; } }
+  // Узловой ряд короткий (1:5/1:10/1:20), а contentBox оценивает текст с запасом:
+  // даём 3% допуска, иначе сборный лист узлов падал за ряд из-за оценки, а не факта.
+  const tol = series === NODE_SERIES ? 1.03 : 1;
+  for (const [r, kk] of series) { if (cw * kk <= fieldW * tol && ch * kk <= fieldH) { k = kk; ratio = r; break; } }
   st.ratio = ratio;
   if (process.env.LINEA_DEBUG_FIT) console.log(`FIT ${st.name} | bb ${bb.x0.toFixed(0)},${bb.y0.toFixed(0)} → ${bb.x1.toFixed(0)},${bb.y1.toFixed(0)} | cw×ch ${cw.toFixed(0)}×${ch.toFixed(0)} | k=${k} 1:${ratio} | на бумаге ${(cw*k).toFixed(0)}×${(ch*k).toFixed(0)} из ${fieldW}×${fieldH}`);
   // содержимое ставим по фактическим границам: слева и сверху с равным полем, без пустых зон
@@ -848,8 +851,8 @@ function drawMontage(room, sheet) {
     const short = g0.labels.map(s => s.split(',')[0]).join(' + ');
     const lines = wrapText(`— фальш-стена ГКЛ, вылет ${g0.depth + 65} мм, стена ${g0.wall} · ${short}`, 74);
     b += `<text x="${M - WT}" y="${legH}" font-size="10" font-weight="700" fill="#3B5C77">М${i + 1}</text>`;
-    lines.forEach((ln, j) => { b += `<text x="${M - WT + 26}" y="${legH + j * 12}" font-size="10" fill="#3B5C77">${esc(ln)}</text>`; });
-    legH += 4 + lines.length * 12;
+    lines.forEach((ln, j) => { b += `<text x="${M - WT + 26}" y="${legH + j * lineH(10)}" font-size="10" fill="#3B5C77">${esc(ln)}</text>`; });
+    legH += 4 + lines.length * lineH(10);
   });
   b += `<g font-size="10" fill="#2E2A26">
 <rect x="${M - WT}" y="${legH - 8}" width="14" height="14" fill="#3B5C7722" stroke="#3B5C77" stroke-width="1.4" stroke-dasharray="4 3"/><text x="${M - WT + 20}" y="${legH + 4}">новые ГКЛ-конструкции · внутри — закладные из фанеры 18 мм под навесное</text>
@@ -1608,6 +1611,7 @@ function tileLayout(room, wallKey, lenMm, hMm, M, h) {
 
 // ---------- развертка стены (премиум: карниз, электрика, бра, подоконник, перемычки) ----------
 function drawElevation(room, wallKey, sheet) {
+  const eqInk = inkMap();   // занятость под подписи оборудования: «Раковина» и «Смеситель» наезжали друг на друга
   const len = (wallKey === 'A' || wallKey === 'C') ? room.w : room.l;
   const M = 90, w = px(len), h = px(room.h);
   const CORN_H = 200, PLIN_H = 80; // мм: высота карниза / плинтуса
@@ -1764,7 +1768,17 @@ function drawElevation(room, wallKey, sheet) {
       b += `<rect x="${vCx-neckW/2}" y="${ey+4}" width="${neckW}" height="${neckH}" fill="${eq.fillColor}" stroke="${eq.strokeColor}" stroke-width="0.8"/>`;
       b += `<ellipse cx="${vCx}" cy="${ey+4}" rx="${neckW*0.58}" ry="${Math.max(3, neckH*0.18)}" fill="${eq.strokeColor}" stroke="${eq.strokeColor}" stroke-width="0.8"/>`;
     }
-    if (eq.label && eh > 14) b += `<text x="${ex + ew/2}" y="${ey + eh/2 + 4}" font-size="8" fill="${eq.strokeColor}" text-anchor="middle" font-weight="600">${esc(eq.label)}</text>`;
+    if (eq.label && eh > 14) {
+      const f8 = effFont(8), lw2 = eq.label.length * f8 * 0.58 + 4, lh2 = f8 * 1.35;
+      // кандидаты: центр бокса → над боксом → под боксом; при тесноте подпись не ставим,
+      // предмет остаётся читаем по форме и по спецификации
+      for (const cy of [ey + eh / 2 + 4, ey - 6, ey + eh + f8 + 2]) {
+        if (!eqInk.free(ex + ew / 2 - lw2 / 2, cy - lh2 + 3, lw2, lh2)) continue;
+        eqInk.add(ex + ew / 2 - lw2 / 2, cy - lh2 + 3, lw2, lh2);
+        b += `<text x="${ex + ew/2}" y="${cy}" font-size="8" fill="${eq.strokeColor}" text-anchor="middle" font-weight="600">${esc(eq.label)}</text>`;
+        break;
+      }
+    }
   }
 
   // ── 5. окна + профиль подоконника + радиатор ──────────────────
@@ -2230,9 +2244,10 @@ const NODES = [
 
 // Обобщённый узел-пирог: слои сверху вниз, выноски-полки на каждый слой,
 // суммарная толщина размерной цепочкой, отметки уровня знаком по ГОСТ.
-function drawNodePie(spec, sheetNo) {
-  const q = px;   // модельные единицы: ряд масштабов узлов выберет svgDoc (1:5 / 1:10 / 1:20)
-  const M = 120, X = M, Y = M + 30;
+// Тело одного узла от отметки Y0: используется и одиночным листом, и сборным
+function nodeBody(spec, Y0) {
+  const q = px;
+  const X = 120, Y = Y0;
   const W = q(spec.width);
   let b = '', y = Y, ink = inkMap();
   ink.add(X - 120, Y - 80, W + 260, 60);
@@ -2242,37 +2257,59 @@ function drawNodePie(spec, sheetNo) {
     b += `<rect x="${X}" y="${y}" width="${W}" height="${hh}" fill="${l.fill}" stroke="#2E2A26" stroke-width="${i === 0 ? 1.2 : 0.8}"/>`;
     if (l.hatch) for (let k = 0; k < spec.width; k += 60) b += `<line x1="${X + q(k)}" y1="${y + hh}" x2="${X + q(k + 30)}" y2="${y}" stroke="#8A8478" stroke-width="0.6"/>`;
     // выноска-полка с толщиной слоя
-    const lead = leader(ink, X + W * (0.35 + 0.5 * (i % 2)), y + hh / 2, `${l.name} — ${l.t} мм`, { size: 8.6, arms: [30, 60, 100], shelf: 46 });
-    b += lead || `<text x="${X + W + 10}" y="${y + hh / 2 + 3}" font-size="8.6" fill="#57514A">${esc(l.name)} — ${l.t} мм</text>`;
+    const lead = leader(ink, X + W * (0.35 + 0.5 * (i % 2)), y + hh / 2, `${l.name} — ${l.t} мм`, { size: 6.2, arms: [22, 44, 70], shelf: 30 });
+    b += lead || `<text x="${X + W + 8}" y="${y + hh / 2 + 3}" font-size="6.2" fill="#57514A">${esc(l.name)} — ${l.t} мм</text>`;
     y += hh;
   });
   // отметки: верх пирога (чистый пол) и низ плиты
   const floorMm = spec.wet ? -20 : 0;
-  b += levelMark(X - 14, Y, spec.layers[0].t ? floorMm + total - spec.layers[0].t : floorMm, -1, { shelf: 46 });
-  b += levelMark(X - 14, y, floorMm - (total - spec.layers[0].t) - spec.layers[0].t + spec.layers[0].t, -1, { shelf: 46 });
+  b += levelMark(X - 10, Y, spec.layers[0].t ? floorMm + total - spec.layers[0].t : floorMm, -1, { shelf: 28 });
+  b += levelMark(X - 10, y, floorMm - (total - spec.layers[0].t) - spec.layers[0].t + spec.layers[0].t, -1, { shelf: 28 });
   // суммарная толщина пирога без несущей плиты
   const pieTop = Y + Math.max(3, q(spec.layers[0].t));
-  b += dimV(X + W + 150, pieTop, y, String(Math.round(total - spec.layers[0].t)));
+  b += dimV(X + W + 96, pieTop, y, String(Math.round(total - spec.layers[0].t)));
   b += dimH(X, X + W, y + 34, String(spec.width));
   // особые пометки исполнения
   if (spec.wet) {
     b += `<rect x="${X - q(120)}" y="${Y}" width="${q(120)}" height="${y - Y}" fill="#EFEFEF" stroke="#2E2A26" stroke-width="1"/>`;
-    b += `<line x1="${X - q(60)}" y1="${pieTop}" x2="${X - q(60)}" y2="${pieTop - q(200)}" stroke="#7FA8C8" stroke-width="2.4"/>`;
-    b += `<text x="${X - q(60) + 6}" y="${pieTop - q(200) - 4}" font-size="8.6" fill="#2E6FA8">гидроизоляция на стену 200 мм</text>`;
+    b += `<line x1="${X - q(60)}" y1="${pieTop}" x2="${X - q(60)}" y2="${pieTop - q(120)}" stroke="#7FA8C8" stroke-width="2.4"/>`;
+    b += `<text x="${X - q(60) + 6}" y="${pieTop - q(120) - 4}" font-size="6" fill="#2E6FA8">гидроизоляция на стену 200 мм</text>`;
   }
   if (spec.joint) {
     b += `<line x1="${X + W / 2}" y1="${Y - 24}" x2="${X + W / 2}" y2="${y + 12}" stroke="#B0483A" stroke-width="1.2" stroke-dasharray="6 3"/>`;
-    b += `<text x="${X + W / 2 + 5}" y="${Y - 28}" font-size="8.6" fill="#B0483A">ось дверного полотна</text>`;
+    b += `<text x="${X + W / 2 + 5}" y="${Y - 28}" font-size="6" fill="#B0483A">ось дверного полотна</text>`;
   }
   if (spec.shadow) {
     b += `<rect x="${X + W - q(30)}" y="${y - q(20)}" width="${q(10)}" height="${q(20)}" fill="#2E2A26"/>`;
-    b += `<text x="${X + W - q(30)}" y="${y + 26}" font-size="8.6" fill="#57514A" text-anchor="middle">теневой шов 10×20</text>`;
+    b += `<text x="${X + W - q(30)}" y="${y + 26}" font-size="6" fill="#57514A" text-anchor="middle">теневой шов 10×20</text>`;
   }
-  b += `<text x="${X}" y="${M - 16}" font-size="16" font-weight="700" fill="#2E2A26">${esc(spec.title)}</text>`;
-  b += `<text x="${X}" y="${M + 2}" font-size="11" fill="#7A756D">${esc(spec.sub)}</text>`;
-  b += notesBlock(X, y + 74, spec.notes.concat(['Узел вынесен с плана полов — см. лист «План напольных покрытий» и разрезы альбома.']), 92);
-  b += stamp(X, y + 74 + spec.notes.length * 12 + 44, Math.max(560, W + 200), spec.title.replace(/^Узел \S+ · /, 'Узел ' + spec.mark + '. '), sheetNo, 'node');
-  return svgDoc(Math.max(900, W + 420), y + 74 + spec.notes.length * 12 + 120, b);
+  b = `<text x="${X}" y="${Y - 30}" font-size="8.5" font-weight="700" fill="#2E2A26">${esc(spec.title)}</text>`
+    + `<text x="${X}" y="${Y - 18}" font-size="6" fill="#7A756D">${esc(spec.sub)}</text>` + b;
+  // примечания узла — компактные: номинал мелкий, печатный размер поднимет normalizeInk
+  let notesY = y + 36;
+  b += `<g data-el="notes"></g><text x="${X}" y="${notesY}" font-size="6.4" font-weight="700" fill="#2E2A26">Примечания:</text>`;
+  let ln2 = 0;
+  spec.notes.forEach((t, i) => {
+    wrapText(String(t), 96).forEach((w2, k2) => {
+      b += `<text x="${X}" y="${notesY + 8 + ln2 * 6.8}" font-size="5.2" fill="#57514A">${k2 ? '    ' : (i + 1) + '. '}${esc(w2)}</text>`;
+      ln2++;
+    });
+  });
+  const bottom = notesY + 12 + ln2 * 6.8;
+  return { svg: b, bottom };
+}
+
+// Сборный лист: два узла друг под другом. По одному узлу на лист поле A3
+// заполнялось на 39–50% — альбом выглядел раздутым.
+function drawNodesPair(specA, specB, sheetNo, sheetTitle) {
+  const a = nodeBody(specA, 128);
+  const bB = nodeBody(specB, a.bottom + 44);
+  let b = a.svg + bB.svg;
+  b += `<line x1="112" y1="${a.bottom + 26}" x2="512" y2="${a.bottom + 34}" stroke="#C29A5B55" stroke-width="0.8"/>`;
+  b += `<text x="120" y="${bB.bottom + 20}" font-size="6" fill="#57514A">Узлы вынесены с плана полов и разрезов — см. «План напольных покрытий» и разрезы альбома.</text>`;
+  // запас снизу: примечания второй колонки ныряли под зону основной надписи
+  b += stamp(120, bB.bottom + 26, 512, sheetTitle, sheetNo, 'node');
+  return svgDoc(700, bB.bottom + 150, b);
 }
 
 function drawNode(sheet) {
@@ -2305,7 +2342,7 @@ function drawNode(sheet) {
   b += dimH(X, X + q(450), y2 + q(12.5) + 34, '450');
   b += dimH(X + q(450), X + q(550), y2 + q(12.5) + 34, '100');
   b += `<text x="${X}" y="${Y - 44}" font-size="16" font-weight="700" fill="#2E2A26">Узел А · Короб 2-го уровня со скрытой LED-подсветкой</text>`;
-  b += `<text x="${X}" y="${Y - 26}" font-size="11" fill="#7A756D">М 1:20 · применяется на планах потолков всех помещений · блок питания LED с запасом 30% и ревизионным люком</text>`;
+  b += `<text x="${X}" y="${Y - 26}" font-size="11" fill="#7A756D">Применяется на планах потолков всех помещений</text>`;
   // Отметки уровня знаком по ГОСТ (разрез) + обратная ссылка на лист, откуда вынесен узел
   {
     const inkN = inkMap();
@@ -2317,8 +2354,33 @@ function drawNode(sheet) {
   b += levelMark(X - 30, y1, BASE_H, -1, { shelf: 52 });
   b += levelMark(X - 30, y2 + q(12.5), BASE_H - 120, -1, { shelf: 52 });
   b += `<text x="${X}" y="${y2 + q(12.5) + 52}" font-size="9.5" fill="#57514A">Узел вынесен с плана потолков — см. лист «План потолков» (раздел 01) и планы потолков помещений (раздел 05).</text>`;
-  b += stamp(X, y2 + q(12.5) + 60, q(1400), 'Узел А. Короб с LED', sheet, 'node');
-  return svgDoc(Math.max(790, q(1400) + M * 2), y2 + q(12.5) + 130 + M, b);
+  // Ведомость уровней потолков: лист узла занимал 11% поля — теперь на нём
+  // и деталь, и все высоты по помещениям, ради которых узел существует
+  {
+    const tx = X, ty = y2 + q(12.5) + 78;   // таблица ПОД узлом: сбоку она выталкивала лист за ряд 1:20
+    const rowH2 = Math.max(15, lineH(8.4) + 4), headH3 = Math.max(20, lineH(10) + 8);
+    const cols = [[0, 'помещение'], [150, 'база'], [210, 'короб'], [268, 'LED, м.п.'], [330, 'люк']];
+    const tw = 380;
+    let tb = `<text x="${tx}" y="${ty - 8}" font-size="11" font-weight="700" fill="#2E2A26">Уровни потолков по помещениям</text>`;
+    tb += `<rect x="${tx}" y="${ty}" width="${tw}" height="${headH3 + rowH2 * rooms.length + 6}" fill="none" stroke="#8A8478" stroke-width="0.8"/>`;
+    cols.slice(1).forEach(c => { tb += `<line x1="${tx + c[0]}" y1="${ty}" x2="${tx + c[0]}" y2="${ty + headH3 + rowH2 * rooms.length + 6}" stroke="#B9B2A4" stroke-width="0.5"/>`; });
+    cols.forEach(c => { tb += `<text x="${tx + c[0] + 6}" y="${ty + headH3 - 6}" font-size="7.8" fill="#7A756D">${c[1]}</text>`; });
+    rooms.forEach((r, i) => {
+      const lv = ceilingLevelsFor(r), ry = ty + headH3 + rowH2 * (i + 1) - 5;
+      const nmMax = fitChars(8.2, 140);
+      const nm = r.name.length > nmMax ? r.name.slice(0, nmMax - 1) + '…' : r.name;
+      tb += `<text x="${tx + 6}" y="${ry}" font-size="8.2" fill="#2E2A26">${esc(nm)}</text>`;
+      tb += `<text x="${tx + 156}" y="${ry}" font-size="8.2" fill="#57514A">${mark(r.h - CEIL_DROP1)}</text>`;
+      tb += `<text x="${tx + 216}" y="${ry}" font-size="8.2" fill="#57514A">${lv.oneLevel ? '—' : mark(r.h - CEIL_DROP1 - 120)}</text>`;
+      tb += `<text x="${tx + 274}" y="${ry}" font-size="8.2" fill="#57514A">${lv.ledLen ? lv.ledLen.toFixed(1) : '—'}</text>`;
+      tb += `<text x="${tx + 336}" y="${ry}" font-size="8.2" fill="#57514A">${lv.oneLevel ? 'да' : '—'}</text>`;
+    });
+    b += `<g data-el="spec">${tb}</g>`;
+  }
+  b += `<text x="${X}" y="${y2 + q(12.5) + 78 + Math.max(20, lineH(10) + 8) + Math.max(15, lineH(8.4) + 4) * rooms.length + 16}" font-size="9" fill="#57514A">Блок питания LED — с запасом 30% по мощности, доступ через ревизионный люк или съёмную полку.</text>`;
+  const tblBottom = y2 + q(12.5) + 78 + Math.max(20, lineH(10) + 8) + Math.max(15, lineH(8.4) + 4) * rooms.length + 34;
+  b += stamp(X, tblBottom, q(1400), 'Узел А. Короб с LED', sheet, 'node');
+  return svgDoc(Math.max(790, q(1400) + M * 2), tblBottom + 70 + M, b);
 }
 
 // ---------- план электрики ----------
@@ -3091,7 +3153,9 @@ function inkMap() {
 const LEAD_DIRS = [[1, -1], [-1, -1], [1, 1], [-1, 1], [1, -0.45], [-1, -0.45], [1, 0.45], [-1, 0.45]];
 function leader(ink, tx, ty, text, opt) {
   opt = opt || {};
-  const fs = opt.size || 8.6, tw = String(text).length * fs * 0.55, th = fs * 1.4;
+  // Ширину меряем по фактическому кеглю листа: на мелких масштабах normalizeInk
+  // поднимает текст до 2,5 мм, и резерв по номиналу давал наложения.
+  const fs = opt.size || 8.6, tw = String(text).length * effFont(fs) * 0.55, th = effFont(fs) * 1.4;
   const arms = opt.arms || [opt.arm || 30];
   const shelf = opt.shelf || 30;
   for (const arm of arms) for (const [dx, dy] of LEAD_DIRS) {
@@ -3547,7 +3611,7 @@ function drawFlatElectro(sheetNo) {
       // расстановке подписи наезжают друг на друга и читаются как мусор
       const dl = Math.round(Math.min(p.x, r.w - p.x, p.y, r.l - p.y) / 10);
       const tieLab = `${dl}/${Math.round(p.h / 10)}`;
-      const lw = tieLab.length * 3.6 + 3, lh = 8;
+      const lw = tieLab.length * effFont(6.2) * 0.58 + 3, lh = effFont(6.2) * 1.3;
       let placed = false;
       for (const [ox, oy] of [[7, -5], [7, 9], [-lw - 7, -5], [-lw - 7, 9], [7, -14], [-lw - 7, -14], [7, 18], [-lw - 7, 18]]) {
         if (!tieInk.free(x + ox, y + oy - lh, lw, lh)) continue;
@@ -3558,10 +3622,11 @@ function drawFlatElectro(sheetNo) {
       if (!placed) s += `<circle cx="${x}" cy="${y}" r="1.4" fill="#B0483A"/>`;   // место занято — точка отмечена, привязка в ведомости
       if (/полот|аквастор|стирал|кондиц|встройк/.test(lab)) outs.push({ x, y, t: p.label });
     }
-    // выноски к спецвыводам по периметру плана
-    outs.slice(0, 5).forEach((o, i2) => { // короткая полка рядом с точкой
-      const dx = o.x > base.fx(FLAT.x0 + FLAT.W / 2) ? -150 : 46;
-      s += callout(o.x + dx, o.y + (i2 % 2 ? 22 : -30), o.x, o.y, o.t.split(',')[0].slice(0, 22));
+    // выноски к спецвыводам — через leader() с той же картой занятости, что и привязки:
+    // слепое чередование верх/низ складывало «вывод кабеля» друг на друга
+    outs.slice(0, 6).forEach(o => {
+      const lead = leader(tieInk, o.x, o.y, o.t.split(',')[0].slice(0, 24), { size: 6.6, arms: [16, 30, 48, 70], shelf: 22 });
+      if (lead) s += lead;
     });
     return s + flatRoomMarks(base.fx, base.fy, false);
   }, (x, y, w) => {
@@ -3610,9 +3675,13 @@ function flatDoorList() {
   const order = [...flatRooms].sort((a, b) => (a.type === 'hallway' ? 0 : 1) - (b.type === 'hallway' ? 0 : 1) || a.idx - b.idx);
   for (const r of order) for (const o of r.doors) {
     const entry = r.type === 'hallway';
-    list.push({ r, o, mark: 'Д' + (list.length + 1), entry,
+    const wet = r.type === 'bathroom' || r.type === 'wc';
+    list.push({ r, o, mark: 'Д' + (list.length + 1), entry, wet,
       type: entry ? 'Входная, сталь (сущ.)' : 'Скрытого монтажа, одностворчатая',
-      leaf: entry ? '—' : `${o.w - 80}×2000` });
+      leaf: entry ? '—' : `${o.w - 80}×${wet ? 1980 : 2000}`,
+      frame: entry ? '—' : `скрытый короб, проём ${o.w}×${o.h}`,
+      hw: entry ? 'существующая' : 'петли скрытые 3D 3 шт · замок магнитный · ручка по спецификации',
+      undercut: wet ? 'подрез полотна 20 мм (переток воздуха)' : null });
   }
   return list;
 }
@@ -3707,20 +3776,92 @@ function drawFlatDoors(sheetNo) {
     y = y + shift + 14;
     // ниже — ведомость дверей
     const dl = flatDoorList();
-    const dRow = Math.max(30, lineH(8.6) + lineH(8.2) + 6);
+    const dRow = Math.max(42, lineH(8.6) + 2 * lineH(7.8) + 8);
     let s = `<rect x="${x}" y="${y}" width="${w}" height="${dl.length * dRow + 44}" fill="none" stroke="#8A8478" stroke-width="0.8"/>`;
     s += `<text x="${x + 10}" y="${y + 18}" font-size="10.5" font-weight="700" fill="#2E2A26">Спецификация дверей</text>`;
     s += `<line x1="${x}" y1="${y + 26}" x2="${x + w}" y2="${y + 26}" stroke="#8A8478" stroke-width="0.6"/>`;
     dl.forEach((d, i) => {
       const sy = y + 44 + i * dRow;
       s += `<circle cx="${x + 18}" cy="${sy - 4}" r="9" fill="none" stroke="#B0483A" stroke-width="1"/><text x="${x + 18}" y="${sy - 1}" font-size="8" font-weight="700" text-anchor="middle" fill="#B0483A">${d.mark}</text>`;
-      const dl2 = lineH(8.6) * 0.55;
+      const lh3 = lineH(7.8);
       const cut = (t, f) => { const m = fitChars(f, w - 46); return t.length > m ? t.slice(0, m - 1) + '…' : t; };
-      s += `<text x="${x + 36}" y="${sy - dl2}" font-size="8.6" fill="#2E2A26">${esc(cut(`проём ${d.o.w}×${d.o.h} · полотно ${d.leaf}`, 8.6))}</text>`;
-      s += `<text x="${x + 36}" y="${sy + dl2}" font-size="8.2" fill="#7A756D">${esc(cut(`${d.type} · ${d.r.name}`, 8.2))}</text>`;
+      s += `<text x="${x + 36}" y="${sy - lh3}" font-size="8.6" fill="#2E2A26">${esc(cut(`полотно ${d.leaf} · ${d.frame}`, 8.6))}</text>`;
+      s += `<text x="${x + 36}" y="${sy}" font-size="7.8" fill="#7A756D">${esc(cut(`${d.type} · ${d.r.name}`, 7.8))}</text>`;
+      s += `<text x="${x + 36}" y="${sy + lh3}" font-size="7.8" fill="#7A756D">${esc(cut(d.hw + (d.undercut ? ' · ' + d.undercut : ''), 7.8))}</text>`;
     });
     return s0 + s;
   }, ['Полотна скрытого монтажа, эмаль в цвет стен, магнитные замки AGB (см. спецификацию, раздел 07).', 'Размеры проёмов уточнить по месту после монтажа конструкций и стяжки.', 'Входная дверь — существующая, замена не предусмотрена.'], { roomFill: CAD.roomFill });
+}
+
+// План плинтусов и порожков: последняя закупка, которую нельзя было снять
+// с альбома — трассы по периметрам (разрывы на дверях и фронте кухни),
+// порожки на осях полотен, ведомость метража (бэклог разведки №5)
+function drawFlatPlinth(sheetNo) {
+  const rowsV = [];
+  return flatSheet(sheetNo, 'План плинтусов и порожков', 'Трассы плинтуса · стыки покрытий на осях дверных полотен', base => {
+    let s = '';
+    for (const r of flatRooms) {
+      const wet = r.type === 'bathroom' || r.type === 'wc';
+      const rx = base.fx(r.pos.x), ry = base.fy(r.pos.y), rw2 = px(r.w), rh2 = px(r.l);
+      const g = roomGeometry(r);
+      const kitchenFront = furnitureFor(r).filter(f => f.key === 'kitchen' || f.key === 'kitchen_ext')
+        .reduce((a, f) => a + Math.max(f.w, f.h), 0);
+      const len = wet ? 0 : Math.max(0, g.plinth - kitchenFront / 1000);
+      rowsV.push({ r, wet, len: +len.toFixed(1) });
+      if (wet) continue;   // в мокрых зонах плинтус не устраивается (узел Д)
+      // трасса плинтуса: по каждой стене с разрывами на дверях
+      const wallDef = { A: [rx, ry, rw2, 0], C: [rx, ry + rh2, rw2, 0], B: [rx + rw2, ry, 0, rh2], D: [rx, ry, 0, rh2] };
+      for (const wk of ['A', 'B', 'C', 'D']) {
+        const [wx, wy, ww, wh] = wallDef[wk];
+        const wallLen = ww || wh;
+        const opens = wallOpenings(r, wk);
+        for (const seg of chainSegments((ww ? r.w : r.l), opens)) {
+          if (seg.open) continue;
+          const a = px(seg.a), bLen = px(seg.b - seg.a);
+          const inset = 4;
+          if (ww) s += `<line x1="${wx + a}" y1="${wy + (wk === 'A' ? inset : -inset)}" x2="${wx + a + bLen}" y2="${wy + (wk === 'A' ? inset : -inset)}" stroke="#8A5A2B" stroke-width="2.4"/>`;
+          else s += `<line x1="${wx + (wk === 'D' ? inset : -inset)}" y1="${wy + a}" x2="${wx + (wk === 'D' ? inset : -inset)}" y2="${wy + a + bLen}" stroke="#8A5A2B" stroke-width="2.4"/>`;
+        }
+      }
+      // порожки/стыки — на осях дверных полотен
+      for (const o of r.doors) {
+        const om = { off: px((o.off !== undefined ? o.off : (o.offset || 0) * 1000)), w: px(o.w || (o.width || 0.9) * 1000) };
+        let jx, jy, jw = 0, jh = 0;
+        if (o.wall === 'A') { jx = rx + om.off; jy = ry; jw = om.w; }
+        else if (o.wall === 'C') { jx = rx + om.off; jy = ry + rh2; jw = om.w; }
+        else if (o.wall === 'B') { jx = rx + rw2; jy = ry + om.off; jh = om.w; }
+        else { jx = rx; jy = ry + om.off; jh = om.w; }
+        s += `<line x1="${jx}" y1="${jy}" x2="${jx + jw}" y2="${jy + jh}" stroke="#B0483A" stroke-width="3" stroke-dasharray="3 2"/>`;
+      }
+      const cx = rx + rw2 / 2, cy = ry + rh2 / 2;
+      s += `<rect x="${cx - 30}" y="${cy - 9}" width="60" height="14" fill="#FFFFFFE0" stroke="#8A5A2B" stroke-width="0.7"/><text x="${cx}" y="${cy + 2}" font-size="8.6" text-anchor="middle" fill="#5A3A1B">${len.toFixed(1)} м.п.</text>`;
+    }
+    return s + flatRoomMarks(base.fx, base.fy, true);
+  }, (x, y, w) => {
+    let s0 = flatLegendBox(x, y, w, 'Условные обозначения', [
+      { sym: (sx, sy) => `<line x1="${sx}" y1="${sy - 3}" x2="${sx + 16}" y2="${sy - 3}" stroke="#8A5A2B" stroke-width="2.4"/>`, text: `плинтус ${style.plinth.split(',')[0]}` },
+      { sym: (sx, sy) => `<line x1="${sx}" y1="${sy - 3}" x2="${sx + 16}" y2="${sy - 3}" stroke="#B0483A" stroke-width="3" stroke-dasharray="3 2"/>`, text: 'стык покрытий / порожек на оси полотна (узел Г)' },
+      { sym: (sx, sy) => `<rect x="${sx}" y="${sy - 8}" width="16" height="11" fill="none" stroke="#C9C9C9" stroke-width="0.8"/>`, text: 'мокрая зона — плинтус не устраивается (узел Д)' },
+    ]);
+    const ty = y + flatLegendBox.lastH + 12;
+    const rowH4 = Math.max(14, lineH(7.8) + 3), headH5 = Math.max(18, lineH(9) + 6);
+    let tb = `<text x="${x + 8}" y="${ty + headH5 - 5}" font-size="9" font-weight="700" fill="#2E2A26">Ведомость плинтуса</text>`;
+    tb += `<rect x="${x}" y="${ty}" width="${w}" height="${headH5 + rowH4 * (rowsV.length + 1) + 6}" fill="none" stroke="#8A8478" stroke-width="0.8"/>`;
+    let tot = 0;
+    rowsV.forEach((v, i) => {
+      const ry4 = ty + headH5 + rowH4 * (i + 1) - 4;
+      const nmMax = fitChars(7.8, w - 90);
+      tb += `<text x="${x + 6}" y="${ry4}" font-size="7.8" fill="#2E2A26">${esc(v.r.name.length > nmMax ? v.r.name.slice(0, nmMax - 1) + '…' : v.r.name)}</text>`;
+      tb += `<text x="${x + w - 8}" y="${ry4}" font-size="7.8" text-anchor="end" fill="#57514A">${v.wet ? 'без плинтуса' : v.len.toFixed(1) + ' м.п.'}</text>`;
+      tot += v.wet ? 0 : v.len;
+    });
+    const ryT = ty + headH5 + rowH4 * (rowsV.length + 1) - 4;
+    tb += `<text x="${x + 6}" y="${ryT}" font-size="7.8" font-weight="700" fill="#2E2A26">Итого (+5% подрезка)</text>`;
+    tb += `<text x="${x + w - 8}" y="${ryT}" font-size="7.8" font-weight="700" text-anchor="end" fill="#2E2A26">${(tot * 1.05).toFixed(1)} м.п.</text>`;
+    return s0 + `<g data-el="spec">${tb}</g>`;
+  }, ['Плинтус крепится к стене, не к покрытию — покрытие должно свободно двигаться (узел Д, сборный лист узлов).',
+      'Метраж за вычетом дверных проёмов и фронта кухни; запас на подрезку 5% учтён в итоге.',
+      'Стыки покрытий выполняются на осях дверных полотен без порожка, скрытым профилем (узел Г).'], { pale: true });
 }
 
 // 9. План освещения (общий)
@@ -3812,14 +3953,43 @@ function drawFlatWallFinish(sheetNo) {
     }
     return s;
   }, (x, y, w) => {
-    const dry = flatRooms.filter(r => r.type !== 'bathroom').reduce((a, r) => a + roomGeometry(r).walls, 0);
-    const wetW = flatRooms.filter(r => r.type === 'bathroom').reduce((a, r) => a + roomGeometry(r).walls, 0);
-    return flatLegendBox(x, y, w, 'Ведомость отделки стен', [
-      { sym: (sx, sy) => `<rect x="${sx}" y="${sy - 8}" width="16" height="11" fill="none" stroke="#C9A227" stroke-width="2"/>`, text: `От-1 · ${style.wall.finish.split(',')[0]} · ≈${(dry * 0.85).toFixed(0)} м²` },
-      { sym: (sx, sy) => `<rect x="${sx}" y="${sy - 8}" width="16" height="11" fill="none" stroke="#7FA3B5" stroke-width="2"/>`, text: `От-2 · керамогранит под камень · ≈${(wetW * 1.1).toFixed(0)} м² (+10%)` },
-      { sym: (sx, sy) => `<line x1="${sx}" y1="${sy - 3}" x2="${sx + 16}" y2="${sy - 3}" stroke="#8A5A2B" stroke-width="4"/>`, text: `От-3 · ${style.accent.finish.split(',')[0]} (акцентные стены) · ≈${(dry * 0.15).toFixed(0)} м²` },
+    let s0 = flatLegendBox(x, y, w, 'Коды отделки', [
+      { sym: (sx, sy) => `<rect x="${sx}" y="${sy - 8}" width="16" height="11" fill="none" stroke="#C9A227" stroke-width="2"/>`, text: `От-1 · ${style.wall.finish.split(',')[0]}` },
+      { sym: (sx, sy) => `<rect x="${sx}" y="${sy - 8}" width="16" height="11" fill="none" stroke="#7FA3B5" stroke-width="2"/>`, text: 'От-2 · керамогранит под камень' },
+      { sym: (sx, sy) => `<line x1="${sx}" y1="${sy - 3}" x2="${sx + 16}" y2="${sy - 3}" stroke="#8A5A2B" stroke-width="4"/>`, text: `От-3 · ${style.accent.finish.split(',')[0]}` },
     ]);
-  }, ['Площади рассчитаны за вычетом проёмов; уточняются по развёрткам (раздел 04).', 'Отделка каждой стены с материалом и артикулом — на развёртках и в спецификации (раздел 07).', 'Стыки разных отделок — во внутренних углах, без нащельников.']);
+    // Матрица «помещение × поверхность»: по такой ведомости отделочник считает
+    // закупку без звонков — площади из геометрии за вычетом проёмов (бэклог разведки №2)
+    const ty = y + flatLegendBox.lastH + 12;
+    const rowH3 = Math.max(15, lineH(7.8) + 4), headH4 = Math.max(18, lineH(9) + 6);
+    const cols = [[0, 'помещение', 96], [96, 'пол, м²', 44], [140, 'стены, м²', 48], [188, 'из них От-3', 52], [240, 'потолок, м²', 60]];
+    let tb = `<text x="${x + 8}" y="${ty + headH4 - 5}" font-size="9" font-weight="700" fill="#2E2A26">Ведомость отделки</text>`;
+    const t0 = ty + headH4;
+    tb += `<rect x="${x}" y="${ty}" width="${w}" height="${headH4 + rowH3 * (flatRooms.length + 2) + 4}" fill="none" stroke="#8A8478" stroke-width="0.8"/>`;
+    cols.slice(1).forEach(c => { tb += `<line x1="${x + c[0]}" y1="${t0}" x2="${x + c[0]}" y2="${ty + headH4 + rowH3 * (flatRooms.length + 2) + 4}" stroke="#B9B2A4" stroke-width="0.5"/>`; });
+    cols.forEach(c => { tb += `<text x="${x + c[0] + 4}" y="${t0 + rowH3 - 5}" font-size="6.8" fill="#7A756D">${c[1]}</text>`; });
+    let sumF = 0, sumW = 0, sumA = 0, sumC = 0;
+    flatRooms.forEach((r, i) => {
+      const g = roomGeometry(r), wet = r.type === 'bathroom';
+      const accent = !wet && nichesFor(r).some(n => /ТВ|изголов/i.test(n.label)) ? +(g.walls * 0.25).toFixed(1) : 0;
+      const ry3 = t0 + rowH3 * (i + 2) - 5;
+      const nmMax = fitChars(7.8, 90);
+      tb += `<text x="${x + 4}" y="${ry3}" font-size="7.8" fill="#2E2A26">${esc(r.name.length > nmMax ? r.name.slice(0, nmMax - 1) + '…' : r.name)}</text>`;
+      tb += `<text x="${x + 100}" y="${ry3}" font-size="7.6" fill="#57514A">${g.floor.toFixed(1)}</text>`;
+      tb += `<text x="${x + 144}" y="${ry3}" font-size="7.6" fill="#57514A">${wet ? '' : (g.walls - accent).toFixed(1)}${wet ? g.walls.toFixed(1) + ' От-2' : ''}</text>`;
+      tb += `<text x="${x + 192}" y="${ry3}" font-size="7.6" fill="#57514A">${accent ? accent.toFixed(1) : '—'}</text>`;
+      tb += `<text x="${x + 244}" y="${ry3}" font-size="7.6" fill="#57514A">${g.floor.toFixed(1)}</text>`;
+      sumF += g.floor; sumW += wet ? 0 : g.walls - accent; sumA += accent; sumC += g.floor;
+    });
+    const ryT = t0 + rowH3 * (flatRooms.length + 2) - 5;
+    tb += `<line x1="${x}" y1="${ryT - rowH3 + 6}" x2="${x + w}" y2="${ryT - rowH3 + 6}" stroke="#8A8478" stroke-width="0.7"/>`;
+    tb += `<text x="${x + 4}" y="${ryT}" font-size="7.8" font-weight="700" fill="#2E2A26">Итого</text>`;
+    tb += `<text x="${x + 100}" y="${ryT}" font-size="7.6" font-weight="700" fill="#2E2A26">${sumF.toFixed(1)}</text>`;
+    tb += `<text x="${x + 144}" y="${ryT}" font-size="7.6" font-weight="700" fill="#2E2A26">${sumW.toFixed(1)}</text>`;
+    tb += `<text x="${x + 192}" y="${ryT}" font-size="7.6" font-weight="700" fill="#2E2A26">${sumA ? sumA.toFixed(1) : '—'}</text>`;
+    tb += `<text x="${x + 244}" y="${ryT}" font-size="7.6" font-weight="700" fill="#2E2A26">${sumC.toFixed(1)}</text>`;
+    return s0 + `<g data-el="spec">${tb}</g>`;
+  }, ['Площади рассчитаны за вычетом проёмов; уточняются по развёрткам (раздел 04). Расход материалов — с запасом на подрезку по спецификации.', 'От-2 в мокрых зонах указана площадью всех стен помещения; раскладка и подрезка — на развёртках.', 'Стыки разных отделок — во внутренних углах, без нащельников.']);
 }
 
 // 13. План тёплых полов
@@ -3930,12 +4100,12 @@ function plumbColumn(x, y, w, legendSvg, legendRows) {
   if (!rows.length) return legendSvg;
   // высота легенды считается по фактическому числу строк: с зашитой пятёркой
   // ведомость привязок прилипала к рамке легенды
-  const ly = y + (legendRows || 5) * 22 + 56;
+  const ly = y + (flatLegendBox.lastH || (legendRows || 5) * 22 + 44) + 12;
   let s = legendSvg;
-  s += `<rect x="${x}" y="${ly}" width="${w}" height="${rows.length * 13 + 32}" fill="none" stroke="#8A8478" stroke-width="0.8"/>`;
+  s += `<rect x="${x}" y="${ly}" width="${w}" height="${rows.length * Math.max(13, lineH(7.6)) + 32}" fill="none" stroke="#8A8478" stroke-width="0.8"/>`;
   s += `<text x="${x + 10}" y="${ly + 17}" font-size="10" font-weight="700" fill="#2E2A26">Ведомость привязок сантехники</text>`;
   rows.forEach((r0, i2) => {
-    const ry = ly + 30 + i2 * 13;
+    const ry = ly + 30 + i2 * Math.max(13, lineH(7.6));
     s += `<rect x="${x + 7}" y="${ry - 9}" width="16" height="12" rx="2" fill="none" stroke="${CAD.plumb}" stroke-width="0.8"/>`;
     s += `<text x="${x + 15}" y="${ry}" font-size="7.4" font-weight="700" text-anchor="middle" fill="${CAD.plumb}">${r0.mk}</text>`;
     s += `<text x="${x + 28}" y="${ry}" font-size="7.6" fill="#2E2A26">${esc(r0.t)}</text>`;
@@ -4229,19 +4399,34 @@ function drawFlatElevKeys(sheetNo) {
       { sym: (sx, sy) => `<g stroke="${CAD.dim}" stroke-width="1" fill="#FFF"><circle cx="${sx + 8}" cy="${sy - 3}" r="7"/></g><text x="${sx + 8}" y="${sy}" font-size="7" text-anchor="middle" fill="${CAD.dim}">A</text>`, text: 'марка стены: буква — стена помещения, ниже — номер листа развёртки' },
       { sym: (sx, sy) => `<g stroke="${CAD.dim}" stroke-width="1.2"><line x1="${sx}" y1="${sy - 3}" x2="${sx + 12}" y2="${sy - 3}"/><path d="M ${sx + 12} ${sy - 6} L ${sx + 17} ${sy - 3} L ${sx + 12} ${sy} Z" fill="${CAD.dim}" stroke="none"/></g>`, text: 'направление взгляда развёртки' },
     ]);
-    // перечень развёрток по помещениям
-    const ly = y + flatLegendBox.lastH + 12, eRow = Math.max(15, lineH(8.4));
-    s += `<rect x="${x}" y="${ly}" width="${w}" height="${flatRooms.length * eRow + 30}" fill="none" stroke="#8A8478" stroke-width="0.8"/>`;
-    s += `<text x="${x + 10}" y="${ly + Math.max(17, lineH(10))}" font-size="10" font-weight="700" fill="#2E2A26">Развёртки по помещениям</text>`;
-    flatRooms.forEach((r, i) => {
-      const ry2 = ly + 30 + i * eRow;
-      const refs = ['A', 'B', 'C', 'D'].map(wk => ELEV_REF[`${r.idx}-${wk}`]).filter(Boolean);
-      const refW = ('листы ' + refs.join(', ')).length * charW(8.2) + 12;
-      const nmMax = fitChars(8.4, w - 20 - refW);
-      const rn = `${nn(r.idx)} · ${r.name}`;
-      s += `<text x="${x + 10}" y="${ry2}" font-size="8.4" fill="#2E2A26">${esc(rn.length > nmMax ? rn.slice(0, nmMax - 1) + '…' : rn)}</text>`;
-      s += `<text x="${x + w - 10}" y="${ry2}" font-size="8.2" fill="#57514A" text-anchor="end">${refs.length ? 'листы ' + refs.join(', ') : '—'}</text>`;
+    // Ведомость развёрток: помещение × стены A–D → номер листа. Настоящая
+    // таблица с линиями и колонками, а не строка «листы 38, 39…» — раньше
+    // длинное имя помещения наезжало на перечень номеров.
+    const ly = y + flatLegendBox.lastH + 12, eRow = Math.max(16, lineH(8.4) + 4);
+    const headH2 = Math.max(20, lineH(10) + 8);
+    const colW = 34, nameW = w - 4 * colW - 16;
+    let tb = `<rect x="${x}" y="${ly}" width="${w}" height="${headH2 + eRow * (flatRooms.length + 1) + 8}" fill="none" stroke="#8A8478" stroke-width="0.8"/>`;
+    tb += `<text x="${x + 10}" y="${ly + headH2 - 6}" font-size="10" font-weight="700" fill="#2E2A26">Ведомость развёрток (№ листа)</text>`;
+    const ty0 = ly + headH2;
+    tb += `<line x1="${x}" y1="${ty0 + eRow}" x2="${x + w}" y2="${ty0 + eRow}" stroke="#8A8478" stroke-width="0.6"/>`;
+    ['A', 'B', 'C', 'D'].forEach((wk, ci) => {
+      const cx0 = x + nameW + 8 + ci * colW;
+      tb += `<line x1="${cx0}" y1="${ty0}" x2="${cx0}" y2="${ly + headH2 + eRow * (flatRooms.length + 1)}" stroke="#B9B2A4" stroke-width="0.5"/>`;
+      tb += `<text x="${cx0 + colW / 2}" y="${ty0 + eRow - 5}" font-size="8.4" font-weight="700" text-anchor="middle" fill="#57514A">${wk}</text>`;
     });
+    tb += `<text x="${x + 10}" y="${ty0 + eRow - 5}" font-size="8" fill="#7A756D">помещение</text>`;
+    flatRooms.forEach((r, i) => {
+      const ry2 = ty0 + eRow * (i + 2) - 5;
+      const nmMax = fitChars(8.4, nameW - 12);
+      const rn = `${nn(r.idx)} · ${r.name}`;
+      tb += `<text x="${x + 10}" y="${ry2}" font-size="8.4" fill="#2E2A26">${esc(rn.length > nmMax ? rn.slice(0, nmMax - 1) + '…' : rn)}</text>`;
+      ['A', 'B', 'C', 'D'].forEach((wk, ci) => {
+        const no = ELEV_REF[`${r.idx}-${wk}`];
+        tb += `<text x="${x + nameW + 8 + ci * colW + colW / 2}" y="${ry2}" font-size="8.2" text-anchor="middle" fill="#57514A">${no || '—'}</text>`;
+      });
+      if (i < flatRooms.length - 1) tb += `<line x1="${x}" y1="${ty0 + eRow * (i + 2) + 3}" x2="${x + w}" y2="${ty0 + eRow * (i + 2) + 3}" stroke="#E0DACD" stroke-width="0.4"/>`;
+    });
+    s += `<g data-el="spec">${tb}</g>`;
     return s;
   }, ['Развёртки читаются изнутри помещения в направлении стрелки.',
       'Буквы стен: A — верхняя на плане, B — правая, C — нижняя, D — левая.',
@@ -5175,9 +5360,9 @@ let sheet = 2;   // лист 1 зарезервирован под титул с
 const PER_ROOM_FULL = 10;
 const HAS_STAIRS = rooms.some(r => r.stairs === 'up');
 TOTAL_SHEETS = 1                                   // титульный лист с перечнем
-  + (FLAT ? 1 + 15 * LEVELS.length + 1 + 1 + 2 : 0) // презентация, сводные, щит, обозначение развёрток, разрезы
+  + (FLAT ? 1 + 16 * LEVELS.length + 1 + 1 + 2 : 0) // презентация, сводные (с плинтусами), щит, обозначение развёрток, разрезы
   + (FLAT && HAS_STAIRS ? 1 : 0)                    // лист лестницы — только когда она есть в брифе
-  + 1 + NODES.length                                // узел А + библиотека узлов
+  + 1 + Math.ceil(NODES.length / 2)                 // узел А + сборные листы узлов (по два на лист)
   + rooms.length * 4                                // развёртки стен
   + (FULL ? rooms.length * PER_ROOM_FULL : 0);
 const reg = []; // реестр листов для ведомости
@@ -5222,6 +5407,7 @@ const FLAT_SHEETS = [
     ['09-vyklyuchateli', drawFlatSwitches, 'План выключателей', 'switches'],
     ['10-skhema-vklyucheniya', drawFlatSwitchScheme, 'Схема включения освещения', 'switch-scheme'],
     ['11-poly', drawFlatFloors, 'План напольных покрытий', 'floors'],
+    ['11b-plintus', drawFlatPlinth, 'План плинтусов и порожков', 'plinth'],
     ['12-otdelka-sten', drawFlatWallFinish, 'План отделки стен', 'wall-finish'],
     ['13-teplye-poly', drawFlatHeatFloor, 'План тёплых полов', 'heat-floor'],
     ['14-kondicionery', drawFlatAC, 'Кондиционеры', 'climate'],
@@ -5268,7 +5454,10 @@ if (FLAT) for (const ax of ['X', 'Y']) sheetOut(`10-uzly/razrez-${ax === 'X' ? '
 // строить по ней нельзя — нужны подъёмы, заложение, площадка и ограждение.
 if (FLAT && HAS_STAIRS) sheetOut('10-uzly/lestnitsa.svg', n => drawStairs(n), 'Лестница: планы, разрез, ведомость', '1:25', 'stairs');
 // библиотека узлов: пироги полов, стык покрытий, примыкание плинтуса
-for (const nd of NODES) sheetOut(`10-uzly/${nd.key}.svg`, n => drawNodePie(nd, n), nd.title.replace('Узел ', 'Узел ').replace(' · ', '. '), '1:' + nd.ratio, 'node');
+// Пары собраны по высоте (высокий пирог + низкое примыкание), а не по теме:
+// Б+В вместе не влезали в узловой ряд по вертикали
+sheetOut('10-uzly/uzly-B-G-pol-styk.svg', n => drawNodesPair(NODES[0], NODES[2], n, 'Узлы Б и Г. Пол жилой зоны, стык покрытий'), 'Узлы Б и Г. Пирог пола жилой зоны и стык покрытий', '1:10', 'node');
+sheetOut('10-uzly/uzly-V-D-mokraya-plintus.svg', n => drawNodesPair(NODES[1], NODES[3], n, 'Узлы В и Д. Мокрая зона, плинтус'), 'Узлы В и Д. Пирог мокрой зоны и примыкание к стене', '1:10', 'node');
 if (FULL) for (const r of rooms) { sheetOut(`09-elektrika/elektrika-${SL(r)}.svg`, n => drawElectro(r, n), `Электрика. ${RN(r)}`, '1:50', 'electro-room'); counts.electro++; }
 if (FULL) for (const r of rooms) { sheetOut(`09-elektrika/smarthome-${SL(r)}.svg`, n => drawSmartHome(r, n), `Умный дом. ${RN(r)}`, '1:50', 'smart-room'); counts.electro++; }
 if (FULL) for (const r of rooms) { sheetOut(`09-elektrika/slabotochka-${SL(r)}.svg`, n => drawSlabotochka(r, n), `Слаботочка. ${RN(r)}`, '1:50', 'lowvolt-room'); counts.electro++; }

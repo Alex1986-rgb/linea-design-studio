@@ -18,7 +18,7 @@ const AUTHOR = {
 };
 
 const BASE = 'https://alex1986-rgb.github.io/linea-design-studio';
-const CSSV = 'v=20';
+const CSSV = 'v=21';
 
 // Разделы сайта в порядке меню. Добавили раздел — правится только здесь.
 const SECTIONS = [
@@ -55,8 +55,18 @@ function header(u, active) {
 ${links}
     </nav>
     <a class="btn sm" href="${u}brief.html">Заполнить бриф</a>
+    <button class="burger" type="button" aria-label="Меню" aria-expanded="false"><i></i><i></i><i></i></button>
   </div>
-</header>`;
+</header>
+<div class="mnav" hidden>
+  <nav>
+${SECTIONS.map(x => `    <a href="${x.key === active ? './' : u + x.href}">${x.title}</a>`).join('\n')}
+  </nav>
+  <div class="mnav-cta">
+    <a class="btn" href="${u}brief.html">Заполнить бриф</a>
+    <a class="btn ghost" href="tel:${AUTHOR.tel}">${AUTHOR.phone}</a>
+  </div>
+</div>`;
 }
 
 const beta = u => `<div class="beta">Открытое тестирование студии · дизайн-проект делается бесплатно · <a href="${u}brief.html">заполнить бриф</a></div>`;
@@ -71,7 +81,7 @@ const FOOTER_EXTRA = [
   { title: 'Портфолио', href: 'portfolio-hub/' }, { title: 'Условия', href: 'price/' },
   { title: 'Процесс', href: 'process/' }, { title: 'FAQ', href: 'faq/' },
   { title: 'О студии', href: 'about/' }, { title: 'Контакты', href: 'contacts/' },
-  { title: 'Карта сайта', href: 'sitemap/' }, { title: 'Обработка данных', href: 'policy/' },
+  { title: 'Чек-лист приёмки', href: 'checklist/' }, { title: 'Карта сайта', href: 'sitemap/' }, { title: 'Обработка данных', href: 'policy/' },
 ];
 // Воронка сайта: три состояния посетителя. Полоса стоит перед подвалом на
 // каждой странице и всегда показывает, где человек сейчас и что дальше.
@@ -147,7 +157,21 @@ function footer(u, active) {
       <p>© LINEA studio, 2026</p>
     </div>
   </div>
-</footer>`;
+</footer>
+<script>
+(function () {
+  var b = document.querySelector('.burger'), m = document.querySelector('.mnav');
+  if (!b || !m) return;
+  b.addEventListener('click', function () {
+    var open = m.hidden;
+    m.hidden = !open;
+    b.classList.toggle('on', open);
+    b.setAttribute('aria-expanded', open ? 'true' : 'false');
+    document.documentElement.style.overflow = open ? 'hidden' : '';
+  });
+  m.addEventListener('click', function (e) { if (e.target.tagName === 'A') b.click(); });
+})();
+</script>`;
 }
 
 // Видимые хлебные крошки: и навигация, и сигнал структуры для поиска

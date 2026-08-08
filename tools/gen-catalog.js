@@ -19,7 +19,7 @@ const { STYLES } = require('../engine/presets.js');
 const ROOT = path.join(__dirname, '..');
 const SITE = path.join(ROOT, 'site');
 const BASE = 'https://alex1986-rgb.github.io/linea-design-studio';
-const CSSV = 'v=20';
+const CSSV = 'v=21';
 const AUTHOR = { name: 'Кырлан Александр', role: 'дизайнер-архитектор', phone: '+7 925 733-86-40', tel: '+79257338640', email: 'optteem@mail.ru' };
 const esc = s => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 
@@ -80,7 +80,7 @@ const crumbsLd = items => ({
 const SERVICES = [
   {
     slug: 'dizayn-proekt-kvartiry', name: 'Дизайн-проект квартиры',
-    tag: 'Основная услуга', term: '48 часов', vol: '46 листов A3',
+    tag: 'Основная услуга', term: '48 часов', vol: '45 листов A3',
     cover: '../portfolio/demo/06-koncept/renders/01-gostinaya-kuhnya.jpg',
     lead: 'Полный альбом рабочей документации на квартиру: от обмерного плана до сметы. Комплект, по которому работает бригада, а не только смотрит заказчик.',
     forWhom: ['новостройка без отделки или квартира под полный ремонт', 'площадь 25–150 м²', 'нужен комплект, по которому можно строить и закупать'],
@@ -96,7 +96,7 @@ const SERVICES = [
     steps: [
       ['Бриф', 'Размеры, проёмы, конструктив и пожелания. Валидатор сразу ловит нестыковки геометрии.'],
       ['Планировка', 'Расстановка по эргономике с учётом радиаторов и стояков; согласуем до чертежей.'],
-      ['Альбом', 'Конвейер собирает 46 листов, три программы проверяют бумагу, содержание и выпуск.'],
+      ['Альбом', 'Конвейер собирает 45 листов, три программы проверяют бумагу, содержание и выпуск.'],
       ['Выдача', 'Папка проекта: листы SVG, единый PDF, листалка для просмотра, документы и смета.']
     ],
     faq: [
@@ -273,6 +273,58 @@ ${SERVICES.map(s => `      <a class="tile" href="${s.slug}.html">
     </div>
   </div>
 </section>
+
+<section class="blk" id="quiz">
+  <div class="wrap">
+    <div class="kicker">Не знаете, что выбрать?</div>
+    <h2>Три вопроса — и каталог сузится до одной позиции</h2>
+    <div class="quiz" data-quiz>
+      <div class="q" data-q="0"><p>Что у вас за объект?</p>
+        <div class="q-opts"><button data-a="flat">Квартира</button><button data-a="house">Дом / таунхаус</button></div></div>
+      <div class="q" data-q="1" hidden><p>Что уже есть на руках?</p>
+        <div class="q-opts"><button data-a="nothing">Только размеры и желание</button><button data-a="concept">Концепция от дизайнера</button><button data-a="project">Готовый проект — нужна смета</button></div></div>
+      <div class="q" data-q="2" hidden><p>Что важнее прямо сейчас?</p>
+        <div class="q-opts"><button data-a="all">Полный комплект для стройки</button><button data-a="plan">Понять, встанет ли мебель</button><button data-a="viz">Увидеть картинку</button></div></div>
+      <div class="q-res" hidden><p class="kicker">Вам подойдёт</p><h3><a data-res-link href="#"></a></h3><p data-res-why class="sub"></p>
+        <div class="cta-row"><a class="btn" data-res-btn href="#">Открыть услугу</a><button class="btn ghost" type="button" data-reset>Пройти заново</button></div></div>
+    </div>
+  </div>
+</section>
+<script>
+(function () {
+  var root = document.querySelector('[data-quiz]'); if (!root) return;
+  var ans = [];
+  var MAP = function () {
+    if (ans[1] === 'project') return ['smeta-i-komplektatsiya.html', 'Смета и комплектация', 'Проект уже есть — считаем спецификацию с артикулами и смету по вашей геометрии.'];
+    if (ans[1] === 'concept') return ['rabochaya-dokumentatsiya.html', 'Только рабочая документация', 'Концепцию сохраняем, достраиваем развёртки, инженерию, узлы и смету.'];
+    if (ans[2] === 'plan') return ['planirovochnoe-reshenie.html', 'Планировочное решение', 'Быстрый ответ «встанет ли»: расстановка с проходами и вариантами за 24 часа.'];
+    if (ans[2] === 'viz') return ['vizualizatsii.html', 'Визуализации по геометрии', 'Кадры вашей квартиры по фактической геометрии — той же, что пойдёт в чертежи.'];
+    return ans[0] === 'house'
+      ? ['dizayn-proekt-doma.html', 'Дизайн-проект дома', 'Полный альбом на дом: поэтажные планы, лестница с расчётом, инженерия по уровням.']
+      : ['dizayn-proekt-kvartiry.html', 'Дизайн-проект квартиры', 'Полный альбом: 45 листов от обмера до сметы за 48 часов.'];
+  };
+  root.addEventListener('click', function (e) {
+    if (e.target.closest('[data-reset]')) {
+      ans = [];
+      root.querySelectorAll('.q').forEach(function (q, i) { q.hidden = i !== 0; });
+      root.querySelector('.q-res').hidden = true;
+      return;
+    }
+    var b = e.target.closest('button[data-a]'); if (!b) return;
+    var q = b.closest('.q'); ans[+q.dataset.q] = b.dataset.a;
+    q.hidden = true;
+    var next = root.querySelector('.q[data-q="' + (+q.dataset.q + 1) + '"]');
+    if (next && !(ans[1] === 'project' || ans[1] === 'concept')) { next.hidden = false; return; }
+    if (next && +q.dataset.q === 0) { next.hidden = false; return; }
+    var r = MAP();
+    root.querySelector('[data-res-link]').textContent = r[1];
+    root.querySelector('[data-res-link]').href = r[0];
+    root.querySelector('[data-res-btn]').href = r[0];
+    root.querySelector('[data-res-why]').textContent = r[2];
+    root.querySelector('.q-res').hidden = false;
+  });
+})();
+</script>
 
 <section class="blk">
   <div class="wrap">

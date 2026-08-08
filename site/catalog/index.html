@@ -14,7 +14,7 @@
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' fill='%230F0E0C'/><text x='50' y='68' font-size='52' text-anchor='middle' fill='%23C29A5B' font-family='Georgia'>L</text></svg>">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;600&family=Inter:wght@400;600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="../css/main.css?v=20">
+<link rel="stylesheet" href="../css/main.css?v=21">
 <script type="application/ld+json">{"@context":"https://schema.org","@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"LINEA","item":"https://alex1986-rgb.github.io/linea-design-studio/"},{"@type":"ListItem","position":2,"name":"Каталог","item":"https://alex1986-rgb.github.io/linea-design-studio/catalog/"}]}</script>
 <script type="application/ld+json">{"@context":"https://schema.org","@type":"ItemList","itemListElement":[{"@type":"ListItem","position":1,"name":"Дизайн-проект квартиры","url":"https://alex1986-rgb.github.io/linea-design-studio/catalog/dizayn-proekt-kvartiry.html"},{"@type":"ListItem","position":2,"name":"Дизайн-проект дома","url":"https://alex1986-rgb.github.io/linea-design-studio/catalog/dizayn-proekt-doma.html"},{"@type":"ListItem","position":3,"name":"Только рабочая документация","url":"https://alex1986-rgb.github.io/linea-design-studio/catalog/rabochaya-dokumentatsiya.html"},{"@type":"ListItem","position":4,"name":"Планировочное решение","url":"https://alex1986-rgb.github.io/linea-design-studio/catalog/planirovochnoe-reshenie.html"},{"@type":"ListItem","position":5,"name":"Визуализации по геометрии","url":"https://alex1986-rgb.github.io/linea-design-studio/catalog/vizualizatsii.html"},{"@type":"ListItem","position":6,"name":"Смета и комплектация","url":"https://alex1986-rgb.github.io/linea-design-studio/catalog/smeta-i-komplektatsiya.html"}]}</script>
 </head>
@@ -34,8 +34,24 @@
       <a href="../reviews/">Отзывы</a>
     </nav>
     <a class="btn sm" href="../brief.html">Заполнить бриф</a>
+    <button class="burger" type="button" aria-label="Меню" aria-expanded="false"><i></i><i></i><i></i></button>
   </div>
 </header>
+<div class="mnav" hidden>
+  <nav>
+    <a href="./">Каталог</a>
+    <a href="../cases/">Кейсы</a>
+    <a href="../compare/">Сравнение</a>
+    <a href="../style/">Стили</a>
+    <a href="../journal/">Журнал</a>
+    <a href="../stories/">Истории</a>
+    <a href="../reviews/">Отзывы</a>
+  </nav>
+  <div class="mnav-cta">
+    <a class="btn" href="../brief.html">Заполнить бриф</a>
+    <a class="btn ghost" href="tel:+79257338640">+7 925 733-86-40</a>
+  </div>
+</div>
 <nav class="crumbs" aria-label="Хлебные крошки"><div class="wrap"><a href="../">Главная</a><span>Каталог</span></div></nav>
 
 <section class="blk hero-page">
@@ -57,7 +73,7 @@
           <span class="tag">Основная услуга</span>
           <b>Дизайн-проект квартиры</b>
           <span class="tile-lead">Полный альбом рабочей документации на квартиру: от обмерного плана до сметы. Комплект, по которому работает бригада,…</span>
-          <span class="tile-figs"><i><b>48 часов</b> срок</i><i><b>46 листов A3</b> объём</i></span>
+          <span class="tile-figs"><i><b>48 часов</b> срок</i><i><b>45 листов A3</b> объём</i></span>
         </div>
       </a>
       <a class="tile" href="dizayn-proekt-doma.html">
@@ -108,6 +124,58 @@
     </div>
   </div>
 </section>
+
+<section class="blk" id="quiz">
+  <div class="wrap">
+    <div class="kicker">Не знаете, что выбрать?</div>
+    <h2>Три вопроса — и каталог сузится до одной позиции</h2>
+    <div class="quiz" data-quiz>
+      <div class="q" data-q="0"><p>Что у вас за объект?</p>
+        <div class="q-opts"><button data-a="flat">Квартира</button><button data-a="house">Дом / таунхаус</button></div></div>
+      <div class="q" data-q="1" hidden><p>Что уже есть на руках?</p>
+        <div class="q-opts"><button data-a="nothing">Только размеры и желание</button><button data-a="concept">Концепция от дизайнера</button><button data-a="project">Готовый проект — нужна смета</button></div></div>
+      <div class="q" data-q="2" hidden><p>Что важнее прямо сейчас?</p>
+        <div class="q-opts"><button data-a="all">Полный комплект для стройки</button><button data-a="plan">Понять, встанет ли мебель</button><button data-a="viz">Увидеть картинку</button></div></div>
+      <div class="q-res" hidden><p class="kicker">Вам подойдёт</p><h3><a data-res-link href="#"></a></h3><p data-res-why class="sub"></p>
+        <div class="cta-row"><a class="btn" data-res-btn href="#">Открыть услугу</a><button class="btn ghost" type="button" data-reset>Пройти заново</button></div></div>
+    </div>
+  </div>
+</section>
+<script>
+(function () {
+  var root = document.querySelector('[data-quiz]'); if (!root) return;
+  var ans = [];
+  var MAP = function () {
+    if (ans[1] === 'project') return ['smeta-i-komplektatsiya.html', 'Смета и комплектация', 'Проект уже есть — считаем спецификацию с артикулами и смету по вашей геометрии.'];
+    if (ans[1] === 'concept') return ['rabochaya-dokumentatsiya.html', 'Только рабочая документация', 'Концепцию сохраняем, достраиваем развёртки, инженерию, узлы и смету.'];
+    if (ans[2] === 'plan') return ['planirovochnoe-reshenie.html', 'Планировочное решение', 'Быстрый ответ «встанет ли»: расстановка с проходами и вариантами за 24 часа.'];
+    if (ans[2] === 'viz') return ['vizualizatsii.html', 'Визуализации по геометрии', 'Кадры вашей квартиры по фактической геометрии — той же, что пойдёт в чертежи.'];
+    return ans[0] === 'house'
+      ? ['dizayn-proekt-doma.html', 'Дизайн-проект дома', 'Полный альбом на дом: поэтажные планы, лестница с расчётом, инженерия по уровням.']
+      : ['dizayn-proekt-kvartiry.html', 'Дизайн-проект квартиры', 'Полный альбом: 45 листов от обмера до сметы за 48 часов.'];
+  };
+  root.addEventListener('click', function (e) {
+    if (e.target.closest('[data-reset]')) {
+      ans = [];
+      root.querySelectorAll('.q').forEach(function (q, i) { q.hidden = i !== 0; });
+      root.querySelector('.q-res').hidden = true;
+      return;
+    }
+    var b = e.target.closest('button[data-a]'); if (!b) return;
+    var q = b.closest('.q'); ans[+q.dataset.q] = b.dataset.a;
+    q.hidden = true;
+    var next = root.querySelector('.q[data-q="' + (+q.dataset.q + 1) + '"]');
+    if (next && !(ans[1] === 'project' || ans[1] === 'concept')) { next.hidden = false; return; }
+    if (next && +q.dataset.q === 0) { next.hidden = false; return; }
+    var r = MAP();
+    root.querySelector('[data-res-link]').textContent = r[1];
+    root.querySelector('[data-res-link]').href = r[0];
+    root.querySelector('[data-res-btn]').href = r[0];
+    root.querySelector('[data-res-why]').textContent = r[2];
+    root.querySelector('.q-res').hidden = false;
+  });
+})();
+</script>
 
 <section class="blk">
   <div class="wrap">
@@ -189,10 +257,24 @@
       <p>дизайнер-архитектор <b>Кырлан Александр</b><br><a href="tel:+79257338640">+7 925 733-86-40</a> · <a href="mailto:optteem@mail.ru">optteem@mail.ru</a></p>
     </div>
     <div>
-      <p><a href="../brief.html">Бриф</a> · <a href="./">Каталог</a> · <a href="../cases/">Кейсы</a> · <a href="../compare/">Сравнение</a> · <a href="../style/">Стили</a> · <a href="../journal/">Журнал</a> · <a href="../stories/">Истории</a> · <a href="../reviews/">Отзывы</a> · <a href="../portfolio-hub/">Портфолио</a> · <a href="../price/">Условия</a> · <a href="../process/">Процесс</a> · <a href="../faq/">FAQ</a> · <a href="../about/">О студии</a> · <a href="../contacts/">Контакты</a> · <a href="../sitemap/">Карта сайта</a> · <a href="../policy/">Обработка данных</a></p>
+      <p><a href="../brief.html">Бриф</a> · <a href="./">Каталог</a> · <a href="../cases/">Кейсы</a> · <a href="../compare/">Сравнение</a> · <a href="../style/">Стили</a> · <a href="../journal/">Журнал</a> · <a href="../stories/">Истории</a> · <a href="../reviews/">Отзывы</a> · <a href="../portfolio-hub/">Портфолио</a> · <a href="../price/">Условия</a> · <a href="../process/">Процесс</a> · <a href="../faq/">FAQ</a> · <a href="../about/">О студии</a> · <a href="../contacts/">Контакты</a> · <a href="../checklist/">Чек-лист приёмки</a> · <a href="../sitemap/">Карта сайта</a> · <a href="../policy/">Обработка данных</a></p>
       <p>© LINEA studio, 2026</p>
     </div>
   </div>
 </footer>
+<script>
+(function () {
+  var b = document.querySelector('.burger'), m = document.querySelector('.mnav');
+  if (!b || !m) return;
+  b.addEventListener('click', function () {
+    var open = m.hidden;
+    m.hidden = !open;
+    b.classList.toggle('on', open);
+    b.setAttribute('aria-expanded', open ? 'true' : 'false');
+    document.documentElement.style.overflow = open ? 'hidden' : '';
+  });
+  m.addEventListener('click', function (e) { if (e.target.tagName === 'A') b.click(); });
+})();
+</script>
 </body>
 </html>

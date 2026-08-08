@@ -14,7 +14,7 @@
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' fill='%230F0E0C'/><text x='50' y='68' font-size='52' text-anchor='middle' fill='%23C29A5B' font-family='Georgia'>L</text></svg>">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;600&family=Inter:wght@400;600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="../css/main.css?v=20">
+<link rel="stylesheet" href="../css/main.css?v=21">
 <script type="application/ld+json">{"@context":"https://schema.org","@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"LINEA","item":"https://alex1986-rgb.github.io/linea-design-studio/"},{"@type":"ListItem","position":2,"name":"Условия","item":"https://alex1986-rgb.github.io/linea-design-studio/price/"}]}</script>
 <script type="application/ld+json">{"@context":"https://schema.org","@type":"Offer","name":"Дизайн-проект интерьера","price":"0","priceCurrency":"RUB","availability":"https://schema.org/LimitedAvailability","description":"Открытое тестирование студии: проектирование бесплатно, предоплаты нет","seller":{"@type":"ProfessionalService","name":"LINEA","telephone":"+79257338640","email":"optteem@mail.ru"}}</script>
 </head>
@@ -34,8 +34,24 @@
       <a href="../reviews/">Отзывы</a>
     </nav>
     <a class="btn sm" href="../brief.html">Заполнить бриф</a>
+    <button class="burger" type="button" aria-label="Меню" aria-expanded="false"><i></i><i></i><i></i></button>
   </div>
 </header>
+<div class="mnav" hidden>
+  <nav>
+    <a href="../catalog/">Каталог</a>
+    <a href="../cases/">Кейсы</a>
+    <a href="../compare/">Сравнение</a>
+    <a href="../style/">Стили</a>
+    <a href="../journal/">Журнал</a>
+    <a href="../stories/">Истории</a>
+    <a href="../reviews/">Отзывы</a>
+  </nav>
+  <div class="mnav-cta">
+    <a class="btn" href="../brief.html">Заполнить бриф</a>
+    <a class="btn ghost" href="tel:+79257338640">+7 925 733-86-40</a>
+  </div>
+</div>
 
 <section class="blk hero-page">
   <div class="wrap">
@@ -52,7 +68,7 @@
     <div class="scroll-x">
       <table class="tbl">
         <tr><th>Услуга</th><th>Объём</th><th>Срок</th><th class="hi">Цена в тесте</th></tr>
-        <tr><td><a href="../catalog/dizayn-proekt-kvartiry.html">Дизайн-проект квартиры</a></td><td>46 листов A3 + документы</td><td>48 часов</td><td class="hi">0 ₽</td></tr>
+        <tr><td><a href="../catalog/dizayn-proekt-kvartiry.html">Дизайн-проект квартиры</a></td><td>45 листов A3 + документы</td><td>48 часов</td><td class="hi">0 ₽</td></tr>
         <tr><td><a href="../catalog/dizayn-proekt-doma.html">Дизайн-проект дома</a></td><td>86 листов A3 + документы</td><td>48–72 часа</td><td class="hi">0 ₽</td></tr>
         <tr><td><a href="../catalog/rabochaya-dokumentatsiya.html">Только рабочая документация</a></td><td>от 30 листов</td><td>24–48 часов</td><td class="hi">0 ₽</td></tr>
         <tr><td><a href="../catalog/planirovochnoe-reshenie.html">Планировочное решение</a></td><td>4–8 листов</td><td>24 часа</td><td class="hi">0 ₽</td></tr>
@@ -63,6 +79,52 @@
     <p class="hint" style="margin-top:14px">Тестирование не бессрочное: о старте платного периода предупредим заранее, участникам теста цена фиксируется.</p>
   </div>
 </section>
+
+<section class="blk" id="calc">
+  <div class="wrap">
+    <div class="kicker">Калькулятор</div>
+    <h2>Сколько листов будет в вашем альбоме</h2>
+    <p class="sub">Формула откалибрована по выпущенным альбомам: квартира на 5 помещений — 45 листов, дом на 11 помещений в два этажа — 86. Отметьте, что есть у вас.</p>
+    <div class="calc" data-calc>
+      <div class="calc-row"><span>Помещений (комнаты, кухня, санузлы, прихожая)</span>
+        <div class="calc-num"><button type="button" data-mm="-1">−</button><b data-rooms>5</b><button type="button" data-mm="1">+</button></div>
+      </div>
+      <div class="calc-row"><span>Этажей</span>
+        <div class="calc-num"><button type="button" data-fm="-1">−</button><b data-floors>1</b><button type="button" data-fm="1">+</button></div>
+      </div>
+      <div class="calc-out">
+        <div><b data-base>45</b><span>листов в базовом пакете</span></div>
+        <div><b data-full>~90</b><span>в полном (с покомнатными)</span></div>
+        <div><b data-elev>20</b><span>из них развёрток стен</span></div>
+      </div>
+      <p class="hint">Базовый пакет: титул, презентационный план, 16 сводных планов на этаж, щит, план обозначения развёрток, 2 разреза, 3 листа узлов, лестница (в доме) и развёртка каждой стены — 4 на помещение.</p>
+      <div class="cta-row"><a class="btn" href="../brief.html">Собрать такой альбом — бриф</a></div>
+    </div>
+  </div>
+</section>
+<script>
+(function () {
+  var root = document.querySelector('[data-calc]'); if (!root) return;
+  var rooms = 5, floors = 1;
+  var $ = function (sel) { return root.querySelector(sel); };
+  function render() {
+    $('[data-rooms]').textContent = rooms;
+    $('[data-floors]').textContent = floors;
+    // калибровка: 45 = 1+1+16+1+1+2+3 (=25) + 4×5; дом 86 = 25+16 + 1(лестница) + 4×11
+    var base = 25 + 16 * (floors - 1) + (floors > 1 ? 1 : 0) + 4 * rooms;
+    $('[data-base]').textContent = base;
+    $('[data-full]').textContent = '~' + (base + 10 * rooms);
+    $('[data-elev]').textContent = 4 * rooms;
+  }
+  root.addEventListener('click', function (e) {
+    var b = e.target.closest('button[data-mm],button[data-fm]'); if (!b) return;
+    if (b.dataset.mm) rooms = Math.min(20, Math.max(2, rooms + (+b.dataset.mm)));
+    if (b.dataset.fm) floors = Math.min(3, Math.max(1, floors + (+b.dataset.fm)));
+    render();
+  });
+  render();
+})();
+</script>
 
 <section class="blk">
   <div class="wrap">
@@ -117,10 +179,24 @@
       <p>дизайнер-архитектор <b>Кырлан Александр</b><br><a href="tel:+79257338640">+7 925 733-86-40</a> · <a href="mailto:optteem@mail.ru">optteem@mail.ru</a></p>
     </div>
     <div>
-      <p><a href="../brief.html">Бриф</a> · <a href="../catalog/">Каталог</a> · <a href="../cases/">Кейсы</a> · <a href="./">Сравнение</a> · <a href="../style/">Стили</a> · <a href="../journal/">Журнал</a> · <a href="../stories/">Истории</a> · <a href="../reviews/">Отзывы</a> · <a href="../portfolio-hub/">Портфолио</a> · <a href="../price/">Условия</a> · <a href="../process/">Процесс</a> · <a href="../faq/">FAQ</a> · <a href="../about/">О студии</a> · <a href="../contacts/">Контакты</a> · <a href="../sitemap/">Карта сайта</a> · <a href="../policy/">Обработка данных</a></p>
+      <p><a href="../brief.html">Бриф</a> · <a href="../catalog/">Каталог</a> · <a href="../cases/">Кейсы</a> · <a href="./">Сравнение</a> · <a href="../style/">Стили</a> · <a href="../journal/">Журнал</a> · <a href="../stories/">Истории</a> · <a href="../reviews/">Отзывы</a> · <a href="../portfolio-hub/">Портфолио</a> · <a href="../price/">Условия</a> · <a href="../process/">Процесс</a> · <a href="../faq/">FAQ</a> · <a href="../about/">О студии</a> · <a href="../contacts/">Контакты</a> · <a href="../checklist/">Чек-лист приёмки</a> · <a href="../sitemap/">Карта сайта</a> · <a href="../policy/">Обработка данных</a></p>
       <p>© LINEA studio, 2026</p>
     </div>
   </div>
 </footer>
+<script>
+(function () {
+  var b = document.querySelector('.burger'), m = document.querySelector('.mnav');
+  if (!b || !m) return;
+  b.addEventListener('click', function () {
+    var open = m.hidden;
+    m.hidden = !open;
+    b.classList.toggle('on', open);
+    b.setAttribute('aria-expanded', open ? 'true' : 'false');
+    document.documentElement.style.overflow = open ? 'hidden' : '';
+  });
+  m.addEventListener('click', function (e) { if (e.target.tagName === 'A') b.click(); });
+})();
+</script>
 </body>
 </html>

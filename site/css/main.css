@@ -619,3 +619,66 @@ a.logo:hover i,.logo:hover i{animation:logoSheen 1.1s ease}
   .logo i,a.logo:hover i{animation:none}
   .btn::after{display:none}
 }
+
+/* ═══════════ v21 · бургер, инструменты, чек-лист, сравнение ═══════════ */
+/* мобильное меню */
+.burger{display:none;width:42px;height:40px;background:none;border:1px solid var(--line);border-radius:2px;cursor:pointer;padding:9px 10px;flex-direction:column;justify-content:space-between}
+.burger i{display:block;height:1.6px;background:var(--gold);transition:.3s;transform-origin:center}
+.burger.on i:nth-child(1){transform:translateY(9px) rotate(45deg)}
+.burger.on i:nth-child(2){opacity:0}
+.burger.on i:nth-child(3){transform:translateY(-9px) rotate(-45deg)}
+.mnav{position:fixed;inset:0;z-index:70;background:#0F0E0Cf5;backdrop-filter:blur(18px);display:flex;flex-direction:column;justify-content:center;padding:8vh 8vw}
+.mnav nav{display:flex;flex-direction:column;gap:4px}
+.mnav nav a{font-family:var(--serif);font-size:clamp(26px,7vw,34px);color:var(--ink);padding:10px 0;border-bottom:1px solid #C29A5B22}
+.mnav nav a:hover{color:var(--gold2)}
+.mnav-cta{margin-top:36px;display:flex;gap:12px;flex-wrap:wrap}
+@media (max-width:760px){
+  .burger{display:flex}
+  .nav .links{display:none}
+  header.site .nav>.btn.sm{display:none}
+}
+
+/* калькулятор листов */
+.calc{border:1px solid var(--line);border-radius:4px;background:var(--panel);padding:28px;max-width:640px}
+.calc-row{display:flex;justify-content:space-between;align-items:center;gap:18px;padding:14px 0;border-bottom:1px solid var(--line);color:var(--mut);font-size:15px}
+.calc-num{display:flex;align-items:center;gap:14px}
+.calc-num button{width:36px;height:36px;border-radius:50%;border:1px solid var(--line);background:none;color:var(--gold);font-size:17px;cursor:pointer;transition:.25s}
+.calc-num button:hover{border-color:var(--gold)}
+.calc-num b{font-family:var(--serif);font-size:22px;min-width:28px;text-align:center;color:var(--ink)}
+.calc-out{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin:22px 0 8px}
+.calc-out b{display:block;font-family:var(--serif);font-size:clamp(24px,3vw,34px);
+  background:linear-gradient(96deg,#C29A5B,#E6CE9E 50%,#B4884A);-webkit-background-clip:text;background-clip:text;color:transparent}
+.calc-out span{color:var(--mut);font-size:12.5px;line-height:1.4;display:block;margin-top:4px}
+.calc .cta-row{margin-top:18px}
+@media (max-width:640px){.calc-out{grid-template-columns:1fr 1fr}}
+
+/* квиз */
+.quiz{border:1px solid var(--line);border-radius:4px;background:var(--panel);padding:30px;max-width:720px}
+.quiz .q p{font-family:var(--serif);font-size:19px;margin:0 0 16px;color:var(--ink)}
+.q-opts{display:flex;gap:10px;flex-wrap:wrap}
+.q-opts button{padding:12px 20px;background:none;border:1px solid var(--line);border-radius:2px;color:var(--ink);font-size:14px;cursor:pointer;transition:.25s}
+.q-opts button:hover{border-color:var(--gold);color:var(--gold2)}
+.q-res h3{font-family:var(--serif);font-size:24px;margin:6px 0 10px}
+.q-res h3 a{color:var(--gold2)}
+
+/* чек-лист приёмки */
+.checklist-doc h2{font-family:var(--serif);font-size:21px;margin:30px 0 12px}
+.check-print{list-style:none;padding:0;margin:0;max-width:56em}
+.check-print li{display:flex;gap:12px;align-items:baseline;padding:9px 0;border-bottom:1px solid var(--line);color:var(--mut);font-size:15px}
+.cbx{flex:0 0 15px;width:15px;height:15px;border:1.4px solid var(--gold);border-radius:2px;position:relative;top:2px}
+@media print{
+  body{background:#fff;color:#000}
+  body::before,.beta,header.site,.mnav,.burger,.sticky-cta,.funnel,.to-top,footer.site,.noprint,.crumbs{display:none!important}
+  .checklist-doc h2{color:#000}
+  .check-print li{color:#222;border-color:#bbb}
+  .cbx{border-color:#000}
+  .hero-page h1{color:#000;-webkit-text-fill-color:#000}
+  .hero-page .lead-page,.blk p.sub,.hint{color:#333}
+}
+
+/* сравнение: колонка LINEA и липкая колонка критериев на мобиле */
+.tbl.cmp td:last-child,.tbl.cmp th:last-child{background:#C29A5B0D;box-shadow:inset 0 1px 0 #C29A5B4D}
+@media (max-width:760px){
+  .scroll-x .tbl.cmp td:first-child,.scroll-x .tbl.cmp th:first-child{
+    position:sticky;left:0;background:var(--bg);z-index:1;box-shadow:2px 0 0 var(--line)}
+}

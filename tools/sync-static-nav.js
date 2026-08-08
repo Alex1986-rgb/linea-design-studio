@@ -28,8 +28,12 @@ for (const file of ['index.html', 'brief.html']) {
   const src = fs.readFileSync(p, 'utf8');
   let out = src;
 
-  const nav = SHELL.header('', null).match(/<nav class="links">[\s\S]*?<\/nav>/)[0];
-  out = out.replace(/<nav class="links">[\s\S]*?<\/nav>/, nav.replace(/\n\s{4}/g, '\n    '));
+  // шапку переносим целиком (вместе с бургером и мобильным оверлеем)
+  const fullHeader = SHELL.header('', null);
+  out = out.replace(/<header class="site">[\s\S]*?<\/header>(\n<div class="mnav"[\s\S]*?<\/div>)?/, fullHeader);
+  // скрипт меню — перед </body>, если ещё не вставлен
+  const menuJs = SHELL.footer('', null).match(/<script>[\s\S]*<\/script>/)[0];
+  if (!/querySelector\('\.burger'\)/.test(out)) out = out.replace('</body>', menuJs + '\n</body>');
 
   // подвал: колонка ссылок (вторая), контакты автора не трогаем
   const links = SHELL.SECTIONS.map(s => `<a href="${s.href}">${s.title}</a>`)

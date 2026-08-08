@@ -20,14 +20,14 @@ const { STYLES, TIERS } = require('../engine/presets.js');
 const ROOT = path.join(__dirname, '..');
 const SITE = path.join(ROOT, 'site');
 const BASE = 'https://alex1986-rgb.github.io/linea-design-studio';
-const CSSV = 'v=20';
+const CSSV = 'v=21';
 const AUTHOR = { name: 'Кырлан Александр', role: 'дизайнер-архитектор', phone: '+7 925 733-86-40', tel: '+79257338640', email: 'optteem@mail.ru' };
 
 const esc = s => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 const rub = n => n.toLocaleString('ru-RU').replace(/ /g, ' ') + ' ₽';
 
 /* ------------------------------------------------------------------ каркас */
-function page({ file, title, desc, h1, kicker, lead, body, crumb, jsonld, up, section }) {
+function page({ file, title, desc, h1, kicker, lead, body, crumb, jsonld, up, section, ogImage }) {
   const u = up || '../';
   section = section || (file.split('/')[0] || '');
   const canonical = `${BASE}/${file.replace(/index\.html$/, '')}`;
@@ -43,7 +43,7 @@ function page({ file, title, desc, h1, kicker, lead, body, crumb, jsonld, up, se
 <meta property="og:type" content="article">
 <meta property="og:title" content="${esc(h1)}">
 <meta property="og:description" content="${esc(lead)}">
-<meta property="og:image" content="${BASE}/assets/hero.jpg">
+<meta property="og:image" content="${BASE}/${ogImage || 'assets/hero.jpg'}">
 <meta property="og:locale" content="ru_RU">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' fill='%230F0E0C'/><text x='50' y='68' font-size='52' text-anchor='middle' fill='%23C29A5B' font-family='Georgia'>L</text></svg>">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -91,7 +91,7 @@ const CASES = [
     style: 'Джапанди',
     lead: 'Двухкомнатная в новостройке: гостиная-кухня, спальня, детская, санузел и прихожая. Задача — уместить три зоны на 56 м² и не превратить квартиру в склад.',
     project: 'demo',
-    figures: [['56 м²', 'площадь'], ['46', 'листов A3'], ['20', 'развёрток стен'], ['11', 'визуализаций'], [rub(2514162), 'смета «бизнес»']],
+    figures: [['56 м²', 'площадь'], ['45', 'листов A3'], ['20', 'развёрток стен'], ['11', 'визуализаций'], [rub(2514162), 'смета «бизнес»']],
     task: [
       'Гостиная и кухня — одним пространством, но с читаемой границей зон.',
       'Детская должна работать как спальня, рабочее место и игровая одновременно.',
@@ -109,7 +109,7 @@ const CASES = [
       ['Планировочное решение', '01-kvartira/kvartira-04-mebel.svg', 'мебель с позициями, спецификация, фото-референс'],
       ['Развёртка стены гостиной', '04-razvertki/01-gostinaya-kuhnya-stena-A.svg', 'фронты мебели, высоты, привязки'],
       ['План розеток', '01-kvartira/kvartira-06-rozetki.svg', 'привязки L/H, группы, IP44 в мокрой зоне'],
-      ['Пирог пола мокрой зоны', '10-uzly/uzel-V-pol-mokryy.svg', 'узел В, М 1:10'],
+      ['Пирог пола мокрой зоны', '10-uzly/uzly-V-D-mokraya-plintus.svg', 'узел В, М 1:10'],
       ['Щит и кабельный журнал', '09-elektrika/schit-i-kabelnyy-zhurnal.svg', 'однолинейка, аппараты, длины кабеля']
     ],
     renders: ['01-gostinaya-kuhnya.jpg', '02-spalnya.jpg', '03-detskaya.jpg', '04-sanuzel.jpg']
@@ -181,7 +181,7 @@ const STORIES = [
       ['Симптом', 'На 56 м² конвейер печатал 94 листа. Выглядело солидно, но альбом было невозможно читать: половина листов повторяла одно и то же в разных ракурсах.'],
       ['Разведка', 'Разобрали 13 студий и шесть реальных выпущенных альбомов в PDF. Рыночная норма — 13–20 листов базового пакета на 40–60 м² и 45–70 в полном. Покомнатно рынок разносит только развёртки.'],
       ['Диагноз', 'Из наших 94 листов 60 были покомнатными повторами сводных планов: у каждого помещения свой обмер, свой демонтаж, свой пол, свой потолок. Для квартиры это шум.'],
-      ['Решение', 'Ввели два пакета: базовый — 46 листов (сводные планы квартиры, развёртки каждой стены, разрезы, узлы, документы) и полный с флагом --package=full — 96 листов, где покомнатные листы возвращаются. По умолчанию базовый.'],
+      ['Решение', 'Ввели два пакета: базовый — 45 листов (сводные планы квартиры, развёртки каждой стены, разрезы, узлы, документы) и полный с флагом --package=full — 96 листов, где покомнатные листы возвращаются. По умолчанию базовый.'],
       ['Побочный эффект', 'Заодно нашли, что движок не удалял листы прошлого выпуска из папки — при смене пакета в проекте оставался мусор. Теперь выпуск чистит за собой.'],
       ['Что это дало', 'Альбом стал читаемым: титул с перечнем, план обозначения развёрток, ссылки между листами. И честным: в штампе «Листов N» теперь совпадает с фактическим количеством.']
     ]
@@ -265,12 +265,13 @@ for (const c of CASES) {
   const figs = c.figures.map(f => `<div><b>${f[0]}</b><span>${f[1]}</span></div>`).join('');
   const dec = c.decisions.map((d, i) => `      <div class="card"><div class="num">${String(i + 1).padStart(2, '0')}</div><h3>${esc(d[0])}</h3><p>${esc(d[1])}</p></div>`).join('\n');
   const album = c.album.map(a => `      <tr><td><a href="../portfolio/${c.project}/${a[1]}" target="_blank" rel="noopener">${esc(a[0])}</a></td><td>${esc(a[2])}</td></tr>`).join('\n');
-  const rend = c.renders.map(r => `      ${SHELL.pic(`../portfolio/${c.project}/06-koncept/renders/${r}`, `${c.name} — визуализация`, 1200, 800)}`).join('\n');
+  const rend = c.renders.map(r => `      <a href="../portfolio/${c.project}/06-koncept/renders/${r}" target="_blank" rel="noopener">${SHELL.pic(`../portfolio/${c.project}/06-koncept/renders/${r}`, `${c.name} — визуализация`, 1200, 800)}</a>`).join('\n');
   w(`cases/${c.slug}.html`, page({
     file: `cases/${c.slug}.html`,
     title: `${c.name} — кейс LINEA: решения и чертежи`,
     desc: `${c.lead} Разбор решений, ссылки на листы альбома и смета проекта.`,
     h1: esc(c.name),
+    ogImage: `portfolio/${c.project}/06-koncept/renders/${c.renders[0]}`,
     kicker: 'Кейс', crumb: `<a href="./">Кейсы</a> · ${esc(c.style)}`,
     lead: esc(c.lead),
     jsonld: [crumbs([['LINEA', BASE + '/'], ['Кейсы', BASE + '/cases/'], [c.name, `${BASE}/cases/${c.slug}.html`]])],
@@ -358,7 +359,7 @@ ${cmpRows}
     <h2>Базовый и полный: чем отличаются</h2>
     <div class="pas-grid">
       <div class="pas-col good">
-        <h3>Базовый · 46 листов</h3>
+        <h3>Базовый · 45 листов</h3>
         <ul>
           <li>Сводные планы квартиры: обмер, демонтаж, монтаж, мебель, двери</li>
           <li>Электрика: розетки, свет, выключатели, схема включения, щит</li>
@@ -494,7 +495,7 @@ w('reviews/index.html', page({
       <div class="pas-col good">
         <h3>Документы, а не слова</h3>
         <ul>
-          <li>Два полных альбома открыты целиком: 46 и 86 листов</li>
+          <li>Два полных альбома открыты целиком: 45 и 86 листов</li>
           <li>Каждый лист можно открыть, увеличить и распечатать</li>
           <li>Смета построчно: работы, материалы, мебель, свет</li>
           <li>Спецификация с брендами и артикулами</li>

@@ -102,7 +102,7 @@ const HEAD_COMMON = `<meta charset="utf-8">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' fill='%230F0E0C'/><text x='50' y='68' font-size='52' text-anchor='middle' fill='%23C29A5B' font-family='Georgia'>L</text></svg>">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;600&family=Inter:wght@400;600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="../css/main.css?v=20">`;
+<link rel="stylesheet" href="../css/main.css?v=21">`;
 
 /* Локальные стили страниц раздела: не трогаем main.css, чтобы не сбрасывать кеш всему сайту. */
 const LOCAL_CSS = `<style>
@@ -208,7 +208,7 @@ ${key === 'japandi' ? `<section class="blk">
   <div class="wrap">
     <div class="kicker">Живой пример</div>
     <h2>Наш демо-проект собран именно в джапанди</h2>
-    <p class="sub">Квартира 56 м²: 46 листов документации и 11 визуализаций в этом стиле — открыты целиком.</p>
+    <p class="sub">Квартира 56 м²: 45 листов документации и 11 визуализаций в этом стиле — открыты целиком.</p>
     <div class="gal">
       ${SHELL.pic('../portfolio/demo/06-koncept/renders/01-gostinaya-kuhnya.jpg', 'Гостиная-кухня в джапанди', 1200, 800)}
       ${SHELL.pic('../portfolio/demo/06-koncept/renders/02-spalnya.jpg', 'Спальня в джапанди', 1200, 800)}
