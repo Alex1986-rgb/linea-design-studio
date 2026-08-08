@@ -5475,7 +5475,9 @@ try {
 function drawTitleSheet(sheetNo) {
   const M = 96;
   const addr = (brief.object && brief.object.address) || 'Объект';
-  const sorted = reg.slice().sort((a, b) => a.no - b.no);
+  let sorted = reg.slice().sort((a, b) => a.no - b.no);
+  // титул включает сам себя первой строкой: в ведомости должны быть ВСЕ листы
+  sorted = [{ no: 1, title: 'Титульный лист с перечнем чертежей', scale: '—' }].concat(sorted);
   const colH = Math.ceil(sorted.length / 3);
   let b = '';
   b += `<text x="${M}" y="${M}" font-size="12" letter-spacing="6" fill="#8A8478">LINEA · СТУДИЯ ДИЗАЙНА ИНТЕРЬЕРА</text>`;
