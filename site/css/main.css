@@ -685,3 +685,93 @@ a.logo:hover i,.logo:hover i{animation:logoSheen 1.1s ease}
   .scroll-x .tbl.cmp td:first-child,.scroll-x .tbl.cmp th:first-child{
     position:sticky;left:0;background:var(--bg);z-index:1;box-shadow:2px 0 0 var(--line)}
 }
+
+/* ═══════════════════════════════════════════════════════════════════════
+   v23 · ЮВЕЛИРНЫЙ СЛОЙ
+   Золото получает патину (тёмный старинный подтон в градиентах), появляются
+   вензельные росчерки-уголки, медальон в подвале и изумрудные кабошоны —
+   огранённые зелёные вставки там, где нужен второй драгоценный акцент.
+   Всё нарисовано кодом: SVG в data-URI, без внешних файлов.
+   ═══════════════════════════════════════════════════════════════════════ */
+:root{
+  --emerald:#1E6E57; --emerald-deep:#0E4A3A;
+  --gold-old:#8F6B33;                       /* патина: старое золото в тень градиента */
+}
+
+/* 1. Патинированное золото: градиенты текста получают старинный тёмный край */
+.hero-page h1 em,.film h1 em,.blk h2 em,.proof b,.stats b,.film .stats b,.calc-out b{
+  background:linear-gradient(96deg,var(--gold-old) 0%,#C9A45F 26%,#EBDCA8 52%,#C29A5B 74%,var(--gold-old) 100%);
+  -webkit-background-clip:text;background-clip:text;color:transparent}
+.sig-name{background:linear-gradient(96deg,var(--gold-old),#EBDCA8 46%,#C9A45F 72%,var(--gold-old));
+  -webkit-background-clip:text;background-clip:text;color:transparent}
+
+/* 2. Кнопка — литое золото с патиной по кромке */
+.btn:not(.ghost){
+  background:linear-gradient(175deg,#DDBC85 0%,#C29A5B 46%,#A87F42 100%);
+  border-color:#8F6B33;
+  box-shadow:inset 0 1px 0 #F4E7C3,inset 0 -2px 4px #7A5A2B66,0 10px 30px -18px #C29A5B}
+.btn:not(.ghost):hover{background:linear-gradient(175deg,#E6CB96 0%,#D0A968 46%,#B48A4A 100%)}
+
+/* 3. Вензельные уголки: подпись автора и цитаты обрамлены росчерком */
+.sig{position:relative;padding:52px 46px;max-width:760px;margin:0 auto}
+.sig::before,.sig::after{
+  content:'';position:absolute;width:92px;height:92px;opacity:.75;pointer-events:none;
+  background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 120 120' fill='none' stroke='%23C9A45F' stroke-width='2'%3E%3Cpath d='M4 116 V44 Q4 4 44 4 H116'/%3E%3Cpath d='M20 116 V56 Q20 20 56 20 H116' opacity='.45'/%3E%3Cpath d='M44 4 q12 9 26 7 M4 44 q9 12 7 26' opacity='.6'/%3E%3Ccircle cx='4' cy='116' r='3' fill='%23C9A45F' stroke='none'/%3E%3C/svg%3E") no-repeat center/contain}
+.sig::before{left:0;top:0}
+.sig::after{right:0;bottom:0;transform:rotate(180deg)}
+
+.quote{position:relative;border-left:0;padding:34px 34px 30px 58px}
+.quote::before{
+  content:'«';position:absolute;left:0;top:-6px;font-family:var(--serif);
+  font-size:96px;line-height:1;color:transparent;
+  background:linear-gradient(160deg,#C9A45F,#8F6B33);-webkit-background-clip:text;background-clip:text;opacity:.85}
+.quote::after{content:'';position:absolute;left:58px;right:20%;bottom:14px;height:1px;
+  background:linear-gradient(90deg,#C29A5B66,transparent)}
+
+/* 4. Медальон-вензель в подвале вместо простой звёздочки */
+footer.site::before{
+  content:'';width:64px;height:64px;top:2px;
+  background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 80 80'%3E%3Ccircle cx='40' cy='44' r='26' fill='none' stroke='%23C9A45F' stroke-width='1.5'/%3E%3Ccircle cx='40' cy='44' r='31' fill='none' stroke='%23C9A45F' stroke-width='.7' opacity='.5'/%3E%3Ctext x='40' y='55' font-family='Georgia' font-size='30' text-anchor='middle' fill='%23D9B87E'%3EL%3C/text%3E%3Crect x='36.5' y='6' width='7' height='7' transform='rotate(45 40 9.5)' fill='%231E6E57' stroke='%23C9A45F' stroke-width='1'/%3E%3C/svg%3E") no-repeat center/contain}
+footer.site{padding-top:96px}
+footer.site::after{top:44px}
+
+/* 5. Изумрудные кабошоны: огранённая вставка перед номерами листов и в шильдиках */
+.plate-cap i::before,.badge::before{
+  content:'';display:inline-block;width:8px;height:8px;margin-right:8px;
+  transform:rotate(45deg);vertical-align:1px;
+  background:linear-gradient(135deg,#2E8A6E 0%,var(--emerald) 45%,var(--emerald-deep) 100%);
+  box-shadow:inset 0 1px 1px #7FD6BC66,0 0 0 1px #C9A45F}
+.badge::before{width:7px;height:7px;margin-right:9px}
+.fstep.on .fnum::after{
+  content:'';display:inline-block;width:7px;height:7px;margin-left:10px;transform:rotate(45deg);
+  background:linear-gradient(135deg,#2E8A6E,var(--emerald-deep));
+  box-shadow:inset 0 1px 1px #7FD6BC66,0 0 0 1px #C9A45F}
+
+/* 6. Росчерки первого экрана: тонкий вензель в углах кадра (только десктоп) */
+@media (min-width:1000px){
+  .film .screen::after{
+    content:'';position:absolute;right:38px;bottom:96px;width:130px;height:130px;
+    opacity:.34;pointer-events:none;transform:rotate(180deg);
+    background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 120 120' fill='none' stroke='%23C9A45F' stroke-width='1.6'%3E%3Cpath d='M4 116 V44 Q4 4 44 4 H116'/%3E%3Cpath d='M20 116 V56 Q20 20 56 20 H116' opacity='.4'/%3E%3Cpath d='M44 4 q12 9 26 7 M4 44 q9 12 7 26' opacity='.55'/%3E%3C/svg%3E") no-repeat center/contain}
+}
+
+/* 7. Патина на золотой полосе: тёмная кромка снизу, как у старой латуни */
+.beta{box-shadow:inset 0 -2px 0 #8F6B3380,inset 0 1px 0 #F4E7C380}
+
+/* 8. Самородки: неровные золотые крапины на ленте фактов (фон, едва заметно) */
+.proof{background:
+  radial-gradient(7px 5px at 12% 30%,#C29A5B14,transparent 70%),
+  radial-gradient(5px 4px at 78% 68%,#C29A5B10,transparent 70%),
+  radial-gradient(9px 6px at 46% 82%,#C29A5B0d,transparent 70%),
+  linear-gradient(180deg,#14120E,#100F0C)}
+
+/* 9. Крошки: разделитель-ромбик вместо косой черты */
+.crumbs a::after,.crumbs span:not(:last-child)::after{content:'◆';font-size:5px;vertical-align:2px;color:#C9A45F66;margin:0 10px}
+
+@media (max-width:760px){
+  .sig{padding:40px 26px}
+  .sig::before,.sig::after{width:56px;height:56px}
+  .quote{padding-left:44px}
+  .quote::before{font-size:64px}
+  footer.site{padding-top:84px}
+}

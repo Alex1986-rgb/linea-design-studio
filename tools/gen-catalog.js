@@ -19,7 +19,7 @@ const { STYLES } = require('../engine/presets.js');
 const ROOT = path.join(__dirname, '..');
 const SITE = path.join(ROOT, 'site');
 const BASE = 'https://alex1986-rgb.github.io/linea-design-studio';
-const CSSV = 'v=22';
+const CSSV = 'v=23';
 const AUTHOR = { name: 'Кырлан Александр', role: 'дизайнер-архитектор', phone: '+7 925 733-86-40', tel: '+79257338640', email: 'optteem@mail.ru' };
 const esc = s => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 
@@ -40,7 +40,7 @@ function shell({ file, title, desc, h1, crumb, lead, body, jsonld }) {
 <meta property="og:description" content="${esc(lead)}">
 <meta property="og:image" content="${BASE}/assets/hero.jpg">
 <meta property="og:locale" content="ru_RU">
-<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' fill='%230F0E0C'/><text x='50' y='68' font-size='52' text-anchor='middle' fill='%23C29A5B' font-family='Georgia'>L</text></svg>">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><defs><linearGradient id='g' x1='0' y1='0' x2='1' y2='1'><stop offset='0' stop-color='%23EBDCA8'/><stop offset='.5' stop-color='%23C9A45F'/><stop offset='1' stop-color='%238F6B33'/></linearGradient></defs><rect width='100' height='100' fill='%230F0E0C'/><text x='50' y='70' font-size='56' text-anchor='middle' fill='url(%23g)' font-family='Georgia'>L</text><rect x='66' y='62' width='10' height='10' transform='rotate(45 71 67)' fill='%231E6E57' stroke='%23C9A45F' stroke-width='2'/></svg>">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;600&family=Inter:wght@400;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="../css/main.css?${CSSV}">
