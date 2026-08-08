@@ -18,7 +18,7 @@ const AUTHOR = {
 };
 
 const BASE = 'https://alex1986-rgb.github.io/linea-design-studio';
-const CSSV = 'v=19';
+const CSSV = 'v=20';
 
 // Разделы сайта в порядке меню. Добавили раздел — правится только здесь.
 const SECTIONS = [
@@ -157,6 +157,20 @@ function crumbsBar(u, items) {
     + `</div></nav>`;
 }
 
+// <picture> c WebP-источником и JPG-фолбэком: одна замена расширения,
+// файлы .webp кладёт tools/make-webp (cwebp), верстка не знает о форматах
+function pic(src, alt, w, h, cls) {
+  const webp = src.replace(/\.jpe?g$/i, '.webp');
+  return `<picture><source srcset="${webp}" type="image/webp"><img src="${src}" alt="${esc(alt)}" width="${w || 1200}" height="${h || 800}" loading="lazy" decoding="async"${cls ? ` class="${cls}"` : ''}></picture>`;
+}
+
+// Крошки для типовых страниц: раздел из SECTIONS + необязательное имя страницы
+function crumbsAuto(u, section, pageTitle) {
+  const sec = SECTIONS.find(x => x.key === section);
+  if (!sec) return pageTitle ? crumbsBar(u, [[pageTitle, null]]) : '';
+  return crumbsBar(u, pageTitle ? [[sec.title, u + sec.href], [pageTitle, null]] : [[sec.title, null]]);
+}
+
 const crumbsLd = items => ({
   '@context': 'https://schema.org', '@type': 'BreadcrumbList',
   itemListElement: items.map((it, i) => ({ '@type': 'ListItem', position: i + 1, name: it[0], item: it[1] })),
@@ -177,4 +191,4 @@ const head = (u, { title, desc, canonical, ogTitle, ogDesc, ogType, extra }) => 
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;600&family=Inter:wght@400;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="${u}css/main.css?${CSSV}">${extra || ''}`;
 
-module.exports = { AUTHOR, BASE, CSSV, SECTIONS, FOOTER_EXTRA, FUNNEL, funnel, ctaBlock, crumbsBar, esc, clamp, header, footer, beta, sticky, crumbsLd, head };
+module.exports = { AUTHOR, BASE, CSSV, SECTIONS, FOOTER_EXTRA, FUNNEL, funnel, ctaBlock, crumbsBar, crumbsAuto, pic, esc, clamp, header, footer, beta, sticky, crumbsLd, head };

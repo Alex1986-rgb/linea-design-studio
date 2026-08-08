@@ -102,11 +102,11 @@ const HEAD_COMMON = `<meta charset="utf-8">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' fill='%230F0E0C'/><text x='50' y='68' font-size='52' text-anchor='middle' fill='%23C29A5B' font-family='Georgia'>L</text></svg>">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;600&family=Inter:wght@400;600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="../css/main.css?v=19">`;
+<link rel="stylesheet" href="../css/main.css?v=20">`;
 
 /* Локальные стили страниц раздела: не трогаем main.css, чтобы не сбрасывать кеш всему сайту. */
 const LOCAL_CSS = `<style>
-.pal{display:flex;gap:0;border-radius:10px;overflow:hidden;border:1px solid var(--line);margin:22px 0}
+.pal{display:flex;gap:0;border-radius:4px;overflow:hidden;border:1px solid var(--line);margin:22px 0}
 .pal i{flex:1;height:74px;display:block;position:relative}
 .pal i b{position:absolute;left:0;right:0;bottom:6px;text-align:center;font:400 10px/1 var(--sans);color:#0F0E0C99;letter-spacing:.5px}
 .spec{width:100%;border-collapse:collapse;margin-top:8px}
@@ -116,13 +116,13 @@ const LOCAL_CSS = `<style>
 .sku li{border-top:1px solid var(--line);padding:10px 0;font-size:14.5px}
 .sku li span{color:var(--mut);display:inline-block;min-width:120px}
 .tiers{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-top:14px}
-.tiers div{border:1px solid var(--line);border-radius:12px;padding:16px 18px;background:var(--panel)}
+.tiers div{border:1px solid var(--line);border-radius:4px;padding:16px 18px;background:var(--panel)}
 .tiers b{display:block;font-size:22px;font-family:var(--serif);color:var(--gold2)}
 .tiers small{color:var(--mut)}
 .slist{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px;margin-top:18px}
-.slist a{display:block;border:1px solid var(--line);border-radius:12px;padding:14px 16px;background:var(--panel);color:var(--ink)}
+.slist a{display:block;border:1px solid var(--line);border-radius:4px;padding:14px 16px;background:var(--panel);color:var(--ink)}
 .slist a:hover{border-color:var(--gold)}
-.slist .sw{display:flex;gap:0;border-radius:6px;overflow:hidden;margin-bottom:10px}
+.slist .sw{display:flex;gap:0;border-radius:3px;overflow:hidden;margin-bottom:10px}
 .slist .sw i{flex:1;height:26px}
 .slist b{display:block;font-family:var(--serif);font-size:19px}
 .slist small{color:var(--mut)}
@@ -188,12 +188,13 @@ ${LOCAL_CSS}
 ${SHELL.beta(`../`)}
 
 ${header()}
+${SHELL.crumbsAuto(`../`, 'style', `Интерьер «${s.title}»`)}
 
-<section class="blk">
+<section class="blk hero-page">
   <div class="wrap">
     <div class="kicker"><a href="./">Стили интерьера</a> · направление</div>
-    <h1>Интерьер в стиле «${s.title}»</h1>
-    <p class="sub">${esc(c.lead)}</p>
+    <h1>Интерьер в стиле <em>«${s.title}»</em></h1>
+    <p class="lead-page">${esc(c.lead)}</p>
     <div class="pal">${s.palette.map(hex => `<i style="background:${hex}"><b>${hex}</b></i>`).join('')}</div>
     <p>${esc(s.concept)}</p>
     <div class="cta-row">
@@ -203,7 +204,21 @@ ${header()}
   </div>
 </section>
 
-<section class="blk">
+${key === 'japandi' ? `<section class="blk">
+  <div class="wrap">
+    <div class="kicker">Живой пример</div>
+    <h2>Наш демо-проект собран именно в джапанди</h2>
+    <p class="sub">Квартира 56 м²: 46 листов документации и 11 визуализаций в этом стиле — открыты целиком.</p>
+    <div class="gal">
+      ${SHELL.pic('../portfolio/demo/06-koncept/renders/01-gostinaya-kuhnya.jpg', 'Гостиная-кухня в джапанди', 1200, 800)}
+      ${SHELL.pic('../portfolio/demo/06-koncept/renders/02-spalnya.jpg', 'Спальня в джапанди', 1200, 800)}
+      ${SHELL.pic('../portfolio/demo/06-koncept/renders/04-sanuzel.jpg', 'Санузел в джапанди', 1200, 800)}
+    </div>
+    <div class="cta-row" style="margin-top:24px"><a class="btn ghost" href="../cases/kvartira-56.html">Разбор этого проекта</a><a class="btn ghost" href="../portfolio/demo/presentation.html">Листать альбом</a></div>
+  </div>
+</section>
+
+` : ''}<section class="blk">
   <div class="wrap">
     <div class="kicker">Решения проекта</div>
     <h2>Что конвейер применит в чертежах</h2>
@@ -319,11 +334,12 @@ ${LOCAL_CSS}
 <div class="beta">Открытое тестирование студии · дизайн-проект делается бесплатно · <a href="../brief.html">заполнить бриф</a></div>
 
 ${header()}
+${SHELL.crumbsAuto(`../`, 'style', null)}
 
-<section class="blk">
+<section class="blk hero-page">
   <div class="wrap">
     <div class="kicker">Направления</div>
-    <h1>Стили, в которых студия собирает проект</h1>
+    <h1>Стили, в которых студия <em>собирает проект</em></h1>
     <p class="sub">Стиль в LINEA — не картинка для настроения, а набор конкретных решений: краска с артикулом, покрытие пола, тип потолка, плинтус, двери и текстиль. Выбранное направление движок подставляет в развёртки, план отделки, спецификацию и смету. Если направления нет — отметьте «на усмотрение студии», подберём по ответам в брифе. Автор проектов — ${AUTHOR.role} ${AUTHOR.name}, ${AUTHOR.phone}, ${AUTHOR.email}.</p>
     <div class="slist">
       ${Object.keys(STYLES).map(k => {

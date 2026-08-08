@@ -142,10 +142,29 @@
       a.download = 'brief.json';
       a.click();
     };
-    $('mailto').addEventListener('click', function () { setTimeout(function () { location.href = 'thanks/'; }, 1200); });
+    // Не редиректим вслепую: на устройстве без настроенной почты mailto молча
+    // не срабатывает, и бриф терялся бы. Вместо этого после клика показываем
+    // запасные каналы; на «спасибо» уводим только после явного успеха.
+    $('mailto').addEventListener('click', function () {
+      var after = $('afterSend');
+      if (after) after.hidden = false;
+    });
     $('mailto').href = 'mailto:optteem@mail.ru?subject=' +
       encodeURIComponent('Бриф на дизайн-проект — ' + (brief.client.name || 'клиент')) +
       '&body=' + encodeURIComponent('Бриф во вложении (файл brief.json) или ниже:\n\n' + json.slice(0, 1500));
+    var copyBtn = $('copyBrief');
+    if (copyBtn) copyBtn.onclick = function () {
+      var summary = 'Бриф LINEA — ' + (brief.client.name || 'клиент') + '\n' +
+        'Телефон: ' + (brief.client.phone || '—') + '\n\n' + json;
+      var done = function () { copyBtn.textContent = 'Скопировано ✓'; setTimeout(function () { copyBtn.textContent = 'Скопировать бриф'; }, 2500); };
+      if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(summary).then(done);
+      else { var ta = document.createElement('textarea'); ta.value = summary; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); ta.remove(); done(); }
+      var after = $('afterSend'); if (after) after.hidden = false;
+    };
+    var wa = $('waSend');
+    if (wa) wa.href = 'https://wa.me/79257338640?text=' +
+      encodeURIComponent('Здравствуйте! Заполнил(а) бриф на дизайн-проект на сайте LINEA. Сейчас пришлю текст брифа следующим сообщением.' +
+        (brief.client.name ? ' Меня зовут ' + brief.client.name + '.' : ''));
     try { localStorage.setItem('linea_brief', json); } catch (e) {}
   }
 

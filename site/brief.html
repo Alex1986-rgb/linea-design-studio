@@ -13,7 +13,7 @@
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' fill='%230F0E0C'/><text x='50' y='68' font-size='52' text-anchor='middle' fill='%23C29A5B' font-family='Georgia'>L</text></svg>">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;600&family=Inter:wght@400;600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/main.css?v=19">
+<link rel="stylesheet" href="css/main.css?v=20">
 </head>
 <body>
 <div class="beta">Открытое тестирование студии · дизайн-проект делается бесплатно · <a href="#wiz">заполнить бриф</a></div>
@@ -123,10 +123,12 @@
     <div class="okmsg"><b>Бриф собран.</b> Нажмите «Отправить бриф в студию» — мы подтвердим получение и вернёмся с папкой проекта в течение 48 часов. Чертежи и фото приложите ответным письмом.</div>
     <div class="summary" id="summary"></div>
     <div class="cta-row" style="margin-bottom:14px">
-      <a class="btn" id="mailto" href="#">Отправить бриф в студию</a>
-      <a class="btn ghost" href="portfolio/demo/index.html">Пример готовой папки →</a>
+      <a class="btn" id="mailto" href="#">Отправить бриф письмом</a>
+      <button class="btn ghost" id="copyBrief" type="button">Скопировать бриф</button>
+      <a class="btn ghost" id="waSend" href="#" target="_blank" rel="noopener">Отправить в WhatsApp</a>
     </div>
-    <p class="hint">Нужна копия для себя? <button class="linklike" id="dl" type="button">скачать бриф файлом</button></p>
+    <p class="hint" id="afterSend" hidden><b>Письмо не открылось?</b> Так бывает, если на устройстве не настроена почта. Нажмите «Скопировать бриф» и пришлите текст в WhatsApp на +7 925 733-86-40 или письмом на optteem@mail.ru с любой веб-почты. Бриф уже сохранён в этом браузере — он не потеряется.</p>
+    <p class="hint">Нужна копия для себя? <button class="linklike" id="dl" type="button">скачать бриф файлом</button> · <a href="portfolio/demo/index.html">пример готовой папки</a></p>
     <details class="raw"><summary>Показать технические данные брифа</summary><pre id="json"></pre></details>
   </div>
 

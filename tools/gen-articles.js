@@ -18,7 +18,7 @@ const SHELL = require('./site-shell.js');
 const ROOT = path.join(__dirname, '..');
 const SITE = path.join(ROOT, 'site');
 const BASE = 'https://alex1986-rgb.github.io/linea-design-studio';
-const CSSV = 'v=19';
+const CSSV = 'v=20';
 const AUTHOR = { name: 'Кырлан Александр', role: 'дизайнер-архитектор', phone: '+7 925 733-86-40', tel: '+79257338640', email: 'optteem@mail.ru' };
 
 const RU_MONTH = ['января','февраля','марта','апреля','мая','июня','июля','августа','сентября','октября','ноября','декабря'];
@@ -53,6 +53,7 @@ ${ld}
 ${SHELL.beta(`../`)}
 
 ${SHELL.header(`../`, 'journal')}
+${SHELL.crumbsAuto(`../`, 'journal', file === 'journal/index.html' ? null : String(h1).replace(/<[^>]*>/g, ''))}
 
 <section class="blk hero-page">
   <div class="wrap">
@@ -255,7 +256,7 @@ w('journal/index.html', shell({
 <section class="blk">
   <div class="wrap">
     <div class="kicker">Статьи</div>
-    <h2>${ARTICLES.length} разбора по документации</h2>
+    <h2>${ARTICLES.length} ${ARTICLES.length === 1 ? 'разбор' : ARTICLES.length < 5 ? 'разбора' : 'разборов'} по документации</h2>
     <div class="tiles two">
 ${ARTICLES.map(a => `      <a class="tile plain" href="${a.slug}.html">
         <div class="tile-body">
@@ -298,7 +299,7 @@ ARTICLES.forEach((a, idx) => {
     body: `<section class="blk article">
   <div class="wrap">
     <figure class="art-hero">
-      <img src="../portfolio/demo/06-koncept/renders/${a.cover}" alt="${esc(a.title)} — визуализация проекта LINEA" width="1200" height="800" decoding="async">
+      ${SHELL.pic(`../portfolio/demo/06-koncept/renders/${a.cover}`, `${a.title} — визуализация проекта LINEA`, 1200, 800)}
       <figcaption>Кадр из демо-проекта студии: та же геометрия и те же материалы, что в чертежах.</figcaption>
     </figure>
     <nav class="toc"><b>В статье</b><ol>${toc}</ol></nav>

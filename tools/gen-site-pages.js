@@ -20,7 +20,7 @@ const { STYLES, TIERS } = require('../engine/presets.js');
 const ROOT = path.join(__dirname, '..');
 const SITE = path.join(ROOT, 'site');
 const BASE = 'https://alex1986-rgb.github.io/linea-design-studio';
-const CSSV = 'v=19';
+const CSSV = 'v=20';
 const AUTHOR = { name: 'Кырлан Александр', role: 'дизайнер-архитектор', phone: '+7 925 733-86-40', tel: '+79257338640', email: 'optteem@mail.ru' };
 
 const esc = s => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
@@ -55,6 +55,7 @@ ${ld}
 ${SHELL.beta(u)}
 
 ${SHELL.header(u, section)}
+${SHELL.crumbsAuto(u, section, /\/index\.html$/.test(file) && file.split('/').length === 2 ? null : String(h1).replace(/<[^>]*>/g, ''))}
 
 <section class="blk hero-page">
   <div class="wrap">
@@ -193,7 +194,7 @@ const w = (rel, html) => { const p = path.join(SITE, rel); fs.mkdirSync(path.dir
 
 /* --- кейсы --- */
 const caseCards = CASES.map(c => `      <a class="tile" href="${c.slug}.html">
-        <img src="../portfolio/${c.project}/06-koncept/renders/${c.renders[0]}" alt="${esc(c.name)} — визуализация" width="1200" height="800" loading="lazy" decoding="async">
+        ${SHELL.pic(`../portfolio/${c.project}/06-koncept/renders/${c.renders[0]}`, `${c.name} — визуализация`, 1200, 800)}
         <div class="tile-body">
           <span class="tag">${esc(c.style)}</span>
           <b>${esc(c.name)}</b>
@@ -264,7 +265,7 @@ for (const c of CASES) {
   const figs = c.figures.map(f => `<div><b>${f[0]}</b><span>${f[1]}</span></div>`).join('');
   const dec = c.decisions.map((d, i) => `      <div class="card"><div class="num">${String(i + 1).padStart(2, '0')}</div><h3>${esc(d[0])}</h3><p>${esc(d[1])}</p></div>`).join('\n');
   const album = c.album.map(a => `      <tr><td><a href="../portfolio/${c.project}/${a[1]}" target="_blank" rel="noopener">${esc(a[0])}</a></td><td>${esc(a[2])}</td></tr>`).join('\n');
-  const rend = c.renders.map(r => `      <img src="../portfolio/${c.project}/06-koncept/renders/${r}" alt="${esc(c.name)} — визуализация" width="1200" height="800" loading="lazy" decoding="async">`).join('\n');
+  const rend = c.renders.map(r => `      ${SHELL.pic(`../portfolio/${c.project}/06-koncept/renders/${r}`, `${c.name} — визуализация`, 1200, 800)}`).join('\n');
   w(`cases/${c.slug}.html`, page({
     file: `cases/${c.slug}.html`,
     title: `${c.name} — кейс LINEA: решения и чертежи`,
@@ -273,7 +274,7 @@ for (const c of CASES) {
     kicker: 'Кейс', crumb: `<a href="./">Кейсы</a> · ${esc(c.style)}`,
     lead: esc(c.lead),
     jsonld: [crumbs([['LINEA', BASE + '/'], ['Кейсы', BASE + '/cases/'], [c.name, `${BASE}/cases/${c.slug}.html`]])],
-    body: `<section class="proof"><div class="wrap">${figs}</div></section>
+    body: `<section class="proof"><div class="wrap${c.figures.length === 5 ? ' five' : ''}">${figs}</div></section>
 
 <section class="blk">
   <div class="wrap">

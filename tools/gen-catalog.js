@@ -19,7 +19,7 @@ const { STYLES } = require('../engine/presets.js');
 const ROOT = path.join(__dirname, '..');
 const SITE = path.join(ROOT, 'site');
 const BASE = 'https://alex1986-rgb.github.io/linea-design-studio';
-const CSSV = 'v=19';
+const CSSV = 'v=20';
 const AUTHOR = { name: 'Кырлан Александр', role: 'дизайнер-архитектор', phone: '+7 925 733-86-40', tel: '+79257338640', email: 'optteem@mail.ru' };
 const esc = s => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 
@@ -50,6 +50,7 @@ ${ld}
 ${SHELL.beta(`../`)}
 
 ${SHELL.header(`../`, 'catalog')}
+${SHELL.crumbsAuto(`../`, 'catalog', file === 'catalog/index.html' ? null : String(h1).replace(/<[^>]*>/g, ''))}
 
 <section class="blk hero-page">
   <div class="wrap">
@@ -183,6 +184,14 @@ const SERVICES = [
   },
   {
     slug: 'vizualizatsii', name: 'Визуализации по геометрии',
+    gallery: [
+      ['../portfolio/demo/06-koncept/renders/01-gostinaya-kuhnya.jpg', 'Гостиная-кухня, квартира 56 м²'],
+      ['../portfolio/dom-120/06-koncept/renders/05-holl-lestnica.jpg', 'Холл с лестницей, дом 120 м²'],
+      ['../portfolio/demo/06-koncept/renders/04-sanuzel.jpg', 'Санузел, квартира 56 м²'],
+      ['../portfolio/dom-120/06-koncept/renders/02-gostinaya-kuhnya.jpg', 'Гостиная, дом 120 м²'],
+      ['../portfolio/demo/06-koncept/renders/02b-spalnya-vid-ot-krovati.jpg', 'Спальня, вид от кровати'],
+      ['../portfolio/demo/06-koncept/renders/03b-detskaya-stol.jpg', 'Рабочее место в детской'],
+    ],
     tag: 'Дополнение', term: '24 часа', vol: '6–12 кадров',
     cover: '../portfolio/demo/06-koncept/renders/02-spalnya.jpg',
     lead: 'Фотореалистичные кадры каждого помещения, собранные по той же геометрии и тем же материалам, что и чертежи. Не «вдохновляющая картинка», а изображение вашей квартиры.',
@@ -253,7 +262,7 @@ w('catalog/index.html', shell({
     <h2>Полный альбом, часть альбома или отдельный документ</h2>
     <div class="tiles">
 ${SERVICES.map(s => `      <a class="tile" href="${s.slug}.html">
-        <img src="${s.cover}" alt="${esc(s.name)}" width="1200" height="800" loading="lazy" decoding="async">
+        ${SHELL.pic(s.cover, s.name, 1200, 800)}
         <div class="tile-body">
           <span class="tag">${esc(s.tag)}</span>
           <b>${esc(s.name)}</b>
@@ -324,7 +333,18 @@ SERVICES.forEach(s => {
   <div><b>${STYLES ? Object.keys(STYLES).length : 6} стилей</b><span>на выбор в брифе</span></div>
 </div></section>
 
-<section class="blk">
+${s.gallery ? `<section class="blk">
+  <div class="wrap">
+    <div class="kicker">Примеры</div>
+    <h2>Кадры из наших альбомов — без ретуши</h2>
+    <p class="sub">Все кадры сгенерированы по фактической геометрии проектов: та же расстановка, те же материалы, что на чертежах и в спецификации.</p>
+    <div class="gal">
+${s.gallery.map(gi => '      ' + SHELL.pic(gi[0], gi[1], 1200, 800)).join('\n')}
+    </div>
+  </div>
+</section>
+
+` : ''}<section class="blk">
   <div class="wrap">
     <div class="kicker">Кому подходит</div>
     <h2>Когда стоит брать именно это</h2>

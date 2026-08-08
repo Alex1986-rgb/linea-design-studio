@@ -5062,10 +5062,10 @@ function viewerHTML(files) {
   return `<!DOCTYPE html><html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Папка дизайн-проекта · ${totalSheets} листов — LINEA</title>
 <meta name="description" content="Демо-проект LINEA: ${totalSheets} листов рабочих чертежей и ${rnd.length} визуализаций — обмер, планы, полы, развертки, потолки, электрика, спецификация и смета.">
-<link rel="canonical" href="https://alex1986-rgb.github.io/linea-design-studio/portfolio/demo/index.html">
+<link rel="canonical" href="https://alex1986-rgb.github.io/linea-design-studio/portfolio/${OUT_SLUG}/index.html">
 <meta property="og:type" content="article"><meta property="og:title" content="Папка дизайн-проекта LINEA — ${totalSheets} листов">
 <meta property="og:description" content="Реальный результат конвейера: рабочие чертежи, визуализации, спецификация и смета.">
-<meta property="og:image" content="https://alex1986-rgb.github.io/linea-design-studio/portfolio/demo/06-koncept/renders/01-gostinaya-kuhnya.jpg">
+<meta property="og:image" content="https://alex1986-rgb.github.io/linea-design-studio/portfolio/${OUT_SLUG}/${rnd[0] || '06-koncept/renders/01-gostinaya-kuhnya.jpg'}">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;600&family=Inter:wght@400;600&display=swap" rel="stylesheet">
 <script type="application/ld+json">{"@context":"https://schema.org","@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"LINEA","item":"https://alex1986-rgb.github.io/linea-design-studio/"},{"@type":"ListItem","position":2,"name":"Демо-проект","item":"https://alex1986-rgb.github.io/linea-design-studio/portfolio/demo/index.html"}]}</script>
@@ -5148,6 +5148,7 @@ document.addEventListener('keydown',function(e){if(!lb.classList.contains('on'))
 }
 
 // ---------- сборка ----------
+const OUT_SLUG = require('path').basename(require('path').resolve(outDir));
 const files = [];
 function writeOut(rel, content) {
   const p = path.join(outDir, rel);
@@ -5446,7 +5447,7 @@ function presentationHTML() {
 <meta property="og:type" content="article">
 <meta property="og:title" content="Дизайн-проект ${esc(addr)} — ${plural(reg.length, 'лист', 'листа', 'листов')}">
 <meta property="og:description" content="Планировочное решение, развёртки, потолки, электрика, сантехника, разрезы и узлы. Альбом студии LINEA.">
-<meta property="og:image" content="${(renders[0] || '06-koncept/renders/01-gostinaya-kuhnya.jpg')}">
+<meta property="og:image" content="https://alex1986-rgb.github.io/linea-design-studio/portfolio/${OUT_SLUG}/${(renders[0] || '06-koncept/renders/01-gostinaya-kuhnya.jpg')}">
 <style>
 :root{--bg:#0F0E0C;--panel:#17151280;--txt:#EDE7DC;--mut:#9A937F;--acc:#C6A96B}
 *{box-sizing:border-box}
