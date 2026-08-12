@@ -28,9 +28,13 @@ for (const file of ['index.html', 'brief.html']) {
   const src = fs.readFileSync(p, 'utf8');
   let out = src;
 
-  // шапку переносим целиком (вместе с бургером и мобильным оверлеем)
+  // Шапку переносим целиком (вместе с бургером и мобильным оверлеем).
+  // Закрывающий </div> оверлея ищем ТОЛЬКО в начале строки: внутри .mnav есть
+  // вложенный .mnav-cta, и ленивый [\s\S]*?</div> обрывался на нём — «хвост»
+  // оверлея оставался в файле, а следом дописывался целый новый блок. Каждый
+  // прогон добавлял по лишнему </div>, вёрстка тихо копила мусор.
   const fullHeader = SHELL.header('', null);
-  out = out.replace(/<header class="site">[\s\S]*?<\/header>(\n<div class="mnav"[\s\S]*?<\/div>)?/, fullHeader);
+  out = out.replace(/<header class="site">[\s\S]*?<\/header>(\n<div class="mnav"[\s\S]*?\n<\/div>)?/, fullHeader);
   // скрипт меню — перед </body>, если ещё не вставлен
   const menuJs = SHELL.footer('', null).match(/<script>[\s\S]*<\/script>/)[0];
   if (!/querySelector\('\.burger'\)/.test(out)) out = out.replace('</body>', menuJs + '\n</body>');

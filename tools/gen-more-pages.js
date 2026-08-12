@@ -218,10 +218,10 @@ w('price/index.html', page({
     <p class="sub">Формула откалибрована по выпущенным альбомам: квартира на 5 помещений — 45 листов, дом на 11 помещений в два этажа — 86. Отметьте, что есть у вас.</p>
     <div class="calc" data-calc>
       <div class="calc-row"><span>Помещений (комнаты, кухня, санузлы, прихожая)</span>
-        <div class="calc-num"><button type="button" data-mm="-1">−</button><b data-rooms>5</b><button type="button" data-mm="1">+</button></div>
+        <div class="calc-num"><button type="button" data-mm="-1" aria-label="Меньше помещений">−</button><b data-rooms>5</b><button type="button" data-mm="1" aria-label="Больше помещений">+</button></div>
       </div>
       <div class="calc-row"><span>Этажей</span>
-        <div class="calc-num"><button type="button" data-fm="-1">−</button><b data-floors>1</b><button type="button" data-fm="1">+</button></div>
+        <div class="calc-num"><button type="button" data-fm="-1" aria-label="Меньше этажей">−</button><b data-floors>1</b><button type="button" data-fm="1" aria-label="Больше этажей">+</button></div>
       </div>
       <div class="calc-out">
         <div><b data-base>45</b><span>листов в базовом пакете</span></div>

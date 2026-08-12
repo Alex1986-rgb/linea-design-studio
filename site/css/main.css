@@ -1,7 +1,9 @@
 /* LINEA · премиальная тёмная тема студии */
 :root{
   --bg:#0F0E0C; --bg2:#14120E; --panel:#1B1812; --line:#2E2921;
-  --ink:#EDE7DC; --mut:#9A937F; --dim:#6D675C;
+  /* --dim осветлён с #6D675C: тот давал контраст 3,45:1 на графите — ниже AA
+     для мелких подписей (крошки, даты, подписи лент); #827C6C даёт 4,65:1 */
+  --ink:#EDE7DC; --mut:#9A937F; --dim:#827C6C;
   --gold:#C29A5B; --gold2:#D9B87E;
   --serif:"Playfair Display",Georgia,"Times New Roman",serif;
   --sans:Inter,-apple-system,"Helvetica Neue",Arial,sans-serif;
@@ -636,7 +638,10 @@ a.logo:hover i,.logo:hover i{animation:logoSheen 1.1s ease}
 .mnav nav a{font-family:var(--serif);font-size:clamp(26px,7vw,34px);color:var(--ink);padding:10px 0;border-bottom:1px solid #C29A5B22}
 .mnav nav a:hover{color:var(--gold2)}
 .mnav-cta{margin-top:36px;display:flex;gap:12px;flex-wrap:wrap}
-@media (max-width:760px){
+/* Семь пунктов меню в одну строку требуют ~978px вместе с лого и кнопкой.
+   Порог бургера стоял на 760px, и вся планшетная полоса (iPad, окно в
+   половину экрана) жила с шапкой в две строки высотой 111px вместо 69. */
+@media (max-width:980px){
   .burger{display:flex}
   .nav .links{display:none}
   header.site .nav>.btn.sm{display:none}
@@ -770,4 +775,35 @@ footer.site::after{top:44px}
   .quote{padding-left:44px}
   .quote::before{font-size:64px}
   footer.site{padding-top:84px}
+}
+
+/* ====================================================================
+   v25. Первый экран на низком окне: телефон в альбомной ориентации,
+   ноутбук с открытой панелью разработчика, окно в половину экрана.
+   Содержимое hero (кикер + заголовок + лид + кнопки + цифры) выше
+   такого окна, а .stage центрировала его в 100vh — заголовок уезжал
+   под липкую шапку, а цифры обрезались нижним краем .screen.
+   ==================================================================== */
+
+/* safe center: пока содержимое влезает — центр, как и было; как только
+   перестало — выравнивание с верха, и наверх оно уже не вылезает */
+.film .stage{align-items:safe center;padding-top:76px;box-sizing:border-box}
+
+@media (max-height:620px){
+  /* .scenes держала min-height 320px — одна она съедала всю высоту окна.
+     Обнулять нельзя: сцены внутри позиционированы абсолютно и без резерва
+     высоты наложатся на кнопки. Поэтому резерв уменьшен, а не снят. */
+  .film .scenes{min-height:200px}
+  /* четыре цифры повторяются ниже по странице в блоке доказательств —
+     на низком окне уступают место заголовку и кнопке */
+  .film .stats{display:none}
+  .film .stage{padding-top:82px;padding-bottom:14px}
+  .film .kicker{font-size:10.5px;margin-bottom:9px}
+  .film h1{font-size:clamp(23px,3.1vw,34px);margin-bottom:9px;max-width:22em}
+  .film .lead{font-size:13.5px;line-height:1.5;margin-bottom:13px;max-width:40em}
+  .film .cta-row{margin-bottom:13px;gap:9px}
+  .film .stats{gap:16px;font-size:11px}
+  .film .stats b{font-size:18px}
+  /* служебная обвязка кадра на такой высоте только мешает */
+  .film .frame-cap,.film .progress,.film .hint,.film .dots{display:none}
 }

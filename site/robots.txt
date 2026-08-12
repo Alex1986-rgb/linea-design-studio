@@ -1,5 +1,8 @@
 User-agent: *
 Allow: /
-Disallow: /portfolio/demo/06-smeta/smeta.csv
+
+# csv-выгрузки смет — не для индекса (пути от корня хоста github.io, с base путём)
+Disallow: /linea-design-studio/portfolio/demo/08-smeta/smeta.csv
+Disallow: /linea-design-studio/portfolio/dom-120/08-smeta/smeta.csv
 
 Sitemap: https://alex1986-rgb.github.io/linea-design-studio/sitemap.xml

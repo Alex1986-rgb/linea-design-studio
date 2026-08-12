@@ -1,0 +1,61 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "HP Quick (DeepSeek дёшево)",
+            "type": "shell",
+            "command": "export PATH=$HOME/.local/bin:$PATH && hp q",
+            "isBackground": false,
+            "problemMatcher": []
+        },
+        {
+            "label": "HP Think (Haiku, проверка)",
+            "type": "shell",
+            "command": "export PATH=$HOME/.local/bin:$PATH && hp t",
+            "isBackground": false,
+            "problemMatcher": []
+        },
+        {
+            "label": "HP Architect (Sonnet, дизайн)",
+            "type": "shell",
+            "command": "export PATH=$HOME/.local/bin:$PATH && hp a",
+            "isBackground": false,
+            "problemMatcher": []
+        },
+        {
+            "label": "HP Expert (Opus, сложное)",
+            "type": "shell",
+            "command": "export PATH=$HOME/.local/bin:$PATH && hp e",
+            "isBackground": false,
+            "problemMatcher": []
+        },
+        {
+            "label": "HP Draft (черновик + рефлекция)",
+            "type": "shell",
+            "command": "export PATH=$HOME/.local/bin:$PATH && hp draft",
+            "isBackground": false,
+            "problemMatcher": []
+        },
+        {
+            "label": "HP Chat (интерактив)",
+            "type": "shell",
+            "command": "export PATH=$HOME/.local/bin:$PATH && hp chat",
+            "isBackground": false,
+            "problemMatcher": []
+        },
+        {
+            "label": "HP Code Review",
+            "type": "shell",
+            "command": "export PATH=$HOME/.local/bin:$PATH && hp a \"Сделай ревью этого кода\"",
+            "isBackground": false,
+            "problemMatcher": []
+        },
+        {
+            "label": "HP Bot Status",
+            "type": "shell",
+            "command": "export PATH=$HOME/.local/bin:$PATH && hp bot",
+            "isBackground": false,
+            "problemMatcher": []
+        }
+    ]
+}
