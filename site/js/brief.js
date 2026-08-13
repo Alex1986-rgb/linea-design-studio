@@ -67,16 +67,46 @@
   }
 
   // стили
+  // Карточки стилей — это выбор одного из шести, то есть радиогруппа. Раньше
+  // они были простыми <div>: мышью выбирались, с клавиатуры — никак, фокус
+  // на них не вставал вовсе. Роли и tabindex делают их доступными, а CSS
+  // :focus-visible наконец получает элемент, на котором может сработать.
   const stylesEl = $('styles');
+  stylesEl.setAttribute('role', 'radiogroup');
+  stylesEl.setAttribute('aria-label', 'Стиль интерьера');
   stylesEl.innerHTML = STYLES.map(s => `
-    <div class="style-card${s.key === 'studio' ? ' sel' : ''}" data-key="${s.key}">
+    <div class="style-card${s.key === 'studio' ? ' sel' : ''}" data-key="${s.key}"
+         role="radio" tabindex="${s.key === 'studio' ? '0' : '-1'}" aria-checked="${s.key === 'studio'}">
       <div class="sw">${s.sw.map(c => `<i style="background:${c}"></i>`).join('')}</div>
       <b>${s.title}</b><small>${s.note}</small>
     </div>`).join('');
+
+  const pickStyle = card => {
+    selStyle = card.dataset.key;
+    stylesEl.querySelectorAll('.style-card').forEach(c => {
+      const on = c === card;
+      c.classList.toggle('sel', on);
+      c.setAttribute('aria-checked', String(on));
+      c.tabIndex = on ? 0 : -1;    // роверная навигация: Tab входит в группу один раз
+    });
+  };
   stylesEl.onclick = e => {
     const card = e.target.closest('.style-card'); if (!card) return;
-    selStyle = card.dataset.key;
-    stylesEl.querySelectorAll('.style-card').forEach(c => c.classList.toggle('sel', c === card));
+    pickStyle(card);
+  };
+  // стрелки ходят по группе, пробел и Enter выбирают — как ждёт радиогруппа
+  stylesEl.onkeydown = e => {
+    const card = e.target.closest('.style-card'); if (!card) return;
+    const all = [...stylesEl.querySelectorAll('.style-card')];
+    const i = all.indexOf(card);
+    let next = null;
+    if (e.key === 'ArrowRight' || e.key === 'ArrowDown') next = all[(i + 1) % all.length];
+    if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') next = all[(i - 1 + all.length) % all.length];
+    if (e.key === ' ' || e.key === 'Enter') next = card;
+    if (!next) return;
+    e.preventDefault();
+    pickStyle(next);
+    next.focus();
   };
   // приход со страницы стиля: brief.html?style=japandi — карточка выбрана заранее
   (function preselect() {

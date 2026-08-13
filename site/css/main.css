@@ -807,3 +807,100 @@ footer.site::after{top:44px}
   /* служебная обвязка кадра на такой высоте только мешает */
   .film .frame-cap,.film .progress,.film .hint,.film .dots{display:none}
 }
+
+
+/* ====================================================================
+   v26. РЕФЕРЕНС-СЛОЙ.
+   Формальные приёмы присланного баннера, переложенные на язык проекта.
+   Иконографика оригинала — лотос, мандала, каллиграфия — не переносится:
+   на сайте студии, которая продаёт альбомы по ГОСТ, она читается как чужой
+   бренд. Берётся ФОРМА приёмов, глиф заменяется чертёжным.
+   Слой намеренно короткий: один орнаментальный мотив вместо одиннадцати —
+   иначе засечка 45° выстраивается на каждом блоке трижды подряд.
+   ==================================================================== */
+:root{
+  /* обращение var(--acc,#C29A5B) живёт в main.css:160, а объявления не было */
+  --acc:#C29A5B;
+  /* «тушь» — тёмный край ТЕКСТОВЫХ градиентов. Прежний --gold-old #8F6B33
+     давал 3,97:1 на графите и 3,64:1 на панели, то есть ниже AA; в нижней
+     трети каждой золотой буквы контраст проваливался. #A9803F — 5,37 / 4,93.
+     Сам --gold-old остаётся: он держит кромку кнопки и плашки беты, где это
+     металл, а не текст. */
+  --gold-ink:#A9803F;
+  --champ:#EBDCA8;
+}
+
+/* 1. Двухтоновый заголовок (приём D3 референса).
+   Ось градиента развёрнута с 96deg на вертикаль: в референсе золото светлеет
+   кверху и уходит в глубину книзу — это литой металл. Горизонтальный градиент
+   давал «мерцание» поперёк строки. Заодно поднята тёмная точка.
+   Только background-image, НЕ шорткат background: шорткат сбрасывает
+   background-clip обратно в border-box, заливка перестаёт обрезаться по буквам
+   и цифры превращаются в сплошные золотые прямоугольники. Клип и прозрачный
+   цвет всё равно продублированы — правило должно работать и в отрыве от v23. */
+.hero-page h1 em,.film h1 em,.blk h2 em,.proof b,.stats b,.film .stats b,.calc-out b,.sig-name{
+  -webkit-background-clip:text;background-clip:text;color:transparent}
+.hero-page h1 em,.film h1 em,.blk h2 em,.proof b,.stats b,.film .stats b,.calc-out b{
+  background-image:linear-gradient(176deg,var(--champ) 0%,#D9B87E 36%,var(--acc) 66%,var(--gold-ink) 100%)}
+.sig-name{background-image:linear-gradient(176deg,var(--champ) 0%,var(--acc) 52%,var(--gold-ink) 100%)}
+
+/* 2. Орнаментальная линейка с глифом (приём D1 референса).
+   Волосяная золотая горизонталь, разорванная по центру — форма один в один.
+   Глиф вместо лотоса: две параллельные засечки 45°, которыми на чертеже
+   закрывают размерную линию (ГОСТ 2.307). Ставится на стык секций, где
+   раньше шла просто линия. Правило переписано целиком, а не дописано поверх
+   слоя v16, — чтобы удаление v16 его не убило.
+   Псевдоэлемент поднят до 12px и сдвинут вверх на 5px: в коробке высотой 1px
+   засечка размером 11px обрезалась бы до одной строки пикселей — фон не
+   рисуется за пределами элемента. Волосяная линия лежит внутри этой коробки
+   на отметке 5px, то есть ровно на стыке секций, как и раньше. */
+.blk + .blk::after,.proof + .blk::after{
+  content:'';position:absolute;left:5vw;right:5vw;top:-5px;height:12px;
+  pointer-events:none;
+  background-image:
+    linear-gradient(90deg,transparent,#C29A5B3D 18%,#C29A5B26 46%,transparent 49%,
+                    transparent 51%,#C29A5B26 54%,#C29A5B3D 82%,transparent),
+    linear-gradient(45deg,transparent 44%,#C9A45F 44%,#C9A45F 56%,transparent 56%);
+  background-repeat:no-repeat;
+  background-size:100% 1px,11px 11px;
+  background-position:0 5px,calc(50% - 5.5px) 0}
+/* лента фактов держит собственную нижнюю границу — без этого на стыке
+   .proof + .blk остаётся вторая, серая линия и мотив читается вдвойне */
+.proof:has(+ .blk){border-bottom-color:transparent}
+
+/* 3. Настоящий курсив вместо синтетического перекоса.
+   Пять мест просили font-style:italic, а в запросе к Google Fonts оси ital
+   не было вовсе — браузер скашивал прямое начертание сам, ломая формы букв.
+   Ось добавлена в семи местах: site-shell.js, четыре генератора со своей
+   головой и два статических файла. */
+.quote p{font-style:italic}
+
+/* 4. Фокус с клавиатуры. Во всём файле не было ни одного :focus-visible,
+   при том что бриф и квиз проходятся именно с клавиатуры. */
+.btn:focus-visible,.burger:focus-visible,.card:focus-visible,.tile:focus-visible,
+input:focus-visible,textarea:focus-visible,select:focus-visible,
+[tabindex]:focus-visible,a:focus-visible{
+  outline:2px solid var(--acc);outline-offset:3px;border-radius:2px}
+input:focus,textarea:focus,select:focus{border-color:var(--acc)}
+
+/* 5. Печать. background-clip:text печатается прозрачным — браузер не печатает
+   фон, а буква у нас и есть фон. На бумаге золотые заголовки, цифры и подпись
+   автора просто исчезали. Существующий print-слой гасил только .hero-page. */
+@media print{
+  .hero-page h1 em,.film h1 em,.blk h2 em,.proof b,.stats b,.film .stats b,
+  .calc-out b,.sig-name{
+    background:none!important;-webkit-text-fill-color:initial!important;
+    color:#8F6B33!important}
+  details summary,details p{color:#222!important}
+  .blk + .blk::after,.proof + .blk::after{background:#CCC!important;height:1px}
+}
+
+/* 6. Режим высокой контрастности Windows: весь акцентный аппарат сайта —
+   градиенты и полупрозрачное золото, которые там принудительно сбрасываются. */
+@media (forced-colors:active){
+  .hero-page h1 em,.film h1 em,.blk h2 em,.proof b,.stats b,.film .stats b,
+  .calc-out b,.sig-name{
+    background:none;-webkit-text-fill-color:initial;color:LinkText}
+  .blk + .blk::after,.proof + .blk::after{background:CanvasText;height:1px}
+  .btn:focus-visible,a:focus-visible{outline:2px solid Highlight}
+}
