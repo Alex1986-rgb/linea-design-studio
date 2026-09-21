@@ -281,6 +281,8 @@ function svgDoc(wPx, hPx, body, bg) {
   // содержимое ставим по фактическим границам: слева и сверху с равным полем, без пустых зон
   const ox = fx + 12 + Math.max(0, (fieldW - cw * k) / 2) - bb.x0 * k;
   const oy = fy + 14 + Math.max(0, (fieldH - ch * k) / 2) - bb.y0 * k;
+  // подписи «М 1:__RATIO__» в теле листа получают фактический масштаб, а не заявленный
+  body = body.split('__RATIO__').join(String(ratio));
   let s = `<svg xmlns="http://www.w3.org/2000/svg" width="${PAGE.w}" height="${PAGE.h}" viewBox="0 0 ${PAGE.w} ${PAGE.h}" font-family='${FONT}' data-sheet="${CUR_SHEET || 'other'}" data-scale="1:${ratio}">`;
   s += `<rect width="${PAGE.w}" height="${PAGE.h}" fill="${bg || CAD.paper}"/>`;
   s += `<rect x="${fx}" y="${fy}" width="${fw}" height="${fh}" fill="none" stroke="#1C1C1C" stroke-width="1.6"/>`;
@@ -1978,7 +1980,7 @@ function drawElevation(room, wallKey, sheet) {
 
   // ── 11. заголовок и штамп ─────────────────────────────────────
   b += `<text x="${M}" y="${M - 40}" font-size="16" font-weight="700" fill="#2E2A26">Развертка · ${esc(room.name)} · стена ${wallKey}</text>`;
-  b += `<text x="${M}" y="${M - 24}" font-size="11" fill="#7A756D">Вид изнутри помещения · отметки от чистого пола · М 1:50</text>`;
+  b += `<text x="${M}" y="${M - 24}" font-size="11" fill="#7A756D">Вид изнутри помещения · отметки от чистого пола · М 1:__RATIO__</text>`;
   // ширина примечаний ограничена левой зоной листа: правее начинается колонка ведомостей
   b += notesBlock(M, Hd - 132, [
     'Схема мебели на чертеже не является технической документацией для производства мебели: чертежи разрабатывает изготовитель после контрольного замера на объекте.',
@@ -4190,13 +4192,13 @@ function drawFlatPlumbing(sheetNo) {
     // раскладка привязок: выноска по ГОСТ 2.316, а при полном отсутствии места —
     // подпись над прибором со сдвигом, чтобы соседние не наложились
     // Сначала выноска по ГОСТ 2.316. В тесной мокрой зоне (санузел 1,85 м на 1:50)
-    // места нет — тогда штатный путь канона: марка прибора Вn на плане, привязки
+    // места нет — тогда штатный путь канона: марка прибора Пn на плане, привязки
     // в «Ведомости привязок сантехники» справа. Лист не перегружается.
     drawFlatPlumbing.marks = [];
     ties.forEach(t => {
       const lead = leader(ink, t.x, t.y, t.t, { size: 7.8, arm: 26, shelf: 34 });
       if (lead) { s += lead; return; }
-      const mk = 'В' + (drawFlatPlumbing.marks.length + 1);
+      const mk = 'П' + (drawFlatPlumbing.marks.length + 1); // «П» — прибор: «В1» на сантехнике читается как код трубы ХВС
       drawFlatPlumbing.marks.push({ mk, t: t.t, room: t.room });
       s += `<rect x="${t.x - 8}" y="${t.y - 7}" width="16" height="14" rx="2" fill="#FFFFFFEE" stroke="${CAD.plumb}" stroke-width="0.9"/>`
         + `<text x="${t.x}" y="${t.y + 3}" font-size="7.6" font-weight="700" text-anchor="middle" fill="${CAD.plumb}">${mk}</text>`;
