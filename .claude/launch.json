@@ -4,9 +4,202 @@
     {
       "name": "linea-site",
       "runtimeExecutable": "python3",
-      "runtimeArgs": ["-m", "http.server", "8141", "--directory", "site"],
+      "runtimeArgs": [
+        "-m",
+        "http.server",
+        "8141",
+        "--directory",
+        "site"
+      ],
       "port": 8141,
       "autoPort": false
+    },
+    {
+      "name": "gorina-site",
+      "runtimeExecutable": "python3",
+      "runtimeArgs": [
+        "-m",
+        "http.server",
+        "8155",
+        "--directory",
+        "/Users/alexandr/projects/gorina-cosmetics/.preview"
+      ],
+      "port": 8155
+    },
+    {
+      "name": "abavmeste-web",
+      "runtimeExecutable": "python3",
+      "runtimeArgs": [
+        "-m",
+        "http.server",
+        "8177",
+        "--directory",
+        "/Users/alexandr/projects/direct-abavmeste/web"
+      ],
+      "port": 8177
+    },
+    {
+      "name": "konsulcar-site",
+      "runtimeExecutable": "python3",
+      "runtimeArgs": [
+        "-m",
+        "http.server",
+        "8146",
+        "--directory",
+        "/Users/alexandr/projects/konsulcar/site"
+      ],
+      "port": 8146
+    },
+    {
+      "name": "konsulcar-php",
+      "runtimeExecutable": "php",
+      "runtimeArgs": [
+        "-S",
+        "127.0.0.1:8147",
+        "-t",
+        "/Users/alexandr/projects/konsulcar/site",
+        "/Users/alexandr/projects/konsulcar/tools/dev-router.php"
+      ],
+      "port": 8147
+    },
+    {
+      "name": "pasika-site",
+      "runtimeExecutable": "python3",
+      "runtimeArgs": [
+        "-m",
+        "http.server",
+        "8155",
+        "--directory",
+        "/Users/alexandr/projects/pasika-bozieni/site"
+      ],
+      "port": 8155
+    },
+    {
+      "name": "zavod-local",
+      "runtimeExecutable": "python3",
+      "runtimeArgs": [
+        "-m",
+        "http.server",
+        "8199",
+        "--directory",
+        "/Users/alexandr/projects/zavod-red-preview"
+      ],
+      "port": 8199
+    },
+    {
+      "name": "textflow-preview",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": [
+        "--prefix",
+        "/Users/alexandr/projects/textflow-111",
+        "run",
+        "preview",
+        "--",
+        "--port",
+        "4173",
+        "--strictPort"
+      ],
+      "port": 4173,
+      "url": "http://localhost:4173"
+    },
+    {
+      "name": "linea-client",
+      "runtimeExecutable": "python3",
+      "runtimeArgs": [
+        "-m",
+        "http.server",
+        "8142",
+        "--directory",
+        "/Users/alexandr/projects/linea-design-studio"
+      ],
+      "port": 8142
+    },
+    {
+      "name": "crm-admin",
+      "runtimeExecutable": "php",
+      "runtimeArgs": [
+        "-S",
+        "127.0.0.1:8094",
+        "-t",
+        "/Users/alexandr/projects/zavod-red-crm"
+      ],
+      "port": 8094
+    },
+    {
+      "name": "seomarket-dev",
+      "runtimeExecutable": "bash",
+      "runtimeArgs": [
+        "-c",
+        "cd /Users/alexandr/projects/seomagic-saas-tool && exec npx vite --port 8080 --strictPort"
+      ],
+      "port": 8080
+    },
+    {
+      "name": "seomarket-design",
+      "runtimeExecutable": "python3",
+      "runtimeArgs": [
+        "-m",
+        "http.server",
+        "8190",
+        "--directory",
+        "/Users/alexandr/projects/seomagic-saas-tool/design/seomarket-v2"
+      ],
+      "port": 8190
+    },
+    {
+      "name": "seomarket-site",
+      "runtimeExecutable": "bash",
+      "runtimeArgs": [
+        "-c",
+        "cd /Users/alexandr/projects/seomarket-site && exec npx vite --port 8080 --strictPort"
+      ],
+      "port": 8080
+    },
+    {
+      "name": "zavod-prodcheck",
+      "runtimeExecutable": "python3",
+      "runtimeArgs": [
+        "-m",
+        "http.server",
+        "8201",
+        "--directory",
+        "/private/tmp/claude-501/-Users-alexandr-projects-linea-design-studio/cfc72305-789d-4c8b-919c-ff728bebb6dc/scratchpad/prod"
+      ],
+      "port": 8201
+    },
+    {
+      "name": "konsulcar-app",
+      "runtimeExecutable": "python3",
+      "runtimeArgs": [
+        "-m",
+        "http.server",
+        "8148",
+        "--directory",
+        "/Users/alexandr/projects/konsulcar/prototype/app"
+      ],
+      "port": 8148
+    },
+    {
+      "name": "pult",
+      "runtimeExecutable": "env",
+      "runtimeArgs": [
+        "PULT_OFFLINE=1",
+        "python3",
+        "/Users/alexandr/projects/marketing-autopilot/app.py"
+      ],
+      "port": 8150
+    },
+    {
+      "name": "pult-site",
+      "runtimeExecutable": "python3",
+      "runtimeArgs": [
+        "-m",
+        "http.server",
+        "8151",
+        "--directory",
+        "/Users/alexandr/projects/marketing-autopilot/site"
+      ],
+      "port": 8151
     }
   ]
 }

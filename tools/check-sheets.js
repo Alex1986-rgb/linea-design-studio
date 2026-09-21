@@ -51,8 +51,11 @@ for (const root of roots) {
     const gStart = s.indexOf('>', s.indexOf('scale(')) + 1;
     // содержимое кончается там, где начинается основная надпись: она рисуется
     // в координатах листа, а не внутри масштабируемой группы
-    const stampAt = s.indexOf('<g data-el="stamp"');
-    const gEnd = stampAt > 0 ? stampAt : s.lastIndexOf('</g>');
+    // граница содержимого — первый блок, который рисуется уже в координатах листа:
+    // основная надпись либо боковая панель/подвал листа (ландшафтные альбомы)
+    const marks = ['<g data-el="heading"', '<g data-el="panel"', '<g data-el="footer"', '<g data-el="stamp"']
+      .map(t => s.indexOf(t)).filter(i => i > 0);
+    const gEnd = marks.length ? Math.min(...marks) : s.lastIndexOf('</g>');
     const inner = s.slice(gStart, gEnd);
 
     // --- 3. штамп: масштаб, номер листа, «листов N» ---
