@@ -3212,13 +3212,17 @@ function flatRoomMarks(fx, fy, full) { // номер в кружке (+ имя �
   let s = '<g data-el="room"></g>';
   for (const r of flatRooms) {
     const cx = fx(r.pos.x + r.w / 2), cy = fy(r.pos.y + r.l / 2);
-    if (full) {
+    if (full === true) {
       s += `<rect x="${cx - 60}" y="${cy - 26}" width="120" height="52" fill="#FCFBF8D9"/>`;
       s += `<circle cx="${cx}" cy="${cy - 12}" r="10" fill="#FFF" stroke="#2E2A26" stroke-width="1.1"/><text x="${cx}" y="${cy - 8}" font-size="9" font-weight="700" text-anchor="middle" fill="#2E2A26">${r.idx}</text>`;
       s += `<text x="${cx}" y="${cy + 8}" font-size="10.5" font-weight="600" text-anchor="middle" fill="#2E2A26">${esc(r.name)}</text>`;
       s += `<text x="${cx}" y="${cy + 21}" font-size="9.5" text-anchor="middle" fill="#57514A" text-decoration="underline">S=${r.area} м²</text>`;
     } else {
-      s += `<circle cx="${cx}" cy="${cy}" r="9" fill="#FFFFFFD9" stroke="#8A8478" stroke-width="0.9"/><text x="${cx}" y="${cy + 3.5}" font-size="8.5" font-weight="700" text-anchor="middle" fill="#57514A">${r.idx}</text>`;
+      // Практика бюро: номер помещения в кружке и подчёркнутая площадь — на каждом плане.
+      // На листах, где центр помещения занят марками (полы, отделка), марка уходит в угол.
+      const kx = full === 'corner' ? fx(r.pos.x) + 22 : cx, ky = full === 'corner' ? fy(r.pos.y) + 20 : cy;
+      s += `<circle cx="${kx}" cy="${ky}" r="9" fill="#FFFFFFD9" stroke="#8A8478" stroke-width="0.9"/><text x="${kx}" y="${ky + 3.5}" font-size="8.5" font-weight="700" text-anchor="middle" fill="#57514A">${r.idx}</text>`;
+      s += `<text x="${kx}" y="${ky + 9 + effFont(7.4) * 1.1}" font-size="7.4" text-anchor="middle" fill="#57514A" text-decoration="underline">${String(r.area).replace('.', ',')}</text>`;
     }
   }
   return s;
@@ -3541,7 +3545,7 @@ function drawFlatFloors(sheetNo) {
         + `<path d="M ${cx} ${cy - up} L ${cx + half} ${cy - up + h} L ${cx - half} ${cy - up + h} Z" fill="#FFFFFFEE" stroke="${CAD.dim}" stroke-width="1"/>`
         + `<text x="${cx}" y="${cy - up + h - 7}" font-size="9.6" font-weight="700" text-anchor="middle" fill="${CAD.dim}">${tno}</text>`;
     }).join('');
-    return s;
+    return s + flatRoomMarks(base.fx, base.fy, 'corner');
   }, (x, y, w) => {
     const dry = flatRooms.filter(r => r.type !== 'bathroom').reduce((a, r) => a + r.area, 0);
     const wetS = flatRooms.filter(r => r.type === 'bathroom').reduce((a, r) => a + r.area, 0);
@@ -3953,7 +3957,7 @@ function drawFlatWallFinish(sheetNo) {
       const cx = rx + rw2 / 2, cy = ry + rh2 / 2;
       s += `<rect x="${cx - 26}" y="${cy - 10}" width="52" height="15" fill="#FFFFFFE0" stroke="#57514A" stroke-width="0.7"/><text x="${cx}" y="${cy + 1}" font-size="9.5" font-weight="700" text-anchor="middle" fill="#2E2A26">${wet ? 'От-2' : 'От-1'}</text>`;
     }
-    return s;
+    return s + flatRoomMarks(base.fx, base.fy, 'corner');
   }, (x, y, w) => {
     let s0 = flatLegendBox(x, y, w, 'Коды отделки', [
       { sym: (sx, sy) => `<rect x="${sx}" y="${sy - 8}" width="16" height="11" fill="none" stroke="#C9A227" stroke-width="2"/>`, text: `От-1 · ${style.wall.finish.split(',')[0]}` },
