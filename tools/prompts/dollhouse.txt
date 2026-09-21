@@ -1,0 +1,8 @@
+TASK:
+Convert this architectural floor plan into a photorealistic 3D dollhouse render of the same apartment.
+
+GEOMETRY — THE PART THAT MUST NOT CHANGE:
+Reproduce the drawing exactly. Every wall keeps its drawn position, thickness and angle, including bay windows, angled walls and balconies. Every door and window stays in its opening. Every room keeps its exact shape, proportion and relative area. Do not straighten the outline, do not merge rooms, do not invent extra rooms, do not move partitions. If the drawing shows furniture, keep each piece in its drawn place with the same size and orientation.
+
+VIEW:
+Aerial dollhouse view, camera tilted about 35 degrees from vertical, ceiling fully removed, partition walls kept at full height so each room reads as a real room with decorated walls. The apartment sits as one solid block on a plain light neutral background with a soft contact shadow beneath it.

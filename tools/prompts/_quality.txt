@@ -1,0 +1,14 @@
+RENDER QUALITY AND CAMERA:
+Professional architectural visualization made in a high-end studio, physically based rendering, global illumination with realistic light bounce, soft ambient occlusion in corners and under furniture, accurate contact shadows, 4K material textures with visible grain and weave, subtle chromatic richness, filmic colour grading, clean sharp focus across the whole frame, no lens distortion.
+
+LIGHT:
+Late-afternoon daylight raking through the windows, forming soft pools of light and long gentle shadows on the floor; interior lamps at warm 2700K glowing against the cooler daylight, so the render reads as a real photograph taken at that hour rather than an evenly lit CG model.
+
+MATERIALS:
+Matte lime-washed walls with subtle tonal variation, wide-plank white oak flooring with visible grain and micro-bevels, honed stone worktops with natural veining, brushed brass and matte black metal, boucle and linen upholstery with real fabric weave, ceramic and glass with correct roughness and reflections. Every material must read as a physical surface, never as flat colour.
+
+LIVED-IN DETAIL:
+Add the small imperfections of a real home that FIT THIS ROOM'S PURPOSE: in living rooms and bedrooms a throw casually draped, one book left open, cushions not perfectly aligned, a cup on the table; in bathrooms towels with soft creases; plants with uneven leaves. Never add furniture that does not belong to the room's function — a storage room, closet, laundry or toilet gets no sofa, no TV, no armchair and no coffee table. These details are what separate a real interior photograph from a catalogue image.
+
+DO NOT INCLUDE:
+No people, no pets, no text, no numbers, no dimension lines, no room labels, no title block, no watermark, no logos. No warped or melted geometry, no duplicated furniture, no objects floating above the floor, no doors opening into walls, no furniture clipping through walls.
