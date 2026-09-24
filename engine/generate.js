@@ -73,6 +73,34 @@ const RISERS = (_obj.risers || []).filter(r => r && r.x != null).map(r => ({
   x: Math.round(r.x * 1000), y: Math.round(r.y * 1000),
   d: Math.round((r.d || 0.11) * 1000), kind: r.kind || 'sewer'
 }));
+// ---------- перепланировка: сносимые участки и возводимые перегородки ----------
+// Раньше планы демонтажа и монтажа рисовали условную картинку: сносимых стен и новых
+// перегородок в брифе не было вообще. Геометрия задаётся отрезком-осью в координатах
+// объекта (метры), как object.bearing; толщина откладывается на две стороны от оси.
+// Типы перегородок — материал, цвет на листе и расценка возведения в смете.
+const PART_TYPES = {
+  gkl:   { title: 'ГКЛ 12,5 в 2 слоя по каркасу ПС/ПН, минвата 50', short: 'ГКЛ', color: '#7030A0', thick: 100, rate: 1850 },
+  block: { title: 'Пеноблок D500, армирование через 2 ряда, штукатурка', short: 'пеноблок', color: '#0072C8', thick: 100, rate: 1450 },
+  brick: { title: 'Кирпич керамический полнотелый на ребро, штукатурка', short: 'кирпич', color: '#C0562F', thick: 120, rate: 1950 },
+};
+const _segMM = (s, i, pfx, defThick) => ({
+  mark: pfx + (i + 1),
+  x1: Math.round(s.from[0] * 1000), y1: Math.round(s.from[1] * 1000),
+  x2: Math.round(s.to[0] * 1000), y2: Math.round(s.to[1] * 1000),
+  t: Math.round(s.thick != null ? s.thick * 1000 : defThick),
+  h: Math.round((s.h != null ? s.h : (_obj.ceilingHeight || 2.7)) * 1000),
+  level: s.level || 1,
+  note: s.note || '',
+});
+let DEMOLISH = (_obj.demolish || []).filter(d => d && Array.isArray(d.from) && Array.isArray(d.to))
+  .map((d, i) => Object.assign(_segMM(d, i, 'Д', INT_MM), { kind: d.kind || 'partition' }));
+let PARTITIONS = (_obj.partitions || []).filter(p => p && Array.isArray(p.from) && Array.isArray(p.to))
+  .map((p, i) => {
+    const type = PART_TYPES[p.type] ? p.type : 'gkl';
+    return Object.assign(_segMM(p, i, 'П', PART_TYPES[type].thick), { type });
+  });
+const segLenMM = s => Math.round(Math.hypot(s.x2 - s.x1, s.y2 - s.y1));
+const segAreaM2 = s => +(segLenMM(s) / 1000 * s.h / 1000).toFixed(1);
 // в панельном доме ниши глубже 60 мм в стенах не выполняются
 const NICHE_DEPTH = HOUSE === 'panel' ? 60 : 100;
 const HOUSE_RU = { panel: 'панель', brick: 'кирпич', monolith: 'монолит', block: 'блок' };
@@ -3097,6 +3125,11 @@ const CAD = {
   finApron: '#F90101',   // отделка: фартук
   callout: '#1C1C1C'     // выноски
 };
+// Перепланировка: сносимое — жёлтая заливка, возводимое — цвет по типу материала
+// (docs/drawing-kb/01-gost-grafika.md §2, практика БТИ и проектных бюро).
+// Контур темнее заливки не только на цвете: в ч/б режиме (--mono) обе краски
+// уходят в серую шкалу, и при близкой яркости жёлтая полоса теряла обводку.
+const DEMO_FILL = '#FFE24D', DEMO_LINE = '#6B5200';
 
 // Автокомпоновка квартиры, если координаты комнат не заданы в брифе (бриф с сайта):
 // раскладываем помещения рядами по ширине «полосы», жилые сверху, служебные снизу —
@@ -3129,6 +3162,23 @@ function autoLayout(level) {
 }
 if (rooms.length && rooms.some(r => !r.pos)) for (const lv of [...new Set(rooms.map(r => r.level || 1))]) autoLayout(lv);
 const allFlatRooms = rooms.filter(r => r.pos);
+// Перепланировка чистится ровно один раз и до всех потребителей (листы, ведомости,
+// смета, паспорт): вырожденный отрезок и отрезок за габаритом квартиры валидатор
+// помечает ошибкой, а движок не должен тащить их ни в чертёж, ни в объёмы работ.
+if ((DEMOLISH.length || PARTITIONS.length) && allFlatRooms.length) {
+  const bx0 = Math.min(...allFlatRooms.map(r => r.pos.x)) - 500;
+  const by0 = Math.min(...allFlatRooms.map(r => r.pos.y)) - 500;
+  const bx1 = Math.max(...allFlatRooms.map(r => r.pos.x + r.w)) + 500;
+  const by1 = Math.max(...allFlatRooms.map(r => r.pos.y + r.l)) + 500;
+  const keep = s0 => {
+    if (segLenMM(s0) < 100) { console.warn(`  ! ${s0.mark}: отрезок вырожден (${segLenMM(s0)} мм) — на листы не выпущен`); return false; }
+    const inb = (x, y) => x >= bx0 && x <= bx1 && y >= by0 && y <= by1;
+    if (!inb(s0.x1, s0.y1) || !inb(s0.x2, s0.y2)) { console.warn(`  ! ${s0.mark}: отрезок за габаритом квартиры — на листы не выпущен`); return false; }
+    return true;
+  };
+  DEMOLISH = DEMOLISH.filter(keep);
+  PARTITIONS = PARTITIONS.filter(keep);
+}
 const LEVELS = [...new Set(rooms.map(r => r.level || 1))].sort((a, b) => a - b);
 const LEVEL_NAME = lv => LEVELS.length > 1 ? ` · ${lv} этаж` : '';
 let flatRooms = [];   // помещения текущего этажа
@@ -3326,7 +3376,9 @@ function flatSheet(sheetNo, title, sub, layerFn, rightFn, notes, lopts) {
   base.col = { x: LGX - 16, y: MY - 60, w: LGW + 32, h: planH + 320 };   // зона правой колонки
   let b = base.s + layerFn(base);
   b += rightFn(LGX, MY, LGW);
-  let ny = MY + planH + 96;
+  // Размеры горизонтальных участков перепланировки выносятся под габаритные цепочки —
+  // примечания опускаются ровно на занятую ими высоту, иначе числа садятся на текст.
+  let ny = MY + planH + 96 + Math.max(0, (lopts && lopts.padBottom) || 0);
   const noteLH = Math.max(14, lineH(9) + 2);   // на мелком масштабе кегль крупнее — строки слипались
   b += `<g data-el="notes"></g><text x="${MX}" y="${ny - 22}" font-size="10" font-weight="700" fill="#2E2A26">Примечания:</text>`;
   notes.forEach((n, i) => { b += `<text x="${MX}" y="${ny - 22 + (i + 1) * noteLH}" font-size="9" fill="#57514A">${i + 1}. ${esc(n)}</text>`; });
@@ -3852,9 +3904,142 @@ function flatDoorList() {
   return list;
 }
 
+// ================================================================
+// ПЕРЕПЛАНИРОВКА: общий слой для листов демонтажа и монтажа
+// Отрезок из брифа — это ОСЬ конструкции, толщина откладывается на две стороны
+// (та же геометрия, что у object.bearing в flatLayer). Сносимое по канону
+// (docs/drawing-kb/01 §2) — жёлтая заливка, возводимое — цвет по типу материала.
+// ================================================================
+// Участок, целиком лежащий вне габарита этажа (опечатка в координатах брифа —
+// валидатор такое помечает ошибкой), на лист не выпускаем: иначе он утащит
+// contentBox и весь план уедет на две ступени мельче по масштабному ряду.
+function replanOnLevel(s) {
+  if (!FLAT) return false;
+  if ((s.level || 1) !== (FLAT.level || 1)) return false;   // дом в два этажа: участок чужого этажа
+  const m = 500;
+  const inb = (x, y) => x >= FLAT.x0 - m && x <= FLAT.x1 + m && y >= FLAT.y0 - m && y <= FLAT.y1 + m;
+  return inb(s.x1, s.y1) && inb(s.x2, s.y2);
+}
+
+function segBand(base, s) {
+  const horiz = Math.abs(s.y2 - s.y1) <= Math.abs(s.x2 - s.x1);
+  const t = px(s.t);
+  const x0 = base.fx(Math.min(s.x1, s.x2)), y0 = base.fy(Math.min(s.y1, s.y2));
+  const w = horiz ? px(Math.abs(s.x2 - s.x1)) : t;
+  const h = horiz ? t : px(Math.abs(s.y2 - s.y1));
+  return { x: x0 - (horiz ? 0 : t / 2), y: y0 - (horiz ? t / 2 : 0), w, h, horiz };
+}
+
+// Карта занятости листа, засеянная марками помещений: подписи перепланировки
+// встают мимо номеров комнат, а не поверх них.
+function replanInk(base) {
+  const ink = inkMap();
+  for (const r of flatRooms) {
+    const cx = base.fx(r.pos.x + r.w / 2), cy = base.fy(r.pos.y + r.l / 2);
+    ink.add(cx - 24, cy - 14, 48, 34);
+  }
+  return ink;
+}
+
+// Марка конструкции в кружке: перебираем 5 позиций вокруг середины участка,
+// пока не найдём свободную — иначе кружки садятся друг на друга на коротких стенах.
+function replanMark(ink, band, mark, color) {
+  const mx = band.x + band.w / 2, my = band.y + band.h / 2;
+  const off = (band.horiz ? band.h : band.w) / 2 + 13;
+  const spots = band.horiz
+    ? [[mx, my], [mx, my - off], [mx, my + off], [mx - 30, my - off], [mx + 30, my + off]]
+    : [[mx, my], [mx - off, my], [mx + off, my], [mx - off, my - 30], [mx + off, my + 30]];
+  for (const [cx, cy] of spots) {
+    if (!ink.free(cx - 10, cy - 10, 20, 20)) continue;
+    ink.add(cx - 10, cy - 10, 20, 20);
+    return `<circle cx="${cx}" cy="${cy}" r="8.5" fill="#FFFFFFEE" stroke="${color}" stroke-width="1.2"/>`
+      + `<text x="${cx}" y="${cy + 3.2}" font-size="8.2" font-weight="700" fill="${color}" text-anchor="middle">${mark}</text>`;
+  }
+  return `<circle cx="${mx}" cy="${my}" r="8.5" fill="#FFFFFFEE" stroke="${color}" stroke-width="1.2"/>`
+    + `<text x="${mx}" y="${my + 3.2}" font-size="8.2" font-weight="700" fill="${color}" text-anchor="middle">${mark}</text>`;
+}
+
+// Размеры участка: длина + привязка начала от капитальной стены выносятся на
+// свободное поле (слева для вертикальных участков, под цепочками — для горизонтальных:
+// правое поле занято колонкой легенды, нижнее и правое — габаритными цепочками).
+// Привязка оси поперёк участка ставится внутри плана у его внутреннего конца — там,
+// где на рабочих чертежах её и ищут; длина линии равна подписанному числу.
+// Сколько места займут размеры горизонтальных участков под габаритными цепочками:
+// на эту величину flatSheet опускает примечания и штамп.
+function replanPadBottom(list) {
+  const nH = list.filter(s => Math.abs(s.y2 - s.y1) <= Math.abs(s.x2 - s.x1)).length;
+  if (!nH) return 0;
+  const step = Math.max(28, effFont(10.5) * 2.8);
+  const chainGap = Math.max(26, effFont(10.5) * 3.1);
+  return Math.max(0, 24 + chainGap + 34 + (nH - 1) * step + 52 - 96);
+}
+
+function replanDims(base, s, tier) {
+  const horiz = Math.abs(s.y2 - s.y1) <= Math.abs(s.x2 - s.x1);
+  const step = Math.max(28, effFont(10.5) * 2.8);
+  const chainGap = Math.max(26, effFont(10.5) * 3.1);
+  let out = '';
+  if (horiz) {
+    const a = Math.min(s.x1, s.x2), b = Math.max(s.x1, s.x2), ax = Math.round((s.y1 + s.y2) / 2);
+    const y = base.fy(FLAT.y1) + px(EXT) + 24 + chainGap + 34 + tier.b++ * step;
+    if (a - FLAT.x0 > 60) out += dimH(base.fx(FLAT.x0) - px(EXT), base.fx(a), y, String(a - FLAT.x0 + EXT));
+    out += dimH(base.fx(a), base.fx(b), y, String(b - a));
+    // привязка оси от верхней капитальной стены — внутри плана, у конца участка
+    const x = b < FLAT.x1 - 200 ? base.fx(b) + 26 : (a > FLAT.x0 + 200 ? base.fx(a) - 26 : base.fx((a + b) / 2));
+    out += dimV(x, base.fy(FLAT.y0) - px(EXT), base.fy(ax), String(ax - FLAT.y0 + EXT));
+  } else {
+    const a = Math.min(s.y1, s.y2), b = Math.max(s.y1, s.y2), ax = Math.round((s.x1 + s.x2) / 2);
+    const x = base.fx(FLAT.x0) - px(EXT) - 34 - tier.l++ * step;
+    if (a - FLAT.y0 > 60) out += dimV(x, base.fy(FLAT.y0) - px(EXT), base.fy(a), String(a - FLAT.y0 + EXT));
+    out += dimV(x, base.fy(a), base.fy(b), String(b - a));
+    // привязка оси от левой капитальной стены — внутри плана, у конца участка
+    const y = b < FLAT.y1 - 200 ? base.fy(b) + 26 : (a > FLAT.y0 + 200 ? base.fy(a) - 26 : base.fy((a + b) / 2));
+    out += dimH(base.fx(FLAT.x0) - px(EXT), base.fx(ax), y, String(ax - FLAT.x0 + EXT));
+  }
+  return out;
+}
+
+// Ведомость перепланировки: табличный документ на листе (ГОСТ 21.501, прил. А).
+// Строка = участок: марка, конструкция, длина, толщина, высота, площадь.
+function replanTable(x, y, w, title, rows, totalLabel) {
+  const F = 8.4, HF = 8.8, LH = Math.max(13, lineH(F));
+  const head = ['Мрк.', 'Конструкция', 'Дл.', 'Толщ.', 'H', 'S, м²'];
+  const cw = [0.14, 0.42, 0.11, 0.11, 0.11, 0.11].map(k => k * w);
+  const cx = []; { let acc = 0; for (const c of cw) { cx.push(acc); acc += c; } }
+  const hTot = 26 + LH + rows.length * LH + (totalLabel ? LH + 6 : 0) + 10;
+  let s = `<g data-el="spec"><rect x="${x}" y="${y}" width="${w}" height="${hTot}" fill="none" stroke="#8A8478" stroke-width="0.8"/>`;
+  s += `<text x="${x + 10}" y="${y + 17}" font-size="10.5" font-weight="700" fill="#2E2A26">${esc(title)}</text>`;
+  s += `<line x1="${x}" y1="${y + 24}" x2="${x + w}" y2="${y + 24}" stroke="#8A8478" stroke-width="0.6"/>`;
+  const hy = y + 24 + LH - 3;
+  head.forEach((t, i) => { s += `<text x="${x + cx[i] + 5}" y="${hy}" font-size="${HF}" font-weight="700" fill="#57514A">${esc(t)}</text>`; });
+  s += `<line x1="${x}" y1="${hy + 5}" x2="${x + w}" y2="${hy + 5}" stroke="#8A8478" stroke-width="0.6"/>`;
+  rows.forEach((r0, i) => {
+    const ry = hy + 5 + (i + 1) * LH - 3;
+    const cut = (t, ww) => { const m = fitChars(F, ww - 8); return String(t).length > m ? String(t).slice(0, Math.max(1, m - 1)) + '…' : String(t); };
+    r0.forEach((v, j) => {
+      const col = j === 0 ? r0.color || '#2E2A26' : '#57514A';
+      s += `<text x="${x + cx[j] + 5}" y="${ry}" font-size="${F}" ${j === 0 ? 'font-weight="700" ' : ''}fill="${col}">${esc(cut(v, cw[j]))}</text>`;
+    });
+  });
+  if (totalLabel) {
+    const ty = hy + 5 + (rows.length + 1) * LH + 3;
+    s += `<line x1="${x}" y1="${ty - LH + 4}" x2="${x + w}" y2="${ty - LH + 4}" stroke="#8A8478" stroke-width="0.6"/>`;
+    s += `<text x="${x + cx[1] + 5}" y="${ty}" font-size="${F}" font-weight="700" fill="#2E2A26">${esc(totalLabel)}</text>`;
+  }
+  replanTable.lastH = hTot;
+  return s + '</g>';
+}
+
 // 6. Демонтаж (общий): снятие отделки + дверные блоки
 function drawFlatDemolition(sheetNo) {
-  return flatSheet(sheetNo, 'План демонтажа', 'Подготовка под чистовую отделку · перегородки не демонтируются', base => {
+  // один список на лист: на многоэтажном объекте участки чужого этажа сюда не попадают,
+  // поэтому подзаголовок, ведомость и графика считаются от одних и тех же данных
+  const DEM = DEMOLISH.filter(replanOnLevel);
+  const dArea = +DEM.reduce((a, d) => a + segAreaM2(d), 0).toFixed(1);
+  const sub = DEM.length
+    ? `Снос перегородок ${DEM.length} уч. · ${String(dArea).replace('.', ',')} м² · подготовка под чистовую отделку`
+    : 'Подготовка под чистовую отделку · перегородки не демонтируются';
+  return flatSheet(sheetNo, 'План демонтажа', sub, base => {
     let s = '';
     for (const r of flatRooms) {
       const rx = base.fx(r.pos.x), ry = base.fy(r.pos.y), rw2 = px(r.w), rh2 = px(r.l);
@@ -3871,16 +4056,57 @@ function drawFlatDemolition(sheetNo) {
       else { const xx = o.wall === 'D' ? base.fx(r.pos.x) - 12 : base.fx(r.pos.x + r.w); y0 = base.fy(r.pos.y + o.off); y1 = y0 + px(o.w); x0 = xx; x1 = xx + 12; }
       s += `<g stroke="#B0483A" stroke-width="1.8"><line x1="${x0}" y1="${y0}" x2="${x1}" y2="${y1}"/><line x1="${x0}" y1="${y1}" x2="${x1}" y2="${y0}"/></g>`;
     }
+    // ---- сносимые участки стен: жёлтая заливка с косой штриховкой (канон БТИ/бюро) ----
+    if (DEM.length) {
+      const ink = replanInk(base);
+      s += `<defs><pattern id="dmw${sheetNo}" width="8" height="8" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="8" height="8" fill="${DEMO_FILL}"/><line x1="0" y1="0" x2="0" y2="8" stroke="${DEMO_LINE}" stroke-width="2.2"/></pattern></defs>`;
+      const tier = { l: 0, b: 0 };
+      DEM.forEach(d => {
+        const b0 = segBand(base, d);
+        s += `<rect x="${b0.x}" y="${b0.y}" width="${b0.w}" height="${b0.h}" fill="url(#dmw${sheetNo})" stroke="${DEMO_LINE}" stroke-width="1.4"/>`;
+        s += replanDims(base, d, tier);
+        s += replanMark(ink, b0, d.mark, DEMO_LINE);
+      });
+    }
     return s + flatChains(base) + flatRoomMarks(base.fx, base.fy, false);
-  }, (x, y, w) => flatLegendBox(x, y, w, 'Условные обозначения', [
-    { sym: (sx, sy) => `<rect x="${sx}" y="${sy - 8}" width="16" height="11" fill="#FFF" stroke="#B0483A" stroke-width="0.8"/><line x1="${sx}" y1="${sy + 3}" x2="${sx + 16}" y2="${sy - 8}" stroke="#B0483A88" stroke-width="1"/>`, text: 'демонтаж отделки: полы до стяжки, обои/краска, плинтусы' },
-    { sym: (sx, sy) => `<g stroke="#B0483A" stroke-width="1.6"><line x1="${sx}" y1="${sy - 9}" x2="${sx + 14}" y2="${sy + 2}"/><line x1="${sx}" y1="${sy + 2}" x2="${sx + 14}" y2="${sy - 9}"/></g>`, text: 'демонтаж дверного блока (полотно, коробка, наличники)' },
-  ]), ['Несущие конструкции и перегородки не затрагиваются.', 'В санузле — демонтаж плитки, стяжки до плиты и старой гидроизоляции.', 'Перед штроблением уточнить трассы скрытых коммуникаций.']);
+  }, (x, y, w) => {
+    const rows = [
+      { sym: (sx, sy) => `<rect x="${sx}" y="${sy - 8}" width="16" height="11" fill="#FFF" stroke="#B0483A" stroke-width="0.8"/><line x1="${sx}" y1="${sy + 3}" x2="${sx + 16}" y2="${sy - 8}" stroke="#B0483A88" stroke-width="1"/>`, text: 'демонтаж отделки: полы до стяжки, обои/краска, плинтусы' },
+      { sym: (sx, sy) => `<g stroke="#B0483A" stroke-width="1.6"><line x1="${sx}" y1="${sy - 9}" x2="${sx + 14}" y2="${sy + 2}"/><line x1="${sx}" y1="${sy + 2}" x2="${sx + 14}" y2="${sy - 9}"/></g>`, text: 'демонтаж дверного блока (полотно, коробка, наличники)' },
+    ];
+    if (DEM.length) rows.push(
+      { sym: (sx, sy) => `<rect x="${sx}" y="${sy - 8}" width="16" height="11" fill="${DEMO_FILL}" stroke="${DEMO_LINE}" stroke-width="1.2"/><line x1="${sx}" y1="${sy + 3}" x2="${sx + 16}" y2="${sy - 8}" stroke="${DEMO_LINE}" stroke-width="1.4"/>`, text: 'демонтируемая перегородка, марка Дn — см. ведомость демонтажа' },
+      { sym: (sx, sy) => `<rect x="${sx}" y="${sy - 8}" width="16" height="11" fill="none" stroke="${CAD.wallStroke}" stroke-width="1.6"/>`, text: 'сохраняемые стены и несущие конструкции — сносу не подлежат' });
+    let s = flatLegendBox(x, y, w, 'Условные обозначения', rows);
+    if (DEM.length) {
+      const tRows = DEM.map(d => {
+        const row = [d.mark, d.note || (d.kind === 'opening' ? 'участок стены под новый проём' : 'перегородка, снос до перекрытия'),
+          String(segLenMM(d)), String(d.t), String(d.h), String(segAreaM2(d)).replace('.', ',')];
+        row.color = DEMO_LINE; return row;
+      });
+      s += replanTable(x, y + flatLegendBox.lastH + 12, w, 'Ведомость демонтажа перегородок', tRows,
+        `Итого к сносу: ${String(dArea).replace('.', ',')} м² · ${fmt(DEM.reduce((a, d) => a + segLenMM(d), 0))} мм по длине`);
+    }
+    return s;
+  }, DEM.length
+    ? ['Сносу подлежат только участки, отмеченные жёлтым и марками Дn; несущие конструкции и стояки не затрагиваются.',
+       'Работы вести после согласования перепланировки (ЖК РФ, ст. 25–29); отступление от согласованного проекта недопустимо.',
+       'Сохраняемые проёмы и примыкания усилить по месту; перед сносом отключить и снять электрику демонтируемых участков.',
+       'В санузле — демонтаж плитки, стяжки до плиты и старой гидроизоляции.',
+       'Перед штроблением уточнить трассы скрытых коммуникаций.']
+    : ['Несущие конструкции и перегородки не затрагиваются.', 'В санузле — демонтаж плитки, стяжки до плиты и старой гидроизоляции.', 'Перед штроблением уточнить трассы скрытых коммуникаций.'],
+  DEM.length ? { padBottom: replanPadBottom(DEM) } : undefined);
 }
 
 // 7. Монтаж ГКЛ (общий)
 function drawFlatMontage(sheetNo) {
-  return flatSheet(sheetNo, 'План монтажа ГКЛ-конструкций', 'Фальш-стены под ниши, закладные, короба потолков · каркас ПП 60×27, ГКЛ 12,5 в 2 слоя', base => {
+  const PART = PARTITIONS.filter(replanOnLevel);
+  const pArea = +PART.reduce((a, p) => a + segAreaM2(p), 0).toFixed(1);
+  const title = PART.length ? 'План монтажа перегородок и ГКЛ-конструкций' : 'План монтажа ГКЛ-конструкций';
+  const sub = PART.length
+    ? `Возводимые перегородки ${PART.length} уч. · ${String(pArea).replace('.', ',')} м² · фальш-стены под ниши, закладные, короба потолков`
+    : 'Фальш-стены под ниши, закладные, короба потолков · каркас ПП 60×27, ГКЛ 12,5 в 2 слоя';
+  return flatSheet(sheetNo, title, sub, base => {
     let s = '', marks = [];
     for (const r of flatRooms) {
       const nn2 = nichesFor(r).filter(n => n.depth >= 80), groups = [];
@@ -3903,11 +4129,54 @@ function drawFlatMontage(sheetNo) {
       }
     }
     drawFlatMontage.marks = marks;
+    // ---- возводимые перегородки: цвет и штриховка по типу материала ----
+    if (PART.length) {
+      const ink = replanInk(base);
+      for (const [key, t] of Object.entries(PART_TYPES)) {
+        // штриховки уходят в <defs> — contentBox их не меряет и масштаб листа не уводит
+        s += `<defs><pattern id="pw${key}${sheetNo}" width="7" height="7" patternUnits="userSpaceOnUse" patternTransform="rotate(${key === 'brick' ? -45 : 45})"><rect width="7" height="7" fill="${t.color}22"/><line x1="0" y1="0" x2="0" y2="7" stroke="${t.color}" stroke-width="${key === 'gkl' ? 1.6 : 2.6}"/></pattern></defs>`;
+      }
+      const tier = { l: 0, b: 0 };
+      PART.forEach(p => {
+        const t = PART_TYPES[p.type], b0 = segBand(base, p);
+        s += `<rect x="${b0.x}" y="${b0.y}" width="${b0.w}" height="${b0.h}" fill="url(#pw${p.type}${sheetNo})" stroke="${t.color}" stroke-width="1.5"/>`;
+        s += replanDims(base, p, tier);
+        s += replanMark(ink, b0, p.mark, t.color);
+        const lead = leader(ink, b0.x + b0.w / 2, b0.y + b0.h / 2, `${t.short} ${p.t} · h=${p.h}`, { size: 7.6, arms: [22, 40, 62], shelf: 26 });
+        if (lead) s += lead;
+      });
+    }
     return s + flatChains(base) + flatRoomMarks(base.fx, base.fy, false);
   }, (x, y, w) => {
+    let s = '', yy = y;
+    if (PART.length) {
+      const used = [...new Set(PART.map(p => p.type))];
+      s += flatLegendBox(x, yy, w, 'Условные обозначения перегородок', used.map(k => {
+        const t = PART_TYPES[k], n = PART.filter(p => p.type === k).length;
+        return { sym: (sx, sy) => `<rect x="${sx}" y="${sy - 9}" width="17" height="12" fill="${t.color}22" stroke="${t.color}" stroke-width="1.4"/>`,
+          text: `${t.title} — ${n} уч., марки Пn` };
+      }).concat([{ sym: (sx, sy) => `<rect x="${sx}" y="${sy - 9}" width="17" height="12" fill="#3B5C7726" stroke="#3B5C77" stroke-width="1.3" stroke-dasharray="4 3"/>`, text: 'фальш-стена ГКЛ под нишу, марка Мn' }]));
+      yy += flatLegendBox.lastH + 12;
+      const tRows = PART.map(p => {
+        const t = PART_TYPES[p.type];
+        const row = [p.mark, p.note || t.title, String(segLenMM(p)), String(p.t), String(p.h), String(segAreaM2(p)).replace('.', ',')];
+        row.color = t.color; return row;
+      });
+      s += replanTable(x, yy, w, 'Ведомость возводимых перегородок', tRows,
+        `Итого: ${String(pArea).replace('.', ',')} м² · ${fmt(PART.reduce((a, p) => a + segLenMM(p), 0))} мм по длине`);
+      yy += replanTable.lastH + 12;
+    }
     const rows = (drawFlatMontage.marks || []).map(m => ({ sym: (sx, sy) => `<circle cx="${sx + 8}" cy="${sy - 3}" r="7" fill="#FFF" stroke="#3B5C77" stroke-width="0.9"/><text x="${sx + 8}" y="${sy}" font-size="7.5" font-weight="700" fill="#3B5C77" text-anchor="middle">М${m.n}</text>`, text: m.text }));
-    return flatLegendBox(x, y, w, 'Ведомость ГКЛ-конструкций', rows);
-  }, ['Внутри всех конструкций — закладные из фанеры 18 мм под навесное оборудование.', 'Границы потолочных коробов — на плане потолков и листах раздела 05.', 'В санузле — влагостойкий ГКЛВ · звукоизоляция минватой 50 мм в полостях.']);
+    return s + flatLegendBox(x, yy, w, 'Ведомость ГКЛ-конструкций', rows);
+  }, (PART.length ? [
+    'Перегородки возводить после демонтажа и разметки осей; отклонение от вертикали не более 2 мм на 1 м.',
+    'Примыкание к капитальным стенам и перекрытию — через уплотнительную ленту, крепление дюбелями с шагом 600 мм.',
+    'Высота перегородок — до перекрытия (h по ведомости); в проёмах предусмотреть усиление стойками и перемычкой.',
+  ] : []).concat([
+    'Внутри всех конструкций — закладные из фанеры 18 мм под навесное оборудование.',
+    'Границы потолочных коробов — на плане потолков и листах раздела 05.',
+    'В санузле — влагостойкий ГКЛВ · звукоизоляция минватой 50 мм в полостях.']),
+  PART.length ? { padBottom: replanPadBottom(PART) } : undefined);
 }
 
 // 8. Экспликация помещений и план дверей
@@ -5243,6 +5512,17 @@ function buildSmeta() {
       R('Материалы', r.name, style.plinth, 'м.п.', g.plinth, 550 * tier.kMat);
     }
   }
+  // перепланировка: объёмы берутся из той же геометрии, что нарисована на листах 02 и 03
+  if (DEMOLISH.length) {
+    const aD = DEMOLISH.reduce((a, d) => a + segAreaM2(d), 0);
+    R('Черновые работы', 'Квартира', `Демонтаж перегородок с выносом мусора (${DEMOLISH.length} уч., марки Д1–Д${DEMOLISH.length})`, 'м²', aD, 950 * tier.k);
+  }
+  for (const key of Object.keys(PART_TYPES)) {
+    const list = PARTITIONS.filter(p => p.type === key);
+    if (!list.length) continue;
+    const aP = list.reduce((a, p) => a + segAreaM2(p), 0);
+    R('Черновые работы', 'Квартира', `Возведение перегородок: ${PART_TYPES[key].title} (${list.map(p => p.mark).join(', ')})`, 'м²', aP, PART_TYPES[key].rate * tier.k);
+  }
   // мебель по всем помещениям
   const furnAgg = {};
   for (const r of rooms) for (const f of furnitureFor(r)) { const k = f.key; if (!FURN_PRICES[k]) continue; furnAgg[k] = furnAgg[k] || { name: f.name, qty: 0 }; furnAgg[k].qty++; }
@@ -5466,7 +5746,7 @@ ${counts.flat ? `<tr><td class="k">01 Сводные планы квартиры
 <tr><td class="k">Объект</td><td>${esc((brief.object && brief.object.type) || 'квартира')} ${totalArea} м², ${rooms.length} помещений: ${rooms.map(r => `${r.name} (${r.area} м²)`).join(', ')}. Высота потолков ${rooms[0] ? rooms[0].h : 2700} мм.</td></tr>
 <tr><td class="k">Стиль и колористика</td><td>«${style.title}». ${esc(style.concept)} Палитра из 5 тонов: светлая тёплая база, деревянные фактуры, один тёмный якорь и латунный акцент — сочетание проверено на контраст и температуру.</td></tr>
 <tr><td class="k">Потолки</td><td>Два уровня во всех помещениях (короб 450 мм, перепад 120 мм, скрытая LED 3000K по внутреннему контуру)${rooms.some(r => ceilingLevelsFor(r).three) ? '; в гостиной — третий уровень «парящий остров» с теневой щелью 10 мм' : ''}. Узел исполнения — лист «Узел А» (М 1:20). Закладные под все подвесные светильники.</td></tr>
-<tr><td class="k">Ниши</td><td>${esc(rooms.flatMap(r => nichesFor(r).map(n => n.label)).filter((v, i, a) => a.indexOf(v) === i).join('; ') || '—')}. Все ниши — ГКЛ с LED-подсветкой в алюминиевом профиле, БП с запасом 30% и ревизией.</td></tr>
+${(DEMOLISH.length || PARTITIONS.length) ? `<tr><td class="k">Перепланировка</td><td>Демонтаж: ${DEMOLISH.length ? `${DEMOLISH.length} уч., ${String(+DEMOLISH.reduce((a, d) => a + segAreaM2(d), 0).toFixed(1)).replace('.', ',')} м² (марки Д1–Д${DEMOLISH.length}, лист «План демонтажа»)` : 'не требуется'}. Возводится: ${PARTITIONS.length ? `${PARTITIONS.length} перегородки, ${String(+PARTITIONS.reduce((a, p) => a + segAreaM2(p), 0).toFixed(1)).replace('.', ',')} м² (${[...new Set(PARTITIONS.map(p => PART_TYPES[p.type].short))].join(', ')}; марки П1–П${PARTITIONS.length}, лист «План монтажа»)` : 'не требуется'}. Несущие конструкции не затрагиваются. Работы выполнять после согласования перепланировки (ЖК РФ, ст. 25–29).</td></tr>\n` : ''}<tr><td class="k">Ниши</td><td>${esc(rooms.flatMap(r => nichesFor(r).map(n => n.label)).filter((v, i, a) => a.indexOf(v) === i).join('; ') || '—')}. Все ниши — ГКЛ с LED-подсветкой в алюминиевом профиле, БП с запасом 30% и ревизией.</td></tr>
 <tr><td class="k">Полы</td><td>${esc(style.floor.name)} (жилые), керамогранит (санузел, −0,020). Стыки покрытий — на оси дверного полотна, без порожков. Запас: +15% на «ёлку», +10% на плитку.</td></tr>
 <tr><td class="k">Электрика</td><td>Розетки по мебельным сценариям (кровать +600, фартук +1100, ТВ-блок +1300 скрыт в нише), выключатели +900 со стороны ручки. Санузлы — через УЗО 30 мА, IP44. Разводку выполняет инженерный проект по привязкам альбома.</td></tr>
 <tr><td class="k">Пожелания клиента</td><td>${esc(Object.values(brief.answers || {}).filter(Boolean).join(' · ') || '—')}</td></tr>
@@ -5692,7 +5972,8 @@ const RN = r => `${r.name}${LEVEL_NAME(r.level || 1)}`;
 const FLAT_SHEETS = [
     ['01-obmer', drawFlatObmer, 'Обмерный план квартиры', 'obmer'],
     ['02-demontazh', drawFlatDemolition, 'План демонтажа', 'demolition'],
-    ['03-montazh', drawFlatMontage, 'План монтажа ГКЛ-конструкций', 'montage'],
+    // заголовок считается на каждом этаже: перегородки могут возводиться только на одном
+    ['03-montazh', drawFlatMontage, () => PARTITIONS.some(replanOnLevel) ? 'План монтажа перегородок и ГКЛ-конструкций' : 'План монтажа ГКЛ-конструкций', 'montage'],
     ['04-mebel', drawFlatFurniture, 'План расстановки мебели', 'furniture'],
     ['05-eksplikatsiya-dverey', drawFlatDoors, 'Экспликация помещений и план дверей', 'doors'],
     ['06-rozetki', drawFlatElectro, 'План розеток и выводов', 'sockets'],
@@ -5715,7 +5996,8 @@ for (const lv of LEVELS) { // канон альбома: 13 сводных ли�
   if (!FLAT) continue;
   const pre = LEVELS.length > 1 ? `et${lv}-` : '';
   for (const [key, fn, title, type] of FLAT_SHEETS) {
-    sheetOut(`01-kvartira/kvartira-${pre}${key}.svg`, n => fn(n), title + LEVEL_NAME(lv), '1:50', type);
+    const tt = typeof title === 'function' ? title() : title;
+    sheetOut(`01-kvartira/kvartira-${pre}${key}.svg`, n => fn(n), tt + LEVEL_NAME(lv), '1:50', type);
     counts.flat++;
   }
 }

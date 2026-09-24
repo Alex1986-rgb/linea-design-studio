@@ -8,7 +8,7 @@
 - `site/` — статический сайт: index.html (лендинг с hero-фильмом по прокрутке), brief.html + js/brief.js (визард брифа), portfolio/demo/ и portfolio/dom-120/ (демо-проекты, генерируются движком)
 - `site/assets/frames/` — раскадровка hero (11 кадров 1600px + manifest.json); пересобрать: `sips -Z 1600 -s formatOptions 62 <рендер> --out site/assets/frames/NN.jpg`
 - В каждой папке проекта движок пишет три входа: `presentation.html` (листалка альбома для клиента), `index.html` (все файлы) и `print.html` (источник единого PDF)
-- `examples/demo-brief.json` — эталон схемы брифа (размеры в метрах; стены A/B/C/D = верх/право/низ/лево; конструктив: `object.structure {houseType, extWall, intWall, slab}`, `object.bearing[]`, `object.risers[]`, `room.walls`)
+- `examples/demo-brief.json` — эталон схемы брифа (размеры в метрах; стены A/B/C/D = верх/право/низ/лево; конструктив: `object.structure {houseType, extWall, intWall, slab}`, `object.bearing[]`, `object.risers[]`, `room.walls`; перепланировка: `object.demolish[] {from,to,thick,h,kind,note,level}` — сносимые участки, `object.partitions[] {from,to,type,thick,h,note,level}` — возводимые перегородки, `type` = `gkl|block|brick`; координаты отрезка — ось конструкции в метрах, толщина откладывается на две стороны, как у `object.bearing`)
 - `examples/fixtures/*.json` — краевые случаи для регрессий: студия 24 м², Г-образная, панель с несущими и стояками, заведомо кривой бриф
 - `examples/house-brief.json` — второй эталон: дом 120 м² в два этажа (`rooms[].level`, `rooms[].stairs`)
 - `clients/<slug>/` — рабочие папки клиентов (brief.json, отчёты, project/)

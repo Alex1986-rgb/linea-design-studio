@@ -113,6 +113,60 @@ function validate(brief) {
     else if (d > obj.area * 0.03) W(`object.area = ${obj.area} м² против суммы ${sum} м² — расхождение ${r2(d)} м² (коридоры и ниши?).`);
   } else W('object.area не задана — в паспорт уйдёт сумма площадей помещений.');
 
+  // ---------- перепланировка: сносимые участки и возводимые перегородки ----------
+  // Геометрия отрезком: from/to — точки в метрах в координатах объекта, как object.bearing.
+  // Ошибка здесь дороже всех: по этим листам бригада ломает стены.
+  const segLen = seg => Math.hypot(seg.to[0] - seg.from[0], seg.to[1] - seg.from[1]);
+  const isPt = p0 => Array.isArray(p0) && p0.length === 2 && num(p0[0]) && num(p0[1]);
+  const bounds = placed.length ? {
+    x0: Math.min(...placed.map(r => r.pos.x)), y0: Math.min(...placed.map(r => r.pos.y)),
+    x1: Math.max(...placed.map(r => r.pos.x + r.width)), y1: Math.max(...placed.map(r => r.pos.y + r.length)),
+  } : null;
+  const maxH = rooms.reduce((a, r) => Math.max(a, num(r.height) ? r.height : (num(obj.ceilingHeight) ? obj.ceilingHeight : 2.7)), 0);
+  // расстояние от точки до отрезка — им ловим перепланировку, попавшую на несущую стену
+  const distToSeg = (px0, py0, ax, ay, bx, by) => {
+    const dx = bx - ax, dy = by - ay, L2 = dx * dx + dy * dy;
+    const t = L2 ? Math.max(0, Math.min(1, ((px0 - ax) * dx + (py0 - ay) * dy) / L2)) : 0;
+    return Math.hypot(px0 - (ax + t * dx), py0 - (ay + t * dy));
+  };
+  const bearing = Array.isArray(obj.bearing) ? obj.bearing.filter(b => b && isPt(b.from) && isPt(b.to)) : [];
+  const onBearing = seg => bearing.some(b => {
+    const mx = (seg.from[0] + seg.to[0]) / 2, my = (seg.from[1] + seg.to[1]) / 2;
+    return distToSeg(mx, my, b.from[0], b.from[1], b.to[0], b.to[1]) < 0.2;
+  });
+
+  const checkSeg = (seg, i, kind) => {
+    const label = `${kind} ${i + 1}`;
+    if (!isPt(seg.from) || !isPt(seg.to)) { E(`${label}: from/to должны быть парами чисел [x, y] в метрах.`); return false; }
+    const L = segLen(seg);
+    if (L < 0.1) { E(`${label}: длина ${r2(L)} м — отрезок вырожден.`); return false; }
+    if (bounds) {
+      const out = [seg.from, seg.to].some(p0 => p0[0] < bounds.x0 - 0.3 || p0[0] > bounds.x1 + 0.3 || p0[1] < bounds.y0 - 0.3 || p0[1] > bounds.y1 + 0.3);
+      if (out) E(`${label}: концы отрезка выходят за габарит квартиры (${r2(bounds.x0)}…${r2(bounds.x1)} × ${r2(bounds.y0)}…${r2(bounds.y1)} м).`);
+    }
+    const skew = Math.abs(seg.to[0] - seg.from[0]) > 0.05 && Math.abs(seg.to[1] - seg.from[1]) > 0.05;
+    if (skew) W(`${label}: отрезок не параллелен осям — проверьте координаты, косые перегородки в жилье редки.`);
+    if (num(seg.thick) && (seg.thick < 0.05 || seg.thick > 0.4)) W(`${label}: толщина ${seg.thick} м вне обычного диапазона 0,05–0,4 м.`);
+    return true;
+  };
+
+  (Array.isArray(obj.demolish) ? obj.demolish : []).forEach((seg, i) => {
+    if (!seg || !checkSeg(seg, i, 'Демонтаж')) return;
+    // ЖК РФ ст. 25–29 и Постановление № 508-ПП: несущие стены сносу не подлежат
+    if (onBearing(seg)) E(`Демонтаж ${i + 1}: участок попадает на несущую стену (object.bearing) — снос запрещён, требуется проект усиления и согласование.`);
+  });
+
+  (Array.isArray(obj.partitions) ? obj.partitions : []).forEach((seg, i) => {
+    if (!seg || !checkSeg(seg, i, 'Перегородка')) return;
+    const KNOWN_PART = new Set(['gkl', 'block', 'brick']);
+    if (seg.type && !KNOWN_PART.has(seg.type)) W(`Перегородка ${i + 1}: тип «${seg.type}» не описан — будет принят «gkl» (ГКЛ по каркасу).`);
+    if (num(seg.h)) {
+      if (seg.h > maxH + 0.001) E(`Перегородка ${i + 1}: высота ${seg.h} м выше потолка ${r2(maxH)} м.`);
+      else if (seg.h < maxH - 0.05) W(`Перегородка ${i + 1}: высота ${seg.h} м ниже потолка ${r2(maxH)} м — не до перекрытия, уточните замысел.`);
+    }
+    if (onBearing(seg)) W(`Перегородка ${i + 1}: возводится по трассе несущей стены — проверьте, не дублирует ли она существующую конструкцию.`);
+  });
+
   // ---------- прочее ----------
   if (!obj.address) W('object.address не задан — в штампе всех листов будет «Объект».');
   if (brief.style && brief.style.name && !brief.style.byStudio) {
