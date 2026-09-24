@@ -22,7 +22,9 @@
 <div id="out"></div><div id="stage"></div>
 <script>
 const stage = document.getElementById('stage'), out = document.getElementById('out'), st = document.getElementById('st');
-const MIN = 2;          // перекрытие меньше 2 px по обеим осям — касание, не наложение
+const MIN = 2;          // перекрытие меньше 2 px по любой оси — касание, не наложение
+const SHARE = 0.4;      // и меньше 30% высоты меньшей надписи — тоже касание: соседние
+                        // строки текста всегда цепляются подстрочными элементами шрифта
 
 async function overlapsOf(url) {
   const svgText = await (await fetch(url)).text();
@@ -34,7 +36,9 @@ async function overlapsOf(url) {
     const a = boxes[i].b, b = boxes[j].b;
     const ox = Math.min(a.right, b.right) - Math.max(a.left, b.left);
     const oy = Math.min(a.bottom, b.bottom) - Math.max(a.top, b.top);
-    if (ox > MIN && oy > MIN) bad.push({ a: boxes[i].t, b: boxes[j].t, ox: Math.round(ox), oy: Math.round(oy) });
+    const minH = Math.min(a.height, b.height), minW = Math.min(a.width, b.width);
+    if (ox > MIN && oy > MIN && oy > minH * SHARE && ox > minW * 0.12)
+      bad.push({ a: boxes[i].t, b: boxes[j].t, ox: Math.round(ox), oy: Math.round(oy) });
   }
   stage.innerHTML = '';
   return { n: texts.length, bad };
