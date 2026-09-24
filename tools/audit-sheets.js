@@ -41,7 +41,9 @@ const RULES = {
   'demolition-room': { need: { stamp: 1 }, want: { legend: 1 }, scales: SCALES_PLAN },
   montage:          { need: { legend: 1, notes: 1, stamp: 1 }, want: { chain: 1, mark: 1 }, scales: SCALES_PLAN },
   'montage-room':   { need: { stamp: 1 }, want: { chain: 1 }, scales: SCALES_PLAN },
-  furniture:        { need: { notes: 1, stamp: 1, room: 1, spec: 1 }, want: { leader: 1 }, scales: SCALES_PLAN },
+  // легенда к цветам обязательна: на плане мебели сосуществуют зелёные контуры,
+  // синий пунктир ниш, кружки позиций и номера помещений (docs/drawing-kb/11)
+  furniture:        { need: { notes: 1, stamp: 1, room: 1, spec: 1, legend: 1 }, want: { leader: 1 }, scales: SCALES_PLAN },
   plan:             { need: { stamp: 1 }, want: { legend: 1 }, scales: SCALES_PLAN },
   'plan-dims':      { need: { chain: 2, stamp: 1 }, want: {}, scales: SCALES_PLAN, sum: true },
   doors:            { need: { legend: 1, notes: 1, stamp: 1, spec: 1 }, want: { chain: 1 }, scales: SCALES_PLAN },
@@ -60,7 +62,7 @@ const RULES = {
   plumbing:         { need: { legend: 1, notes: 1, stamp: 1, tie: 2 }, want: { slope: 1 }, scales: SCALES_PLAN },
   // привязки на развёртке обязательны там, где на стене есть розетки и выключатели;
   // стена без электрики их иметь не может — поэтому tie здесь замечание, а не ошибка
-  elevation:        { need: { stamp: 1, level: 2, chain: 1 }, want: { tie: 1, spec: 1, notes: 1 }, scales: SCALES_PLAN },
+  elevation:        { need: { stamp: 1, level: 2, chain: 1, legend: 1 }, want: { tie: 1, spec: 1, notes: 1 }, scales: SCALES_PLAN },
   node:             { need: { stamp: 1, level: 1 }, want: { leader: 1, sheetRef: 1 }, scales: SCALES_NODE },
   // разрез: конструкции в сечении, отметки уровней, габариты помещений по линии сечения
   section:          { need: { stamp: 1, level: 3, dim: 2, notes: 1 }, want: { leader: 1, chain: 1 }, scales: SCALES_PLAN },

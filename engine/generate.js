@@ -1604,9 +1604,26 @@ function tileLayout(room, wallKey, lenMm, hMm, M, h) {
   }
   // стартовый ряд и стартовый шов — от них ведут кладку
   svg += `<line x1="${M}" y1="${M + h - px(TH)}" x2="${M + px(lenMm)}" y2="${M + h - px(TH)}" stroke="#8A7A5A" stroke-width="1.4"/>`;
-  const sx0 = M + px(Math.max(x0 + TW, 0));
-  svg += `<line x1="${sx0}" y1="${M + h}" x2="${sx0}" y2="${M + h - px(hMm)}" stroke="#8A7A5A" stroke-width="1.2" stroke-dasharray="6 3"/>`;
-  svg += `<text x="${sx0 + 4}" y="${M + h - px(TH) - 5}" font-size="8" fill="#8A6A3B">стартовый шов${fromCenter ? ' (раскладка от центра)' : ''}</text>`;
+  const startMm = Math.max(x0 + TW, 0);
+  const sx0 = M + px(startMm);
+  // Штрихпунктир старта и красная стрелка направления кладки с привязкой размером:
+  // плиточник должен видеть, откуда начинать и куда уводить подрезку, а не гадать
+  // (практика бюро, docs/drawing-kb/11 · канон elevation).
+  svg += `<line x1="${sx0}" y1="${M + h}" x2="${sx0}" y2="${M + h - px(hMm)}" stroke="#B0483A" stroke-width="1.2" stroke-dasharray="9 3 2 3"/>`;
+  const ay = M + h - px(TH) / 2;
+  const dir = fromCenter ? 1 : 1;                       // кладка ведётся от стартового шва вправо
+  svg += `<g stroke="#B0483A" stroke-width="1.4" fill="none">`
+    + `<line x1="${sx0}" y1="${ay}" x2="${sx0 + dir * 46}" y2="${ay}"/>`
+    + `<path d="M ${sx0 + dir * 38} ${ay - 4.5} L ${sx0 + dir * 47} ${ay} L ${sx0 + dir * 38} ${ay + 4.5}"/></g>`;
+  // привязка стартового шва от угла стены — размером, как все привязки альбома
+  if (startMm > 5) {
+    const yd = M + h + 56;     // ниже подписей высот (M+h+16) и цепочки размеров (M+h+34)
+    svg += `<g stroke="#B0483A" stroke-width="0.8" fill="none"><line x1="${M}" y1="${yd}" x2="${sx0}" y2="${yd}"/>`
+      + `<line x1="${M}" y1="${yd - 4}" x2="${M}" y2="${yd + 4}"/><line x1="${sx0}" y1="${yd - 4}" x2="${sx0}" y2="${yd + 4}"/></g>`
+      + `<text x="${(M + sx0) / 2}" y="${yd - 4}" font-size="8" text-anchor="middle" fill="#B0483A">${Math.round(startMm)}</text>`;
+  }
+  // подпись — над стеной у начала линии старта: внутри поля она ложилась на оборудование
+  svg += `<text x="${sx0 + 4}" y="${M - 6}" font-size="8" fill="#B0483A">начало раскладки${fromCenter ? ' · от центра стены' : ' · от угла'}</text>`;
   const area = +(lenMm * hMm / 1e6).toFixed(1);
   return { svg, full, cut, area, cutTop: Math.round(cutTop), cutSide: Math.round(cutSide), fromCenter, TW, TH };
 }
@@ -1969,8 +1986,25 @@ function drawElevation(room, wallKey, sheet) {
   b += `<text x="${ax}" y="${cy}" font-size="8" fill="#8A8478">Арт.: ${esc(style.skus.led)}</text>`;
   cy += 18;
 
-  // фото помещения
-  const ph = roomPhotos(room, 1)[0];
+  // Легенда цветов развёртки: на листе сосуществуют зелёная электрика, золотой LED,
+  // сетка плитки и контуры мебели — без расшифровки цвет читается наугад
+  // (docs/drawing-kb/11: «легенда к каждому цвету»)
+  b += flatLegendBox(ax, cy, SPEC_W - 4, 'Условные обозначения', [
+    { sym: (sx, sy) => `<g stroke="#21A366" stroke-width="1.2" fill="none"><circle cx="${sx + 6}" cy="${sy - 3}" r="4.5"/><circle cx="${sx + 6}" cy="${sy - 3}" r="1.4" fill="#21A366"/></g>`, text: 'электроточка: подпись Н=… — отметка оси от чистого пола' },
+    { sym: (sx, sy) => `<line x1="${sx}" y1="${sy - 3}" x2="${sx + 16}" y2="${sy - 3}" stroke="#C29A5B" stroke-width="2.2" stroke-dasharray="6 3"/>`, text: 'LED-подсветка: карниз, ниша, подшкафная линия' },
+    { sym: (sx, sy) => `<rect x="${sx}" y="${sy - 9}" width="16" height="11" fill="none" stroke="#57514A" stroke-width="1.2"/>`, text: 'ниша ГКЛ: габарит и отметка низа' },
+    ...(tile ? [
+      { sym: (sx, sy) => `<g><rect x="${sx}" y="${sy - 9}" width="16" height="11" fill="#F2EEE8" stroke="#C8C0B4" stroke-width="0.6"/><line x1="${sx + 8}" y1="${sy - 9}" x2="${sx + 8}" y2="${sy + 2}" stroke="#C8C0B4" stroke-width="0.6"/></g>`, text: `плитка ${tile.TW}×${tile.TH}, диагональ — подрезка` },
+      { sym: (sx, sy) => `<g stroke="#B0483A" stroke-width="1.4" fill="none"><line x1="${sx}" y1="${sy - 3}" x2="${sx + 14}" y2="${sy - 3}"/><path d="M ${sx + 10} ${sy - 7} L ${sx + 15} ${sy - 3} L ${sx + 10} ${sy + 1}"/></g>`, text: 'стрелка и штрихпунктир — начало раскладки плитки' },
+    ] : [
+      { sym: (sx, sy) => `<rect x="${sx}" y="${sy - 9}" width="16" height="11" fill="none" stroke="#2E9E4F" stroke-width="1"/>`, text: 'мебель и оборудование: габарит и отметка' },
+    ]),
+    { sym: (sx, sy) => `<g stroke="#2A2A2A" stroke-width="0.8" fill="none"><line x1="${sx}" y1="${sy - 4}" x2="${sx + 16}" y2="${sy - 4}"/><line x1="${sx + 1}" y1="${sy - 1}" x2="${sx + 5}" y2="${sy - 7}"/><line x1="${sx + 12}" y1="${sy - 1}" x2="${sx + 16}" y2="${sy - 7}"/></g>`, text: 'размерная цепочка, засечки 45° (ГОСТ 2.307)' },
+  ]);
+  cy += flatLegendBox.lastH + 12;
+
+  // фото помещения — только если под легендой осталось поле
+  const ph = cy + 170 < Hd - 40 ? roomPhotos(room, 1)[0] : null;
   if (ph) {
     const pw = Math.min(SPEC_W - 4, 228);
     b += `<image href="${ph.data}" x="${ax}" y="${cy}" width="${pw}" height="${+(pw * 0.66).toFixed(0)}" preserveAspectRatio="xMidYMid slice"/>`;
@@ -3486,6 +3520,21 @@ function drawFlatFurniture(sheetNo) {
         s += `<text x="${x + w - 8}" y="${ry}" font-size="7.6" fill="#7A756D" text-anchor="end">${nn(it.r.idx)}</text>`;
       });
     }
+    // Легенда к цветам листа: в рабочих альбомах каждый цвет на плане расшифрован,
+    // иначе зелёный контур мебели, синий пунктир ниши и кружки номеров читаются наугад.
+    let legH = 0;
+    {
+      const ly0 = y + tblH + nicheH + 12;
+      s += flatLegendBox(x, ly0, w, 'Условные обозначения', [
+        { sym: (sx, sy) => `<rect x="${sx}" y="${sy - 9}" width="17" height="12" fill="none" stroke="${CAD.furn}" stroke-width="1"/>`, text: 'мебель и оборудование, габарит в мм' },
+        { sym: (sx, sy) => `<g fill="none" stroke="${CAD.furn}" stroke-width="0.9"><line x1="${sx}" y1="${sy + 2}" x2="${sx}" y2="${sy - 10}"/><path d="M ${sx} ${sy - 10} A 12 12 0 0 1 ${sx + 12} ${sy + 2}" stroke-dasharray="3 2"/></g>`, text: 'зона открывания дверей, фасадов и выдвижных ящиков' },
+        { sym: (sx, sy) => `<g><rect x="${sx + 1}" y="${sy - 9}" width="13" height="13" rx="2" fill="#FFF" stroke="${CAD.furn}" stroke-width="0.9"/><text x="${sx + 7.5}" y="${sy}" font-size="7.6" font-weight="700" text-anchor="middle" fill="${CAD.furn}">n</text></g>`, text: 'номер позиции по спецификации мебели' },
+        { sym: (sx, sy) => `<rect x="${sx}" y="${sy - 9}" width="17" height="12" fill="none" stroke="${CAD.plumb}" stroke-width="0.9" stroke-dasharray="4 2"/>`, text: 'ниша ГКЛ с подсветкой, марка Нn — см. ведомость ниш' },
+        { sym: (sx, sy) => `<g><circle cx="${sx + 8}" cy="${sy - 5}" r="7" fill="#FFF" stroke="#2E2A26" stroke-width="1"/><text x="${sx + 8}" y="${sy - 2}" font-size="7.4" font-weight="700" text-anchor="middle" fill="#2E2A26">n</text><line x1="${sx + 1}" y1="${sy + 4}" x2="${sx + 15}" y2="${sy + 4}" stroke="#57514A" stroke-width="0.9"/></g>`, text: 'номер помещения по экспликации и подчёркнутая площадь, м²' },
+        { sym: (sx, sy) => `<path d="M ${sx} ${sy - 3} q 4 -6 8 0 q 4 6 8 0" fill="none" stroke="${CAD.curtain}" stroke-width="1.1"/>`, text: 'штора в потолочной нише — см. план потолков' },
+      ]);
+      legH = flatLegendBox.lastH + 12;
+    }
     let refs = [];
     try {
       refs = fs.readdirSync(path.join(outDir, '06-koncept', 'renders', 'thumbs'))
@@ -3493,7 +3542,7 @@ function drawFlatFurniture(sheetNo) {
         .map(f => { const r0 = flatRooms.find(x => f.startsWith(nn(x.idx))); return { f, t: r0 ? r0.name : 'Референс' }; });
     } catch (e) { refs = []; }
     refs.forEach((rf, i) => {
-      const iy = y + tblH + (typeof nicheH === 'number' ? nicheH : 0) + 26 + i * 202;
+      const iy = y + tblH + (typeof nicheH === 'number' ? nicheH : 0) + legH + 26 + i * 202;
       let href = null;
       try {
         const raw = fs.readFileSync(path.join(outDir, '06-koncept', 'renders', 'thumbs', rf.f));
@@ -3527,6 +3576,17 @@ function drawFlatFloors(sheetNo) {
         }
       }
       s += `</g>`;
+      // Мокрая зона: точка начала раскладки керамогранита и направление укладки.
+      // Плитку кладут от видового угла, подрезку уводят под сантехнику — без этой
+      // пометки подрядчик начинает от двери и режет плитку на видовом месте.
+      if (wet) {
+        const ax0 = rx + px(60), ay0 = ry + px(60);
+        s += `<g stroke="#B0483A" stroke-width="1.3" fill="none">`
+          + `<circle cx="${ax0}" cy="${ay0}" r="3.4" fill="#B0483A"/>`
+          + `<line x1="${ax0}" y1="${ay0}" x2="${ax0 + Math.min(rw2 * 0.45, 52)}" y2="${ay0}"/>`
+          + `<path d="M ${ax0 + Math.min(rw2 * 0.45, 52) - 7} ${ay0 - 4} L ${ax0 + Math.min(rw2 * 0.45, 52)} ${ay0} L ${ax0 + Math.min(rw2 * 0.45, 52) - 7} ${ay0 + 4}"/></g>`
+          + `<text x="${ax0 + 4}" y="${ay0 - 6}" font-size="6.6" fill="#B0483A">начало укладки 600×600</text>`;
+      }
       const cx = rx + rw2 / 2, cy = ry + rh2 / 2;
       s += `<rect x="${cx - 26}" y="${cy - 10}" width="52" height="15" fill="#FFFFFFE0" stroke="#57514A" stroke-width="0.7"/><text x="${cx}" y="${cy + 1}" font-size="9.5" font-weight="700" text-anchor="middle" fill="#2E2A26">${wet ? 'Пл-2' : 'Пл-1'}</text>`;
       s += `<circle cx="${rx + 20}" cy="${ry + rh2 - 18}" r="12" fill="#FFF" stroke="#2E2A26" stroke-width="1"/><text x="${rx + 20}" y="${ry + rh2 - 15}" font-size="6.6" text-anchor="middle" fill="#2E2A26">${wet ? '−0.020' : '0.000'}</text>`;
@@ -3553,6 +3613,7 @@ function drawFlatFloors(sheetNo) {
       { sym: (sx, sy) => `<rect x="${sx}" y="${sy - 8}" width="16" height="11" fill="${style.floor.color}55" stroke="#57514A" stroke-width="0.7"/>`, text: `Пл-1 · ${style.floor.name.split(',')[0]} · ${(dry * 1.15).toFixed(1)} м² (+15% «ёлка»)` },
       { sym: (sx, sy) => `<rect x="${sx}" y="${sy - 8}" width="16" height="11" fill="#E3E7E4" stroke="#57514A" stroke-width="0.7"/>`, text: `Пл-2 · керамогранит 600×600 · ${(wetS * 1.1).toFixed(1)} м² (+10%)` },
       { sym: (sx, sy) => `<circle cx="${sx + 8}" cy="${sy - 3}" r="7" fill="#FFF" stroke="#2E2A26" stroke-width="0.9"/>`, text: 'отметка уровня чистового пола' },
+      { sym: (sx, sy) => `<g stroke="#B0483A" stroke-width="1.2" fill="none"><circle cx="${sx + 2}" cy="${sy - 3}" r="2.6" fill="#B0483A"/><line x1="${sx + 2}" y1="${sy - 3}" x2="${sx + 15}" y2="${sy - 3}"/><path d="M ${sx + 11} ${sy - 6.5} L ${sx + 16} ${sy - 3} L ${sx + 11} ${sy + 0.5}"/></g>`, text: 'точка начала раскладки и направление укладки покрытия' },
     ]);
   }, ['Стыки покрытий выполнять на оси дверного полотна, скрыто, без порожков.', 'В санузле — гидроизоляция с заведением на стены 200 мм, отметка пола −0,020.', 'Компенсационный зазор у стен 10 мм — под плинтус.', 'Направление укладки «ёлки» — от главного окна помещения (см. раздел 03).']);
 }
@@ -3584,14 +3645,33 @@ function drawFlatCeiling(sheetNo) {
       s += `<rect x="${rx + off + 3}" y="${ry + off + 3}" width="${rw2 - 2 * off - 6}" height="${rh2 - 2 * off - 6}" fill="none" stroke="#C29A5B" stroke-width="1.1" stroke-dasharray="5 3"/>`;
       if (lv.three && lv.island) s += `<rect x="${base.fx(r.pos.x + lv.island.x)}" y="${base.fy(r.pos.y + lv.island.y)}" width="${px(lv.island.w)}" height="${px(lv.island.l)}" fill="#E0D9C9" stroke="#57514A" stroke-width="0.9"/>`;
       for (const sp of lightsFor(r).spots) s += `<circle cx="${base.fx(r.pos.x + sp.x)}" cy="${base.fy(r.pos.y + sp.y)}" r="3" fill="#FFF" stroke="#57514A" stroke-width="0.8"/>`;
+      // ревизионный люк 300×300 в зашивке у стояка: без него до счётчиков и ревизии
+      // канализации не добраться, а подрядчик закрывает короб наглухо
+      // стояки стоят кучно (канализация и вода в 150 мм друг от друга) — люк один
+      // на группу, иначе два квадрата 300×300 ложатся друг на друга
+      const lukGroups = [];
+      for (const rs of risersIn(r)) {
+        const g = lukGroups.find(q => Math.abs(q.x - rs.x) < 700 && Math.abs(q.y - rs.y) < 700);
+        if (g) { g.x = (g.x + rs.x) / 2; g.y = (g.y + rs.y) / 2; } else lukGroups.push({ x: rs.x, y: rs.y });
+      }
+      for (const rs of lukGroups) {
+        // risersIn отдаёт координаты внутри помещения — переводим в координаты плана
+        const lx = base.fx(r.pos.x + rs.x) - px(150), ly = base.fy(r.pos.y + rs.y) - px(150);
+        s += `<rect x="${lx}" y="${ly}" width="${px(300)}" height="${px(300)}" fill="#FFF" stroke="${CAD.plumb}" stroke-width="1"/>`
+          + `<line x1="${lx}" y1="${ly}" x2="${lx + px(300)}" y2="${ly + px(300)}" stroke="${CAD.plumb}" stroke-width="0.6"/>`
+          + `<text x="${lx + px(300) / 2}" y="${ly - 3}" font-size="6.4" text-anchor="middle" fill="${CAD.plumb}">Л 300×300</text>`;
+      }
     }
-    return s + flatChains(base) + ceilLevels(base) + flatRoomMarks(base.fx, base.fy, false);
+    // марка помещения уходит в угол: в центре стоит отметка уровня потолка,
+    // и подчёркнутая площадь ложилась прямо на неё
+    return s + flatChains(base) + ceilLevels(base) + flatRoomMarks(base.fx, base.fy, 'corner');
   }, (x, y, w) => flatLegendBox(x, y, w, 'Условные обозначения', [
     { sym: (sx, sy) => `<rect x="${sx}" y="${sy - 8}" width="16" height="11" fill="#E9E4D8" stroke="#57514A" stroke-width="0.7"/>`, text: `короб 2-го уровня, отметка ${mark(BASE_H - 120)}` },
     { sym: (sx, sy) => `<rect x="${sx}" y="${sy - 8}" width="16" height="11" fill="#F6F3EC" stroke="#57514A" stroke-width="0.7"/>`, text: `базовый потолок, отметка ${mark(BASE_H)}` },
     { sym: (sx, sy) => `<rect x="${sx}" y="${sy - 8}" width="16" height="11" fill="#E0D9C9" stroke="#57514A" stroke-width="0.7"/>`, text: `«парящий» остров 3-го уровня, ${mark(BASE_H - 240)}` },
     { sym: (sx, sy) => `<line x1="${sx}" y1="${sy - 3}" x2="${sx + 16}" y2="${sy - 3}" stroke="#C29A5B" stroke-width="1.2" stroke-dasharray="5 3"/>`, text: `LED 3000K скрытая — ${rooms.reduce((a, r) => a + ceilingLevelsFor(r).ledLen, 0).toFixed(1)} м.п. всего` },
     { sym: (sx, sy) => `<circle cx="${sx + 8}" cy="${sy - 3}" r="4" fill="#FFF" stroke="#57514A" stroke-width="0.9"/>`, text: `точечные светильники — ${rooms.reduce((a, r) => a + lightsFor(r).spots.length, 0)} шт. всего · 2700K, CRI ≥ 90` },
+    { sym: (sx, sy) => `<g stroke="${CAD.plumb}" stroke-width="0.9" fill="#FFF"><rect x="${sx}" y="${sy - 9}" width="13" height="13"/><line x1="${sx}" y1="${sy - 9}" x2="${sx + 13}" y2="${sy + 4}" stroke-width="0.6"/></g>`, text: 'Л — ревизионный люк 300×300 у стояка, доступ к ревизии и счётчикам' },
   ]), ['Отметки и перепады уровней — на планах потолков помещений (раздел 05).', 'Узел короба с LED-полкой — лист «Узел А», М 1:20.', 'Закладные под все подвесные светильники и карнизы предусмотреть до зашивки ГКЛ.']);
 }
 
@@ -4134,6 +4214,114 @@ function drawFlatPlumbing(sheetNo) {
     }
     for (const r of plumbRooms)
       s += `<rect x="${base.fx(r.pos.x)}" y="${base.fy(r.pos.y)}" width="${px(r.w)}" height="${px(r.l)}" fill="#E8F2FC" fill-opacity="0.55" stroke="none"/>`;
+
+    // ── трубопроводы от стояков к приборам ────────────────────────
+    // Буквенно-цифровые обозначения по ГОСТ 21.601-2011 (табл. 1): В1 — хозяйственно-
+    // питьевой водопровод, Т3 — подающий трубопровод ГВС, К1 — бытовая канализация.
+    // Трассы показаны схематично: точная прокладка — в стяжке и в сантехническом коробе.
+    const PIPE = { B1: '#2E6FA8', T3: '#B0483A', K1: '#6B5B3E' };
+    const PIPE_RU = { B1: 'В1', T3: 'Т3', K1: 'К1' };   // подписи — кириллицей, как в ГОСТ
+    const riserOf = kind => RISERS.find(r => r.kind === kind) || RISERS[0] || null;
+    const wRiser = riserOf('water'), sRiser = riserOf('sewer');
+    // приборы, к которым идёт подводка, и что именно к ним подводится
+    const PIPES_FOR = {
+      wc:      { water: ['B1'],       sewer: 110 },
+      sink:    { water: ['B1', 'T3'], sewer: 50 },
+      bath:    { water: ['B1', 'T3'], sewer: 50 },
+      kitchen: { water: ['B1', 'T3'], sewer: 50 },
+    };
+    const routeD = (from, to, off) => {           // манхэттен: вдоль оси стояка, затем к прибору
+      const a = base.fx(from.x), b = base.fy(from.y), c = base.fx(to.x), d = base.fy(to.y);
+      return `M ${a} ${b + off} L ${c + off} ${b + off} L ${c + off} ${d}`;
+    };
+    // Код трубы ставится в разрыве трассы один раз на марку (ГОСТ 21.601, 5.2):
+    // повторять «В1» у каждого прибора незачем, а наложенные подписи нечитаемы.
+    const pipeSeen = new Set();
+    const pipeLabel = (from, to, off, code, color) => {
+      if (pipeSeen.has(code)) return '';
+      const a = base.fx(from.x), c = base.fx(to.x), ly = base.fy(from.y) + off;
+      // резерв под подпись считаем по фактическому кеглю: normalizeInk поднимает
+      // текст до 2,5 мм, и по номиналу подписи наезжали друг на друга
+      const wl = code.length * effFont(7.6) * 0.62 + 8, lh = effFont(7.6) * 1.5;
+      for (const t of [0.5, 0.36, 0.64, 0.26, 0.74, 0.14]) {   // ищем свободное место вдоль сегмента
+        const lx = a + (c - a) * t + off;
+        if (!ink.free(lx - wl / 2, ly - 6, wl, lh)) continue;
+        ink.add(lx - wl / 2, ly - 6, wl, lh);
+        pipeSeen.add(code);
+        return `<rect x="${lx - wl / 2}" y="${ly - 6}" width="${wl}" height="${lh}" fill="#FFFFFFEE"/>`
+          + `<text x="${lx}" y="${ly + 2.6}" font-size="7.6" font-weight="700" text-anchor="middle" fill="${color}">${code}</text>`;
+      }
+      return '';   // места нет — код поставит следующая трасса той же марки, иначе он есть в легенде
+    };
+    // страховка: если по всем трассам марка так и не подписалась, ставим её
+    // у стояка принудительно — лист без кода трубы читается неоднозначно
+    const pipeFallback = (from, off, code, color, k) => {
+      if (pipeSeen.has(code)) return '';
+      pipeSeen.add(code);
+      const wl = code.length * effFont(7.6) * 0.62 + 8, lh = effFont(7.6) * 1.5;
+      const ly = base.fy(from.y) + off;
+      let lx = base.fx(from.x) + 70 + k * 46;
+      // от стояка у правой стены метка уходит в поле листа — начинаем в сторону плана
+      const inward = base.fx(from.x) > base.fx(FLAT.x0) + px(FLAT.W) / 2 ? -1 : 1;
+      for (const d of [70, 110, 150, 190, -70, -110].map(v => v * inward)) {
+        const cand = base.fx(from.x) + d + k * 46;
+        if (!ink.free(cand - wl / 2, ly - 6, wl, lh)) continue;
+        lx = cand; break;
+      }
+      ink.add(lx - wl / 2, ly - 6, wl, lh);
+      return `<rect x="${lx - wl / 2}" y="${ly - 6}" width="${wl}" height="11" fill="#FFFFFFEE"/>`
+        + `<text x="${lx}" y="${ly + 2.6}" font-size="7.6" font-weight="700" text-anchor="middle" fill="${color}">${code}</text>`;
+    };
+    let pipeSvg = '', labSvg = '';
+    let sewerRuns = 0, waterRuns = 0;
+    for (const r of plumbRooms) for (const f of furnitureFor(r)) {
+      const need = PIPES_FOR[f.key];
+      if (!need || (f.key === 'kitchen' && r.type === 'bathroom')) continue;
+      const to = { x: r.pos.x + f.x + f.w / 2, y: r.pos.y + f.y + f.h / 2 };
+      if (wRiser) need.water.forEach((code, i) => {
+        const off = code === 'B1' ? -4 : -8;
+        pipeSvg += `<path d="${routeD(wRiser, to, off)}" fill="none" stroke="${PIPE[code]}" stroke-width="1.1" stroke-linejoin="round"/>`;
+        labSvg += pipeLabel(wRiser, to, off, PIPE_RU[code], PIPE[code]);
+        waterRuns++;
+      });
+      if (sRiser) {
+        const off = 5, dia = need.sewer;
+        pipeSvg += `<path d="${routeD(sRiser, to, off)}" fill="none" stroke="${PIPE.K1}" stroke-width="${dia === 110 ? 2.4 : 1.7}" stroke-linejoin="round"/>`;
+        labSvg += pipeLabel(sRiser, to, off, PIPE_RU.K1, PIPE.K1);
+        // стрелка уклона — к стояку, уклон 1/d (СП 30.13330.2020, 19.1)
+        const ax0 = base.fx(sRiser.x), ay0 = base.fy(sRiser.y) + off, dirn = base.fx(to.x) > ax0 ? 1 : -1;
+        pipeSvg += `<g stroke="${PIPE.K1}" stroke-width="1" fill="none"><path d="M ${ax0 + dirn * 30} ${ay0 - 4} L ${ax0 + dirn * 22} ${ay0} L ${ax0 + dirn * 30} ${ay0 + 4}"/></g>`;
+        sewerRuns++;
+      }
+    }
+    if (wRiser) { labSvg += pipeFallback(wRiser, -4, PIPE_RU.B1, PIPE.B1, 0); labSvg += pipeFallback(wRiser, -8, PIPE_RU.T3, PIPE.T3, 1); }
+    if (sRiser) labSvg += pipeFallback(sRiser, 5, PIPE_RU.K1, PIPE.K1, 0);
+    // марки стояков по ГОСТ 21.601: Ст В1-1, Ст К1-1
+    for (const [rs, mk] of [[wRiser, 'Ст В1-1'], [sRiser, 'Ст К1-1']]) {
+      if (!rs) continue;
+      const cxr = base.fx(rs.x), cyr = base.fy(rs.y);
+      pipeSvg += `<circle cx="${cxr}" cy="${cyr}" r="${Math.max(3.4, px(rs.d) / 2)}" fill="#E8F2FC" stroke="#2E6FA8" stroke-width="1.1"/>`;
+      const mw = mk.length * 5 + 8, mh = 11;
+      let put = null;
+      for (const [dx, dy] of [[11, -8], [11, 12], [-mw - 11, -8], [-mw - 11, 12], [11, -20], [-mw - 11, -20], [11, 24]]) {
+        if (!ink.free(cxr + dx, cyr + dy - 8, mw, mh)) continue;
+        ink.add(cxr + dx, cyr + dy - 8, mw, mh); put = [dx, dy]; break;
+      }
+      if (!put) put = [11, -8];
+      labSvg += `<rect x="${cxr + put[0]}" y="${cyr + put[1] - 8}" width="${mw}" height="${mh}" fill="#FFFFFFEE"/>`
+        + `<text x="${cxr + put[0] + 4}" y="${cyr + put[1]}" font-size="7.4" font-weight="700" fill="#2E6FA8">${mk}</text>`;
+    }
+    // трап в душевой: уклон пола 1–2% к трапу (СП 29.13330, 5.6)
+    for (const r of plumbRooms) for (const f of furnitureFor(r)) {
+      if (f.key !== 'bath' || f.w > 1000 || f.h > 1000) continue;
+      const tx = base.fx(r.pos.x + f.x + f.w / 2), ty = base.fy(r.pos.y + f.y + f.h / 2);
+      pipeSvg += `<g stroke="${PIPE.K1}" stroke-width="1.1" fill="#FFF"><rect x="${tx - 6}" y="${ty - 6}" width="12" height="12"/>`
+        + `<line x1="${tx - 6}" y1="${ty - 6}" x2="${tx + 6}" y2="${ty + 6}"/><line x1="${tx - 6}" y1="${ty + 6}" x2="${tx + 6}" y2="${ty - 6}"/></g>`;
+      labSvg += `<text x="${tx}" y="${ty + 18}" font-size="6.8" text-anchor="middle" fill="${PIPE.K1}">трап Ø50, i=0,02</text>`;
+    }
+    s += pipeSvg;
+    drawFlatPlumbing.runs = { water: waterRuns, sewer: sewerRuns, trap: 0 };
+
     for (const r of plumbRooms) {
       const furns = furnitureFor(r);
       for (const f of furns) {
@@ -4209,21 +4397,28 @@ function drawFlatPlumbing(sheetNo) {
       s += `<rect x="${t.x - 8}" y="${t.y - 7}" width="16" height="14" rx="2" fill="#FFFFFFEE" stroke="${CAD.plumb}" stroke-width="0.9"/>`
         + `<text x="${t.x}" y="${t.y + 3}" font-size="7.6" font-weight="700" text-anchor="middle" fill="${CAD.plumb}">${mk}</text>`;
     });
-    return s + flatRoomMarks(base.fx, base.fy, false);
+    // коды труб и марки стояков рисуем последними — поверх приборов и трасс
+    return s + labSvg + flatRoomMarks(base.fx, base.fy, false);
   }, (x, y, w) => {
     const rows = [
     { sym: (sx, sy) => `<rect x="${sx}" y="${sy - 10}" width="10" height="14" fill="#E0F0FF" stroke="${CAD.plumb}" stroke-width="0.9"/><ellipse cx="${sx + 5}" cy="${sy + 1}" rx="3.5" ry="2.5" fill="#FFF" stroke="${CAD.plumb}" stroke-width="0.7"/>`, text: 'унитаз 400×680' },
     { sym: (sx, sy) => `<ellipse cx="${sx + 8}" cy="${sy - 3}" rx="7" ry="5" fill="#E0F0FF" stroke="${CAD.plumb}" stroke-width="0.9"/><circle cx="${sx + 8}" cy="${sy - 3}" r="1.5" fill="${CAD.plumb}"/>`, text: 'раковина 600×450' },
     { sym: (sx, sy) => `<rect x="${sx}" y="${sy - 9}" width="16" height="10" fill="#E0F0FF" stroke="${CAD.plumb}" stroke-width="0.9" rx="2"/><circle cx="${sx + 8}" cy="${sy - 2}" r="1.8" fill="none" stroke="${CAD.plumb}" stroke-width="0.7"/>`, text: 'ванна 1700×700 / душ 900×900' },
     { sym: (sx, sy) => `<rect x="${sx}" y="${sy - 9}" width="16" height="10" fill="#E0F0FF" stroke="${CAD.plumb}" stroke-width="0.9" rx="2"/><circle cx="${sx + 5}" cy="${sy - 4}" r="1.5" fill="${CAD.plumb}"/><circle cx="${sx + 11}" cy="${sy - 4}" r="1.5" fill="${CAD.plumb}"/>`, text: 'мойка кухонная двойная 600×500' },
-    { sym: (sx, sy) => `<line x1="${sx}" y1="${sy - 4}" x2="${sx + 16}" y2="${sy - 4}" stroke="${CAD.plumb}" stroke-width="0.9" stroke-dasharray="6 3"/>`, text: 'трасса ГВС/ХВС от стояка' },
-    ].concat(RISERS.length ? [{ sym: (sx, sy) => `<g stroke="#2E6FA8" stroke-width="1.1" fill="#E8F2FC"><circle cx="${sx + 8}" cy="${sy - 3}" r="5"/><line x1="${sx + 3}" y1="${sy - 3}" x2="${sx + 13}" y2="${sy - 3}"/><line x1="${sx + 8}" y1="${sy - 8}" x2="${sx + 8}" y2="${sy + 2}"/></g>`, text: 'стояки: канализация Ø110, вода Ø32 — существующие, зона обслуживания 250 мм' }] : []);
+    ].concat(RISERS.length ? [
+    { sym: (sx, sy) => `<line x1="${sx}" y1="${sy - 4}" x2="${sx + 16}" y2="${sy - 4}" stroke="#2E6FA8" stroke-width="1.1"/>`, text: 'В1 — хозяйственно-питьевой водопровод (ХВС), Ø20' },
+    { sym: (sx, sy) => `<line x1="${sx}" y1="${sy - 4}" x2="${sx + 16}" y2="${sy - 4}" stroke="#B0483A" stroke-width="1.1"/>`, text: 'Т3 — подающий трубопровод ГВС, Ø20 (ГВ слева от ХВ)' },
+    { sym: (sx, sy) => `<g stroke="#6B5B3E" fill="none"><line x1="${sx}" y1="${sy - 4}" x2="${sx + 16}" y2="${sy - 4}" stroke-width="2.2"/><path d="M ${sx + 5} ${sy - 8} L ${sx} ${sy - 4} L ${sx + 5} ${sy}" stroke-width="0.9"/></g>`, text: 'К1 — бытовая канализация Ø110 / Ø50, стрелка — уклон к стояку' },
+    ] : []).concat(RISERS.length ? [{ sym: (sx, sy) => `<g stroke="#2E6FA8" stroke-width="1.1" fill="#E8F2FC"><circle cx="${sx + 8}" cy="${sy - 3}" r="5"/><line x1="${sx + 3}" y1="${sy - 3}" x2="${sx + 13}" y2="${sy - 3}"/><line x1="${sx + 8}" y1="${sy - 8}" x2="${sx + 8}" y2="${sy + 2}"/></g>`, text: 'стояки Ст В1-1 и Ст К1-1 — существующие, зона обслуживания 250 мм' }] : []);
     return plumbColumn(x, y, w, flatLegendBox(x, y, w, 'Условные обозначения', rows), rows.length);
   }, [
     'Привязки от оси прибора; уточнить после укладки плитки ±5 мм.',
     'Сантехника монтируется после завершения чистовой отделки.',
     'Уклон безрасчётных отводных трубопроводов — 1/d (СП 30.13330.2020, 19.1): Ø110 — 10 мм/пог.м, Ø50 — 20, Ø40 — 25; наибольший уклон не более 0,15.',
     'Ввод ГВС и ХВС — от существующих стояков согласно проекту ВК.',
+    RISERS.length
+      ? 'Трассы В1, Т3 и К1 показаны схематично от существующих стояков: водопровод — в стяжке и в штробе, канализация — в стяжке и в сантехническом коробе. Точки подключения и фактическую трассировку уточнить по месту.'
+      : 'Стояки в исходных данных не заданы: трассировка В1, Т3 и К1 на листе не показана — точки подключения определить обмером по месту и внести в бриф (object.risers).',
   ], { pale: true });
 }
 

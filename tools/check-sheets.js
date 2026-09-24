@@ -8,6 +8,9 @@ const fs = require('fs'), path = require('path');
 const roots = process.argv.slice(2);
 const PAGE = { w: 1587, h: 1123, ml: 76, mt: 19, mr: 19, mb: 19 };  // A3 + поле подшивки
 const STAMP = { w: 700, h: 150 };
+// ряд масштабов уменьшения по ГОСТ 2.302-68 (плюс 1:1 — натуральная величина,
+// которой движок помечает табличные листы: ведомости, журналы, схемы без масштаба)
+const GOST_SCALES = [1, 2, 4, 5, 10, 15, 20, 25, 40, 50, 75, 100, 200, 400, 500, 800, 1000];
 let total = 0;
 const bad = [];
 const add = (f, kind, msg) => bad.push({ f, kind, msg });
@@ -64,6 +67,15 @@ for (const root of roots) {
     if (!dataScale) add(rel, 'штамп', 'нет data-scale');
     if (stampScale && dataScale && stampScale !== dataScale)
       add(rel, 'штамп', `в штампе М 1:${stampScale}, фактически 1:${dataScale}`);
+    // масштаб только из ряда ГОСТ 2.302-68: «круглые» 1:30, 1:60, 1:70 в ряд не входят,
+    // а подрядчик меряет по листу линейкой и попадает не туда.
+    // 1:1 — служебное значение табличных листов (ведомости, журналы): у них в штампе «б/м»
+    if (dataScale && !GOST_SCALES.includes(+dataScale))
+      add(rel, 'масштаб', `1:${dataScale} вне ряда ГОСТ 2.302 (${GOST_SCALES.slice(4, 12).map(v => '1:' + v).join(', ')}…)`);
+    if (dataScale === '1' && stampScale)
+      add(rel, 'штамп', `табличный лист: в штампе «М 1:${stampScale}», должно быть «б/м»`);
+    if (dataScale && dataScale !== '1' && !stampScale && !/>б\/м</.test(s))
+      add(rel, 'штамп', `чертёж в масштабе 1:${dataScale}, но в штампе масштаб не указан`);
     const type = (s.match(/data-sheet="([^"]+)"/) || [])[1];
     if (!type || type === 'other') add(rel, 'тип', `тип листа «${type || 'нет'}» — аудит применит общий чек-лист`);
     // «Лист N» и «Листов M» стоят в штампе жирным

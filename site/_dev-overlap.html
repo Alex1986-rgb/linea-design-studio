@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="ru"><head><meta charset="utf-8">
+<title>LINEA · проверка наложений текста</title>
+<!-- Служебная страница разработки. Наложения подписей ловятся только настоящим
+     браузером: нужны метрики шрифта, а getBBox() игнорирует трансформацию группы
+     содержимого — поэтому сравниваются getBoundingClientRect() всех <text>.
+     Открывать так:  http://localhost:8141/_dev-overlap.html?p=portfolio/demo
+     Список листов берётся из manifest.json проекта. -->
+<meta name="robots" content="noindex">
+<style>
+  body{margin:0;font:13px/1.5 Inter,system-ui,sans-serif;color:#2E2A26;background:#fff}
+  #bar{padding:8px 12px;border-bottom:1px solid #E5E0D6;background:#FAF9F6;position:sticky;top:0}
+  #bar input{width:min(520px,60vw);font:inherit;padding:3px 6px;border:1px solid #D8D2C6;border-radius:3px}
+  #out{padding:10px 12px}
+  h3{margin:14px 0 4px;font-size:13px}
+  li{color:#57514A}
+  .ok{color:#2E7D32}.bad{color:#B0483A;font-weight:600}
+  #stage{position:absolute;left:0;top:0;opacity:0;pointer-events:none}
+</style></head>
+<body>
+<div id="bar">проект: <input id="p" value="portfolio/demo"> <button id="go">проверить</button> <span id="st"></span></div>
+<div id="out"></div><div id="stage"></div>
+<script>
+const stage = document.getElementById('stage'), out = document.getElementById('out'), st = document.getElementById('st');
+const MIN = 2;          // перекрытие меньше 2 px по обеим осям — касание, не наложение
+
+async function overlapsOf(url) {
+  const svgText = await (await fetch(url)).text();
+  stage.innerHTML = svgText;
+  const texts = [...stage.querySelectorAll('text')].filter(t => t.textContent.trim());
+  const boxes = texts.map(t => ({ t: t.textContent.trim(), b: t.getBoundingClientRect() }));
+  const bad = [];
+  for (let i = 0; i < boxes.length; i++) for (let j = i + 1; j < boxes.length; j++) {
+    const a = boxes[i].b, b = boxes[j].b;
+    const ox = Math.min(a.right, b.right) - Math.max(a.left, b.left);
+    const oy = Math.min(a.bottom, b.bottom) - Math.max(a.top, b.top);
+    if (ox > MIN && oy > MIN) bad.push({ a: boxes[i].t, b: boxes[j].t, ox: Math.round(ox), oy: Math.round(oy) });
+  }
+  stage.innerHTML = '';
+  return { n: texts.length, bad };
+}
+
+async function run() {
+  const proj = document.getElementById('p').value.replace(/\/$/, '');
+  out.innerHTML = ''; st.textContent = 'читаю manifest…';
+  let files;
+  try { files = (await (await fetch(proj + '/manifest.json')).json()).files.filter(f => f.endsWith('.svg')); }
+  catch (e) { st.textContent = 'не читается ' + proj + '/manifest.json'; return; }
+  let total = 0, sheets = 0;
+  for (const f of files) {
+    st.textContent = `${f} (${sheets + 1}/${files.length})`;
+    const r = await overlapsOf(proj + '/' + f);
+    sheets++;
+    if (!r.bad.length) continue;
+    total += r.bad.length;
+    const h = document.createElement('div');
+    h.innerHTML = `<h3 class="bad">${f} — ${r.bad.length} из ${r.n} надписей</h3><ul>`
+      + r.bad.slice(0, 12).map(x => `<li>«${x.a}» ↔ «${x.b}» — ${x.ox}×${x.oy} px</li>`).join('')
+      + (r.bad.length > 12 ? `<li>…ещё ${r.bad.length - 12}</li>` : '') + '</ul>';
+    out.appendChild(h);
+  }
+  st.textContent = '';
+  const sum = document.createElement('p');
+  sum.className = total ? 'bad' : 'ok';
+  sum.textContent = `Проверено листов: ${sheets}. Наложений: ${total}.`;
+  out.prepend(sum);
+}
+document.getElementById('go').addEventListener('click', run);
+const q = new URLSearchParams(location.search).get('p');
+if (q) { document.getElementById('p').value = q; run(); }
+</script>
+</body></html>
