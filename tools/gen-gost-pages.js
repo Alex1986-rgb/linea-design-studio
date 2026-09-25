@@ -85,6 +85,12 @@ const SECTION_OF = {
 };
 
 const TR = { а: 'a', б: 'b', в: 'v', г: 'g', д: 'd', е: 'e', ж: 'zh', з: 'z', и: 'i', й: 'y', к: 'k', л: 'l', м: 'm', н: 'n', о: 'o', п: 'p', р: 'r', с: 's', т: 't', у: 'u', ф: 'f', х: 'h', ц: 'c', ч: 'ch', ш: 'sh', щ: 'sch', ы: 'y', э: 'e', ю: 'yu', я: 'ya', ь: '', ъ: '', ё: 'e' };
+// склонение: «71 лист», «105 листов», «22 листа» — иначе плитки читаются коряво
+const plural = (n, one, few, many) => {
+  const a = Math.abs(n) % 100, b = a % 10;
+  return `${n} ${a > 10 && a < 20 ? many : b === 1 ? one : b >= 2 && b <= 4 ? few : many}`;
+};
+
 const slugify = s => String(s).toLowerCase().replace(/[а-яё]/g, c => TR[c] ?? c)
   .replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
 
@@ -155,6 +161,11 @@ function albumPage(a, r) {
     </div>
   </section>`).join('\n');
 
+  const pdf = fs.existsSync(path.join(SITE, 'portfolio', a.slug, 'album.pdf'))
+    ? `      <div class="cta-row" style="margin-top:26px"><a class="btn" href="album.pdf" download>Скачать альбом PDF · ${a.pdfSize}</a>
+        <a class="btn ghost" href="../../brief.html">Собрать такой же — бриф</a></div>\n`
+    : '';
+
   const body = `  <section class="blk">
     <div class="wrap">
       <div class="stats">
@@ -164,7 +175,7 @@ function albumPage(a, r) {
         <div><b>${r.blockers}</b><span>блокеров нормоконтроля</span></div>
         <div><b>${groups.length}</b><span>разделов комплекта</span></div>
       </div>
-    </div>
+${pdf}    </div>
   </section>
 
   <section class="blk">
@@ -174,7 +185,7 @@ function albumPage(a, r) {
       <p class="sub">Шифр комплекта ${esc(a.code)}. Листы идут в том же порядке, что в выданном альбоме:
       титульный лист, общие данные с ведомостью чертежей, дальше разделы по специальностям.</p>
       <div class="cards g3">
-        ${groups.map(g => `<div class="card"><h3>${esc(g.sec)}</h3><p>Листов: ${g.items.length}</p></div>`).join('\n        ')}
+        ${groups.map(g => `<div class="card"><h3>${esc(g.sec)}</h3><p>${plural(g.items.length, 'лист', 'листа', 'листов')}</p></div>`).join('\n        ')}
       </div>
     </div>
   </section>
@@ -194,8 +205,8 @@ ${blocks}
 
   return page({
     file: `portfolio/${a.slug}/index.html`,
-    title: `${a.name} — рабочая документация, ${r.total} листов | LINEA`,
-    desc: `${a.name}: комплект рабочей документации на ${r.total} листов A3, ${groups.length} разделов, `
+    title: `${a.name} — рабочая документация, ${plural(r.total, 'лист', 'листа', 'листов')} | LINEA`,
+    desc: `${a.name}: комплект рабочей документации на ${plural(r.total, 'лист', 'листа', 'листов')} A3, ${groups.length} разделов, `
       + 'нормоконтроль без блокеров. Каждый лист можно рассмотреть целиком.',
     h1: a.name,
     lead: a.lead,
@@ -215,7 +226,7 @@ function hubPage(releases) {
   const totalSheets = releases.reduce((s, x) => s + x.r.total, 0);
   const cards = releases.map(({ a, r }) => `        <a class="tile plain" href="../portfolio/${a.slug}/">
           <div class="tile-body">
-            <span class="tag">${r.total} листов A3</span>
+            <span class="tag">${plural(r.total, 'лист', 'листа', 'листов')} A3</span>
             <b>${esc(a.name)}</b>
             <span class="tile-lead">${esc(a.lead)}</span>
             <div class="tile-figs"><i><b>${a.area}</b>площадь</i><i><b>${a.rooms}</b>помещений</i><i><b>${r.blockers}</b>блокеров</i></div>
@@ -302,6 +313,10 @@ ${cards}
 }
 
 // ---------- сборка ----------
+for (const a of ALBUMS) {          // размер PDF показываем честно, из файла
+  const f = path.join(SITE, 'portfolio', a.slug, 'album.pdf');
+  a.pdfSize = fs.existsSync(f) ? `${Math.round(fs.statSync(f).size / 1024 / 1024)} МБ` : '';
+}
 const releases = ALBUMS.map(a => ({ a, r: readRelease(a.slug) }));
 for (const { a, r } of releases) w(`portfolio/${a.slug}/index.html`, albumPage(a, r));
 w('gost/index.html', hubPage(releases));
