@@ -177,7 +177,9 @@ function albumPage(a, r) {
         <div><b>${r.blockers}</b><span>блокеров нормоконтроля</span></div>
         <div><b>${groups.length}</b><span>разделов комплекта</span></div>
       </div>
-${pdf}    </div>
+${pdf}${r.blockers ? `      <p class="sub" style="margin-top:18px">Блокеров на выдаче: ${r.blockers}. Это открытые вопросы
+      по исходным данным, а не ошибки оформления: проверка движка держит комплект невыданным, пока они не закрыты.
+      Здесь альбом показан как рабочий пример — так выглядит выпуск до контрольного обмера.</p>\n` : ''}    </div>
   </section>
 
   <section class="blk">
