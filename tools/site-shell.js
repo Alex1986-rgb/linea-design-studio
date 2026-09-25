@@ -23,6 +23,7 @@ const CSSV = 'v=31';
 // Разделы сайта в порядке меню. Добавили раздел — правится только здесь.
 const SECTIONS = [
   { key: 'catalog', title: 'Каталог', href: 'catalog/' },
+  { key: 'gost', title: 'Документация', href: 'gost/' },
   { key: 'cases', title: 'Кейсы', href: 'cases/' },
   { key: 'compare', title: 'Сравнение', href: 'compare/' },
   { key: 'style', title: 'Стили', href: 'style/' },

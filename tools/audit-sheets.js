@@ -37,9 +37,11 @@ const SCALES_NODE = [5, 10, 20];
 const RULES = {
   obmer:            { need: { chain: 2, legend: 1, notes: 1, stamp: 1, level: 0, room: 1 }, want: { dim: 4 }, scales: SCALES_PLAN, sum: true },
   'obmer-room':     { need: { chain: 2, stamp: 1 }, want: { notes: 1 }, scales: SCALES_PLAN, sum: true },
-  demolition:       { need: { legend: 1, notes: 1, stamp: 1 }, want: { chain: 1 }, scales: SCALES_PLAN },
+  // перепланировка задана (на листе есть марки Сn/Пn/Мn) — ведомость конструкций
+  // обязательна, а цепочки привязок обязаны быть замкнутыми (ГОСТ 2.307-2011, 4.13)
+  demolition:       { need: { legend: 1, notes: 1, stamp: 1 }, want: { chain: 1 }, scales: SCALES_PLAN, sum: true, needWhenMark: { specBlock: 1, chain: 1 } },
   'demolition-room': { need: { stamp: 1 }, want: { legend: 1 }, scales: SCALES_PLAN },
-  montage:          { need: { legend: 1, notes: 1, stamp: 1 }, want: { chain: 1, mark: 1 }, scales: SCALES_PLAN },
+  montage:          { need: { legend: 1, notes: 1, stamp: 1 }, want: { chain: 1, mark: 1 }, scales: SCALES_PLAN, sum: true, needWhenMark: { specBlock: 1 } },
   'montage-room':   { need: { stamp: 1 }, want: { chain: 1 }, scales: SCALES_PLAN },
   // легенда к цветам обязательна: на плане мебели сосуществуют зелёные контуры,
   // синий пунктир ниш, кружки позиций и номера помещений (docs/drawing-kb/11)
@@ -89,7 +91,8 @@ const HUMAN = {
   spec: 'спецификация/ведомость на листе', leader: 'выноска по ГОСТ 2.316',
   arrow: 'стрелка направления укладки', slope: 'указание уклона',
   finMark: 'марка отделки в кружке', lampSpec: 'запись о светильниках «тип · лампы×Вт»',
-  nodeRef: 'ссылка на лист узла', sheetRef: 'обратная ссылка на лист-источник', mark: 'марка конструкции Мn'
+  nodeRef: 'ссылка на лист узла', sheetRef: 'обратная ссылка на лист-источник', mark: 'марка конструкции Сn/Пn/Мn',
+  specBlock: 'ведомость конструкций на листе (блок data-el="spec")'
 };
 
 function walk(d) {
@@ -113,18 +116,48 @@ function counts(svg) {
   c.lampSpec = has(/\d+\s*(шт|×|x)\s*\d+\s*Вт/i) + has(/точечн|светильник/i);
   c.nodeRef = has(/узел|л\.\s?\d+/i);
   c.sheetRef = has(/лист\s?\d+|см\.\s?лист/i);
-  c.mark = has(/^М\d+$/);
+  // марки конструкций: Сn — сносимый участок, Пn — возводимая перегородка, Мn — ГКЛ
+  c.mark = has(/^[СПМ]\d+$/);
+  c.specBlock = byEl('spec');
   // кабельный журнал — такой же табличный документ на листе, как ведомость (ГОСТ 21.608)
   c.spec += has(/спецификац|ведомост|экспликац|журнал/i) ? 1 : 0;
   return c;
 }
 
+// Содержимое группы <g data-el="chain"> целиком, с учётом вложенных <g data-el="dim">.
+// Раньше здесь стоял ленивый regex до следующего data-el — он обрывался на первом же
+// вложенном размере, и проверка замкнутости фактически ничего не читала.
+function chainGroups(svg) {
+  const out = [];
+  const re = /<g data-el="chain"([^>]*)>/g;
+  let m;
+  while ((m = re.exec(svg))) {
+    const total = +((/data-total="(\d+)"/.exec(m[1]) || [, 0])[1]);
+    let i = m.index + m[0].length, depth = 1;
+    const start = i;
+    while (depth > 0) {
+      const ng = svg.indexOf('<g', i), cg = svg.indexOf('</g>', i);
+      if (cg < 0) break;
+      if (ng >= 0 && ng < cg) { depth++; i = ng + 2; } else { depth--; i = cg + 4; }
+    }
+    out.push({ body: svg.slice(start, Math.max(start, i - 4)), total });
+  }
+  return out;
+}
+
 // замкнутость цепочки: сумма подписанных сегментов должна давать габарит
 function chainClosure(svg) {
-  const nums = [...svg.matchAll(/data-el="chain"[\s\S]*?(?=data-el="(?!chain)|<\/svg>)/g)]
-    .map(m => [...m[0].matchAll(/>(\d{3,5})</g)].map(x => +x[1]));
   const bad = [];
-  for (const seg of nums) {
+  for (const g of chainGroups(svg)) {
+    const nums0 = [...g.body.matchAll(/>(\d{3,5})</g)].map(x => +x[1]);
+    // габарит объявлен явно (цепочка привязок, габаритная линия которой стоит
+    // общей для листа) — тогда сверяем сумму звеньев прямо с ним
+    if (g.total) {
+      const sum0 = nums0.reduce((a, b) => a + b, 0);
+      if (nums0.length >= 2 && Math.abs(sum0 - g.total) > g.total * 0.02) bad.push({ sum: sum0, total: g.total });
+      continue;
+    }
+    const seg = nums0;
     if (seg.length < 3) continue;
     const total = Math.max(...seg);
     const parts = seg.filter(v => v !== total);
@@ -157,6 +190,11 @@ for (const f of files) {
 
   for (const [k, min] of Object.entries(rule.need)) {
     if (min > 0 && (c[k] || 0) < min) errors.push(`${HUMAN[k] || k}: ${c[k] || 0} из ${min}`);
+  }
+  // требование, включающееся по факту: на листе есть марки конструкций — значит
+  // перепланировка задана, и ведомость с их перечнем перестаёт быть пожеланием
+  if (rule.needWhenMark && c.mark > 0) for (const [k, min] of Object.entries(rule.needWhenMark)) {
+    if ((c[k] || 0) < min) errors.push(`${HUMAN[k] || k}: ${c[k] || 0} из ${min} (на листе есть марки конструкций)`);
   }
   for (const [k, min] of Object.entries(rule.want || {})) {
     if ((c[k] || 0) < min) warns.push(`${HUMAN[k] || k}: ${c[k] || 0} из ${min}`);

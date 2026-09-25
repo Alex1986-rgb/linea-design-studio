@@ -29,6 +29,7 @@
     <a class="logo" href="../">LINE<i>A</i></a>
     <nav class="links">
       <a href="../catalog/">Каталог</a>
+      <a href="../gost/">Документация</a>
       <a href="../cases/">Кейсы</a>
       <a href="../compare/">Сравнение</a>
       <a href="../style/">Стили</a>
@@ -43,6 +44,7 @@
 <div class="mnav" hidden>
   <nav>
     <a href="../catalog/">Каталог</a>
+    <a href="../gost/">Документация</a>
     <a href="../cases/">Кейсы</a>
     <a href="../compare/">Сравнение</a>
     <a href="../style/">Стили</a>
@@ -71,7 +73,7 @@
     <div class="scroll-x">
       <table class="tbl">
         <tr><th>Услуга</th><th>Объём</th><th>Срок</th><th class="hi">Цена в тесте</th></tr>
-        <tr><td><a href="../catalog/dizayn-proekt-kvartiry.html">Дизайн-проект квартиры</a></td><td>45 листов A3 + документы</td><td>48 часов</td><td class="hi">0 ₽</td></tr>
+        <tr><td><a href="../catalog/dizayn-proekt-kvartiry.html">Дизайн-проект квартиры</a></td><td>от 70 листов A3 + документы</td><td>48 часов</td><td class="hi">0 ₽</td></tr>
         <tr><td><a href="../catalog/dizayn-proekt-doma.html">Дизайн-проект дома</a></td><td>86 листов A3 + документы</td><td>48–72 часа</td><td class="hi">0 ₽</td></tr>
         <tr><td><a href="../catalog/rabochaya-dokumentatsiya.html">Только рабочая документация</a></td><td>от 30 листов</td><td>24–48 часов</td><td class="hi">0 ₽</td></tr>
         <tr><td><a href="../catalog/planirovochnoe-reshenie.html">Планировочное решение</a></td><td>4–8 листов</td><td>24 часа</td><td class="hi">0 ₽</td></tr>
@@ -87,7 +89,7 @@
   <div class="wrap">
     <div class="kicker">Калькулятор</div>
     <h2>Сколько листов будет в вашем альбоме</h2>
-    <p class="sub">Формула откалибрована по выпущенным альбомам: квартира на 5 помещений — 45 листов, дом на 11 помещений в два этажа — 86. Отметьте, что есть у вас.</p>
+    <p class="sub">Формула откалибрована по выпущенным альбомам нового движка: трёхкомнатная на 8 помещений — 71 лист, четырёхкомнатная на 13 помещений — 105. Отметьте, что есть у вас.</p>
     <div class="calc" data-calc>
       <div class="calc-row"><span>Помещений (комнаты, кухня, санузлы, прихожая)</span>
         <div class="calc-num"><button type="button" data-mm="-1" aria-label="Меньше помещений">−</button><b data-rooms>5</b><button type="button" data-mm="1" aria-label="Больше помещений">+</button></div>
@@ -96,11 +98,11 @@
         <div class="calc-num"><button type="button" data-fm="-1" aria-label="Меньше этажей">−</button><b data-floors>1</b><button type="button" data-fm="1" aria-label="Больше этажей">+</button></div>
       </div>
       <div class="calc-out">
-        <div><b data-base>45</b><span>листов в базовом пакете</span></div>
-        <div><b data-full>~90</b><span>в полном (с покомнатными)</span></div>
-        <div><b data-elev>20</b><span>из них развёрток стен</span></div>
+        <div><b data-base>70</b><span>листов в комплекте</span></div>
+        <div><b data-full>26</b><span>разделов по специальностям</span></div>
+        <div><b data-elev>18</b><span>из них развёрток стен</span></div>
       </div>
-      <p class="hint">Базовый пакет: титул, презентационный план, 16 сводных планов на этаж, щит, план обозначения развёрток, 2 разреза, 3 листа узлов, лестница (в доме) и развёртка каждой стены — 4 на помещение.</p>
+      <p class="hint">В комплект входят: титул и общие данные с ведомостью чертежей, обмер, демонтаж и монтаж, планировочное решение со спецификацией, двери, электрика со щитом и слаботочкой, освещение, отопление и вентиляция, вода и канализация, потолки с узлами, раскладка плитки, полы и отделка, цвет и материалы, декор, встроенная мебель с монтажными схемами, развёртки стен, узлы и смета.</p>
       <div class="cta-row"><a class="btn" href="../brief.html">Собрать такой альбом — бриф</a></div>
     </div>
   </div>
@@ -113,11 +115,13 @@
   function render() {
     $('[data-rooms]').textContent = rooms;
     $('[data-floors]').textContent = floors;
-    // калибровка: 45 = 1+1+16+1+1+2+3 (=25) + 4×5; дом 86 = 25+16 + 1(лестница) + 4×11
-    var base = 25 + 16 * (floors - 1) + (floors > 1 ? 1 : 0) + 4 * rooms;
+    // Калибровка по двум выпускам движка: 8 помещений — 71 лист, 13 помещений — 105.
+    // Отсюда 14 листов общей части плюс 7 на каждое помещение; второй этаж добавляет
+    // свой комплект сводных планов.
+    var base = 14 + 7 * rooms + 16 * (floors - 1) + (floors > 1 ? 1 : 0);
     $('[data-base]').textContent = base;
-    $('[data-full]').textContent = '~' + (base + 10 * rooms);
-    $('[data-elev]').textContent = 4 * rooms;
+    $('[data-full]').textContent = 26;
+    $('[data-elev]').textContent = Math.round(2.2 * rooms);
   }
   root.addEventListener('click', function (e) {
     var b = e.target.closest('button[data-mm],button[data-fm]'); if (!b) return;
@@ -182,7 +186,7 @@
       <p>дизайнер-архитектор <b>Кырлан Александр</b><br><a href="tel:+79257338640">+7 925 733-86-40</a> · <a href="mailto:optteem@mail.ru">optteem@mail.ru</a></p>
     </div>
     <div>
-      <p><a href="../brief.html">Бриф</a> · <a href="../catalog/">Каталог</a> · <a href="../cases/">Кейсы</a> · <a href="./">Сравнение</a> · <a href="../style/">Стили</a> · <a href="../journal/">Журнал</a> · <a href="../stories/">Истории</a> · <a href="../reviews/">Отзывы</a> · <a href="../portfolio-hub/">Портфолио</a> · <a href="../price/">Условия</a> · <a href="../process/">Процесс</a> · <a href="../faq/">FAQ</a> · <a href="../about/">О студии</a> · <a href="../contacts/">Контакты</a> · <a href="../checklist/">Чек-лист приёмки</a> · <a href="../sitemap/">Карта сайта</a> · <a href="../policy/">Обработка данных</a></p>
+      <p><a href="../brief.html">Бриф</a> · <a href="../catalog/">Каталог</a> · <a href="../gost/">Документация</a> · <a href="../cases/">Кейсы</a> · <a href="./">Сравнение</a> · <a href="../style/">Стили</a> · <a href="../journal/">Журнал</a> · <a href="../stories/">Истории</a> · <a href="../reviews/">Отзывы</a> · <a href="../portfolio-hub/">Портфолио</a> · <a href="../price/">Условия</a> · <a href="../process/">Процесс</a> · <a href="../faq/">FAQ</a> · <a href="../about/">О студии</a> · <a href="../contacts/">Контакты</a> · <a href="../checklist/">Чек-лист приёмки</a> · <a href="../sitemap/">Карта сайта</a> · <a href="../policy/">Обработка данных</a></p>
       <p>© LINEA studio, 2026</p>
     </div>
   </div>
