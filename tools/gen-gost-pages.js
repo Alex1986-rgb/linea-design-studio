@@ -154,10 +154,12 @@ function albumPage(a, r) {
       <div class="kicker">Раздел</div>
       <h2>${esc(g.sec)}</h2>
       <p class="sub">Листов в разделе: ${g.items.length}</p>
-      ${g.items.map(sh => `<figure class="sheet">
-        <img loading="lazy" src="sheets/${encodeURIComponent(sh.file)}" alt="${esc(sh.title)}">
-        <figcaption>${esc(sh.title)}</figcaption>
-      </figure>`).join('\n      ')}
+      <div class="plates">
+      ${g.items.map(sh => `<a class="plate" href="sheets/${encodeURIComponent(sh.file)}" target="_blank" rel="noopener">
+        <span class="plate-img"><img loading="lazy" src="sheets/${encodeURIComponent(sh.file)}" alt="${esc(sh.title)}"></span>
+        <span class="plate-cap"><i>${esc(sh.file.replace(/^(\d+).*$/, 'Лист $1'))}</i>${esc(sh.title)}</span>
+      </a>`).join('\n      ')}
+      </div>
     </div>
   </section>`).join('\n');
 
@@ -192,6 +194,22 @@ ${pdf}    </div>
 
   <section class="blk">
     <div class="wrap">
+      <div class="kicker">Условия</div>
+      <h2>Сколько стоит и сколько ждать</h2>
+      <div class="stats">
+        <div><b>24–48 ч</b><span>срок выпуска комплекта</span></div>
+        <div><b>0 ₽</b><span>на время открытого теста</span></div>
+        <div><b>${r.total}</b><span>листов в этом альбоме</span></div>
+      </div>
+      <p class="sub">Тот же комплект на вашей геометрии — позиция каталога
+      <a href="../../catalog/rabochaya-dokumentatsiya.html">«Только рабочая документация»</a>.
+      Соседние работы — в <a href="../../portfolio-hub/">портфолио</a> и в разделе
+      <a href="../../gost/">«Документация»</a>.</p>
+    </div>
+  </section>
+
+  <section class="blk">
+    <div class="wrap">
       <div class="kicker">Решения</div>
       <h2>Что решалось на этом объекте</h2>
       <div class="cards g3">
@@ -205,7 +223,7 @@ ${blocks}
 
   return page({
     file: `portfolio/${a.slug}/index.html`,
-    title: `${a.name} — рабочая документация, ${plural(r.total, 'лист', 'листа', 'листов')} | LINEA`,
+    title: `${a.name} — рабочая документация | LINEA`,
     desc: `${a.name}: комплект рабочей документации на ${plural(r.total, 'лист', 'листа', 'листов')} A3, ${groups.length} разделов, `
       + 'нормоконтроль без блокеров. Каждый лист можно рассмотреть целиком.',
     h1: a.name,
@@ -217,7 +235,17 @@ ${blocks}
       ['LINEA', `${BASE}/`],
       ['Документация', `${BASE}/gost/`],
       [a.name, `${BASE}/portfolio/${a.slug}/`],
-    ])],
+    ]), {
+      '@context': 'https://schema.org', '@type': 'Service',
+      name: 'Рабочая документация по ГОСТ', serviceType: 'Дизайн-проект: рабочая документация',
+      provider: { '@type': 'Organization', name: 'LINEA', url: `${BASE}/` },
+      areaServed: 'RU',
+      offers: {
+        '@type': 'Offer', price: '0', priceCurrency: 'RUB', availability: 'https://schema.org/InStock',
+        url: `${BASE}/catalog/rabochaya-dokumentatsiya.html`,
+        description: 'Открытое тестирование: комплект рабочей документации выпускается бесплатно, срок 24–48 часов',
+      },
+    }],
   });
 }
 

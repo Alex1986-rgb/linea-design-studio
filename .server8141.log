@@ -1,0 +1,736 @@
+::ffff:127.0.0.1 - - [24/Sep/2026 23:03:16] "GET /gost/ HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:03:25] "GET /portfolio/gost-proekt2/ HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:03:25] "GET /portfolio/gost-proekt2/ HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:03:25] "GET /portfolio/gost-proekt2/ HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:03:25] "GET /portfolio/gost-kv3k/ HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:03:41] "HEAD /policy/ HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:03:46] "HEAD /gost/ HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:03:46] "HEAD /portfolio-hub/ HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:03:46] "HEAD /price/ HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:03:46] "HEAD /portfolio/gost-kv3k/ HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:03:46] "HEAD /faq/ HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:03:46] "HEAD /journal/ HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:03:46] "HEAD /checklist/ HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:03:46] "HEAD / HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:03:46] "HEAD /stories/ HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:03:46] "HEAD /catalog/ HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:03:46] "HEAD /reviews/ HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:03:46] "HEAD /contacts/ HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:03:46] "HEAD /cases/ HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:03:46] "HEAD /about/ HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:03:46] "HEAD /portfolio/gost-proekt2/ HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:03:46] "HEAD /process/ HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:03:51] "HEAD /sitemap/ HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:03:51] "HEAD /css/main.css?v=31 HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:03:52] "HEAD /brief.html HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:03:52] "HEAD /style/ HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:03:52] "HEAD /compare/ HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:03:57] "HEAD /portfolio/gost-proekt2/sheets/06-architect-obmer.svg HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:03:57] "HEAD /portfolio/gost-proekt2/sheets/54-furniture-maker-furn-m19.svg HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:03:57] "HEAD /portfolio/gost-proekt2/sheets/60-furniture-maker-furn-m40.svg HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:03:57] "HEAD /portfolio/gost-proekt2/sheets/71-furniture-maker-furn-mount-3.svg HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:03:57] "HEAD /portfolio/gost-proekt2/sheets/58-furniture-maker-furn-m35.svg HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:03:57] "HEAD /portfolio/gost-proekt2/sheets/10-interior-designer-furniture.svg HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:03:57] "HEAD /portfolio/gost-proekt2/sheets/102-estimator-boq-2.svg HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:03:57] "HEAD /portfolio/gost-proekt2/sheets/05-draftsman-general-4.svg HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:03:57] "HEAD /portfolio/gost-proekt2/sheets/99-draftsman-nodes.svg HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:03:57] "HEAD /portfolio/gost-proekt2/sheets/95-draftsman-elev-r11.svg HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:03:57] "HEAD /portfolio/gost-proekt2/sheets/43-decorator-decor-concept.svg HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:03:57] "HEAD /portfolio/gost-proekt2/sheets/52-furniture-maker-furn-m16.svg HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:03:57] "HEAD /portfolio/gost-proekt2/sheets/81-draftsman-elev-r4-1.svg HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:03:57] "HEAD /portfolio/gost-proekt2/sheets/94-draftsman-elev-r10-2.svg HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:03:57] "HEAD /portfolio/gost-proekt2/sheets/59-furniture-maker-furn-m39.svg HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:03:57] "HEAD /portfolio/gost-proekt2/sheets/23-hvac-engineer-heating.svg HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:03:57] "HEAD /portfolio/gost-proekt2/sheets/105-estimator-spec-2.svg HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:03:57] "HEAD /portfolio/gost-proekt2/sheets/35-finisher-floor-tables.svg HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:03:57] "HEAD /price/ HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:03:57] "HEAD /portfolio/gost-proekt2/sheets/31-tiler-tile-extra.svg HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:03:57] "HEAD /portfolio/gost-proekt2/sheets/36-finisher-finish-schedule.svg HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:03:57] "HEAD /portfolio/gost-proekt2/sheets/49-furniture-maker-furn-m8.svg HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:03:57] "HEAD /portfolio/gost-proekt2/sheets/75-draftsman-elev-r1-1.svg HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:03:57] "HEAD /portfolio/gost-proekt2/sheets/50-furniture-maker-furn-m9.svg HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:03:57] "HEAD /portfolio/gost-proekt2/sheets/17-electrical-engineer-switches.svg HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:03:57] "HEAD /portfolio/gost-proekt2/sheets/24-plumbing-engineer-vyvody.svg HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:03:57] "HEAD /portfolio/gost-proekt2/sheets/66-furniture-maker-furn-kitchen-6a-mount.svg HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:03:57] "HEAD /policy/ HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:03:57] "HEAD /portfolio/gost-proekt2/sheets/32-tiler-tile-walls-r2.svg HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:03:57] "HEAD /portfolio/gost-proekt2/sheets/91-draftsman-elev-r9-1.svg HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:03:57] "HEAD /portfolio/gost-proekt2/sheets/34-finisher-floors.svg HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:03:57] "HEAD /portfolio/gost-proekt2/sheets/46-decorator-textile-schedule.svg HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:03:57] "HEAD /process/ HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:03:57] "HEAD /portfolio/gost-proekt2/sheets/04-draftsman-general-3.svg HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:03:57] "HEAD /portfolio/gost-proekt2/sheets/88-draftsman-elev-r7-1.svg HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:03:57] "HEAD /portfolio/gost-proekt2/sheets/48-furniture-maker-furn-plan.svg HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:03:57] "HEAD /portfolio/gost-proekt2/sheets/26-plumbing-engineer-spec-equipment.svg HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:03:57] "HEAD /portfolio/gost-proekt2/sheets/56-furniture-maker-furn-m32.svg HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:03:57] "HEAD /portfolio/gost-proekt2/sheets/67-furniture-maker-furn-kitchen-6c.svg HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:03:57] "HEAD /portfolio/gost-proekt2/sheets/73-draftsman-registers.svg HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:03:57] "HEAD /portfolio/gost-proekt2/sheets/79-draftsman-elev-r2-3.svg HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:03:57] "HEAD /portfolio/gost-proekt2/sheets/12-interior-designer-spec-2.svg HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:03:57] "HEAD /portfolio/gost-proekt2/sheets/89-draftsman-elev-r7-2.svg HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:03:57] "HEAD /portfolio/gost-proekt2/sheets/28-drywall-installer-ceiling.svg HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:03:57] "HEAD /about/ HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:03:57] "HEAD /portfolio/gost-proekt2/sheets/85-draftsman-elev-r6-1.svg HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:03:57] "HEAD /portfolio/gost-proekt2/sheets/41-colorist-materials-spec.svg HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:03:57] "HEAD /portfolio-hub/ HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:03:57] "HEAD /portfolio/gost-proekt2/sheets/47-decorator-decor-schedule.svg HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:03:57] "HEAD /portfolio/gost-proekt2/sheets/84-draftsman-elev-r5-2.svg HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:03:57] "HEAD /portfolio/gost-proekt2/sheets/70-furniture-maker-furn-mount-2.svg HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:03:57] "HEAD /portfolio/gost-proekt2/sheets/69-furniture-maker-furn-mount.svg HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:03:57] "HEAD /portfolio/gost-proekt2/sheets/104-estimator-spec.svg HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:03:57] "HEAD /portfolio/gost-proekt2/sheets/42-colorist-materials-spec-2.svg HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:03:57] "HEAD /catalog/ HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:03:57] "HEAD /portfolio/gost-proekt2/sheets/93-draftsman-elev-r10-1.svg HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:03:57] "HEAD /journal/ HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:03:57] "HEAD /style/ HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:03:57] "HEAD /portfolio/gost-proekt2/sheets/33-tiler-tile-walls-r10.svg HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:03:57] "HEAD /faq/ HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:04:02] "HEAD /portfolio/gost-proekt2/sheets/98-draftsman-elev-r13.svg HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:04:02] "HEAD /compare/ HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:04:03] "HEAD /portfolio/gost-proekt2/sheets/90-draftsman-elev-r8.svg HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:04:03] "HEAD /portfolio/gost-proekt2/sheets/82-draftsman-elev-r4-2.svg HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:04:03] "HEAD /portfolio/gost-proekt2/sheets/40-colorist-color-card-2.svg HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:04:03] "HEAD /portfolio/gost-proekt2/sheets/64-furniture-maker-furn-m45.svg HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:04:03] "HEAD /portfolio/gost-proekt2/sheets/74-draftsman-elev-key.svg HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:04:03] "HEAD /portfolio/gost-proekt2/sheets/103-estimator-boq-3.svg HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:04:03] "HEAD /portfolio/gost-proekt2/sheets/77-draftsman-elev-r2-1.svg HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:04:03] "HEAD /portfolio/gost-proekt2/sheets/55-furniture-maker-furn-m29.svg HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:04:03] "HEAD /portfolio/gost-proekt2/sheets/25-plumbing-engineer-razvodka.svg HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:04:03] "HEAD /portfolio/gost-proekt2/sheets/76-draftsman-elev-r1-2.svg HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:04:03] "HEAD /portfolio/gost-proekt2/sheets/13-interior-designer-spec-3.svg HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:04:03] "HEAD /reviews/ HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:04:03] "HEAD /portfolio/gost-proekt2/sheets/02-draftsman-general.svg HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:04:03] "HEAD /brief.html HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:04:03] "HEAD /portfolio/gost-proekt2/sheets/80-draftsman-elev-r3.svg HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:04:03] "HEAD /portfolio/gost-proekt2/sheets/38-finisher-finish-schedule-3.svg HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:04:03] "HEAD /portfolio/gost-proekt2/sheets/14-interior-designer-spec-4.svg HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:04:03] "HEAD /portfolio/gost-proekt2/sheets/68-furniture-maker-furn-kitchen-6c-mount.svg HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:04:03] "HEAD /portfolio/gost-proekt2/sheets/37-finisher-finish-schedule-2.svg HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:04:03] "HEAD /portfolio/gost-proekt2/sheets/101-estimator-boq.svg HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:04:03] "HEAD /portfolio/gost-proekt2/sheets/01-decorator-cover.svg HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:04:03] "HEAD /portfolio/gost-proekt2/sheets/16-electrical-engineer-lighting.svg HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:04:03] "HEAD /portfolio/gost-proekt2/sheets/65-furniture-maker-furn-kitchen-6a.svg HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:04:03] "HEAD /portfolio/gost-proekt2/sheets/61-furniture-maker-furn-m41.svg HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:04:03] "HEAD /portfolio/gost-proekt2/sheets/83-draftsman-elev-r5-1.svg HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:04:03] "HEAD /portfolio/gost-proekt2/sheets/29-drywall-installer-ceiling-sections.svg HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:04:03] "HEAD /portfolio/gost-proekt2/sheets/30-tiler-tile-floors.svg HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:04:03] "HEAD /portfolio/gost-proekt2/sheets/11-interior-designer-spec.svg HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:04:03] "HEAD /portfolio/gost-proekt2/sheets/44-decorator-decor-plan.svg HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:04:03] "HEAD /portfolio/gost-proekt2/sheets/100-draftsman-nodes-2.svg HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:04:03] "HEAD /portfolio/gost-proekt2/sheets/92-draftsman-elev-r9-2.svg HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:04:03] "HEAD /portfolio/gost-proekt2/sheets/27-lighting-designer-lighting-spec.svg HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:04:03] "HEAD /portfolio/gost-proekt2/album.pdf HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:04:03] "HEAD /stories/ HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:04:03] "HEAD /css/main.css?v=31 HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:04:03] "HEAD /portfolio/gost-proekt2/sheets/57-furniture-maker-furn-m33.svg HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:04:03] "HEAD /portfolio/gost-proekt2/sheets/08-architect-doors.svg HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:04:03] "HEAD /portfolio/gost-proekt2/sheets/78-draftsman-elev-r2-2.svg HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:04:03] "HEAD /portfolio/gost-proekt2/sheets/51-furniture-maker-furn-m10.svg HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:04:03] "HEAD /portfolio/gost-proekt2/sheets/106-estimator-estimate.svg HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:04:03] "HEAD /portfolio/gost-proekt2/sheets/96-draftsman-elev-r12-1.svg HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:04:03] "HEAD /portfolio/gost-proekt2/ HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:04:03] "HEAD /portfolio/gost-proekt2/sheets/15-electrical-engineer-sockets.svg HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:04:03] "HEAD /portfolio/gost-proekt2/sheets/09-interior-designer-concept.svg HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:04:03] "HEAD /checklist/ HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:04:03] "HEAD /portfolio/gost-proekt2/sheets/39-colorist-color-card.svg HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:04:03] "HEAD /portfolio/gost-proekt2/sheets/62-furniture-maker-furn-m42.svg HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:04:03] "HEAD /portfolio/gost-proekt2/sheets/45-decorator-curtains.svg HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:04:03] "HEAD /portfolio/gost-proekt2/sheets/07-architect-demolition.svg HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:04:03] "HEAD /cases/ HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:04:03] "HEAD /portfolio/gost-proekt2/sheets/63-furniture-maker-furn-m44.svg HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:04:03] "HEAD /contacts/ HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:04:03] "HEAD /portfolio/gost-proekt2/sheets/20-electrical-engineer-panel-2.svg HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:04:03] "HEAD /sitemap/ HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:04:03] "HEAD /portfolio/gost-proekt2/sheets/72-furniture-maker-furn-schedule.svg HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:04:03] "HEAD /portfolio/gost-proekt2/sheets/53-furniture-maker-furn-m18.svg HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:04:03] "HEAD /portfolio/gost-proekt2/sheets/86-draftsman-elev-r6-2.svg HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:04:03] "HEAD /portfolio/gost-proekt2/sheets/87-draftsman-elev-r6-3.svg HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:04:03] "HEAD / HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:04:03] "HEAD /portfolio/gost-proekt2/sheets/03-draftsman-general-2.svg HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:04:03] "HEAD /gost/ HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:04:03] "HEAD /portfolio/gost-proekt2/sheets/18-electrical-engineer-schedule.svg HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:04:03] "HEAD /portfolio/gost-proekt2/sheets/19-electrical-engineer-panel.svg HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:04:03] "HEAD /portfolio/gost-proekt2/sheets/22-hvac-engineer-ventilation.svg HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:04:03] "HEAD /portfolio/gost-proekt2/sheets/21-electrical-engineer-low-current.svg HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:04:03] "HEAD /portfolio/gost-proekt2/sheets/97-draftsman-elev-r12-2.svg HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:04:03] "HEAD /portfolio/gost-kv3k/sheets/64-draftsman-elev-r8-1.svg HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:04:03] "HEAD /portfolio/gost-kv3k/sheets/51-draftsman-elev-r2-1.svg HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:04:03] "HEAD /portfolio/gost-kv3k/sheets/14-electrical-engineer-switches.svg HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:04:03] "HEAD /portfolio/gost-kv3k/sheets/23-lighting-designer-lighting-spec.svg HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:04:03] "HEAD /portfolio/gost-kv3k/sheets/66-draftsman-nodes.svg HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:04:03] "HEAD /portfolio/gost-kv3k/sheets/65-draftsman-elev-r8-2.svg HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:04:03] "HEAD /portfolio/gost-kv3k/sheets/43-furniture-maker-furn-kitchen-6c.svg HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:04:03] "HEAD /portfolio/gost-kv3k/sheets/28-tiler-tile-walls-r2.svg HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:04:03] "HEAD /portfolio/gost-kv3k/sheets/41-furniture-maker-furn-g1.svg HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:04:03] "HEAD /portfolio/gost-kv3k/sheets/67-draftsman-nodes-2.svg HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:04:03] "HEAD /price/ HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:04:03] "HEAD /portfolio/gost-kv3k/sheets/34-decorator-decor-concept.svg HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:04:03] "HEAD /portfolio/gost-kv3k/sheets/57-draftsman-elev-r5-2.svg HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:04:03] "HEAD /portfolio/gost-kv3k/sheets/25-drywall-installer-ceiling-sections.svg HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:04:03] "HEAD /portfolio/gost-kv3k/sheets/11-interior-designer-spec-2.svg HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:04:03] "HEAD /portfolio/gost-kv3k/sheets/54-draftsman-elev-r4-1.svg HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:04:03] "HEAD /policy/ HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:04:03] "HEAD /portfolio/gost-kv3k/sheets/63-draftsman-elev-r7-2.svg HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:04:03] "HEAD /portfolio/gost-kv3k/sheets/37-decorator-textile-schedule.svg HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:04:03] "HEAD /portfolio/gost-kv3k/sheets/61-draftsman-elev-r6-4.svg HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:04:03] "HEAD /process/ HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:04:03] "HEAD /portfolio/gost-kv3k/sheets/04-draftsman-general-3.svg HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:04:03] "HEAD /portfolio/gost-kv3k/sheets/49-draftsman-elev-r1-1.svg HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:04:03] "HEAD /portfolio/gost-kv3k/sheets/10-interior-designer-spec.svg HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:04:03] "HEAD /portfolio/gost-kv3k/sheets/55-draftsman-elev-r4-2.svg HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:04:03] "HEAD /portfolio/gost-kv3k/sheets/18-hvac-engineer-ventilation.svg HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:04:03] "HEAD /portfolio/gost-kv3k/sheets/33-colorist-materials-spec.svg HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:04:03] "HEAD /portfolio/gost-kv3k/sheets/22-plumbing-engineer-spec-equipment.svg HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:04:03] "HEAD /about/ HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:04:03] "HEAD /portfolio-hub/ HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:04:03] "HEAD /portfolio/gost-kv3k/sheets/15-electrical-engineer-schedule.svg HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:04:03] "HEAD /portfolio/gost-kv3k/sheets/19-hvac-engineer-heating.svg HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:04:03] "HEAD /portfolio/gost-kv3k/sheets/35-decorator-decor-plan.svg HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:04:03] "HEAD /portfolio/gost-kv3k/sheets/48-draftsman-elev-key.svg HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:04:03] "HEAD /portfolio/gost-kv3k/sheets/42-furniture-maker-furn-p5.svg HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:04:03] "HEAD /portfolio/gost-kv3k/sheets/16-electrical-engineer-panel.svg HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:04:03] "HEAD /catalog/ HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:04:03] "HEAD /journal/ HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:04:03] "HEAD /style/ HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:04:03] "HEAD /faq/ HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:04:03] "HEAD /portfolio/gost-kv3k/sheets/70-estimator-spec.svg HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:04:03] "HEAD /compare/ HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:04:03] "HEAD /portfolio/gost-kv3k/sheets/24-drywall-installer-ceiling.svg HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:04:04] "HEAD /portfolio/gost-kv3k/sheets/71-estimator-estimate.svg HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:04:04] "HEAD /portfolio/gost-kv3k/sheets/44-furniture-maker-furn-kitchen-6c-mount.svg HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:04:04] "HEAD /portfolio/gost-kv3k/sheets/31-finisher-finish-schedule.svg HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:04:04] "HEAD /portfolio/gost-kv3k/sheets/47-draftsman-registers.svg HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:04:04] "HEAD /portfolio/gost-kv3k/sheets/17-electrical-engineer-low-current.svg HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:04:04] "HEAD /portfolio/gost-kv3k/sheets/07-architect-doors.svg HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:04:04] "HEAD /portfolio/gost-kv3k/sheets/29-tiler-tile-walls-r7.svg HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:04:04] "HEAD /reviews/ HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:04:04] "HEAD /portfolio/gost-kv3k/sheets/02-draftsman-general.svg HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:04:04] "HEAD /portfolio/gost-kv3k/sheets/50-draftsman-elev-r1-2.svg HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:04:04] "HEAD /portfolio/gost-kv3k/sheets/39-furniture-maker-furn-plan.svg HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:04:04] "HEAD /brief.html HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:04:04] "HEAD /portfolio/gost-kv3k/sheets/69-estimator-boq-2.svg HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:04:04] "HEAD /portfolio/gost-kv3k/sheets/62-draftsman-elev-r7-1.svg HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:04:04] "HEAD /portfolio/gost-kv3k/sheets/01-decorator-cover.svg HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:04:04] "HEAD /portfolio/gost-kv3k/sheets/58-draftsman-elev-r6-1.svg HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:04:04] "HEAD /portfolio/gost-kv3k/sheets/68-estimator-boq.svg HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:04:04] "HEAD /portfolio/gost-kv3k/sheets/05-architect-obmer.svg HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:04:04] "HEAD /portfolio/gost-kv3k/sheets/21-plumbing-engineer-razvodka.svg HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:04:04] "HEAD /portfolio/gost-kv3k/sheets/60-draftsman-elev-r6-3.svg HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:04:04] "HEAD /portfolio/gost-kv3k/sheets/56-draftsman-elev-r5-1.svg HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:04:04] "HEAD /portfolio/gost-kv3k/sheets/45-furniture-maker-furn-mount.svg HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:04:04] "HEAD /portfolio/gost-kv3k/sheets/08-interior-designer-concept.svg HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:04:04] "HEAD /portfolio/gost-kv3k/sheets/36-decorator-curtains.svg HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:04:04] "HEAD /portfolio/gost-kv3k/sheets/46-furniture-maker-furn-schedule.svg HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:04:04] "HEAD /portfolio/gost-kv3k/album.pdf HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:04:04] "HEAD /portfolio/gost-kv3k/sheets/53-draftsman-elev-r3.svg HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:04:04] "HEAD /stories/ HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:04:04] "HEAD /css/main.css?v=31 HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:04:04] "HEAD /portfolio/gost-kv3k/sheets/38-decorator-decor-schedule.svg HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:04:04] "HEAD /portfolio/gost-kv3k/sheets/32-colorist-color-card.svg HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:04:04] "HEAD /portfolio/gost-kv3k/ HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:04:04] "HEAD /portfolio/gost-kv3k/sheets/30-finisher-floors.svg HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:04:04] "HEAD /checklist/ HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:04:04] "HEAD /portfolio/gost-kv3k/sheets/52-draftsman-elev-r2-2.svg HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:04:04] "HEAD /portfolio/gost-kv3k/sheets/12-electrical-engineer-sockets.svg HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:04:04] "HEAD /portfolio/gost-kv3k/sheets/40-furniture-maker-furn-s5.svg HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:04:04] "HEAD /portfolio/gost-kv3k/sheets/06-architect-demolition.svg HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:04:04] "HEAD /portfolio/gost-kv3k/sheets/13-electrical-engineer-lighting.svg HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:04:04] "HEAD /cases/ HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:04:04] "HEAD /contacts/ HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:04:04] "HEAD /portfolio/gost-kv3k/sheets/59-draftsman-elev-r6-2.svg HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:04:04] "HEAD /sitemap/ HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:04:04] "HEAD /portfolio/gost-kv3k/sheets/09-interior-designer-furniture.svg HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:04:04] "HEAD / HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:04:04] "HEAD /portfolio/gost-kv3k/sheets/03-draftsman-general-2.svg HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:04:04] "HEAD /gost/ HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:04:04] "HEAD /portfolio/gost-kv3k/sheets/20-plumbing-engineer-vyvody.svg HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:04:04] "HEAD /portfolio/gost-kv3k/sheets/27-tiler-tile-extra.svg HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:04:04] "HEAD /portfolio/gost-kv3k/sheets/26-tiler-tile-floors.svg HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:04:10] "GET /about/ HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:04:10] "GET /portfolio/gost-kv3k/ HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:04:10] "GET /checklist/ HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:04:10] "GET /brief.html HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:04:10] "GET /reviews/ HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:04:10] "GET /faq/ HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:04:10] "GET /policy/ HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:04:10] "GET /process/ HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:04:10] "GET /catalog/ HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:04:10] "GET /sitemap/ HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:04:10] "GET /portfolio/gost-proekt2/ HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:04:10] "GET /css/main.css?v=31 HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:04:10] "GET /price/ HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:04:10] "GET /gost/ HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:04:10] "GET /journal/ HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:04:10] "GET /contacts/ HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:04:10] "GET / HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:04:10] "GET /cases/ HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:04:10] "GET /style/ HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:04:10] "GET /stories/ HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:04:10] "GET /portfolio-hub/ HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:04:10] "GET /compare/ HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:04:10] "GET /portfolio/gost-proekt2/sheets/22-hvac-engineer-ventilation.svg HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:04:10] "GET /portfolio/gost-proekt2/sheets/58-furniture-maker-furn-m35.svg HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:04:10] "GET /portfolio/gost-proekt2/sheets/32-tiler-tile-walls-r2.svg HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:04:10] "GET /portfolio/gost-proekt2/album.pdf HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:04:10] "GET /portfolio/gost-proekt2/sheets/91-draftsman-elev-r9-1.svg HTTP/1.1" 200 -
+----------------------------------------
+Exception occurred during processing of request from ('::1', 55935, 0, 0)
+::1 - - [24/Sep/2026 23:04:10] "GET /portfolio/gost-proekt2/sheets/102-estimator-boq-2.svg HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:04:10] "GET /portfolio/gost-proekt2/sheets/80-draftsman-elev-r3.svg HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:04:10] "GET /portfolio/gost-proekt2/sheets/98-draftsman-elev-r13.svg HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:04:10] "GET /portfolio/gost-proekt2/sheets/81-draftsman-elev-r4-1.svg HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:04:10] "GET /portfolio/gost-proekt2/sheets/77-draftsman-elev-r2-1.svg HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:04:10] "GET /portfolio/gost-proekt2/sheets/01-decorator-cover.svg HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:04:10] "GET /portfolio/gost-proekt2/sheets/84-draftsman-elev-r5-2.svg HTTP/1.1" 200 -
+Traceback (most recent call last):
+----------------------------------------
+Exception occurred during processing of request from ('::1', 55942, 0, 0)
+Traceback (most recent call last):
+::1 - - [24/Sep/2026 23:04:10] "GET /portfolio/gost-proekt2/sheets/62-furniture-maker-furn-m42.svg HTTP/1.1" 200 -
+  File "/Users/alexandr/.local/share/uv/python/cpython-3.12.13-macos-aarch64-none/lib/python3.12/socketserver.py", line 697, in process_request_thread
+    self.finish_request(request, client_address)
+  File "/Users/alexandr/.local/share/uv/python/cpython-3.12.13-macos-aarch64-none/lib/python3.12/socketserver.py", line 697, in process_request_thread
+    self.finish_request(request, client_address)
+  File "/Users/alexandr/.local/share/uv/python/cpython-3.12.13-macos-aarch64-none/lib/python3.12/http/server.py", line 1326, in finish_request
+    self.RequestHandlerClass(request, client_address, self,
+  File "/Users/alexandr/.local/share/uv/python/cpython-3.12.13-macos-aarch64-none/lib/python3.12/http/server.py", line 1326, in finish_request
+    self.RequestHandlerClass(request, client_address, self,
+  File "/Users/alexandr/.local/share/uv/python/cpython-3.12.13-macos-aarch64-none/lib/python3.12/http/server.py", line 676, in __init__
+    super().__init__(*args, **kwargs)
+  File "/Users/alexandr/.local/share/uv/python/cpython-3.12.13-macos-aarch64-none/lib/python3.12/http/server.py", line 676, in __init__
+    super().__init__(*args, **kwargs)
+  File "/Users/alexandr/.local/share/uv/python/cpython-3.12.13-macos-aarch64-none/lib/python3.12/socketserver.py", line 766, in __init__
+    self.handle()
+  File "/Users/alexandr/.local/share/uv/python/cpython-3.12.13-macos-aarch64-none/lib/python3.12/socketserver.py", line 766, in __init__
+    self.handle()
+  File "/Users/alexandr/.local/share/uv/python/cpython-3.12.13-macos-aarch64-none/lib/python3.12/http/server.py", line 440, in handle
+    self.handle_one_request()
+  File "/Users/alexandr/.local/share/uv/python/cpython-3.12.13-macos-aarch64-none/lib/python3.12/http/server.py", line 440, in handle
+    self.handle_one_request()
+  File "/Users/alexandr/.local/share/uv/python/cpython-3.12.13-macos-aarch64-none/lib/python3.12/http/server.py", line 428, in handle_one_request
+    method()
+  File "/Users/alexandr/.local/share/uv/python/cpython-3.12.13-macos-aarch64-none/lib/python3.12/http/server.py", line 428, in handle_one_request
+    method()
+  File "/Users/alexandr/.local/share/uv/python/cpython-3.12.13-macos-aarch64-none/lib/python3.12/http/server.py", line 683, in do_GET
+    self.copyfile(f, self.wfile)
+  File "/Users/alexandr/.local/share/uv/python/cpython-3.12.13-macos-aarch64-none/lib/python3.12/http/server.py", line 683, in do_GET
+    self.copyfile(f, self.wfile)
+  File "/Users/alexandr/.local/share/uv/python/cpython-3.12.13-macos-aarch64-none/lib/python3.12/http/server.py", line 882, in copyfile
+    shutil.copyfileobj(source, outputfile)
+  File "/Users/alexandr/.local/share/uv/python/cpython-3.12.13-macos-aarch64-none/lib/python3.12/shutil.py", line 204, in copyfileobj
+    fdst_write(buf)
+  File "/Users/alexandr/.local/share/uv/python/cpython-3.12.13-macos-aarch64-none/lib/python3.12/http/server.py", line 882, in copyfile
+    shutil.copyfileobj(source, outputfile)
+  File "/Users/alexandr/.local/share/uv/python/cpython-3.12.13-macos-aarch64-none/lib/python3.12/shutil.py", line 204, in copyfileobj
+    fdst_write(buf)
+::1 - - [24/Sep/2026 23:04:10] "GET /portfolio/gost-proekt2/ HTTP/1.1" 200 -
+  File "/Users/alexandr/.local/share/uv/python/cpython-3.12.13-macos-aarch64-none/lib/python3.12/socketserver.py", line 845, in write
+    self._sock.sendall(b)
+  File "/Users/alexandr/.local/share/uv/python/cpython-3.12.13-macos-aarch64-none/lib/python3.12/socketserver.py", line 845, in write
+    self._sock.sendall(b)
+BrokenPipeError: [Errno 32] Broken pipe
+BrokenPipeError: [Errno 32] Broken pipe
+----------------------------------------
+----------------------------------------
+::1 - - [24/Sep/2026 23:04:10] "GET /portfolio/gost-proekt2/sheets/82-draftsman-elev-r4-2.svg HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:04:10] "GET /portfolio/gost-proekt2/sheets/50-furniture-maker-furn-m9.svg HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:04:10] "GET /portfolio/gost-proekt2/sheets/69-furniture-maker-furn-mount.svg HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:04:10] "GET /portfolio/gost-proekt2/sheets/73-draftsman-registers.svg HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:04:10] "GET /portfolio/gost-proekt2/sheets/85-draftsman-elev-r6-1.svg HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:04:10] "GET /contacts/ HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:04:10] "GET /portfolio/gost-proekt2/sheets/48-furniture-maker-furn-plan.svg HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:04:10] "GET / HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:04:10] "GET /portfolio/gost-proekt2/sheets/63-furniture-maker-furn-m44.svg HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:04:10] "GET /portfolio/gost-proekt2/sheets/15-electrical-engineer-sockets.svg HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:04:10] "GET /portfolio/gost-proekt2/sheets/13-interior-designer-spec-3.svg HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:04:10] "GET /portfolio/gost-proekt2/sheets/47-decorator-decor-schedule.svg HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:04:10] "GET /portfolio/gost-proekt2/sheets/31-tiler-tile-extra.svg HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:04:10] "GET /portfolio/gost-proekt2/sheets/33-tiler-tile-walls-r10.svg HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:04:10] "GET /portfolio/gost-proekt2/sheets/104-estimator-spec.svg HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:04:10] "GET /portfolio/gost-proekt2/sheets/02-draftsman-general.svg HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:04:10] "GET /portfolio/gost-proekt2/sheets/11-interior-designer-spec.svg HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:04:10] "GET /portfolio/gost-proekt2/sheets/18-electrical-engineer-schedule.svg HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:04:10] "GET /portfolio/gost-proekt2/sheets/37-finisher-finish-schedule-2.svg HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:04:10] "GET /journal/ HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:04:10] "GET /portfolio/gost-proekt2/sheets/54-furniture-maker-furn-m19.svg HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:04:10] "GET /portfolio/gost-proekt2/sheets/05-draftsman-general-4.svg HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:04:10] "GET /about/ HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:04:10] "GET /portfolio/gost-proekt2/sheets/42-colorist-materials-spec-2.svg HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:04:10] "GET /portfolio/gost-proekt2/sheets/56-furniture-maker-furn-m32.svg HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:04:10] "GET /portfolio/gost-proekt2/sheets/17-electrical-engineer-switches.svg HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:04:10] "GET /policy/ HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:04:10] "GET /portfolio/gost-proekt2/sheets/90-draftsman-elev-r8.svg HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:04:10] "GET /portfolio/gost-proekt2/sheets/65-furniture-maker-furn-kitchen-6a.svg HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:04:10] "GET /portfolio/gost-proekt2/sheets/46-decorator-textile-schedule.svg HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:04:10] "GET /portfolio/gost-proekt2/sheets/39-colorist-color-card.svg HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:04:10] "GET /sitemap/ HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:04:10] "GET /portfolio/gost-proekt2/sheets/16-electrical-engineer-lighting.svg HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:04:10] "GET /portfolio/gost-proekt2/sheets/68-furniture-maker-furn-kitchen-6c-mount.svg HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:04:10] "GET /catalog/ HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:04:10] "GET /portfolio/gost-proekt2/sheets/55-furniture-maker-furn-m29.svg HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:04:10] "GET /portfolio/gost-proekt2/sheets/70-furniture-maker-furn-mount-2.svg HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:04:10] "GET /portfolio/gost-proekt2/sheets/64-furniture-maker-furn-m45.svg HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:04:10] "GET /portfolio/gost-proekt2/sheets/28-drywall-installer-ceiling.svg HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:04:10] "GET /checklist/ HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:04:10] "GET /portfolio/gost-proekt2/sheets/52-furniture-maker-furn-m16.svg HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:04:10] "GET /portfolio/gost-proekt2/sheets/20-electrical-engineer-panel-2.svg HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:04:10] "GET /faq/ HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:04:10] "GET /portfolio/gost-proekt2/sheets/41-colorist-materials-spec.svg HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:04:10] "GET /portfolio/gost-proekt2/sheets/97-draftsman-elev-r12-2.svg HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:04:10] "GET /portfolio/gost-proekt2/sheets/93-draftsman-elev-r10-1.svg HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:04:10] "GET /portfolio/gost-proekt2/sheets/53-furniture-maker-furn-m18.svg HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:04:10] "GET /portfolio/gost-proekt2/sheets/04-draftsman-general-3.svg HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:04:10] "GET /portfolio/gost-proekt2/sheets/40-colorist-color-card-2.svg HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:04:10] "GET /gost/ HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:04:10] "GET /reviews/ HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:04:10] "GET /portfolio/gost-proekt2/sheets/94-draftsman-elev-r10-2.svg HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:04:10] "GET /process/ HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:04:10] "GET /portfolio/gost-proekt2/sheets/08-architect-doors.svg HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:04:10] "GET /portfolio/gost-proekt2/sheets/95-draftsman-elev-r11.svg HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:04:10] "GET /portfolio/gost-proekt2/sheets/88-draftsman-elev-r7-1.svg HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:04:10] "GET /compare/ HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:04:10] "GET /portfolio/gost-proekt2/sheets/26-plumbing-engineer-spec-equipment.svg HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:04:10] "GET /portfolio/gost-proekt2/sheets/57-furniture-maker-furn-m33.svg HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:04:10] "GET /portfolio/gost-proekt2/sheets/79-draftsman-elev-r2-3.svg HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:04:10] "GET /portfolio/gost-proekt2/sheets/23-hvac-engineer-heating.svg HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:04:10] "GET /portfolio/gost-proekt2/sheets/71-furniture-maker-furn-mount-3.svg HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:04:10] "GET /portfolio/gost-proekt2/sheets/76-draftsman-elev-r1-2.svg HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:04:10] "GET /portfolio/gost-proekt2/sheets/29-drywall-installer-ceiling-sections.svg HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:04:10] "GET /portfolio/gost-proekt2/sheets/100-draftsman-nodes-2.svg HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:04:10] "GET /portfolio/gost-proekt2/sheets/19-electrical-engineer-panel.svg HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:04:10] "GET /portfolio/gost-proekt2/sheets/25-plumbing-engineer-razvodka.svg HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:04:10] "GET /portfolio/gost-proekt2/sheets/61-furniture-maker-furn-m41.svg HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:04:10] "GET /portfolio/gost-proekt2/sheets/66-furniture-maker-furn-kitchen-6a-mount.svg HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:04:10] "GET /portfolio/gost-proekt2/sheets/21-electrical-engineer-low-current.svg HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:04:10] "GET /portfolio-hub/ HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:04:10] "GET /portfolio/gost-proekt2/sheets/45-decorator-curtains.svg HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:04:10] "GET /portfolio/gost-proekt2/sheets/59-furniture-maker-furn-m39.svg HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:04:10] "GET /portfolio/gost-proekt2/sheets/24-plumbing-engineer-vyvody.svg HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:04:10] "GET /portfolio/gost-proekt2/sheets/51-furniture-maker-furn-m10.svg HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:04:10] "GET /portfolio/gost-proekt2/sheets/27-lighting-designer-lighting-spec.svg HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:04:10] "GET /stories/ HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:04:10] "GET /portfolio/gost-proekt2/sheets/83-draftsman-elev-r5-1.svg HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:04:10] "GET /portfolio/gost-proekt2/sheets/101-estimator-boq.svg HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:04:10] "GET /portfolio/gost-proekt2/sheets/36-finisher-finish-schedule.svg HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:04:10] "GET /portfolio/gost-proekt2/sheets/49-furniture-maker-furn-m8.svg HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:04:10] "GET /style/ HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:04:10] "GET /portfolio/gost-proekt2/sheets/74-draftsman-elev-key.svg HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:04:10] "GET /portfolio/gost-proekt2/sheets/10-interior-designer-furniture.svg HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:04:10] "GET /portfolio/gost-proekt2/sheets/06-architect-obmer.svg HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:04:10] "GET /portfolio/gost-proekt2/sheets/38-finisher-finish-schedule-3.svg HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:04:10] "GET /portfolio/gost-proekt2/sheets/99-draftsman-nodes.svg HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:04:10] "GET /portfolio/gost-proekt2/sheets/09-interior-designer-concept.svg HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:04:10] "GET /portfolio/gost-proekt2/sheets/67-furniture-maker-furn-kitchen-6c.svg HTTP/1.1" 200 -
+----------------------------------------
+Exception occurred during processing of request from ('::1', 56033, 0, 0)
+Traceback (most recent call last):
+::1 - - [24/Sep/2026 23:04:10] "GET /portfolio/gost-proekt2/sheets/75-draftsman-elev-r1-1.svg HTTP/1.1" 200 -
+  File "/Users/alexandr/.local/share/uv/python/cpython-3.12.13-macos-aarch64-none/lib/python3.12/socketserver.py", line 697, in process_request_thread
+    self.finish_request(request, client_address)
+  File "/Users/alexandr/.local/share/uv/python/cpython-3.12.13-macos-aarch64-none/lib/python3.12/http/server.py", line 1326, in finish_request
+    self.RequestHandlerClass(request, client_address, self,
+  File "/Users/alexandr/.local/share/uv/python/cpython-3.12.13-macos-aarch64-none/lib/python3.12/http/server.py", line 676, in __init__
+    super().__init__(*args, **kwargs)
+  File "/Users/alexandr/.local/share/uv/python/cpython-3.12.13-macos-aarch64-none/lib/python3.12/socketserver.py", line 766, in __init__
+    self.handle()
+  File "/Users/alexandr/.local/share/uv/python/cpython-3.12.13-macos-aarch64-none/lib/python3.12/http/server.py", line 440, in handle
+    self.handle_one_request()
+  File "/Users/alexandr/.local/share/uv/python/cpython-3.12.13-macos-aarch64-none/lib/python3.12/http/server.py", line 428, in handle_one_request
+    method()
+  File "/Users/alexandr/.local/share/uv/python/cpython-3.12.13-macos-aarch64-none/lib/python3.12/http/server.py", line 683, in do_GET
+    self.copyfile(f, self.wfile)
+  File "/Users/alexandr/.local/share/uv/python/cpython-3.12.13-macos-aarch64-none/lib/python3.12/http/server.py", line 882, in copyfile
+    shutil.copyfileobj(source, outputfile)
+  File "/Users/alexandr/.local/share/uv/python/cpython-3.12.13-macos-aarch64-none/lib/python3.12/shutil.py", line 204, in copyfileobj
+    fdst_write(buf)
+  File "/Users/alexandr/.local/share/uv/python/cpython-3.12.13-macos-aarch64-none/lib/python3.12/socketserver.py", line 845, in write
+    self._sock.sendall(b)
+BrokenPipeError: [Errno 32] Broken pipe
+----------------------------------------
+::1 - - [24/Sep/2026 23:04:10] "GET /portfolio/gost-proekt2/sheets/34-finisher-floors.svg HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:04:10] "GET /portfolio/gost-proekt2/sheets/35-finisher-floor-tables.svg HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:04:10] "GET /portfolio/gost-proekt2/sheets/07-architect-demolition.svg HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:04:10] "GET /portfolio/gost-proekt2/sheets/03-draftsman-general-2.svg HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:04:10] "GET /portfolio/gost-proekt2/sheets/89-draftsman-elev-r7-2.svg HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:04:10] "GET /portfolio/gost-proekt2/sheets/105-estimator-spec-2.svg HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:04:10] "GET /portfolio/gost-proekt2/sheets/12-interior-designer-spec-2.svg HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:04:10] "GET /portfolio/gost-proekt2/sheets/106-estimator-estimate.svg HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:04:10] "GET /portfolio/gost-proekt2/sheets/72-furniture-maker-furn-schedule.svg HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:04:10] "GET /brief.html HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:04:10] "GET /portfolio/gost-proekt2/sheets/86-draftsman-elev-r6-2.svg HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:04:10] "GET /portfolio/gost-proekt2/sheets/78-draftsman-elev-r2-2.svg HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:04:10] "GET /portfolio/gost-proekt2/sheets/30-tiler-tile-floors.svg HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:04:10] "GET /portfolio/gost-proekt2/sheets/103-estimator-boq-3.svg HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:04:10] "GET /portfolio/gost-proekt2/sheets/92-draftsman-elev-r9-2.svg HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:04:10] "GET /portfolio/gost-proekt2/sheets/14-interior-designer-spec-4.svg HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:04:10] "GET /cases/ HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:04:10] "GET /portfolio/gost-proekt2/sheets/87-draftsman-elev-r6-3.svg HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:04:10] "GET /portfolio/gost-proekt2/sheets/43-decorator-decor-concept.svg HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:04:10] "GET /portfolio/gost-proekt2/sheets/44-decorator-decor-plan.svg HTTP/1.1" 200 -
+----------------------------------------
+Exception occurred during processing of request from ('::1', 56054, 0, 0)
+Traceback (most recent call last):
+  File "/Users/alexandr/.local/share/uv/python/cpython-3.12.13-macos-aarch64-none/lib/python3.12/socketserver.py", line 697, in process_request_thread
+    self.finish_request(request, client_address)
+  File "/Users/alexandr/.local/share/uv/python/cpython-3.12.13-macos-aarch64-none/lib/python3.12/http/server.py", line 1326, in finish_request
+    self.RequestHandlerClass(request, client_address, self,
+  File "/Users/alexandr/.local/share/uv/python/cpython-3.12.13-macos-aarch64-none/lib/python3.12/http/server.py", line 676, in __init__
+    super().__init__(*args, **kwargs)
+  File "/Users/alexandr/.local/share/uv/python/cpython-3.12.13-macos-aarch64-none/lib/python3.12/socketserver.py", line 766, in __init__
+    self.handle()
+  File "/Users/alexandr/.local/share/uv/python/cpython-3.12.13-macos-aarch64-none/lib/python3.12/http/server.py", line 440, in handle
+    self.handle_one_request()
+  File "/Users/alexandr/.local/share/uv/python/cpython-3.12.13-macos-aarch64-none/lib/python3.12/http/server.py", line 428, in handle_one_request
+    method()
+  File "/Users/alexandr/.local/share/uv/python/cpython-3.12.13-macos-aarch64-none/lib/python3.12/http/server.py", line 683, in do_GET
+    self.copyfile(f, self.wfile)
+  File "/Users/alexandr/.local/share/uv/python/cpython-3.12.13-macos-aarch64-none/lib/python3.12/http/server.py", line 882, in copyfile
+    shutil.copyfileobj(source, outputfile)
+::1 - - [24/Sep/2026 23:04:10] "GET /portfolio/gost-proekt2/sheets/96-draftsman-elev-r12-1.svg HTTP/1.1" 200 -
+  File "/Users/alexandr/.local/share/uv/python/cpython-3.12.13-macos-aarch64-none/lib/python3.12/shutil.py", line 204, in copyfileobj
+    fdst_write(buf)
+  File "/Users/alexandr/.local/share/uv/python/cpython-3.12.13-macos-aarch64-none/lib/python3.12/socketserver.py", line 845, in write
+    self._sock.sendall(b)
+BrokenPipeError: [Errno 32] Broken pipe
+----------------------------------------
+::1 - - [24/Sep/2026 23:04:10] "GET /price/ HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:04:10] "GET /portfolio/gost-proekt2/sheets/60-furniture-maker-furn-m40.svg HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:04:10] "GET /css/main.css?v=31 HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:04:10] "GET /portfolio/gost-kv3k/sheets/35-decorator-decor-plan.svg HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:04:10] "GET /portfolio/gost-kv3k/album.pdf HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:04:10] "GET /portfolio/gost-kv3k/sheets/27-tiler-tile-extra.svg HTTP/1.1" 200 -
+----------------------------------------
+Exception occurred during processing of request from ('::1', 56061, 0, 0)
+Traceback (most recent call last):
+  File "/Users/alexandr/.local/share/uv/python/cpython-3.12.13-macos-aarch64-none/lib/python3.12/socketserver.py", line 697, in process_request_thread
+    self.finish_request(request, client_address)
+  File "/Users/alexandr/.local/share/uv/python/cpython-3.12.13-macos-aarch64-none/lib/python3.12/http/server.py", line 1326, in finish_request
+    self.RequestHandlerClass(request, client_address, self,
+  File "/Users/alexandr/.local/share/uv/python/cpython-3.12.13-macos-aarch64-none/lib/python3.12/http/server.py", line 676, in __init__
+    super().__init__(*args, **kwargs)
+  File "/Users/alexandr/.local/share/uv/python/cpython-3.12.13-macos-aarch64-none/lib/python3.12/socketserver.py", line 766, in __init__
+    self.handle()
+  File "/Users/alexandr/.local/share/uv/python/cpython-3.12.13-macos-aarch64-none/lib/python3.12/http/server.py", line 440, in handle
+    self.handle_one_request()
+  File "/Users/alexandr/.local/share/uv/python/cpython-3.12.13-macos-aarch64-none/lib/python3.12/http/server.py", line 428, in handle_one_request
+    method()
+::1 - - [24/Sep/2026 23:04:10] "GET /portfolio/gost-kv3k/sheets/30-finisher-floors.svg HTTP/1.1" 200 -
+  File "/Users/alexandr/.local/share/uv/python/cpython-3.12.13-macos-aarch64-none/lib/python3.12/http/server.py", line 683, in do_GET
+    self.copyfile(f, self.wfile)
+  File "/Users/alexandr/.local/share/uv/python/cpython-3.12.13-macos-aarch64-none/lib/python3.12/http/server.py", line 882, in copyfile
+    shutil.copyfileobj(source, outputfile)
+  File "/Users/alexandr/.local/share/uv/python/cpython-3.12.13-macos-aarch64-none/lib/python3.12/shutil.py", line 204, in copyfileobj
+    fdst_write(buf)
+  File "/Users/alexandr/.local/share/uv/python/cpython-3.12.13-macos-aarch64-none/lib/python3.12/socketserver.py", line 845, in write
+    self._sock.sendall(b)
+BrokenPipeError: [Errno 32] Broken pipe
+----------------------------------------
+::1 - - [24/Sep/2026 23:04:10] "GET /portfolio/gost-kv3k/sheets/01-decorator-cover.svg HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:04:10] "GET /portfolio/gost-kv3k/sheets/10-interior-designer-spec.svg HTTP/1.1" 200 -
+----------------------------------------
+Exception occurred during processing of request from ('::1', 56064, 0, 0)
+Traceback (most recent call last):
+  File "/Users/alexandr/.local/share/uv/python/cpython-3.12.13-macos-aarch64-none/lib/python3.12/socketserver.py", line 697, in process_request_thread
+    self.finish_request(request, client_address)
+  File "/Users/alexandr/.local/share/uv/python/cpython-3.12.13-macos-aarch64-none/lib/python3.12/http/server.py", line 1326, in finish_request
+    self.RequestHandlerClass(request, client_address, self,
+  File "/Users/alexandr/.local/share/uv/python/cpython-3.12.13-macos-aarch64-none/lib/python3.12/http/server.py", line 676, in __init__
+    super().__init__(*args, **kwargs)
+  File "/Users/alexandr/.local/share/uv/python/cpython-3.12.13-macos-aarch64-none/lib/python3.12/socketserver.py", line 766, in __init__
+    self.handle()
+  File "/Users/alexandr/.local/share/uv/python/cpython-3.12.13-macos-aarch64-none/lib/python3.12/http/server.py", line 440, in handle
+    self.handle_one_request()
+::1 - - [24/Sep/2026 23:04:10] "GET /portfolio/gost-kv3k/sheets/42-furniture-maker-furn-p5.svg HTTP/1.1" 200 -
+  File "/Users/alexandr/.local/share/uv/python/cpython-3.12.13-macos-aarch64-none/lib/python3.12/http/server.py", line 428, in handle_one_request
+    method()
+  File "/Users/alexandr/.local/share/uv/python/cpython-3.12.13-macos-aarch64-none/lib/python3.12/http/server.py", line 683, in do_GET
+    self.copyfile(f, self.wfile)
+  File "/Users/alexandr/.local/share/uv/python/cpython-3.12.13-macos-aarch64-none/lib/python3.12/http/server.py", line 882, in copyfile
+    shutil.copyfileobj(source, outputfile)
+  File "/Users/alexandr/.local/share/uv/python/cpython-3.12.13-macos-aarch64-none/lib/python3.12/shutil.py", line 204, in copyfileobj
+    fdst_write(buf)
+  File "/Users/alexandr/.local/share/uv/python/cpython-3.12.13-macos-aarch64-none/lib/python3.12/socketserver.py", line 845, in write
+    self._sock.sendall(b)
+BrokenPipeError: [Errno 32] Broken pipe
+----------------------------------------
+::1 - - [24/Sep/2026 23:04:10] "GET /portfolio/gost-kv3k/sheets/43-furniture-maker-furn-kitchen-6c.svg HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:04:10] "GET /portfolio/gost-kv3k/sheets/26-tiler-tile-floors.svg HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:04:10] "GET /portfolio/gost-kv3k/ HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:04:10] "GET /portfolio/gost-kv3k/sheets/33-colorist-materials-spec.svg HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:04:10] "GET /portfolio/gost-kv3k/sheets/22-plumbing-engineer-spec-equipment.svg HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:04:10] "GET /portfolio/gost-kv3k/sheets/65-draftsman-elev-r8-2.svg HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:04:10] "GET /contacts/ HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:04:10] "GET /portfolio/gost-kv3k/sheets/66-draftsman-nodes.svg HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:04:10] "GET /portfolio/gost-kv3k/sheets/28-tiler-tile-walls-r2.svg HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:04:10] "GET / HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:04:10] "GET /portfolio/gost-kv3k/sheets/51-draftsman-elev-r2-1.svg HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:04:10] "GET /portfolio/gost-kv3k/sheets/58-draftsman-elev-r6-1.svg HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:04:10] "GET /portfolio/gost-kv3k/sheets/63-draftsman-elev-r7-2.svg HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:04:10] "GET /portfolio/gost-kv3k/sheets/02-draftsman-general.svg HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:04:10] "GET /portfolio/gost-kv3k/sheets/69-estimator-boq-2.svg HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:04:10] "GET /portfolio/gost-kv3k/sheets/53-draftsman-elev-r3.svg HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:04:10] "GET /portfolio/gost-kv3k/sheets/59-draftsman-elev-r6-2.svg HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:04:10] "GET /portfolio/gost-kv3k/sheets/11-interior-designer-spec-2.svg HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:04:10] "GET /portfolio/gost-kv3k/sheets/15-electrical-engineer-schedule.svg HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:04:10] "GET /journal/ HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:04:10] "GET /portfolio/gost-kv3k/sheets/21-plumbing-engineer-razvodka.svg HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:04:10] "GET /portfolio/gost-kv3k/sheets/47-draftsman-registers.svg HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:04:10] "GET /about/ HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:04:10] "GET /portfolio/gost-kv3k/sheets/06-architect-demolition.svg HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:04:10] "GET /policy/ HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:04:10] "GET /portfolio/gost-kv3k/sheets/57-draftsman-elev-r5-2.svg HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:04:10] "GET /portfolio/gost-kv3k/sheets/64-draftsman-elev-r8-1.svg HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:04:10] "GET /portfolio/gost-kv3k/sheets/07-architect-doors.svg HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:04:10] "GET /sitemap/ HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:04:10] "GET /portfolio/gost-kv3k/sheets/68-estimator-boq.svg HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:04:10] "GET /catalog/ HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:04:10] "GET /portfolio/gost-kv3k/sheets/62-draftsman-elev-r7-1.svg HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:04:10] "GET /portfolio/gost-kv3k/sheets/37-decorator-textile-schedule.svg HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:04:10] "GET /portfolio/gost-kv3k/sheets/05-architect-obmer.svg HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:04:10] "GET /portfolio/gost-kv3k/sheets/24-drywall-installer-ceiling.svg HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:04:10] "GET /portfolio/gost-kv3k/sheets/44-furniture-maker-furn-kitchen-6c-mount.svg HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:04:10] "GET /checklist/ HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:04:10] "GET /portfolio/gost-kv3k/sheets/09-interior-designer-furniture.svg HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:04:10] "GET /faq/ HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:04:10] "GET /portfolio/gost-kv3k/sheets/61-draftsman-elev-r6-4.svg HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:04:11] "GET /portfolio/gost-kv3k/sheets/67-draftsman-nodes-2.svg HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:04:11] "GET /portfolio/gost-kv3k/sheets/52-draftsman-elev-r2-2.svg HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:04:11] "GET /portfolio/gost-kv3k/sheets/39-furniture-maker-furn-plan.svg HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:04:11] "GET /portfolio/gost-kv3k/sheets/04-draftsman-general-3.svg HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:04:11] "GET /gost/ HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:04:11] "GET /portfolio/gost-kv3k/sheets/46-furniture-maker-furn-schedule.svg HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:04:11] "GET /reviews/ HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:04:11] "GET /process/ HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:04:11] "GET /portfolio/gost-kv3k/sheets/49-draftsman-elev-r1-1.svg HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:04:11] "GET /compare/ HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:04:11] "GET /portfolio/gost-kv3k/sheets/54-draftsman-elev-r4-1.svg HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:04:11] "GET /portfolio/gost-kv3k/sheets/13-electrical-engineer-lighting.svg HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:04:11] "GET /portfolio/gost-kv3k/sheets/23-lighting-designer-lighting-spec.svg HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:04:11] "GET /portfolio/gost-kv3k/sheets/48-draftsman-elev-key.svg HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:04:11] "GET /portfolio/gost-kv3k/sheets/18-hvac-engineer-ventilation.svg HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:04:11] "GET /portfolio/gost-kv3k/sheets/14-electrical-engineer-switches.svg HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:04:11] "GET /portfolio-hub/ HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:04:11] "GET /stories/ HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:04:11] "GET /portfolio/gost-kv3k/sheets/70-estimator-spec.svg HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:04:11] "GET /portfolio/gost-kv3k/sheets/20-plumbing-engineer-vyvody.svg HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:04:11] "GET /portfolio/gost-kv3k/sheets/12-electrical-engineer-sockets.svg HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:04:11] "GET /portfolio/gost-kv3k/sheets/38-decorator-decor-schedule.svg HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:04:11] "GET /style/ HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:04:11] "GET /portfolio/gost-kv3k/sheets/56-draftsman-elev-r5-1.svg HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:04:11] "GET /portfolio/gost-kv3k/sheets/36-decorator-curtains.svg HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:04:11] "GET /portfolio/gost-kv3k/sheets/29-tiler-tile-walls-r7.svg HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:04:11] "GET /portfolio/gost-kv3k/sheets/34-decorator-decor-concept.svg HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:04:11] "GET /portfolio/gost-kv3k/sheets/03-draftsman-general-2.svg HTTP/1.1" 200 -
+----------------------------------------
+Exception occurred during processing of request from ('::1', 56133, 0, 0)
+Traceback (most recent call last):
+  File "/Users/alexandr/.local/share/uv/python/cpython-3.12.13-macos-aarch64-none/lib/python3.12/socketserver.py", line 697, in process_request_thread
+    self.finish_request(request, client_address)
+  File "/Users/alexandr/.local/share/uv/python/cpython-3.12.13-macos-aarch64-none/lib/python3.12/http/server.py", line 1326, in finish_request
+    self.RequestHandlerClass(request, client_address, self,
+  File "/Users/alexandr/.local/share/uv/python/cpython-3.12.13-macos-aarch64-none/lib/python3.12/http/server.py", line 676, in __init__
+    super().__init__(*args, **kwargs)
+  File "/Users/alexandr/.local/share/uv/python/cpython-3.12.13-macos-aarch64-none/lib/python3.12/socketserver.py", line 766, in __init__
+    self.handle()
+  File "/Users/alexandr/.local/share/uv/python/cpython-3.12.13-macos-aarch64-none/lib/python3.12/http/server.py", line 440, in handle
+    self.handle_one_request()
+  File "/Users/alexandr/.local/share/uv/python/cpython-3.12.13-macos-aarch64-none/lib/python3.12/http/server.py", line 428, in handle_one_request
+    method()
+  File "/Users/alexandr/.local/share/uv/python/cpython-3.12.13-macos-aarch64-none/lib/python3.12/http/server.py", line 683, in do_GET
+    self.copyfile(f, self.wfile)
+  File "/Users/alexandr/.local/share/uv/python/cpython-3.12.13-macos-aarch64-none/lib/python3.12/http/server.py", line 882, in copyfile
+    shutil.copyfileobj(source, outputfile)
+  File "/Users/alexandr/.local/share/uv/python/cpython-3.12.13-macos-aarch64-none/lib/python3.12/shutil.py", line 204, in copyfileobj
+    fdst_write(buf)
+  File "/Users/alexandr/.local/share/uv/python/cpython-3.12.13-macos-aarch64-none/lib/python3.12/socketserver.py", line 845, in write
+    self._sock.sendall(b)
+BrokenPipeError: [Errno 32] Broken pipe
+----------------------------------------
+::1 - - [24/Sep/2026 23:04:11] "GET /portfolio/gost-kv3k/sheets/45-furniture-maker-furn-mount.svg HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:04:11] "GET /portfolio/gost-kv3k/sheets/50-draftsman-elev-r1-2.svg HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:04:11] "GET /portfolio/gost-kv3k/sheets/16-electrical-engineer-panel.svg HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:04:11] "GET /portfolio/gost-kv3k/sheets/17-electrical-engineer-low-current.svg HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:04:11] "GET /portfolio/gost-kv3k/sheets/55-draftsman-elev-r4-2.svg HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:04:11] "GET /portfolio/gost-kv3k/sheets/71-estimator-estimate.svg HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:04:11] "GET /brief.html HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:04:11] "GET /portfolio/gost-kv3k/sheets/31-finisher-finish-schedule.svg HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:04:11] "GET /portfolio/gost-kv3k/sheets/08-interior-designer-concept.svg HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:04:11] "GET /portfolio/gost-kv3k/sheets/41-furniture-maker-furn-g1.svg HTTP/1.1" 200 -
+----------------------------------------
+Exception occurred during processing of request from ('::1', 56143, 0, 0)
+Traceback (most recent call last):
+  File "/Users/alexandr/.local/share/uv/python/cpython-3.12.13-macos-aarch64-none/lib/python3.12/socketserver.py", line 697, in process_request_thread
+    self.finish_request(request, client_address)
+  File "/Users/alexandr/.local/share/uv/python/cpython-3.12.13-macos-aarch64-none/lib/python3.12/http/server.py", line 1326, in finish_request
+    self.RequestHandlerClass(request, client_address, self,
+  File "/Users/alexandr/.local/share/uv/python/cpython-3.12.13-macos-aarch64-none/lib/python3.12/http/server.py", line 676, in __init__
+    super().__init__(*args, **kwargs)
+  File "/Users/alexandr/.local/share/uv/python/cpython-3.12.13-macos-aarch64-none/lib/python3.12/socketserver.py", line 766, in __init__
+    self.handle()
+  File "/Users/alexandr/.local/share/uv/python/cpython-3.12.13-macos-aarch64-none/lib/python3.12/http/server.py", line 440, in handle
+    self.handle_one_request()
+  File "/Users/alexandr/.local/share/uv/python/cpython-3.12.13-macos-aarch64-none/lib/python3.12/http/server.py", line 428, in handle_one_request
+    method()
+  File "/Users/alexandr/.local/share/uv/python/cpython-3.12.13-macos-aarch64-none/lib/python3.12/http/server.py", line 683, in do_GET
+    self.copyfile(f, self.wfile)
+  File "/Users/alexandr/.local/share/uv/python/cpython-3.12.13-macos-aarch64-none/lib/python3.12/http/server.py", line 882, in copyfile
+    shutil.copyfileobj(source, outputfile)
+  File "/Users/alexandr/.local/share/uv/python/cpython-3.12.13-macos-aarch64-none/lib/python3.12/shutil.py", line 204, in copyfileobj
+    fdst_write(buf)
+::1 - - [24/Sep/2026 23:04:11] "GET /portfolio/gost-kv3k/sheets/32-colorist-color-card.svg HTTP/1.1" 200 -
+  File "/Users/alexandr/.local/share/uv/python/cpython-3.12.13-macos-aarch64-none/lib/python3.12/socketserver.py", line 845, in write
+    self._sock.sendall(b)
+BrokenPipeError: [Errno 32] Broken pipe
+----------------------------------------
+::1 - - [24/Sep/2026 23:04:11] "GET /portfolio/gost-kv3k/sheets/40-furniture-maker-furn-s5.svg HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:04:11] "GET /portfolio/gost-kv3k/sheets/19-hvac-engineer-heating.svg HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:04:11] "GET /cases/ HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:04:11] "GET /price/ HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:04:11] "GET /portfolio/gost-kv3k/sheets/25-drywall-installer-ceiling-sections.svg HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:04:11] "GET /css/main.css?v=31 HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:04:11] "GET /portfolio/gost-kv3k/sheets/60-draftsman-elev-r6-3.svg HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:04:46] "GET /gost/ HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:05:29] "GET /portfolio/gost-proekt2/ HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:05:29] code 404, message File not found
+::1 - - [24/Sep/2026 23:05:29] "GET /favicon.ico HTTP/1.1" 404 -
+::1 - - [24/Sep/2026 23:06:25] "GET /portfolio/gost-proekt2/sheets/43-decorator-decor-concept.svg HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:06:25] "GET /portfolio/gost-proekt2/sheets/44-decorator-decor-plan.svg HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:06:25] "GET /portfolio/gost-proekt2/sheets/01-decorator-cover.svg HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:06:25] "GET /portfolio/gost-proekt2/sheets/45-decorator-curtains.svg HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:06:32] "GET /portfolio/gost-proekt2/sheets/46-decorator-textile-schedule.svg HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:06:32] "GET /portfolio/gost-proekt2/sheets/47-decorator-decor-schedule.svg HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:06:34] "GET /portfolio/gost-proekt2/sheets/02-draftsman-general.svg HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:06:49] code 404, message File not found
+::1 - - [24/Sep/2026 23:06:49] "GET /favicon.ico HTTP/1.1" 404 -
+::1 - - [24/Sep/2026 23:06:55] "GET /portfolio-hub/ HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:06:57] "GET /portfolio-hub/ HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:07:02] "GET /catalog/ HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:07:02] "GET / HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:07:50] "GET /portfolio/gost-kv3k/ HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:07:50] code 404, message File not found
+::1 - - [24/Sep/2026 23:07:50] "GET /favicon.ico HTTP/1.1" 404 -
+::1 - - [24/Sep/2026 23:07:55] "GET /portfolio/gost-kv3k/sheets/01-decorator-cover.svg HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:07:55] "GET /portfolio/gost-kv3k/sheets/34-decorator-decor-concept.svg HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:07:55] "GET /portfolio/gost-kv3k/sheets/35-decorator-decor-plan.svg HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:07:55] "GET /portfolio/gost-kv3k/sheets/36-decorator-curtains.svg HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:07:55] "GET /portfolio/gost-kv3k/sheets/38-decorator-decor-schedule.svg HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:07:55] "GET /portfolio/gost-kv3k/sheets/37-decorator-textile-schedule.svg HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:07:55] "GET /portfolio/gost-kv3k/sheets/02-draftsman-general.svg HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:07:55] "GET /portfolio/gost-kv3k/sheets/04-draftsman-general-3.svg HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:07:55] "GET /portfolio/gost-kv3k/sheets/03-draftsman-general-2.svg HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:07:55] "GET /portfolio/gost-kv3k/sheets/47-draftsman-registers.svg HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:07:55] "GET /portfolio/gost-kv3k/sheets/48-draftsman-elev-key.svg HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:07:55] "GET /portfolio/gost-kv3k/sheets/49-draftsman-elev-r1-1.svg HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:07:55] "GET /portfolio/gost-kv3k/sheets/50-draftsman-elev-r1-2.svg HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:07:55] "GET /portfolio/gost-kv3k/sheets/52-draftsman-elev-r2-2.svg HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:07:55] "GET /portfolio/gost-kv3k/sheets/51-draftsman-elev-r2-1.svg HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:07:55] "GET /portfolio/gost-kv3k/sheets/53-draftsman-elev-r3.svg HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:07:55] "GET /portfolio/gost-kv3k/sheets/54-draftsman-elev-r4-1.svg HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:07:55] "GET /portfolio/gost-kv3k/sheets/55-draftsman-elev-r4-2.svg HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:07:55] "GET /portfolio/gost-kv3k/sheets/56-draftsman-elev-r5-1.svg HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:07:55] "GET /portfolio/gost-kv3k/sheets/57-draftsman-elev-r5-2.svg HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:07:55] "GET /portfolio/gost-kv3k/sheets/58-draftsman-elev-r6-1.svg HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:07:55] "GET /portfolio/gost-kv3k/sheets/59-draftsman-elev-r6-2.svg HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:07:55] "GET /portfolio/gost-kv3k/sheets/61-draftsman-elev-r6-4.svg HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:07:55] "GET /portfolio/gost-kv3k/sheets/60-draftsman-elev-r6-3.svg HTTP/1.1" 200 -
+::1 - - [24/Sep/2026 23:07:55] "GET /portfolio/gost-kv3k/sheets/62-draftsman-elev-r7-1.svg HTTP/1.1" 200 -
