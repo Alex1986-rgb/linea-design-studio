@@ -6181,12 +6181,18 @@ reg.sort((a, b) => a.no - b.no);
 function printHTML() {
   const docCSS = (/<style>([\s\S]*?)<\/style>/.exec(docHTML('x', '')) || [, ''])[1];
   const body = h => (/<main>([\s\S]*?)<\/main>/.exec(h) || [, ''])[1];
+  // документы живут в подпапках, а print.html — в корне выпуска: относительные ссылки
+  // внутри вставленного тела надо переписать от корня, иначе ведомость и рендеры бьются
+  const rebase = (html, file) => {
+    const dir = file.includes('/') ? file.slice(0, file.lastIndexOf('/') + 1) : '';
+    return dir ? html.replace(/(href|src)="(?!https?:|\/|#|data:|mailto:|tel:)([^"]+)"/g, (m, a, p) => `${a}="${dir}${p}"`) : html;
+  };
   const addr = (brief.object && brief.object.address) || 'Объект';
   const tocRow = (id, title, extra, href) => `<a class="tr" href="#${href}"><span class="n">${id}</span><span class="t">${esc(title)}</span><span class="s">${extra}</span></a>`;
   const toc = DOCS.map((d, i) => tocRow(d.id, d.title, 'документ', 'd' + (i + 1))).join('')
     + reg.map(s => tocRow('АИ-' + s.no, s.title, s.scale, 's' + s.no)).join('');
   const docPages = DOCS.map((d, i) => DOC_HTML[d.file]
-    ? `<section class="page doc" id="d${i + 1}"><div class="dhead">${d.id} · ${esc(addr)} · ${DATE}</div><div class="inner">${body(DOC_HTML[d.file])}</div></section>` : '').join('');
+    ? `<section class="page doc" id="d${i + 1}"><div class="dhead">${d.id} · ${esc(addr)} · ${DATE}</div><div class="inner">${rebase(body(DOC_HTML[d.file]), d.file)}</div></section>` : '').join('');
   const sheetPages = reg.map(s => `<section class="page" id="s${s.no}"><img src="${s.file}" alt="${esc(s.title)}"></section>`).join('');
   return `<!DOCTYPE html><html lang="ru"><head><meta charset="utf-8"><title>Альбом · ${esc(addr)} — LINEA</title><style>
 ${docCSS}
@@ -6380,5 +6386,6 @@ const total = smetaRows.reduce((s, r) => s + r.sum, 0);
 if (reg.length !== TOTAL_SHEETS) console.warn(`  ⚠ штамп обещает «Листов ${TOTAL_SHEETS}», фактически выпущено ${reg.length} — поправить формулу TOTAL_SHEETS`);
 console.log(`✔ Проект собран: ${outDir}`);
 console.log(`  Стиль «${style.title}», тариф «${tier.title}», ${totalArea} м², помещений: ${rooms.length}`);
-console.log(`  Листов: планы ${counts.plans} · развертки ${counts.elev} · потолки ${counts.ceil}`);
+console.log(`  Пакет «${PACKAGE}» · листов ${reg.length}: сводные ${counts.flat} · развёртки ${counts.elev}`
+  + (FULL ? ` · покомнатные планы ${counts.plans} · полы ${counts.poly} · потолки ${counts.ceil} · электрика ${counts.electro}` : ' (покомнатные листы — в пакете --package=full)'));
 console.log(`  Смета (без резерва): ${fmt(total)} ₽ · файлов: ${files.length}`);

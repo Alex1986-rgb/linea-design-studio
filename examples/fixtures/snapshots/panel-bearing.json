@@ -3,13 +3,13 @@
  "00-pasport/pasport.html": "31dc605d583415ce",
  "00-pasport/plan-prezentatsiya.svg": "4531c4c6c46c984f",
  "00-pasport/vedomost.html": "8d01fc18ca899888",
- "01-kvartira/kvartira-01-obmer.svg": "94641b2a2fdb2be1",
- "01-kvartira/kvartira-02-demontazh.svg": "cc72b2ecffdccfdf",
- "01-kvartira/kvartira-03-montazh.svg": "de44dd6919652887",
+ "01-kvartira/kvartira-01-obmer.svg": "a3bdcaf048232856",
+ "01-kvartira/kvartira-02-demontazh.svg": "87cddfdb9844bf80",
+ "01-kvartira/kvartira-03-montazh.svg": "460fe43556052c9d",
  "01-kvartira/kvartira-04-mebel.svg": "ca00c190cc5a3dac",
- "01-kvartira/kvartira-05-eksplikatsiya-dverey.svg": "6dd906ba709fcf21",
+ "01-kvartira/kvartira-05-eksplikatsiya-dverey.svg": "24480b788610e220",
  "01-kvartira/kvartira-06-rozetki.svg": "8750abc354a688e9",
- "01-kvartira/kvartira-07-potolki.svg": "a3a1d377e24952dc",
+ "01-kvartira/kvartira-07-potolki.svg": "ec82c75d815b2080",
  "01-kvartira/kvartira-08-osveshchenie.svg": "c610e049b62950b2",
  "01-kvartira/kvartira-09-vyklyuchateli.svg": "dc33c10a05ae3cfc",
  "01-kvartira/kvartira-10-skhema-vklyucheniya.svg": "b18da1ef4c35fbea",
@@ -53,5 +53,5 @@
  "index.html": "b74c50ee4df959f9",
  "manifest.json": "78b674953ac25315",
  "presentation.html": "f09778aa084d6cf8",
- "print.html": "e226190e014788bc"
+ "print.html": "bb71b1116af5039c"
 }
