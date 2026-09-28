@@ -346,8 +346,12 @@ function svgDoc(wPx, hPx, body, bg, opts) {
   // только под сам чертёж, а не под таблицы, которые не обязаны масштабироваться.
   const panelW = +opts.panelW || 0, headH = +opts.headH || 0, footH = +opts.footH || 0;
   const fieldX = fx + 12, fieldY = fy + 14 + headH;
+  // Поле чертежа — полоса над основной надписью. Г-образное поле (чертёж опускается
+  // вдоль штампа, забирая 150 px высоты) проверено и отклонено: безопасная полоса левее
+  // штампа всего 480 px, наши планы шире — ни один лист не получал крупнее ступень.
   const fieldW = fw - 16 - (panelW ? panelW + 16 : 0);
   const fieldH = fh - sh - 20 - headH - footH;    // поле чертежа над штампом
+
   const bb = contentBox(body) || { x0: 0, y0: 0, x1: wPx, y1: hPx };
   const cw = Math.max(40, bb.x1 - bb.x0), ch = Math.max(40, bb.y1 - bb.y0);
   const series = (st.scale === 'node') ? NODE_SERIES : SCALE_SERIES;
@@ -3212,19 +3216,30 @@ function autoLayout(level) {
     const rank = t => ({ 'living-kitchen': 0, living: 1, kitchen: 2, bedroom: 3, kids: 4, cabinet: 5, hallway: 6, bathroom: 7, wc: 8 }[t] ?? 9);
     return rank(a.type) - rank(b.type) || b.area - a.area;
   });
-  // Целимся в пропорцию альбомного листа (≈3:2): при квадратной раскладке план выходил
-  // «портретным» и занимал треть поля A3 — лист падал на две ступени масштабного ряда.
-  const area = order.reduce((s, r) => s + r.w * r.l, 0);
-  const target = Math.max(...order.map(r => r.w), Math.round(Math.sqrt(area * 1.5)));
-  let x = 0, y = 0, rowH = 0;
-  for (const r of order) {
-    // допуск 12 %: иначе комната, не влезающая в ряд на пару процентов, рвала строку
-    // и добавляла целый ряд высоты — именно из-за этого план вытягивался вниз
-    if (x > 0 && x + r.w > target * 1.12) { x = 0; y += rowH + INT; rowH = 0; }
-    r.pos = { x, y };
-    x += r.w + INT;
-    rowH = Math.max(rowH, r.l);
-  }
+  // Раскладываем рядами и подбираем ширину ряда перебором: одна угаданная ширина
+  // (корень из площади) давала «портретный» план на альбомном поле A3 — этаж занимал
+  // треть листа и падал на две ступени масштабного ряда. Допуск 12 % на ряд: иначе
+  // комната, не влезающая на пару процентов, рвала строку и добавляла ряд высоты.
+  const FIELD_AR = 1.5;                     // пропорция поля чертежа A3 над штампом
+  const pack = target => {
+    const pos = [];
+    let x = 0, y = 0, rowH = 0;
+    for (const r of order) {
+      if (x > 0 && x + r.w > target * 1.12) { x = 0; y += rowH + INT; rowH = 0; }
+      pos.push({ x, y });
+      x += r.w + INT;
+      rowH = Math.max(rowH, r.l);
+    }
+    const W = Math.max(...order.map((r, i) => pos[i].x + r.w));
+    const H = Math.max(...order.map((r, i) => pos[i].y + r.l));
+    return { pos, fit: Math.min(FIELD_AR / W, 1 / H) };   // во сколько влезает в поле
+  };
+  const widths = order.map(r => r.w);
+  const minT = Math.max(...widths), maxT = widths.reduce((a, b) => a + b, 0) + INT * widths.length;
+  let best = null;
+  for (let t = minT; t <= maxT; t += Math.max(100, Math.round((maxT - minT) / 40)))
+    { const c = pack(t); if (!best || c.fit > best.fit) best = c; }
+  order.forEach((r, i) => { r.pos = best.pos[i]; });
   // окна — только во внешних стенах получившейся раскладки
   const maxY = Math.max(...order.map(o => o.pos.y + o.l));
   for (const r of order) {
