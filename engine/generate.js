@@ -204,20 +204,57 @@ function contentBox(body) {
   // линии
   const rl = /<line\b[^>]*?x1="(-?[\d.]+)"[^>]*?y1="(-?[\d.]+)"[^>]*?x2="(-?[\d.]+)"[^>]*?y2="(-?[\d.]+)"/g;
   while ((m = rl.exec(body))) { put(+m[1], +m[2]); put(+m[3], +m[4]); }
-  // окружности и эллипсы
-  const rc = /<(circle|ellipse)\b[^>]*?cx="(-?[\d.]+)"[^>]*?cy="(-?[\d.]+)"/g;
-  while ((m = rc.exec(body))) { put(+m[2] - 12, +m[3] - 12); put(+m[2] + 12, +m[3] + 12); }
-  // тексты: якорь плюс запас на длину строки
-  const rt = /<text\b[^>]*?x="(-?[\d.]+)"[^>]*?y="(-?[\d.]+)"[^>]*?>([^<]*)</g;
-  while ((m = rt.exec(body))) { const x = +m[1], y = +m[2], w = (m[3] || '').length * 5.2; put(x - 6, y - 14); put(x + w, y + 6); }
-  // пути и полилинии
-  const rp = /<(path|polyline)\b[^>]*?(?:d|points)="([^"]+)"/g;
+  // окружности и эллипсы — по фактическому радиусу, а не по жёсткому запасу ±12
+  const rc = /<(circle|ellipse)\b([^>]*)>/g;
+  while ((m = rc.exec(body))) {
+    const at = m[2], gx = /\bcx="(-?[\d.]+)"/.exec(at), gy = /\bcy="(-?[\d.]+)"/.exec(at);
+    if (!gx || !gy) continue;
+    const cx = +gx[1], cy = +gy[1];
+    const gr = /\br="(-?[\d.]+)"/.exec(at), grx = /\brx="(-?[\d.]+)"/.exec(at), gry = /\bry="(-?[\d.]+)"/.exec(at);
+    const rx = gr ? +gr[1] : (grx ? +grx[1] : 2), ry = gr ? +gr[1] : (gry ? +gry[1] : rx);
+    put(cx - rx, cy - ry); put(cx + rx, cy + ry);
+  }
+  // тексты: фактический кегль и выключка (start/middle/end), а не константа на знак
+  const rt = /<text\b([^>]*)>([^<]*)</g;
+  while ((m = rt.exec(body))) {
+    const at = m[1], gx = /\bx="(-?[\d.]+)"/.exec(at), gy = /\by="(-?[\d.]+)"/.exec(at);
+    if (!gx || !gy) continue;
+    const x = +gx[1], y = +gy[1];
+    const gf = /\bfont-size="(-?[\d.]+)"/.exec(at), fs = gf ? +gf[1] : 10;
+    const ga = /\btext-anchor="(\w+)"/.exec(at), anchor = ga ? ga[1] : 'start';
+    const w = (m[2] || '').length * charW(fs);
+    const x0t = anchor === 'middle' ? x - w / 2 : anchor === 'end' ? x - w : x;
+    put(x0t, y - fs); put(x0t + w, y + fs * 0.3);
+  }
+  // пути: разбор по командам — иначе аргументы дуг (A rx ry rot laf sf x y) читались
+  // парами координат и давали фантомную точку, завышая габарит листа
+  const ARGS = { M: 2, L: 2, T: 2, C: 6, S: 4, Q: 4, A: 7, H: 1, V: 1 };
+  const rpd = /<path\b[^>]*?\sd="([^"]+)"/g;
+  while ((m = rpd.exec(body))) {
+    const toks = m[1].match(/[A-Za-z]|-?[\d.]+(?:e-?\d+)?/g) || [];
+    let cmd = 'M', cx = 0, cy = 0, i = 0;
+    while (i < toks.length) {
+      if (/[A-Za-z]/.test(toks[i])) { cmd = toks[i]; i++; continue; }
+      const up = cmd.toUpperCase(), rel = cmd !== up, n = ARGS[up] || 2;
+      const a = toks.slice(i, i + n).map(Number);
+      if (a.length < n) break;
+      i += n;
+      if (up === 'H') cx = rel ? cx + a[0] : a[0];
+      else if (up === 'V') cy = rel ? cy + a[0] : a[0];
+      else { const dx = a[n - 2], dy = a[n - 1]; cx = rel ? cx + dx : dx; cy = rel ? cy + dy : dy; }
+      put(cx, cy);
+      if (up === 'M') cmd = rel ? 'l' : 'L';
+    }
+  }
+  // полилинии — парами координат, как и было
+  const rp = /<polyline\b[^>]*?points="([^"]+)"/g;
   while ((m = rp.exec(body))) {
-    const nums = (m[2].match(/-?[\d.]+/g) || []).map(Number);
+    const nums = (m[1].match(/-?[\d.]+/g) || []).map(Number);
     for (let i = 0; i + 1 < nums.length; i += 2) put(nums[i], nums[i + 1]);
   }
   if (x0 > x1 || y0 > y1) return null;
-  return { x0: x0 - 14, y0: y0 - 14, x1: x1 + 14, y1: y1 + 14 };
+  // запас ±8 как в paper.js: прежние ±14 съедали ~2,8 % поля и роняли лист на ступень ряда
+  return { x0: x0 - 8, y0: y0 - 8, x1: x1 + 8, y1: y1 + 8 };
 }
 
 // ---------- ч/б режим (--mono) ----------
@@ -290,12 +327,27 @@ function normalizeInk(body, k) {
     .replace(/stroke-width="([\d.]+)"/g, (m, v) => `stroke-width="${Math.max(+v * c, minPen).toFixed(2)}"`);
 }
 
-function svgDoc(wPx, hPx, body, bg) {
+// Бумажный слой (панели, примечания, заголовок) рисуется в координатах листа и НЕ масштабируется:
+// кегли в нём уже заданы в бумажных единицах, поэтому только подтягиваем их до минимумов ГОСТ.
+function normalizePaperInk(body) {
+  const minText = TEXT_MM.h25 * PXMM, minPen = PEN_MM.aux * PXMM;
+  return body
+    .replace(/font-size="([\d.]+)"/g, (m, v) => `font-size="${Math.max(+v, minText).toFixed(2)}"`)
+    .replace(/stroke-width="([\d.]+)"/g, (m, v) => `stroke-width="${Math.max(+v, minPen).toFixed(2)}"`);
+}
+
+function svgDoc(wPx, hPx, body, bg, opts) {
+  opts = opts || {};
   const st = LAST_STAMP || { name: 'Лист', sheet: '—', scale: null }; LAST_STAMP = null;
   if (st.y && st.y > 40 && st.y < hPx) hPx = st.y + 12;   // низ содержимого — там, где стоял старый штамп
   const fx = PAGE.ml, fy = PAGE.mt, fw = PAGE.w - PAGE.ml - PAGE.mr, fh = PAGE.h - PAGE.mt - PAGE.mb;
   const sw = 700, sh = 150;                       // штамп 185×40 мм в правом нижнем углу поля
-  const fieldW = fw - 16, fieldH = fh - sh - 20;  // поле чертежа над штампом
+  // Бумажные зоны отнимают поле у чертежа ОДИН раз — дальше масштаб подбирается
+  // только под сам чертёж, а не под таблицы, которые не обязаны масштабироваться.
+  const panelW = +opts.panelW || 0, headH = +opts.headH || 0, footH = +opts.footH || 0;
+  const fieldX = fx + 12, fieldY = fy + 14 + headH;
+  const fieldW = fw - 16 - (panelW ? panelW + 16 : 0);
+  const fieldH = fh - sh - 20 - headH - footH;    // поле чертежа над штампом
   const bb = contentBox(body) || { x0: 0, y0: 0, x1: wPx, y1: hPx };
   const cw = Math.max(40, bb.x1 - bb.x0), ch = Math.max(40, bb.y1 - bb.y0);
   const series = (st.scale === 'node') ? NODE_SERIES : SCALE_SERIES;
@@ -307,14 +359,26 @@ function svgDoc(wPx, hPx, body, bg) {
   st.ratio = ratio;
   if (process.env.LINEA_DEBUG_FIT) console.log(`FIT ${st.name} | bb ${bb.x0.toFixed(0)},${bb.y0.toFixed(0)} → ${bb.x1.toFixed(0)},${bb.y1.toFixed(0)} | cw×ch ${cw.toFixed(0)}×${ch.toFixed(0)} | k=${k} 1:${ratio} | на бумаге ${(cw*k).toFixed(0)}×${(ch*k).toFixed(0)} из ${fieldW}×${fieldH}`);
   // содержимое ставим по фактическим границам: слева и сверху с равным полем, без пустых зон
-  const ox = fx + 12 + Math.max(0, (fieldW - cw * k) / 2) - bb.x0 * k;
-  const oy = fy + 14 + Math.max(0, (fieldH - ch * k) / 2) - bb.y0 * k;
+  const ox = fieldX + Math.max(0, (fieldW - cw * k) / 2) - bb.x0 * k;
+  const oy = fieldY + Math.max(0, (fieldH - ch * k) / 2) - bb.y0 * k;
   // подписи «М 1:__RATIO__» в теле листа получают фактический масштаб, а не заявленный
   body = body.split('__RATIO__').join(String(ratio));
   let s = `<svg xmlns="http://www.w3.org/2000/svg" width="${PAGE.w}" height="${PAGE.h}" viewBox="0 0 ${PAGE.w} ${PAGE.h}" font-family='${FONT}' data-sheet="${CUR_SHEET || 'other'}" data-scale="1:${ratio}">`;
   s += `<rect width="${PAGE.w}" height="${PAGE.h}" fill="${bg || CAD.paper}"/>`;
   s += `<rect x="${fx}" y="${fy}" width="${fw}" height="${fh}" fill="none" stroke="#1C1C1C" stroke-width="1.6"/>`;
   s += `<g transform="translate(${ox} ${oy}) scale(${k.toFixed(4)})">${normalizeInk(body, k)}</g>`;
+  // бумажный слой поверх чертежа: заголовок, боковая панель, подвал с примечаниями.
+  // На время сборки INK_K = 1: кегли, межстрочное и ширина колонок считаются в бумажных
+  // единицах, иначе строки слипаются и текст уезжает (helper'ы завязаны на масштаб чертежа).
+  const paper = [];
+  const prevInk = INK_K; INK_K = 1;
+  // маркеры data-el — контракт бумажного слоя: по ним tools/check-sheets.js отделяет
+  // блоки в координатах листа от масштабируемой группы и не пересчитывает их через k
+  if (opts.head) paper.push(`<g data-el="heading">${opts.head({ x: fieldX, y: fy + 14, w: fw - 24, h: headH })}</g>`);
+  if (opts.panel) paper.push(`<g data-el="panel">${opts.panel({ x: fx + fw - 12 - panelW, y: fieldY, w: panelW, h: fieldH })}</g>`);
+  if (opts.footer) paper.push(`<g data-el="footer">${opts.footer({ x: fieldX, y: fieldY + fieldH + 10, w: fw - sw - 28, h: footH })}</g>`);
+  INK_K = prevInk;
+  if (paper.length) s += normalizePaperInk(paper.join('')).split('__RATIO__').join(String(ratio));
   s += sheetStampBlock(fx + fw - sw, fy + fh - sh, sw, sh, st);
   // контрольный отрезок масштаба: 1000 мм в натуре
   const ctrl = 1000 * S * k;
@@ -1994,28 +2058,29 @@ function drawElevation(room, wallKey, sheet) {
 
   // ── 10. правая колонка: спецификация ──────────────────────────
   const ax = SPEC_X;
+  let panel = '';   // правая колонка уходит в бумажный слой: она не масштабируется вместе со стеной
   const sockCount = elPts.filter(p => p.type === 'socket').length;
   const swCount = elPts.filter(p => p.type === 'switch').length;
   const braCount = mySconces.length;
   const wallNiches = nichesFor(room).filter(n => n.wall === wallKey);
   const ledCorniceM = +(len / 1000 * 1.05).toFixed(1);
 
-  b += `<text x="${ax}" y="${M + 16}" font-size="12" font-weight="700" fill="#2E2A26">Ведомость отделки · стена ${wallKey}</text>`;
-  b += `<line x1="${ax}" y1="${M + 22}" x2="${ax + SPEC_W - 4}" y2="${M + 22}" stroke="#D8D2C6" stroke-width="0.8"/>`;
+  panel += `<text x="${ax}" y="${M + 16}" font-size="12" font-weight="700" fill="#2E2A26">Ведомость отделки · стена ${wallKey}</text>`;
+  panel += `<line x1="${ax}" y1="${M + 22}" x2="${ax + SPEC_W - 4}" y2="${M + 22}" stroke="#D8D2C6" stroke-width="0.8"/>`;
 
   const finRows = room.type === 'bathroom'
     ? [['Стены', 'Кер./гр. 600×300, затирка в тон'], ['Потолок', 'ГКЛВ, краска влагостойкая'], ['Плинтус', 'ПВХ сантехнический'], ['LED', style.skus.led.split('·')[0].trim()]]
     : [['Стены', style.wall.finish.split(',')[0].replace(/^краска\s+/i, '')], ['Акцент', style.accent.finish.split(':').pop().trim()], ['Плинтус', style.plinth.split(',')[0]], ['LED', style.skus.led.split('·')[0].trim()]];
   let cy = M + 34;
   finRows.forEach(r => {
-    b += `<text x="${ax}" y="${cy}" font-size="9" font-weight="600" fill="#7A756D">${esc(r[0])}:</text>`;
-    wrapText(r[1], 27).slice(0, 2).forEach((ln, j) => { b += `<text x="${ax + 50}" y="${cy + j * 12}" font-size="9.5" fill="#1C1C1C">${esc(ln)}</text>`; });
+    panel += `<text x="${ax}" y="${cy}" font-size="9" font-weight="600" fill="#7A756D">${esc(r[0])}:</text>`;
+    wrapText(r[1], 27).slice(0, 2).forEach((ln, j) => { panel += `<text x="${ax + 50}" y="${cy + j * 12}" font-size="9.5" fill="#1C1C1C">${esc(ln)}</text>`; });
     cy += 23;
   });
 
   cy += 8;
-  b += `<text x="${ax}" y="${cy}" font-size="11" font-weight="700" fill="#2E2A26">Элементы стены</text>`;
-  b += `<line x1="${ax}" y1="${cy + 5}" x2="${ax + SPEC_W - 4}" y2="${cy + 5}" stroke="#D8D2C6" stroke-width="0.8"/>`;
+  panel += `<text x="${ax}" y="${cy}" font-size="11" font-weight="700" fill="#2E2A26">Элементы стены</text>`;
+  panel += `<line x1="${ax}" y1="${cy + 5}" x2="${ax + SPEC_W - 4}" y2="${cy + 5}" stroke="#D8D2C6" stroke-width="0.8"/>`;
   cy += 18;
   const counters = [
     ...(sockCount > 0 ? [['Розетки', `${sockCount} шт.`]] : []),
@@ -2028,15 +2093,15 @@ function drawElevation(room, wallKey, sheet) {
     [`Плинтус`, `${+(len / 1000).toFixed(1)} м.п.`]
   ];
   counters.forEach((r, i) => {
-    if (i) b += `<line x1="${ax}" y1="${cy - 6}" x2="${ax + SPEC_W - 4}" y2="${cy - 6}" stroke="#EDEBE4" stroke-width="0.6"/>`;
+    if (i) panel += `<line x1="${ax}" y1="${cy - 6}" x2="${ax + SPEC_W - 4}" y2="${cy - 6}" stroke="#EDEBE4" stroke-width="0.6"/>`;
     // символ-иконка слева
-    if (r[0].startsWith('Розетки')) b += `<circle cx="${ax + 5}" cy="${cy + 2}" r="4.5" fill="none" stroke="#21A366" stroke-width="1.2"/>`;
-    else if (r[0].startsWith('Выключат')) b += `<circle cx="${ax + 5}" cy="${cy + 2}" r="4" fill="#21A366"/>`;
-    else if (r[0].startsWith('Бра')) b += `<path d="M ${ax + 1} ${cy + 4} A 8 8 0 0 1 ${ax + 12} ${cy + 4}" fill="none" stroke="#C29A5B" stroke-width="1.4"/>`;
-    else if (r[0].startsWith('Ниши')) b += `<rect x="${ax + 1}" y="${cy - 2}" width="10" height="8" fill="none" stroke="#C29A5B" stroke-width="1" stroke-dasharray="3 2"/>`;
-    else if (r[0].startsWith('LED')) b += `<line x1="${ax + 1}" y1="${cy + 3}" x2="${ax + 11}" y2="${cy + 3}" stroke="#C29A5B" stroke-width="2.2" stroke-dasharray="4 3"/>`;
-    b += `<text x="${ax + 16}" y="${cy + 7}" font-size="9.5" fill="#57514A">${esc(r[0])}</text>`;
-    b += `<text x="${ax + SPEC_W - 6}" y="${cy + 7}" font-size="9.5" font-weight="600" fill="#1C1C1C" text-anchor="end">${esc(r[1])}</text>`;
+    if (r[0].startsWith('Розетки')) panel += `<circle cx="${ax + 5}" cy="${cy + 2}" r="4.5" fill="none" stroke="#21A366" stroke-width="1.2"/>`;
+    else if (r[0].startsWith('Выключат')) panel += `<circle cx="${ax + 5}" cy="${cy + 2}" r="4" fill="#21A366"/>`;
+    else if (r[0].startsWith('Бра')) panel += `<path d="M ${ax + 1} ${cy + 4} A 8 8 0 0 1 ${ax + 12} ${cy + 4}" fill="none" stroke="#C29A5B" stroke-width="1.4"/>`;
+    else if (r[0].startsWith('Ниши')) panel += `<rect x="${ax + 1}" y="${cy - 2}" width="10" height="8" fill="none" stroke="#C29A5B" stroke-width="1" stroke-dasharray="3 2"/>`;
+    else if (r[0].startsWith('LED')) panel += `<line x1="${ax + 1}" y1="${cy + 3}" x2="${ax + 11}" y2="${cy + 3}" stroke="#C29A5B" stroke-width="2.2" stroke-dasharray="4 3"/>`;
+    panel += `<text x="${ax + 16}" y="${cy + 7}" font-size="9.5" fill="#57514A">${esc(r[0])}</text>`;
+    panel += `<text x="${ax + SPEC_W - 6}" y="${cy + 7}" font-size="9.5" font-weight="600" fill="#1C1C1C" text-anchor="end">${esc(r[1])}</text>`;
     cy += 21;
   });
 
@@ -2046,20 +2111,20 @@ function drawElevation(room, wallKey, sheet) {
   // по ним закупку, а не «на глаз» (канон, чек-лист elevation)
   if (tile) {
     cy += 8;
-    b += `<rect x="${ax}" y="${cy}" width="${SPEC_W - 4}" height="62" fill="#FBF9F4" stroke="#C8C0B4" stroke-width="0.8"/>`;
-    b += `<text x="${ax + 8}" y="${cy + 15}" font-size="9.5" font-weight="700" fill="#2E2A26">Раскладка плитки ${tile.TW}×${tile.TH}</text>`;
-    b += `<text x="${ax + 8}" y="${cy + 28}" font-size="8.4" fill="#57514A">целых ${tile.full} шт. · подрезка ${tile.cut} шт. · ${(tile.area * 1.1).toFixed(1)} м² (+10%)</text>`;
-    b += `<text x="${ax + 8}" y="${cy + 40}" font-size="8.4" fill="#57514A">верхний ряд ${tile.cutTop || tile.TH} мм · подрезка по длине ${tile.cutSide || 0} мм</text>`;
-    b += `<text x="${ax + 8}" y="${cy + 53}" font-size="8.2" fill="#8A6A3B">${tile.fromCenter ? 'от центра стены, симметричная подрезка по краям' : 'от левого угла, подрезка в дальний угол'}</text>`;
+    panel += `<rect x="${ax}" y="${cy}" width="${SPEC_W - 4}" height="62" fill="#FBF9F4" stroke="#C8C0B4" stroke-width="0.8"/>`;
+    panel += `<text x="${ax + 8}" y="${cy + 15}" font-size="9.5" font-weight="700" fill="#2E2A26">Раскладка плитки ${tile.TW}×${tile.TH}</text>`;
+    panel += `<text x="${ax + 8}" y="${cy + 28}" font-size="8.4" fill="#57514A">целых ${tile.full} шт. · подрезка ${tile.cut} шт. · ${(tile.area * 1.1).toFixed(1)} м² (+10%)</text>`;
+    panel += `<text x="${ax + 8}" y="${cy + 40}" font-size="8.4" fill="#57514A">верхний ряд ${tile.cutTop || tile.TH} мм · подрезка по длине ${tile.cutSide || 0} мм</text>`;
+    panel += `<text x="${ax + 8}" y="${cy + 53}" font-size="8.2" fill="#8A6A3B">${tile.fromCenter ? 'от центра стены, симметричная подрезка по краям' : 'от левого угла, подрезка в дальний угол'}</text>`;
     cy += 72;
   }
-  b += `<text x="${ax}" y="${cy}" font-size="8" fill="#8A8478">Арт.: ${esc(style.skus.led)}</text>`;
+  panel += `<text x="${ax}" y="${cy}" font-size="8" fill="#8A8478">Арт.: ${esc(style.skus.led)}</text>`;
   cy += 18;
 
   // Легенда цветов развёртки: на листе сосуществуют зелёная электрика, золотой LED,
   // сетка плитки и контуры мебели — без расшифровки цвет читается наугад
   // (docs/drawing-kb/11: «легенда к каждому цвету»)
-  b += flatLegendBox(ax, cy, SPEC_W - 4, 'Условные обозначения', [
+  panel += flatLegendBox(ax, cy, SPEC_W - 4, 'Условные обозначения', [
     { sym: (sx, sy) => `<g stroke="#21A366" stroke-width="1.2" fill="none"><circle cx="${sx + 6}" cy="${sy - 3}" r="4.5"/><circle cx="${sx + 6}" cy="${sy - 3}" r="1.4" fill="#21A366"/></g>`, text: 'электроточка: подпись Н=… — отметка оси от чистого пола' },
     { sym: (sx, sy) => `<line x1="${sx}" y1="${sy - 3}" x2="${sx + 16}" y2="${sy - 3}" stroke="#C29A5B" stroke-width="2.2" stroke-dasharray="6 3"/>`, text: 'LED-подсветка: карниз, ниша, подшкафная линия' },
     { sym: (sx, sy) => `<rect x="${sx}" y="${sy - 9}" width="16" height="11" fill="none" stroke="#57514A" stroke-width="1.2"/>`, text: 'ниша ГКЛ: габарит и отметка низа' },
@@ -2077,22 +2142,29 @@ function drawElevation(room, wallKey, sheet) {
   const ph = cy + 170 < Hd - 40 ? roomPhotos(room, 1)[0] : null;
   if (ph) {
     const pw = Math.min(SPEC_W - 4, 228);
-    b += `<image href="${ph.data}" x="${ax}" y="${cy}" width="${pw}" height="${+(pw * 0.66).toFixed(0)}" preserveAspectRatio="xMidYMid slice"/>`;
-    b += `<rect x="${ax}" y="${cy}" width="${pw}" height="${+(pw * 0.66).toFixed(0)}" fill="none" stroke="#1C1C1C" stroke-width="0.8"/>`;
-    b += `<text x="${ax}" y="${cy + pw * 0.66 + 12}" font-size="8.4" fill="#57514A">Реализация: ${esc(room.name)}</text>`;
+    panel += `<image href="${ph.data}" x="${ax}" y="${cy}" width="${pw}" height="${+(pw * 0.66).toFixed(0)}" preserveAspectRatio="xMidYMid slice"/>`;
+    panel += `<rect x="${ax}" y="${cy}" width="${pw}" height="${+(pw * 0.66).toFixed(0)}" fill="none" stroke="#1C1C1C" stroke-width="0.8"/>`;
+    panel += `<text x="${ax}" y="${cy + pw * 0.66 + 12}" font-size="8.4" fill="#57514A">Реализация: ${esc(room.name)}</text>`;
   }
 
-  // ── 11. заголовок и штамп ─────────────────────────────────────
-  b += `<text x="${M}" y="${M - 40}" font-size="16" font-weight="700" fill="#2E2A26">Развертка · ${esc(room.name)} · стена ${wallKey}</text>`;
-  b += `<text x="${M}" y="${M - 24}" font-size="11" fill="#7A756D">Вид изнутри помещения · отметки от чистого пола · М 1:__RATIO__</text>`;
-  // ширина примечаний ограничена левой зоной листа: правее начинается колонка ведомостей
-  b += notesBlock(M, Hd - 132, [
+  // ── 11. заголовок, примечания и штамп — бумажный слой ─────────
+  // Заголовок, ведомости и примечания не масштабируются вместе со стеной: раньше они
+  // входили в contentBox и роняли развёртку на ступень ряда (лист был занят на 42 %).
+  stamp(0, 0, 0, `Развертка ${room.name}, стена ${wallKey}`, sheet);
+  const NOTES = [
     'Схема мебели на чертеже не является технической документацией для производства мебели: чертежи разрабатывает изготовитель после контрольного замера на объекте.',
     'Отметки даны от уровня чистого пола 0,000; привязки розеток и выключателей выдержать строго.',
     room.type === 'bathroom' ? 'Раскладку плитки начинать от указанного ряда; подрезку уводить в зону, скрытую сантехникой.' : 'Границы типов отделки — по маркам ведомости отделки на этом листе.',
-  ], Math.max(40, Math.floor((ax - M - 14) / 4.7)));
-  b += stamp(M, Hd - 60, Math.min(w + 220, ax - M - 24), `Развертка ${room.name}, стена ${wallKey}`, sheet);
-  return svgDoc(Wd, Hd + 10, b);
+  ];
+  const noteRows = NOTES.reduce((a, t) => a + wrapText(t, 100).length, 0);
+  return svgDoc(Wd, Hd + 10, b, CAD.paper, {
+    panelW: SPEC_W, headH: 52, footH: 20 + noteRows * 12,
+    head: g => `<text x="${g.x}" y="${g.y + 18}" font-size="16" font-weight="700" fill="#2E2A26">Развертка · ${esc(room.name)} · стена ${wallKey}</text>`
+      + `<text x="${g.x}" y="${g.y + 36}" font-size="11" fill="#7A756D">Вид изнутри помещения · отметки от чистого пола · М 1:__RATIO__</text>`,
+    // панель собрана в координатах колонки (ax, M) — сдвигаем её в бумажную зону целиком
+    panel: g => `<g transform="translate(${(g.x - ax).toFixed(1)} ${(g.y - M).toFixed(1)})">${panel}</g>`,
+    footer: g => notesBlock(g.x, g.y, NOTES, 100),
+  });
 }
 function wrapText(t, n) { const out = []; let cur = ''; for (const word of t.split(' ')) { if ((cur + ' ' + word).trim().length > n) { out.push(cur.trim()); cur = word; } else cur += ' ' + word; } if (cur.trim()) out.push(cur.trim()); return out; }
 
@@ -3140,10 +3212,15 @@ function autoLayout(level) {
     const rank = t => ({ 'living-kitchen': 0, living: 1, kitchen: 2, bedroom: 3, kids: 4, cabinet: 5, hallway: 6, bathroom: 7, wc: 8 }[t] ?? 9);
     return rank(a.type) - rank(b.type) || b.area - a.area;
   });
-  const target = Math.max(...order.map(r => r.w), Math.round(Math.sqrt(order.reduce((s, r) => s + r.w * r.l, 0)) * 1.25));
+  // Целимся в пропорцию альбомного листа (≈3:2): при квадратной раскладке план выходил
+  // «портретным» и занимал треть поля A3 — лист падал на две ступени масштабного ряда.
+  const area = order.reduce((s, r) => s + r.w * r.l, 0);
+  const target = Math.max(...order.map(r => r.w), Math.round(Math.sqrt(area * 1.5)));
   let x = 0, y = 0, rowH = 0;
   for (const r of order) {
-    if (x > 0 && x + r.w > target) { x = 0; y += rowH + INT; rowH = 0; }
+    // допуск 12 %: иначе комната, не влезающая в ряд на пару процентов, рвала строку
+    // и добавляла целый ряд высоты — именно из-за этого план вытягивался вниз
+    if (x > 0 && x + r.w > target * 1.12) { x = 0; y += rowH + INT; rowH = 0; }
     r.pos = { x, y };
     x += r.w + INT;
     rowH = Math.max(rowH, r.l);
@@ -3385,31 +3462,30 @@ function flatSheet(sheetNo, title, sub, layerFn, rightFn, notes, lopts) {
   if (/розет|освещен|выключател|схема|пол(ы|ов)|отделк|тёплы|потолк/i.test(title)) lopts = Object.assign({ pale: true }, lopts || {});
   const MX = 70, MY = 74;
   const planW = px(FLAT.W + 2 * EXT), planH = px(FLAT.H + 2 * EXT);
-  const LGX = MX + planW + 76, LGW = 268;
-  const Wd = LGX + LGW + 26;
+  // Ведомости, примечания и заголовок ушли в бумажный слой: они не обязаны масштабироваться
+  // вместе с планом, а раньше конкурировали с ним за масштабный ряд и съедали четверть поля.
+  const PANEL_W = 268, HEAD_H = 54;
   const base = flatLayer(MX, MY, Object.assign({ id: sheetNo }, lopts || {}));
-  base.col = { x: LGX - 16, y: MY - 60, w: LGW + 32, h: planH + 320 };   // зона правой колонки
-  let b = base.s + layerFn(base);
-  b += rightFn(LGX, MY, LGW);
-  // Размеры горизонтальных участков перепланировки выносятся под габаритные цепочки —
-  // примечания опускаются ровно на занятую ими высоту, иначе числа садятся на текст.
-  let ny = MY + planH + 96 + Math.max(0, (lopts && lopts.padBottom) || 0);
-  const noteLH = Math.max(14, lineH(9) + 2);   // на мелком масштабе кегль крупнее — строки слипались
-  b += `<g data-el="notes"></g><text x="${MX}" y="${ny - 22}" font-size="10" font-weight="700" fill="#2E2A26">Примечания:</text>`;
-  notes.forEach((n, i) => { b += `<text x="${MX}" y="${ny - 22 + (i + 1) * noteLH}" font-size="9" fill="#57514A">${i + 1}. ${esc(n)}</text>`; });
-  const stY = ny - 30 + (notes.length + 1) * noteLH + 10;
-  b += `<text x="${MX}" y="${MY - 52}" font-size="17" font-weight="700" fill="#2E2A26">${esc(title)}</text>`;
-  b += `<text x="${MX}" y="${MY - 34}" font-size="11" fill="#7A756D">${esc(sub)}</text>`;
-  b += flatStamp(Wd - 26 - 560, stY, 560, title, sheetNo);
-  const Hd = stY + 56 + 26;
-  // рамку листа рисует svgDoc (ГОСТ 2.301 + поле подшивки) — вторая здесь была лишней
-  return svgDoc(Wd, Hd, b, CAD.paper);
+  const b = base.s + layerFn(base);   // в масштабируемую группу идёт только чертёж
+  flatStamp(0, 0, 0, title, sheetNo); // передаёт данные штампу листа (рисует svgDoc)
+  const noteLH = 13;
+  const FOOT_H = notes.length ? 20 + notes.length * noteLH : 0;
+  return svgDoc(planW + 2 * MX, planH + 2 * MY, b, CAD.paper, {
+    panelW: PANEL_W, headH: HEAD_H, footH: FOOT_H,
+    head: g => `<text x="${g.x}" y="${g.y + 20}" font-size="17" font-weight="700" fill="#2E2A26">${esc(title)}</text>`
+      + `<text x="${g.x}" y="${g.y + 38}" font-size="11" fill="#7A756D">${esc(sub)}</text>`,
+    panel: g => rightFn(g.x, g.y, g.w),
+    footer: g => `<g data-el="notes"><text x="${g.x}" y="${g.y + 10}" font-size="10" font-weight="700" fill="#2E2A26">Примечания:</text>`
+      + notes.map((n, i) => `<text x="${g.x}" y="${g.y + 10 + (i + 1) * noteLH}" font-size="9" fill="#57514A">${i + 1}. ${esc(n)}</text>`).join('') + '</g>',
+  });
 }
 
 function flatLegendBox(x, y, w, title, rows) { // rows: [{sym, text}] sym = функция (sx, sy) => svg
   // высота строки зависит от числа переносов — многострочные записи не наезжают на соседние
   const F = 8.7, LH = lineH(F);
-  const cols = Math.max(14, fitChars(F, 40 * 8.7 * 0.53));
+  // переносим по ФАКТИЧЕСКОЙ ширине колонки: константа не знала про ширину панели,
+  // и в бумажном слое (без сжатия масштабом) длинные строки уезжали за рамку листа
+  const cols = Math.max(14, fitChars(F, Math.max(120, w - 46)));
   const wrapped = rows.map(r0 => wrapText(r0.text, cols));
   const heights = wrapped.map(ls => Math.max(LH + 8, ls.length * LH + 8));
   const total = heights.reduce((a, b) => a + b, 0);
