@@ -352,7 +352,10 @@ function svgDoc(wPx, hPx, body, bg, opts) {
   const fieldW = fw - 16 - (panelW ? panelW + 16 : 0);
   const fieldH = fh - sh - 20 - headH - footH;    // поле чертежа над штампом
 
-  const bb = contentBox(body) || { x0: 0, y0: 0, x1: wPx, y1: hPx };
+  // opts.bbox — габарит, посчитанный вызывающим. Нужен там, где тело собрано из групп
+  // с transform="translate(...)": contentBox читает координаты атрибутами и сдвиг группы
+  // не применяет, поэтому сводный лист мерился бы как одна вложенная картинка.
+  const bb = opts.bbox || contentBox(body) || { x0: 0, y0: 0, x1: wPx, y1: hPx };
   const cw = Math.max(40, bb.x1 - bb.x0), ch = Math.max(40, bb.y1 - bb.y0);
   const series = (st.scale === 'node') ? NODE_SERIES : SCALE_SERIES;
   let k = series[series.length - 1][1], ratio = series[series.length - 1][0];
@@ -1729,7 +1732,9 @@ function tileLayout(room, wallKey, lenMm, hMm, M, h) {
 }
 
 // ---------- развертка стены (премиум: карниз, электрика, бра, подоконник, перемычки) ----------
-function drawElevation(room, wallKey, sheet) {
+// parts=true — вернуть заготовки (тело, данные ведомости) вместо готового листа:
+// на этом держится сетка развёрток одной комнаты (drawElevGrid).
+function drawElevation(room, wallKey, sheet, parts) {
   const eqInk = inkMap();   // занятость под подписи оборудования: «Раковина» и «Смеситель» наезжали друг на друга
   // Подпись по первому свободному кандидату сверху вниз. Последний кандидат ставится
   // принудительно: подоконник и радиатор должны быть подписаны в любом случае.
@@ -2154,12 +2159,13 @@ function drawElevation(room, wallKey, sheet) {
   // ── 11. заголовок, примечания и штамп — бумажный слой ─────────
   // Заголовок, ведомости и примечания не масштабируются вместе со стеной: раньше они
   // входили в contentBox и роняли развёртку на ступень ряда (лист был занят на 42 %).
-  stamp(0, 0, 0, `Развертка ${room.name}, стена ${wallKey}`, sheet);
   const NOTES = [
     'Схема мебели на чертеже не является технической документацией для производства мебели: чертежи разрабатывает изготовитель после контрольного замера на объекте.',
     'Отметки даны от уровня чистого пола 0,000; привязки розеток и выключателей выдержать строго.',
     room.type === 'bathroom' ? 'Раскладку плитки начинать от указанного ряда; подрезку уводить в зону, скрытую сантехникой.' : 'Границы типов отделки — по маркам ведомости отделки на этом листе.',
   ];
+  if (parts) return { b, panel, w, h, M, ax, len, tile, finRows, counters, NOTES, wallKey };
+  stamp(0, 0, 0, `Развертка ${room.name}, стена ${wallKey}`, sheet);
   const noteRows = NOTES.reduce((a, t) => a + wrapText(t, 100).length, 0);
   return svgDoc(Wd, Hd + 10, b, CAD.paper, {
     panelW: SPEC_W, headH: 52, footH: 20 + noteRows * 12,
@@ -2167,6 +2173,150 @@ function drawElevation(room, wallKey, sheet) {
       + `<text x="${g.x}" y="${g.y + 36}" font-size="11" fill="#7A756D">Вид изнутри помещения · отметки от чистого пола · М 1:__RATIO__</text>`,
     // панель собрана в координатах колонки (ax, M) — сдвигаем её в бумажную зону целиком
     panel: g => `<g transform="translate(${(g.x - ax).toFixed(1)} ${(g.y - M).toFixed(1)})">${panel}</g>`,
+    footer: g => notesBlock(g.x, g.y, NOTES, 100),
+  });
+}
+// ---------- сетка развёрток одной комнаты на одном листе ----------
+// Канон допускает 1:40 для развёрток (docs/cad-canon.md, «осознанное отступление»),
+// поэтому стены одной комнаты можно свести на лист, пока масштаб держится в ряду.
+// Ведомость отделки и легенда у всех стен комнаты одинаковы — на сводном листе они
+// печатаются один раз, а счётчики элементов становятся таблицей с колонкой на стену.
+// Зазор между развёртками задан в модельных px, на бумагу он выходит умноженным на
+// масштаб: 20 px — это 10 мм при 1:25 и 6 мм при 1:40. Этого хватает: у каждой стены
+// есть своя размерная цепочка и колонка отметок, они и разделяют чертежи. Щедрые 40 px
+// роняли пару узких стен на ступень ряда, а шаг 1:25 → 1:40 стоит 37% размера.
+const ELEV_GAP = 20;
+// Поле чертежа сводного листа: ширина листа минус правая панель, высота минус
+// заголовок, подвал примечаний и основная надпись. Служит только выбору раскладки.
+const ELEV_FIELD = { w: 1192, h: 795 };
+const ELEV_CAP = 26;                    // строка подписи «Стена A» под развёрткой
+// Раскладку выбираем перебором: в ряд, в два ряда, столбцом — для узких стен два ряда
+// иногда дают ступень ряда, которую строка не берёт.
+function elevGridPlan(boxes) {
+  const plan = nc => {
+    const cw2 = [], rh2 = [];
+    boxes.forEach((bx, i) => {
+      const c = i % nc, r = Math.floor(i / nc);
+      cw2[c] = Math.max(cw2[c] || 0, bx.x1 - bx.x0);
+      rh2[r] = Math.max(rh2[r] || 0, bx.y1 - bx.y0 + ELEV_CAP);
+    });
+    const W = cw2.reduce((a, v) => a + v + ELEV_GAP, -ELEV_GAP);
+    const H = rh2.reduce((a, v) => a + v + ELEV_GAP, -ELEV_GAP);
+    return { nc, cw2, rh2, W, H, fit: Math.min(ELEV_FIELD.w / W, ELEV_FIELD.h / H) };
+  };
+  let best = null;
+  for (let nc = 1; nc <= boxes.length; nc++) { const c = plan(nc); if (!best || c.fit > best.fit) best = c; }
+  return best;
+}
+// Во что обойдётся сведение стен на лист: какой масштаб из ряда возьмёт лист и сколько
+// поля займёт чертёж. Считается по тем же заготовкам, что и сам лист, но без сборки.
+function elevGridFit(room, wallKeys) {
+  const boxes = wallKeys.map(wk => contentBox(drawElevation(room, wk, 0, true).b) || { x0: 0, y0: 0, x1: 400, y1: 300 });
+  const pl = elevGridPlan(boxes);
+  const row = SCALE_SERIES.find(([, kk]) => pl.W * kk <= ELEV_FIELD.w && pl.H * kk <= ELEV_FIELD.h);
+  if (!row) return { ratio: 999, fill: 0 };
+  const k = row[1];
+  return { ratio: row[0], fill: (pl.W * k) * (pl.H * k) / ((PAGE.w - PAGE.ml - PAGE.mr) * (PAGE.h - PAGE.mt - PAGE.mb)) };
+}
+function drawElevGrid(room, wallKeys, sheet) {
+  const SPEC_W = 268, M = 90;
+  const parts = wallKeys.map(wk => drawElevation(room, wk, 0, true));
+  const boxes = parts.map(pt => contentBox(pt.b) || { x0: 0, y0: 0, x1: 400, y1: 300 });
+  const bestPlan = elevGridPlan(boxes);
+  const cols = bestPlan.nc, colW = bestPlan.cw2, rowH = bestPlan.rh2;
+  let b = '';
+  parts.forEach((pt, i) => {
+    const c = i % cols, r = Math.floor(i / cols);
+    const dx = M + colW.slice(0, c).reduce((a, v) => a + v + ELEV_GAP, 0) - boxes[i].x0
+      + (colW[c] - (boxes[i].x1 - boxes[i].x0)) / 2;
+    const dy = M + rowH.slice(0, r).reduce((a, v) => a + v + ELEV_GAP, 0) - boxes[i].y0;
+    b += `<g transform="translate(${dx.toFixed(1)} ${dy.toFixed(1)})">${pt.b}</g>`;
+    const cx = dx + boxes[i].x0 + (boxes[i].x1 - boxes[i].x0) / 2;
+    const cy = dy + boxes[i].y1 + 18;
+    b += `<text x="${cx.toFixed(1)}" y="${cy.toFixed(1)}" font-size="12" font-weight="700" text-anchor="middle" fill="#2E2A26">Стена ${pt.wallKey}</text>`;
+  });
+  const gridW = colW.reduce((a, v) => a + v + ELEV_GAP, -ELEV_GAP);
+  const gridH = rowH.reduce((a, v) => a + v + ELEV_GAP, -ELEV_GAP);
+  const Wd = M * 2 + gridW + SPEC_W + 80, Hd = M * 2 + gridH;
+  // габарит знаем точно: ячейки расставлены нами, мерить регуляркой нечего
+  const BBOX = { x0: M, y0: M, x1: M + gridW, y1: M + gridH };
+
+  // ── общая правая колонка ──────────────────────────────────────
+  const ax = 0;
+  let panel = '';
+  let cy = 16;
+  panel += `<text x="${ax}" y="${cy}" font-size="12" font-weight="700" fill="#2E2A26">Ведомость отделки · ${esc(room.name)}</text>`;
+  panel += `<line x1="${ax}" y1="${cy + 6}" x2="${ax + SPEC_W - 4}" y2="${cy + 6}" stroke="#D8D2C6" stroke-width="0.8"/>`;
+  cy += 18;
+  parts[0].finRows.forEach(r => {
+    panel += `<text x="${ax}" y="${cy}" font-size="9" font-weight="600" fill="#7A756D">${esc(r[0])}:</text>`;
+    wrapText(r[1], 27).slice(0, 2).forEach((ln, j) => { panel += `<text x="${ax + 50}" y="${cy + j * 12}" font-size="9.5" fill="#1C1C1C">${esc(ln)}</text>`; });
+    cy += 23;
+  });
+
+  // таблица «элементы стен»: строка — элемент, колонка — стена
+  cy += 10;
+  panel += `<text x="${ax}" y="${cy}" font-size="11" font-weight="700" fill="#2E2A26">Элементы стен</text>`;
+  panel += `<line x1="${ax}" y1="${cy + 5}" x2="${ax + SPEC_W - 4}" y2="${cy + 5}" stroke="#D8D2C6" stroke-width="0.8"/>`;
+  cy += 17;
+  const labels = [];
+  for (const pt of parts) for (const [lab] of pt.counters) if (!labels.includes(lab)) labels.push(lab);
+  const labW = 118, cw = (SPEC_W - 4 - labW) / parts.length;
+  parts.forEach((pt, i) => {
+    panel += `<text x="${ax + labW + cw * (i + 0.5)}" y="${cy}" font-size="9" font-weight="700" fill="#7A756D" text-anchor="middle">${pt.wallKey}</text>`;
+  });
+  cy += 13;
+  labels.forEach((lab, i) => {
+    if (i) panel += `<line x1="${ax}" y1="${cy - 9}" x2="${ax + SPEC_W - 4}" y2="${cy - 9}" stroke="#EDEBE4" stroke-width="0.6"/>`;
+    panel += `<text x="${ax}" y="${cy}" font-size="9" fill="#57514A">${esc(lab)}</text>`;
+    parts.forEach((pt, j) => {
+      const row = pt.counters.find(c => c[0] === lab);
+      panel += `<text x="${ax + labW + cw * (j + 0.5)}" y="${cy}" font-size="8.6" fill="${row ? '#1C1C1C' : '#B8B2A6'}" text-anchor="middle">${row ? esc(row[1]) : '—'}</text>`;
+    });
+    cy += 16;
+  });
+
+  // раскладка плитки — строкой на стену, только там, где плитка есть
+  const tiled = parts.filter(pt => pt.tile);
+  if (tiled.length) {
+    cy += 10;
+    const th = 16 + tiled.length * 22;
+    panel += `<rect x="${ax}" y="${cy - 12}" width="${SPEC_W - 4}" height="${th}" fill="#FBF9F4" stroke="#C8C0B4" stroke-width="0.8"/>`;
+    panel += `<text x="${ax + 8}" y="${cy + 2}" font-size="9.5" font-weight="700" fill="#2E2A26">Раскладка плитки ${tiled[0].tile.TW}×${tiled[0].tile.TH}</text>`;
+    cy += 18;
+    tiled.forEach(pt => {
+      panel += `<text x="${ax + 8}" y="${cy}" font-size="8.4" fill="#57514A">стена ${pt.wallKey}: целых ${pt.tile.full} · подрезка ${pt.tile.cut} · ${(pt.tile.area * 1.1).toFixed(1)} м² (+10%)</text>`;
+      cy += 11;
+      panel += `<text x="${ax + 8}" y="${cy}" font-size="8" fill="#8A6A3B">${pt.tile.fromCenter ? 'от центра стены, симметричная подрезка' : 'от левого угла, подрезка в дальний угол'}</text>`;
+      cy += 11;
+    });
+    cy += 8;
+  }
+
+  cy += 6;
+  panel += flatLegendBox(ax, cy, SPEC_W - 4, 'Условные обозначения', [
+    { sym: (sx, sy) => `<g stroke="#21A366" stroke-width="1.2" fill="none"><circle cx="${sx + 6}" cy="${sy - 3}" r="4.5"/><circle cx="${sx + 6}" cy="${sy - 3}" r="1.4" fill="#21A366"/></g>`, text: 'электроточка: подпись Н=… — отметка оси от чистого пола' },
+    { sym: (sx, sy) => `<line x1="${sx}" y1="${sy - 3}" x2="${sx + 16}" y2="${sy - 3}" stroke="#C29A5B" stroke-width="2.2" stroke-dasharray="6 3"/>`, text: 'LED-подсветка: карниз, ниша, подшкафная линия' },
+    { sym: (sx, sy) => `<rect x="${sx}" y="${sy - 9}" width="16" height="11" fill="none" stroke="#57514A" stroke-width="1.2"/>`, text: 'ниша ГКЛ: габарит и отметка низа' },
+    ...(tiled.length ? [
+      { sym: (sx, sy) => `<g><rect x="${sx}" y="${sy - 9}" width="16" height="11" fill="#F2EEE8" stroke="#C8C0B4" stroke-width="0.6"/><line x1="${sx + 8}" y1="${sy - 9}" x2="${sx + 8}" y2="${sy + 2}" stroke="#C8C0B4" stroke-width="0.6"/></g>`, text: `плитка ${tiled[0].tile.TW}×${tiled[0].tile.TH}, диагональ — подрезка` },
+    ] : [
+      { sym: (sx, sy) => `<rect x="${sx}" y="${sy - 9}" width="16" height="11" fill="none" stroke="#2E9E4F" stroke-width="1"/>`, text: 'мебель и оборудование: габарит и отметка' },
+    ]),
+    { sym: (sx, sy) => `<g stroke="#2A2A2A" stroke-width="0.8" fill="none"><line x1="${sx}" y1="${sy - 4}" x2="${sx + 16}" y2="${sy - 4}"/><line x1="${sx + 1}" y1="${sy - 1}" x2="${sx + 5}" y2="${sy - 7}"/><line x1="${sx + 12}" y1="${sy - 1}" x2="${sx + 16}" y2="${sy - 7}"/></g>`, text: 'размерная цепочка, засечки 45° (ГОСТ 2.307)' },
+  ]);
+  cy += flatLegendBox.lastH + 10;
+  panel += `<text x="${ax}" y="${cy}" font-size="8" fill="#8A8478">Арт.: ${esc(style.skus.led)}</text>`;
+
+  const NOTES = parts[0].NOTES;
+  const noteRows = NOTES.reduce((a, t) => a + wrapText(t, 100).length, 0);
+  const walls = wallKeys.join(', ');
+  stamp(0, 0, 0, `Развертки ${room.name}, стены ${walls}`, sheet);
+  return svgDoc(Wd, Hd + 10, b, CAD.paper, {
+    panelW: SPEC_W, headH: 52, footH: 20 + noteRows * 12, bbox: BBOX,
+    head: g => `<text x="${g.x}" y="${g.y + 18}" font-size="16" font-weight="700" fill="#2E2A26">Развертки · ${esc(room.name)} · стены ${walls}</text>`
+      + `<text x="${g.x}" y="${g.y + 36}" font-size="11" fill="#7A756D">Вид изнутри помещения · отметки от чистого пола · М 1:__RATIO__</text>`,
+    panel: g => `<g transform="translate(${g.x.toFixed(1)} ${g.y.toFixed(1)})">${panel}</g>`,
     footer: g => notesBlock(g.x, g.y, NOTES, 100),
   });
 }
@@ -6049,6 +6199,8 @@ function writeOut(rel, content) {
 //   full — плюс покомнатные планы, полы, потолки, электрика, умный дом, слаботочка.
 const PACKAGE = (typeof FLAGS.package === 'string' && FLAGS.package) || 'base';
 const FULL = PACKAGE === 'full';
+// --elev-solo: одна стена = один лист (крупнее масштаб, длиннее альбом)
+const ELEV_SOLO = !!FLAGS['elev-solo'];
 let sheet = 2;   // лист 1 зарезервирован под титул с перечнем чертежей (ГОСТ 21.1101: обложка → титул → содержание)
 // Считаем ровно то, что выпускаем, иначе штамп «Листов N» соврёт:
 //   титул + презентация + 15 сводных на этаж + щит + обозначение развёрток +
@@ -6057,11 +6209,34 @@ let sheet = 2;   // лист 1 зарезервирован под титул с
 //   монтаж, два плана, пол, потолок, электрика, умный дом, слаботочка).
 const PER_ROOM_FULL = 10;
 const HAS_STAIRS = rooms.some(r => r.stairs === 'up');
+// Развёртки комнаты сводятся на лист, пока масштаб держится не мельче 1:40 — границы,
+// которую канон (docs/cad-canon.md, «осознанное отступление») называет рабочей для
+// развёрток. Решает не таблица, а фактический подбор: движок прикидывает лист вхолостую
+// и читает масштаб, который выбрал svgDoc. Не влезло крупно — стена уходит на свой лист.
+// План считается здесь, до «Листов N»: штамп обязан знать итог заранее.
+// Сводить стены стоит ступеней ряда: ширина удваивается, а это два шага. Нижняя граница —
+// 1:50: именно его ГОСТ 21.507-81 п. 8 называет для видов и развёрток (наши прежние 1:40
+// и 1:20 были отступлением в сторону крупности, см. docs/cad-canon.md). Второе условие —
+// заполнение листа: сводить незачем, если чертёж занимает меньше четверти поля.
+// Все четыре стены в два ряда кладутся плотнее пары в строку — поэтому этот вариант
+// проверяется первым. Флаг --elev-solo возвращает «одна стена — один лист».
+const ELEV_MAX = 50, ELEV_MIN_FILL = 0.25, ELEV_SOLO_GROUPS = [['A'], ['B'], ['C'], ['D']];
+const elevOk = (r, wks) => { const f = elevGridFit(r, wks); return f.ratio <= ELEV_MAX && f.fill >= ELEV_MIN_FILL; };
+if (process.env.LINEA_DEBUG_ELEV) for (const r of rooms) {
+  const f4 = elevGridFit(r, ['A', 'B', 'C', 'D']), fac = elevGridFit(r, ['A', 'C']), fbd = elevGridFit(r, ['B', 'D']);
+  console.log(`ELEV ${r.name}: 4-в-1 1:${f4.ratio} ${(f4.fill*100).toFixed(0)}% · A+C 1:${fac.ratio} ${(fac.fill*100).toFixed(0)}% · B+D 1:${fbd.ratio} ${(fbd.fill*100).toFixed(0)}%`);
+}
+const ELEV_PLAN = new Map(rooms.map(r => [r.idx, ELEV_SOLO ? ELEV_SOLO_GROUPS
+  : elevOk(r, ['A', 'B', 'C', 'D']) ? [['A', 'B', 'C', 'D']]
+  // противоположные стены равной длины дают опрятную пару и один масштаб на обе
+  : (elevOk(r, ['A', 'C']) && elevOk(r, ['B', 'D'])) ? [['A', 'C'], ['B', 'D']]
+  : ELEV_SOLO_GROUPS]));
+const ELEV_TOTAL = [...ELEV_PLAN.values()].reduce((a, g) => a + g.length, 0);
 TOTAL_SHEETS = 1                                   // титульный лист с перечнем
   + (FLAT ? 1 + 16 * LEVELS.length + 1 + 1 + 2 : 0) // презентация, сводные (с плинтусами), щит, обозначение развёрток, разрезы
   + (FLAT && HAS_STAIRS ? 1 : 0)                    // лист лестницы — только когда она есть в брифе
   + 1 + Math.ceil(NODES.length / 2)                 // узел А + сборные листы узлов (по два на лист)
-  + rooms.length * 4                                // развёртки стен
+  + ELEV_TOTAL                                      // развёртки стен (сведённые и одиночные)
   + (FULL ? rooms.length * PER_ROOM_FULL : 0);
 const reg = []; // реестр листов для ведомости
 const ELEV_REF = {};   // «idx-стена» → номер листа развёртки, для листа обозначений
@@ -6133,9 +6308,13 @@ if (FULL) for (const r of rooms) { sheetOut(`02-plany/plan-${SL(r)}.svg`, n => d
 if (FULL) for (const r of rooms) { sheetOut(`02-plany/plan-${SL(r)}-mebel.svg`, n => drawPlan(r, n, false), `План мебели. ${RN(r)}`, '1:50', 'plan'); counts.plans++; }
 if (FULL) for (const r of rooms) { sheetOut(`03-poly/pol-${SL(r)}.svg`, n => drawFloor(r, n), `План пола. ${RN(r)}`, '1:50', 'floor-room'); counts.poly++; }
 const elevKeyNo = FLAT ? sheet++ : null;   // «План обозначения развёрток» встаёт перед ними
-for (const r of rooms) for (const wk of ['A', 'B', 'C', 'D']) {
-  ELEV_REF[`${r.idx}-${wk}`] = sheet;   // номер, который получит лист ниже
-  sheetOut(`04-razvertki/${SL(r)}-stena-${wk}.svg`, n => drawElevation(r, wk, n), `Развертка. ${RN(r)}, стена ${wk}`, '1:50', 'elevation'); counts.elev++;
+for (const r of rooms) {
+  for (const g of ELEV_PLAN.get(r.idx)) {
+    for (const wk of g) ELEV_REF[`${r.idx}-${wk}`] = sheet;   // номер, который получит лист ниже
+    if (g.length === 1) sheetOut(`04-razvertki/${SL(r)}-stena-${g[0]}.svg`, n => drawElevation(r, g[0], n), `Развертка. ${RN(r)}, стена ${g[0]}`, '1:50', 'elevation');
+    else sheetOut(`04-razvertki/${SL(r)}-steny-${g.join('')}.svg`, n => drawElevGrid(r, g, n), `Развертки. ${RN(r)}, стены ${g.join(', ')}`, '1:40', 'elevation');
+    counts.elev++;
+  }
 }
 if (FULL) for (const r of rooms) { sheetOut(`05-potolki/potolok-${SL(r)}.svg`, n => drawCeiling(r, n), `План потолка. ${RN(r)}`, '1:50', 'ceiling-room'); counts.ceil++; }
 sheetOut(`05-potolki/uzel-A-korob-led.svg`, n => drawNode(n), 'Узел А. Короб с LED-подсветкой', '1:20', 'node');

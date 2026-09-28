@@ -94,8 +94,20 @@ for (const root of roots) {
     const toPage = (x, y) => [ox + x * k, oy + y * k];
     const stampBox = { x0: fx + fw - STAMP.w, y0: fy + fh - STAMP.h, x1: fx + fw, y1: fy + fh };
     let outFrame = 0, onStamp = 0, worst = 0;
-    for (const m of inner.matchAll(/<text x="([-\d.]+)" y="([-\d.]+)"([^>]*)>([^<]*)</g)) {
-      const [, xs, ys, attrs, txt] = m;
+    // Надписи внутри групп со сдвигом (сводные листы развёрток ставят так каждую стену)
+    // раньше мерились без него и проверка врала в обе стороны: обход ведёт стек translate.
+    const walk = /<g\b([^>]*)>|<\/g>|<text x="([-\d.]+)" y="([-\d.]+)"([^>]*)>([^<]*)</g;
+    const stack = [[0, 0]];
+    let g2;
+    while ((g2 = walk.exec(inner))) {
+      if (g2[0] === '</g>') { if (stack.length > 1) stack.pop(); continue; }
+      const top = stack[stack.length - 1];
+      if (g2[1] !== undefined) {
+        const t = /translate\(\s*([-\d.]+)[ ,]+([-\d.]+)\s*\)/.exec(g2[1]);
+        stack.push(t ? [top[0] + +t[1], top[1] + +t[2]] : [top[0], top[1]]);
+        continue;
+      }
+      const xs = String(+g2[2] + top[0]), ys = String(+g2[3] + top[1]), attrs = g2[4], txt = g2[5];
       if (!txt.trim() || /rotate/.test(attrs)) continue;
       const fs2 = +((attrs.match(/font-size="([\d.]+)"/) || [])[1] || 10);
       const anchor = (attrs.match(/text-anchor="(\w+)"/) || [])[1] || 'start';
@@ -111,10 +123,28 @@ for (const root of roots) {
     if (onStamp) add(rel, 'наезд', `${onStamp} надписей заходят в зону основной надписи`);
 
     // --- 5. заполнение поля ---
-    const nums = [...inner.matchAll(/[xy]\d?="([-\d.]+)"/g)].map(m => +m[1]).filter(v => Number.isFinite(v));
-    if (nums.length > 8) {
-      const xs = [...inner.matchAll(/\sx\d?="([-\d.]+)"/g)].map(m => +m[1]);
-      const ys = [...inner.matchAll(/\sy\d?="([-\d.]+)"/g)].map(m => +m[1]);
+    // Координаты собираем со сдвигом групп: без него сводный лист развёрток мерился
+    // по одной стене (все ячейки живут в своих координатах) и выглядел полупустым.
+    const sweep = /<g\b([^>]*)>|<\/g>|<\w+\b([^>]*?)\/?>/g;
+    const st2 = [[0, 0]];
+    const xs = [], ys = [];
+    let e2;
+    while ((e2 = sweep.exec(inner))) {
+      if (e2[0] === '</g>') { if (st2.length > 1) st2.pop(); continue; }
+      const top2 = st2[st2.length - 1];
+      if (e2[1] !== undefined) {
+        const t = /translate\(\s*([-\d.]+)[ ,]+([-\d.]+)\s*\)/.exec(e2[1]);
+        st2.push(t ? [top2[0] + +t[1], top2[1] + +t[2]] : [top2[0], top2[1]]);
+        continue;
+      }
+      const at2 = e2[2] || '';
+      for (const mm of at2.matchAll(/\s(x|y|x1|y1|x2|y2|cx|cy)="([-\d.]+)"/g)) {
+        const v = +mm[2];
+        if (!Number.isFinite(v)) continue;
+        (mm[1][0] === 'x' || mm[1] === 'cx' ? xs : ys).push(v + (mm[1][0] === 'x' || mm[1] === 'cx' ? top2[0] : top2[1]));
+      }
+    }
+    if (xs.length + ys.length > 8) {
       const cw = (Math.max(...xs) - Math.min(...xs)) * k, ch = (Math.max(...ys) - Math.min(...ys)) * k;
       const fill = (cw * ch) / (fw * fh);
       if (fill < 0.18) add(rel, 'пустовато', `содержимое занимает ~${Math.round(fill * 100)}% поля листа`);

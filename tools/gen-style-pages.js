@@ -211,7 +211,7 @@ ${key === 'japandi' ? `<section class="blk">
   <div class="wrap">
     <div class="kicker">Живой пример</div>
     <h2>Наш демо-проект собран именно в джапанди</h2>
-    <p class="sub">Квартира 56 м²: 45 листов документации и 11 визуализаций в этом стиле — открыты целиком.</p>
+    <p class="sub">Квартира 56 м²: 30 листов документации и 11 визуализаций в этом стиле — открыты целиком.</p>
     <div class="gal">
       ${SHELL.pic('../portfolio/demo/06-koncept/renders/01-gostinaya-kuhnya.jpg', 'Гостиная-кухня в джапанди', 1200, 800)}
       ${SHELL.pic('../portfolio/demo/06-koncept/renders/02-spalnya.jpg', 'Спальня в джапанди', 1200, 800)}

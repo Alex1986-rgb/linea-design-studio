@@ -70,13 +70,13 @@ w('portfolio-hub/index.html', page({
     <div class="tiles">
       <a class="tile" href="../portfolio/demo/presentation.html">
         <img src="../portfolio/demo/06-koncept/renders/01-gostinaya-kuhnya.jpg" alt="Квартира 56 м² — визуализация гостиной" width="1200" height="800" loading="lazy" decoding="async">
-        <div class="tile-body"><span class="badge">45 листов A3</span><span class="tag" style="margin-left:10px">Джапанди</span><b>Квартира 56 м²</b>
+        <div class="tile-body"><span class="badge">30 листов A3</span><span class="tag" style="margin-left:10px">Джапанди</span><b>Квартира 56 м²</b>
         <span class="tile-lead">Гостиная-кухня, спальня, детская, санузел, прихожая. Смета 2 514 162 ₽ в тарифе «бизнес».</span>
         <span class="tile-figs"><i><b>20</b> развёрток</i><i><b>11</b> визуализаций</i><i><b>5</b> узлов</i></span></div>
       </a>
       <a class="tile" href="../portfolio/dom-120/presentation.html">
         <img src="../portfolio/dom-120/06-koncept/renders/05-holl-lestnica.jpg" alt="Дом 120 м² — холл с лестницей" width="1200" height="800" loading="lazy" decoding="async">
-        <div class="tile-body"><span class="badge">86 листов A3</span><span class="tag" style="margin-left:10px">Современный</span><b>Дом 120 м², два этажа</b>
+        <div class="tile-body"><span class="badge">56 листов A3</span><span class="tag" style="margin-left:10px">Современный</span><b>Дом 120 м², два этажа</b>
         <span class="tile-lead">Общая зона и кабинет внизу, три спальни наверху, лестница с расчётом. Смета 4 871 834 ₽.</span>
         <span class="tile-figs"><i><b>44</b> развёртки</i><i><b>2</b> этажа</i><i><b>1</b> лестница</i></span></div>
       </a>
@@ -123,7 +123,7 @@ w('portfolio-hub/index.html', page({
     <div class="plates">
       ${[
         ['demo/01-kvartira/kvartira-04-mebel.svg', 'Лист 6', 'Планировочное решение'],
-        ['demo/04-razvertki/01-gostinaya-kuhnya-stena-A.svg', 'Лист 20', 'Развёртка стены гостиной'],
+        ['demo/04-razvertki/01-gostinaya-kuhnya-steny-ABCD.svg', 'Лист 20', 'Развёртки стен гостиной-кухни'],
         ['demo/01-kvartira/kvartira-11b-plintus.svg', 'Лист 14', 'Плинтусы и порожки'],
         ['dom-120/10-uzly/lestnitsa.svg', 'Дом', 'Лестница: планы и расчёт'],
         ['dom-120/10-uzly/razrez-1-1.svg', 'Дом', 'Разрез 1—1'],
@@ -222,7 +222,7 @@ w('price/index.html', page({
       <table class="tbl">
         <tr><th>Услуга</th><th>Объём</th><th>Срок</th><th class="hi">Цена в тесте</th></tr>
         <tr><td><a href="../catalog/dizayn-proekt-kvartiry.html">Дизайн-проект квартиры</a></td><td>от 70 листов A3 + документы</td><td>48 часов</td><td class="hi">0 ₽</td></tr>
-        <tr><td><a href="../catalog/dizayn-proekt-doma.html">Дизайн-проект дома</a></td><td>86 листов A3 + документы</td><td>48–72 часа</td><td class="hi">0 ₽</td></tr>
+        <tr><td><a href="../catalog/dizayn-proekt-doma.html">Дизайн-проект дома</a></td><td>56 листов A3 + документы</td><td>48–72 часа</td><td class="hi">0 ₽</td></tr>
         <tr><td><a href="../catalog/rabochaya-dokumentatsiya.html">Только рабочая документация</a></td><td>от 30 листов</td><td>24–48 часов</td><td class="hi">0 ₽</td></tr>
         <tr><td><a href="../catalog/planirovochnoe-reshenie.html">Планировочное решение</a></td><td>4–8 листов</td><td>24 часа</td><td class="hi">0 ₽</td></tr>
         <tr><td><a href="../catalog/vizualizatsii.html">Визуализации</a></td><td>6–12 кадров</td><td>24 часа</td><td class="hi">0 ₽</td></tr>
@@ -302,7 +302,7 @@ w('price/index.html', page({
 
 /* ---------------------------------------------------------- FAQ */
 const FAQ = [
-  ['Что входит в дизайн-проект?', 'Планировки с расстановкой, развёртка каждой стены, планы полов, потолков и отделки, электрика с привязками и щитом, сантехника, разрезы и узлы, спецификация с артикулами, смета и визуализации. В базовом пакете на квартиру это 45 листов A3 и семь документов.'],
+  ['Что входит в дизайн-проект?', 'Планировки с расстановкой, развёртка каждой стены, планы полов, потолков и отделки, электрика с привязками и щитом, сантехника, разрезы и узлы, спецификация с артикулами, смета и визуализации. В базовом пакете на квартиру это 30 листов A3 и семь документов.'],
   ['Почему 48 часов, а не три месяца?', 'Черновую работу делает программный конвейер: он строит листы по согласованной геометрии и сам проверяет их тремя программами. Человек тратит время на смысл — бриф, планировку и приёмку, а не на вычерчивание.'],
   ['Проект правда бесплатный?', 'Да, на время открытого тестирования. Предоплаты нет ни на одном этапе, альбом остаётся у вас, даже если работать дальше не станем. Взамен просим честную обратную связь.'],
   ['Что нужно от меня на старте?', 'Размеры помещений и проёмов, высота потолка, тип дома, фотографии объекта и пожелания по стилю и бюджету. Подойдёт планировка застройщика или фото листа с рулеткой.'],
