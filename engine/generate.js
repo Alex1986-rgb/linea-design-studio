@@ -1983,8 +1983,11 @@ function drawElevation(room, wallKey, sheet, parts) {
     b += `<rect x="${dx - 4}" y="${dy - px(60)}" width="${px(o.w) + 8}" height="${px(60)}" fill="#CFC9BD" stroke="#57514A" stroke-width="0.8"/>`;
     b += `<rect x="${dx}" y="${dy}" width="${px(o.w)}" height="${px(o.h)}" fill="#EFEAE1" stroke="#57514A" stroke-width="1.5"/>`;
     b += `<circle cx="${dx + px(o.w) - 8}" cy="${dy + px(o.h) / 2}" r="2.5" fill="#57514A"/>`;
+    // На низком потолке (2,5 м при 1:50) между полосой карниза и перемычкой остаётся
+    // меньше строки — тогда подпись уходит внутрь дверного полотна, оно светлое и
+    // читается. Кандидаты идут от привычного места над перемычкой вглубь полотна.
     b += placeLabel(dx + px(o.w) / 2,
-      [dy - px(60) - 6, dy - px(60) - 18, dy + 14, dy - px(60) - 30, dy - px(60) - 6],
+      [dy - px(60) - 6, dy - px(60) - 18, dy + 14, dy + 30, dy + 46, dy - px(60) - 30, dy - px(60) - 6],
       `дверь ${o.w}×${o.h}`, { size: 9.5, clampX: [M + 4, M + w - 4] });
   }
 
