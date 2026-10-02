@@ -17,8 +17,12 @@ node engine/generate.js examples/house-brief.json site/portfolio/dom-120
 # 3. содержание и бумага
 node tools/audit-sheets.js site/portfolio/demo
 node tools/lint-sheets.js  site/portfolio/demo
+node tools/check-sheets.js site/portfolio/demo
 node tools/audit-sheets.js site/portfolio/dom-120
 node tools/lint-sheets.js  site/portfolio/dom-120
+node tools/check-sheets.js site/portfolio/dom-120
+# 3а. наложения подписей — только настоящий браузер, иначе метрики шрифта врут
+node tools/check-overlap.js site/portfolio/demo site/portfolio/dom-120
 # 4. регрессии: что изменилось против эталона
 node tools/regen-fixtures.js
 # 5. единый файл для бригады
@@ -29,6 +33,8 @@ node tools/regen-fixtures.js
 
 1. `audit-sheets` нашёл нарушение канона.
 2. `lint-sheets` нашёл кегль < 2,5 мм или перо < 0,18 мм.
+2а. `check-sheets` дал замечание: сквозная нумерация, честность штампа, надписи за рамкой.
+2б. `check-overlap` нашёл наложение подписей — подрядчик не должен читать наугад.
 3. Штамп обещает не то число листов, что выпущено (движок пишет предупреждение в консоль).
 4. Валидатор брифа даёт ошибки, а документ «Замечания к исходным данным» в альбоме отсутствует.
 5. `regen-fixtures` показал изменения, которых никто не планировал.
@@ -37,7 +43,7 @@ node tools/regen-fixtures.js
 
 ## Что проверять глазами (машина не увидит)
 
-Выбери 5 листов: обмерный, планировочный, развёртку мокрой зоны, план потолков, сантехнику. Открой их на HTTP (`preview_start name=linea-site`, порт 8141) и убедись, что лист читается как документ: масштаб уместный, подписи не наложены, легенда соответствует тому, что нарисовано, ничего не обрезано.
+Выбери 5 листов: обмерный, планировочный, развёртку мокрой зоны, план потолков, сантехнику. Открой их на HTTP (`preview_start name=linea-site`, порт 8141) и убедись, что лист читается как документ: масштаб уместный, легенда соответствует тому, что нарисовано, ничего не обрезано. Наложения подписей теперь ловит `check-overlap` — глазами сверяй смысл, а не геометрию.
 
 ## Отчёт
 

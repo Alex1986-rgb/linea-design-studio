@@ -54,12 +54,14 @@ async function run() {
   try { files = (await (await fetch(proj + '/manifest.json?x=' + RUN)).json()).files.filter(f => f.endsWith('.svg')); }
   catch (e) { st.textContent = 'не читается ' + proj + '/manifest.json'; return; }
   let total = 0, sheets = 0;
+  const items = [];
   for (const f of files) {
     st.textContent = `${f} (${sheets + 1}/${files.length})`;
     const r = await overlapsOf(proj + '/' + f);
     sheets++;
     if (!r.bad.length) continue;
     total += r.bad.length;
+    items.push({ file: f, texts: r.n, bad: r.bad });
     const h = document.createElement('div');
     h.innerHTML = `<h3 class="bad">${f} — ${r.bad.length} из ${r.n} надписей</h3><ul>`
       + r.bad.slice(0, 12).map(x => `<li>«${x.a}» ↔ «${x.b}» — ${x.ox}×${x.oy} px</li>`).join('')
@@ -71,6 +73,13 @@ async function run() {
   sum.className = total ? 'bad' : 'ok';
   sum.textContent = `Проверено листов: ${sheets}. Наложений: ${total}.`;
   out.prepend(sum);
+  // Машиночитаемый итог: по нему tools/check-overlap.js читает результат из
+  // --dump-dom headless-браузера. Его появление в DOM и значит «прогон закончен».
+  const dump = document.createElement('script');
+  dump.type = 'application/json';
+  dump.id = 'result';
+  dump.textContent = JSON.stringify({ project: proj, sheets, total, items });
+  document.body.appendChild(dump);
 }
 document.getElementById('go').addEventListener('click', run);
 const q = new URLSearchParams(location.search).get('p');
