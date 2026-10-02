@@ -82,7 +82,15 @@
 - Новый альбом добавляется двумя правками: строка в `ALBUMS` генератора и вызов `sync_one` в скрипте переноса.
 
 ## Публикация
-Сайт публикуется на GitHub Pages из папки `site/` через Actions (`.github/workflows/pages.yml`): пуш в `main`, затрагивающий `site/**`, сам собирает и заливает артефакт. На практике push-события в этом репозитории workflow не запускают (ни разу не создалось ни одного run с event=push), поэтому **после пуша деплой запускать вручную**: `gh workflow run pages.yml`, статус — `gh run list --workflow=pages.yml -L 1`. Сборка занимает около минуты. Старая схема (`git subtree split --prefix site -b gh-pages` + Jekyll-сборка ветки) отменена: legacy-сборщик падал на альбомах в сотни SVG даже с `.nojekyll`. Живой адрес — https://alex1986-rgb.github.io/linea-design-studio/
+Сайт публикуется на GitHub Pages из папки `site/` через Actions (`.github/workflows/pages.yml`).
+**Достаточно `git push origin main` — ручной запуск не нужен и вреден.** Workflow слушает `on: push`
+по ветке `main` без фильтра путей (фильтра `site/**` в нём нет — любой пуш в main запускает сборку),
+плюс `workflow_dispatch`. У него `concurrency: group: pages` с `cancel-in-progress: true`, поэтому
+**запуск, стартовавший позже, отменяет предыдущий**: привычная связка `git push && gh workflow run`
+создаёт две сборки, одна из которых гасит другую. Отсюда и пошло давнее заблуждение, будто
+push-события сборку не запускают — на деле их run просто отменялся ручным. Проверено 02.10.2026:
+push без ручного запуска отработал `success`. Статус — `gh run list --workflow=pages.yml -L 1`,
+сборка около минуты. Старая схема (`git subtree split --prefix site -b gh-pages` + Jekyll-сборка ветки) отменена: legacy-сборщик падал на альбомах в сотни SVG даже с `.nojekyll`. Живой адрес — https://alex1986-rgb.github.io/linea-design-studio/
 
 ## Канон чертежей
 Правила самих чертежей — `docs/cad-canon.md` (нормативная база СПДС/ЕСКД с пунктами, анатомия листа, чек-листы по каждому типу листа, нормируемые зазоры). Регламент работы — навык `cad-drawings`. Роли: агент `draftsman` (правит движок), `cad-normcontrol` (нормоконтроль), `cad-acceptance` (приёмка перед выдачей).
