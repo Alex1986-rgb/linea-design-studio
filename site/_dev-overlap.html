@@ -21,13 +21,16 @@
 <div id="bar">проект: <input id="p" value="portfolio/demo"> <button id="go">проверить</button> <span id="st"></span></div>
 <div id="out"></div><div id="stage"></div>
 <script>
+const RUN = Date.now();   // метка прогона: обходит кэш браузера
 const stage = document.getElementById('stage'), out = document.getElementById('out'), st = document.getElementById('st');
 const MIN = 2;          // перекрытие меньше 2 px по любой оси — касание, не наложение
 const SHARE = 0.4;      // и меньше 30% высоты меньшей надписи — тоже касание: соседние
                         // строки текста всегда цепляются подстрочными элементами шрифта
 
 async function overlapsOf(url) {
-  const svgText = await (await fetch(url)).text();
+  // Без обхода кэша страница показывала прошлый выпуск: файлы перегенерированы,
+  // а браузер отдавал старый SVG и проверка «не замечала» правок.
+  const svgText = await (await fetch(url + (url.includes('?') ? '&' : '?') + 'x=' + RUN)).text();
   stage.innerHTML = svgText;
   const texts = [...stage.querySelectorAll('text')].filter(t => t.textContent.trim());
   const boxes = texts.map(t => ({ t: t.textContent.trim(), b: t.getBoundingClientRect() }));
@@ -48,7 +51,7 @@ async function run() {
   const proj = document.getElementById('p').value.replace(/\/$/, '');
   out.innerHTML = ''; st.textContent = 'читаю manifest…';
   let files;
-  try { files = (await (await fetch(proj + '/manifest.json')).json()).files.filter(f => f.endsWith('.svg')); }
+  try { files = (await (await fetch(proj + '/manifest.json?x=' + RUN)).json()).files.filter(f => f.endsWith('.svg')); }
   catch (e) { st.textContent = 'не читается ' + proj + '/manifest.json'; return; }
   let total = 0, sheets = 0;
   for (const f of files) {

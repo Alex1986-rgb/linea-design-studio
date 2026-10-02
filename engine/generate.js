@@ -1720,7 +1720,9 @@ function tileLayout(room, wallKey, lenMm, hMm, M, h) {
     + `<path d="M ${sx0 + dir * 38} ${ay - 4.5} L ${sx0 + dir * 47} ${ay} L ${sx0 + dir * 38} ${ay + 4.5}"/></g>`;
   // привязка стартового шва от угла стены — размером, как все привязки альбома
   if (startMm > 5) {
-    const yd = M + h + 56;     // ниже подписей высот (M+h+16) и цепочки размеров (M+h+34)
+    // Ниже ВСЕЙ цепочки: сегменты на M+h+34, габаритная линия ещё на столько же ниже.
+    // Раньше привязка вставала между ними и её число ложилось на размерное.
+    const yd = M + h + 34 + Math.max(26, effFont(10.5) * 3.1) + 22;
     svg += `<g stroke="#B0483A" stroke-width="0.8" fill="none"><line x1="${M}" y1="${yd}" x2="${sx0}" y2="${yd}"/>`
       + `<line x1="${M}" y1="${yd - 4}" x2="${M}" y2="${yd + 4}"/><line x1="${sx0}" y1="${yd - 4}" x2="${sx0}" y2="${yd + 4}"/></g>`
       + `<text x="${(M + sx0) / 2}" y="${yd - 4}" font-size="8" text-anchor="middle" fill="#B0483A">${Math.round(startMm)}</text>`;
@@ -1742,10 +1744,14 @@ function drawElevation(room, wallKey, sheet, parts) {
     opt = opt || {};
     const f = opt.size || 8, lw = String(text).length * effFont(f) * 0.58 + 4, lh = effFont(f) * 1.35;
     const anchor = opt.anchor || 'middle';
+    // Подпись предмета у края стены вылезала за неё и ложилась на размерную цепочку.
+    // Держим её внутри поля стены, как это делает подпись ниши.
+    if (opt.clampX) x = Math.min(Math.max(x, opt.clampX[0] + lw / 2), opt.clampX[1] - lw / 2);
     const x0 = y => anchor === 'end' ? x - lw : anchor === 'start' ? x : x - lw / 2;
     for (let i = 0; i < ys.length; i++) {
       const y = ys[i];
-      if (i < ys.length - 1 && !eqInk.free(x0(y), y - lh + 3, lw, lh)) continue;
+      const last = i === ys.length - 1;
+      if ((!last || opt.optional) && !eqInk.free(x0(y), y - lh + 3, lw, lh)) continue;
       eqInk.add(x0(y), y - lh + 3, lw, lh);
       return `<text x="${x}" y="${y}" font-size="${f}" fill="${opt.fill || '#7A756D'}" text-anchor="${anchor}">${esc(text)}</text>`;
     }
@@ -1774,9 +1780,13 @@ function drawElevation(room, wallKey, sheet, parts) {
   b += `<text x="${M + 8}" y="${M + cornHpx * 0.42}" font-size="8" fill="#7A756D">Карниз ГКЛ ${CORN_H}×60 мм</text>`;
   // на узкой стене вторая подпись не влезает — LED уходит во вторую строку
   if (w > 300) b += `<text x="${M + w - 8}" y="${M + cornHpx * 0.42}" font-size="7.5" fill="#8A6A3B" text-anchor="end">LED 3000К · ${style.skus.led.split('·')[0].trim()}</text>`;
-  else b += `<text x="${M + 8}" y="${M + cornHpx * 0.42 + 10}" font-size="7.5" fill="#8A6A3B">LED 3000К · ${style.skus.led.split('·')[0].trim()}</text>`;
+  // На узкой стене вторая строка с маркой лезла на подписи двери и бра. Марка и так
+  // стоит в ведомости листа («Арт.: …»), поэтому здесь остаётся только температура.
+  else b += `<text x="${M + 8}" y="${M + cornHpx * 0.42 + Math.max(11, effFont(7.5) * 1.3)}" font-size="7.5" fill="#8A6A3B">LED 3000К</text>`;
 
-  eqInk.add(M, M, w, cornHpx + 12);   // полоса карниза с подписями LED — место занято
+  // Полоса карниза с подписями LED. На узкой стене подпись уходит во вторую строку —
+  // тогда и занятое место ниже, иначе под неё подставлялись подписи двери и бра.
+  eqInk.add(M, M, w, cornHpx + (w > 300 ? 12 : Math.max(11, effFont(7.5) * 1.3) + 12));
 
   // ── 3. плинтус ────────────────────────────────────────────────
   b += `<rect x="${M}" y="${M + h - px(PLIN_H)}" width="${w}" height="${px(PLIN_H)}" fill="#CFC9BD" stroke="#57514A" stroke-width="0.8"/>`;
@@ -1790,15 +1800,18 @@ function drawElevation(room, wallKey, sheet, parts) {
     b += `<rect x="${nx + 3}" y="${ny + 3}" width="${px(nch.w) - 6}" height="${px(nch.h) - 6}" fill="none" stroke="#C29A5B" stroke-width="1" stroke-dasharray="5 3"/>`;
     b += `<line x1="${nx + 5}" y1="${ny + 7}" x2="${nx + px(nch.w) - 5}" y2="${ny + 7}" stroke="#C29A5B" stroke-width="2.2" stroke-dasharray="7 4"/>`;
     const l1 = `${nch.w}×${nch.h} гл.${nch.depth}`;
-    const lw = Math.min(Math.max(l1.length, nch.label.length) * 5.2 + 10, w - 12);
+    // Длинная подпись на узкой стене вылезала за неё и ложилась на цепочку слева:
+    // режем её по словам под ширину стены.
+    const nchLines = wrapText(nch.label, Math.max(10, fitChars(8, w - 16))).slice(0, 2);
+    const lw = Math.min(Math.max(l1.length, ...nchLines.map(t => t.length)) * 5.2 + 10, w - 12);
     const tcx = Math.min(Math.max(nx + px(nch.w) / 2, M + 6 + lw / 2), M + w - 6 - lw / 2);
     // подпись ниши ищет свободное место: в нише часто стоит мебель со своей подписью
     const nyc = [ny + px(nch.h) / 2, ny + px(nch.h) / 2 + 22, ny + px(nch.h) / 2 - 20, ny + px(nch.h) / 2]
       .find(cy => eqInk.free(tcx - lw / 2, cy - 12, lw, 26)) || ny + px(nch.h) / 2;
-    eqInk.add(tcx - lw / 2, nyc - 12, lw, 26);
+    eqInk.add(tcx - lw / 2, nyc - 12, lw, 26 + (nchLines.length - 1) * 10);
     nicheLabels += `<rect x="${tcx - lw / 2}" y="${nyc - 10}" width="${lw}" height="26" fill="#FFFFFFE8"/>`;
     nicheLabels += `<text x="${tcx}" y="${nyc}" font-size="9" fill="#57514A" text-anchor="middle">${l1}</text>`;
-    nicheLabels += `<text x="${tcx}" y="${nyc + 12}" font-size="8" fill="#8A6A3B" text-anchor="middle">${esc(nch.label)}</text>`;
+    nchLines.forEach((ln, li) => { nicheLabels += `<text x="${tcx}" y="${nyc + 12 + li * 10}" font-size="8" fill="#8A6A3B" text-anchor="middle">${esc(ln)}</text>`; });
     b += placeLabel(nx + px(nch.w) / 2, [ny - 5, ny - 17, ny + px(nch.h) + 12, ny - 5],
       `низ +${(nch.sill / 1000).toFixed(3).replace('.', ',')}`, { size: 9 });
   }
@@ -1840,8 +1853,10 @@ function drawElevation(room, wallKey, sheet, parts) {
     // подпись и отметка верха — поверх графики, собираем отдельно
     const cap = `${f.head ? 'Изголовье' : (FURN_H[f.key] || {}).name || f.name} ${f.w}`;
     if (fw0 > cap.length * 4.6 && fh0 > 16)
-      furnMarks += placeLabel(fx0 + fw0 / 2, [fy0 + fh0 / 2 + 3, fy0 + fh0 / 2 + 15, fy0 + fh0 / 2 - 9, fy0 + fh0 / 2 + 3],
-        cap, { fill: CAD.furn });
+      furnMarks += placeLabel(fx0 + fw0 / 2,
+        [fy0 + fh0 / 2 + 3, fy0 + fh0 / 2 + 15, fy0 + fh0 / 2 - 9, fy0 + fh0 / 2 + 27,
+         fy0 + fh0 / 2 - 21, fy0 + fh0 - 6, fy0 + 12],
+        cap, { fill: CAD.furn, optional: true, clampX: [M + 4, M + w - 4] });
     // отметка верха предмета: у высокого шкафа она попадала на строку LED-карниза
     // верх высокого шкафа приходится на полосу карниза — тогда отметка уходит внутрь предмета
     const topNearCorn = fy0 - M < cornHpx + 18;
@@ -1968,7 +1983,9 @@ function drawElevation(room, wallKey, sheet, parts) {
     b += `<rect x="${dx - 4}" y="${dy - px(60)}" width="${px(o.w) + 8}" height="${px(60)}" fill="#CFC9BD" stroke="#57514A" stroke-width="0.8"/>`;
     b += `<rect x="${dx}" y="${dy}" width="${px(o.w)}" height="${px(o.h)}" fill="#EFEAE1" stroke="#57514A" stroke-width="1.5"/>`;
     b += `<circle cx="${dx + px(o.w) - 8}" cy="${dy + px(o.h) / 2}" r="2.5" fill="#57514A"/>`;
-    b += `<text x="${dx + px(o.w) / 2}" y="${dy - px(60) - 6}" font-size="9.5" fill="#7A756D" text-anchor="middle">дверь ${o.w}×${o.h}</text>`;
+    b += placeLabel(dx + px(o.w) / 2,
+      [dy - px(60) - 6, dy - px(60) - 18, dy + 14, dy - px(60) - 30, dy - px(60) - 6],
+      `дверь ${o.w}×${o.h}`, { size: 9.5, clampX: [M + 4, M + w - 4] });
   }
 
   b += radSvg;
@@ -1981,9 +1998,14 @@ function drawElevation(room, wallKey, sheet, parts) {
     const seen = new Set();
     lv.filter(v => { const k = Math.round(v.mm / 120); if (seen.has(k)) return false; seen.add(k); return true; })
       .sort((a, b) => a.mm - b.mm)
-      // полка длиннее размерной цепочки (она на M-46): иначе «0,000» ложится на
-      // подпись короткого нижнего сегмента, которую dimV выносит вбок
-      .forEach(v => { b += levelMark(M - 6, M + h - px(v.mm), v.mm, -1, { shelf: 74 }); });
+      // Полка должна уводить число ЗА размерную цепочку (она на M-46), причём с запасом
+      // на самое длинное число: на мелком масштабе «+2,400» не доставало до цепочки
+      // двух пикселей и ложилось на её подпись. Длина считается, а не угадывается.
+      .forEach((v, i, arr) => {
+        if (!arr.shelf) arr.shelf = Math.max(74, Math.round(Math.max(...arr.map(o =>
+          String((o.mm > 0 ? '+' : '') + (o.mm / 1000).toFixed(3)).length * charW(8.6))) + 70));
+        b += levelMark(M - 6, M + h - px(v.mm), v.mm, -1, { shelf: arr.shelf });
+      });
   }
   b += furnMarks;      // подписи мебели поверх графики фронтов
   b += nicheLabels;
@@ -1998,7 +2020,8 @@ function drawElevation(room, wallKey, sheet, parts) {
     b += `<line x1="${sx}" y1="${sy + ar * 0.85}" x2="${sx}" y2="${sy + ar * 2.8}" stroke="#C29A5B" stroke-width="1.5"/>`;
     b += `<line x1="${sx - ar * 1.4}" y1="${sy + ar * 1.2}" x2="${sx - ar * 2}" y2="${sy + ar * 2.2}" stroke="#C29A5B" stroke-width="0.8" stroke-dasharray="2 2"/>`;
     b += `<line x1="${sx + ar * 1.4}" y1="${sy + ar * 1.2}" x2="${sx + ar * 2}" y2="${sy + ar * 2.2}" stroke="#C29A5B" stroke-width="0.8" stroke-dasharray="2 2"/>`;
-    b += `<text x="${sx}" y="${sy - ar * 2.8}" font-size="8" fill="#8A6A3B" text-anchor="middle">бра h=${sc.h}</text>`;
+    b += placeLabel(sx, [sy - ar * 2.8, sy - ar * 2.8 - 12, sy + ar * 3.4, sy - ar * 2.8],
+      `бра h=${sc.h}`, { size: 8, fill: '#8A6A3B', clampX: [M + 4, M + w - 4] });
   }
 
   // ── 8. электрика на стене (розетки / выключатели) ─────────────
