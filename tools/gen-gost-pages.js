@@ -15,6 +15,8 @@
 const fs = require('fs');
 const path = require('path');
 const SHELL = require('./site-shell.js');
+const OPEN = require('./gost-open-issues.js');
+const EXPLAINER = require('./gost-explainer.js');
 
 const SITE = path.join(__dirname, '..', 'site');
 const { BASE, esc, crumbsLd } = SHELL;
@@ -31,10 +33,9 @@ const ALBUMS = [
   {
     slug: 'gost-proekt2',
     name: 'Квартира с эркерами, 13 помещений',
+    short: 'квартира с эркерами',
     lead: 'Четырёхкомнатная с непрямоугольным контуром и двумя эркерными балконами: зал, кухня, две детские, '
-      + 'две гардеробные, кладовая, ванная, санузел, прихожая и коридор на 87,9 м².',
-    area: '87,9 м²',
-    rooms: 13,
+      + 'две гардеробные, кладовая, ванная, санузел, прихожая и коридор.',
     code: 'ГД-2026-004-АИ',
     highlights: [
       ['Обмер снят со скана заказчика', 'Координаты пересчитаны с внутренних граней на оси стен. Движок сразу поймал '
@@ -47,11 +48,10 @@ const ALBUMS = [
   },
   {
     slug: 'gost-kv3k',
-    name: 'Трёхкомнатная квартира, 78,9 м²',
+    name: 'Трёхкомнатная квартира',
+    short: 'трёхкомнатная квартира',
     lead: 'Первый объект нового движка: две спальни, кухня-гостиная, ванная, санузел, гардеробная, прихожая и коридор. '
       + 'Г-образный контур, помещения собраны из нескольких частей.',
-    area: '78,9 м²',
-    rooms: 8,
     code: 'ГД-2026-003-АИ',
     highlights: [
       ['Развёртки строятся от чистовых граней', 'Вид начинается от чистового угла, длина — между чистовыми гранями '
@@ -91,19 +91,14 @@ const plural = (n, one, few, many) => {
   return `${n} ${a > 10 && a < 20 ? many : b === 1 ? one : b >= 2 && b <= 4 ? few : many}`;
 };
 
+// то же без числа: «<b>41</b> открытый вопрос» — число стоит в плитке отдельно
+const word = (n, one, few, many) => plural(n, one, few, many).replace(/^\d+ /, '');
+
 const slugify = s => String(s).toLowerCase().replace(/[а-яё]/g, c => TR[c] ?? c)
   .replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
 
 // ---------- читаем выпуск ----------
-function readRelease(slug) {
-  const src = path.join(SITE, 'portfolio', slug, '_release.html');
-  const idx = fs.readFileSync(src, 'utf8');
-  const stat = idx.match(/Листов:\s*(\d+)[^<]*блокеров:\s*(\d+)[^<]*замечаний:\s*(\d+)/) || [];
-  const sheets = [...idx.matchAll(/<h3>([^<]+?)\.svg — ([^<]+?) \(([a-z-]+)\)<\/h3>/g)]
-    .map(m => ({ file: m[1] + '.svg', title: m[2], owner: m[3] }));
-  if (!sheets.length) throw new Error(`${slug}: в _release.html не нашлось листов — проверьте синхронизацию выпуска`);
-  return { sheets, total: +stat[1] || sheets.length, blockers: +stat[2] || 0, issues: +stat[3] || 0 };
-}
+const readRelease = slug => OPEN.readRelease(SITE, slug);
 
 // группировка листов по разделам в порядке появления
 function bySection(sheets) {
@@ -146,7 +141,7 @@ ${SHELL.sticky(u)}
 }
 
 // ---------- страница одного альбома ----------
-function albumPage(a, r) {
+function albumPage(a, r, honesty) {
   const groups = bySection(r.sheets);
 
   const blocks = groups.map(g => `  <section class="blk" id="${slugify(g.sec)}">
@@ -171,10 +166,11 @@ function albumPage(a, r) {
   const body = `  <section class="blk">
     <div class="wrap">
       <div class="stats">
-        <div><b>${r.total}</b><span>листов A3</span></div>
+        <div><b>${r.total}</b><span>${word(r.total, 'лист', 'листа', 'листов')} A3</span></div>
         <div><b>${a.area}</b><span>площадь</span></div>
         <div><b>${a.rooms}</b><span>помещений</span></div>
-        <div><b>${r.blockers}</b><span>блокеров нормоконтроля</span></div>
+        <div><b>${r.blockers}</b><span>${word(r.blockers, 'блокер', 'блокера', 'блокеров')} проверки движка</span></div>
+        <div><b>${r.issues}</b><span>${word(r.issues, 'замечание', 'замечания', 'замечаний')} проверки в выпуске</span></div>
         <div><b>${groups.length}</b><span>разделов комплекта</span></div>
       </div>
 ${pdf}${r.blockers ? `      <p class="sub" style="margin-top:18px">Блокеров на выдаче: ${r.blockers}. Это открытые вопросы
@@ -182,6 +178,7 @@ ${pdf}${r.blockers ? `      <p class="sub" style="margin-top:18px">Блокер�
       Здесь альбом показан как рабочий пример — так выглядит выпуск до контрольного обмера.</p>\n` : ''}    </div>
   </section>
 
+${honesty}
   <section class="blk">
     <div class="wrap">
       <div class="kicker">Состав</div>
@@ -227,7 +224,7 @@ ${blocks}
     file: `portfolio/${a.slug}/index.html`,
     title: `${a.name} — рабочая документация | LINEA`,
     desc: `${a.name}: комплект рабочей документации на ${plural(r.total, 'лист', 'листа', 'листов')} A3, ${groups.length} разделов, `
-      + 'нормоконтроль без блокеров. Каждый лист можно рассмотреть целиком.',
+      + `проверка движка: блокеров ${r.blockers}, замечаний ${r.issues}. Комплект предварительный — до контрольного обмера. Каждый лист можно рассмотреть целиком.`,
     h1: a.name,
     lead: a.lead,
     crumb: [['Документация', '../../gost/'], [a.name, null]],
@@ -252,7 +249,7 @@ ${blocks}
 }
 
 // ---------- страница раздела ----------
-function hubPage(releases) {
+function hubPage(releases, honesty) {
   const totalSheets = releases.reduce((s, x) => s + x.r.total, 0);
   const cards = releases.map(({ a, r }) => `        <a class="tile plain" href="../portfolio/${a.slug}/">
           <div class="tile-body">
@@ -269,8 +266,8 @@ function hubPage(releases) {
       <div class="stats">
         <div><b>868</b><span>правил проверки выпуска</span></div>
         <div><b>26</b><span>специальностей в команде</span></div>
-        <div><b>${totalSheets}</b><span>листов в двух альбомах</span></div>
-        <div><b>0</b><span>блокеров на выдаче</span></div>
+        <div><b>${totalSheets}</b><span>${word(totalSheets, 'лист', 'листа', 'листов')} в двух альбомах</span></div>
+        <div><b>${releases.reduce((s, x) => s + x.r.blockers, 0)}</b><span>${word(releases.reduce((s, x) => s + x.r.blockers, 0), 'блокер', 'блокера', 'блокеров')} на выдаче</span></div>
       </div>
     </div>
   </section>
@@ -280,8 +277,8 @@ function hubPage(releases) {
       <div class="kicker">Как это устроено</div>
       <h2>Альбом собирает движок — и сам себя проверяет</h2>
       <p class="sub">Объект описан данными один раз: геометрия в миллиметрах, отметки от нуля, проёмы, мебель,
-      инженерные точки, отделка. Каждый раздел выпускает свой специалист движка, а нормоконтроль проверяет
-      результат 868 правилами — у каждого записан источник: пункт ГОСТ, СП или практика бюро.</p>
+      инженерные точки, отделка. Каждый раздел выпускает свой специалист движка, а проверка движка прогоняет
+      результат по 868 правилам — у каждого записан источник: пункт ГОСТ, СП или практика бюро.</p>
       <div class="cards g3">
         <div class="card"><div class="num">01</div><h3>Данные вместо картинок</h3>
           <p>Лист нельзя поправить руками в файле: он строится из данных объекта. Поменялась планировка —
@@ -291,7 +288,8 @@ function hubPage(releases) {
           и куда смотреть в норме.</p></div>
         <div class="card"><div class="num">03</div><h3>Блокеры не уходят в печать</h3>
           <p>Проём не помещается в стену, содержимое вылезло за край листа — выпуск останавливается.
-          На обоих альбомах на выдаче ноль блокеров.</p></div>
+          Блокеров на выдаче: ${releases.map(x => `${x.a.short} — ${x.r.blockers}`).join('; ')}. Замечания проверки блокерами не являются и остаются в выпуске: ${releases.map(x => `${x.a.short} — ${x.r.issues}`).join('; ')}.
+          Подписей проверяющего и нормоконтролёра на листах нет — об этом ниже, в разделе о честности выпуска.</p></div>
       </div>
     </div>
   </section>
@@ -313,12 +311,13 @@ function hubPage(releases) {
     </div>
   </section>
 
+${honesty}
   <section class="blk">
     <div class="wrap">
       <div class="kicker">Альбомы</div>
       <h2>Посмотреть листы целиком</h2>
-      <p class="sub">Это не картинки для сайта, а те самые листы, которые получает бригада: со штампом,
-      размерными цепочками, ведомостями и примечаниями.</p>
+      <p class="sub">Это не картинки для сайта, а листы выпуска: со штампом, размерными цепочками, ведомостями
+      и примечаниями. Комплекты предварительные: на листах напечатано «не для производства работ».</p>
       <div class="tiles">
 ${cards}
       </div>
@@ -329,12 +328,12 @@ ${cards}
   return page({
     file: 'gost/index.html',
     title: 'Рабочая документация по ГОСТ — как собирается альбом | LINEA',
-    desc: 'Комплект рабочей документации на квартиру: 70–105 листов A3, 26 специальностей, 868 правил '
-      + 'нормоконтроля с пунктами ГОСТ и СП. Два альбома можно посмотреть целиком.',
+    desc: `Комплект рабочей документации на квартиру: ${Math.min(...releases.map(x => x.r.total))}–${Math.max(...releases.map(x => x.r.total))} листов A3, 26 специальностей, 868 правил `
+      + 'проверки с пунктами ГОСТ и СП. Два альбома можно посмотреть целиком.',
     h1: 'Рабочая документация по ГОСТ',
-    lead: 'Полный комплект, по которому работает бригада: планировки, развёртки всех стен, электрика со щитом, '
+    lead: 'Комплект рабочей документации на квартиру: планировки, развёртки стен, электрика со щитом, '
       + 'вода и канализация, отопление и вентиляция, потолки с узлами, раскладка плитки, отделка, '
-      + 'встроенная мебель и смета.',
+      + 'встроенная мебель и смета. Два показанных альбома — предварительные: до контрольного обмера по ним не работают.',
     crumb: [['Документация', null]],
     body,
     u: '../',
@@ -348,15 +347,27 @@ for (const a of ALBUMS) {          // размер PDF показываем че
   a.pdfSize = fs.existsSync(f) ? `${Math.round(fs.statSync(f).size / 1024 / 1024)} МБ` : '';
 }
 const releases = ALBUMS.map(a => ({ a, r: readRelease(a.slug) }));
-for (const { a, r } of releases) w(`portfolio/${a.slug}/index.html`, albumPage(a, r));
-w('gost/index.html', hubPage(releases));
+// честная часть выпуска: вопросы, знак «*», задание на обмер — читается с самих листов (tools/gost-open-issues.js)
+const H = {};
+for (const { a } of releases) {
+  const r = releases.find(x => x.a === a).r;
+  H[a.slug] = OPEN.read(SITE, a.slug, r);
+  a.area = H[a.slug].facts.area;          // паспорт объекта — с титула выпуска, не руками
+  a.rooms = H[a.slug].facts.rooms;
+  const nm = a.name.match(/(\d+) помещени/);   // число в названии альбома не пишем мимо титула
+  if (nm && +nm[1] !== a.rooms) throw new Error(`${a.slug}: в названии «${a.name}» ${nm[1]} помещений, а на титуле выпуска ${a.rooms}`);
+}
+const X = EXPLAINER.build({ ALBUMS, releases, H, esc, plural, word, page, BASE, crumbsLd });
+for (const { a, r } of releases) w(`portfolio/${a.slug}/index.html`, albumPage(a, r, X.albumBlock(a.slug)));
+w('gost/index.html', hubPage(releases, X.hubSection));
+w(`gost/${X.slug}/index.html`, X.explainer);
 
 // sitemap: дописываем новые адреса, если их ещё нет
 const smPath = path.join(SITE, 'sitemap.xml');
 if (fs.existsSync(smPath)) {
   let sm = fs.readFileSync(smPath, 'utf8');
   let added = 0;
-  for (const u of ['gost/', ...ALBUMS.map(a => `portfolio/${a.slug}/`)]) {
+  for (const u of ['gost/', `gost/${X.slug}/`, ...ALBUMS.map(a => `portfolio/${a.slug}/`)]) {
     const loc = `${BASE}/${u}`;
     if (sm.includes(`<loc>${loc}</loc>`)) continue;
     sm = sm.replace('</urlset>', `  <url><loc>${loc}</loc><changefreq>monthly</changefreq><priority>0.8</priority></url>\n</urlset>`);

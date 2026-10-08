@@ -134,7 +134,9 @@ function ctaBlock(u, active) {
       ${second}
       <a class="btn ghost" href="tel:${AUTHOR.tel}">${AUTHOR.phone}</a>
     </div>
-    <p class="hint" style="margin-top:18px">Автор проекта — ${AUTHOR.role} ${AUTHOR.name}. Его подпись и контакты стоят в основной надписи каждого листа.</p>
+    <p class="hint" style="margin-top:18px">Автор проекта — ${AUTHOR.role} ${AUTHOR.name}. ${active === 'gost'
+      ? `В основной надписи листов этих альбомов указана его фамилия; телефона и почты на листах нет — они <a href="${u}contacts/">на странице контактов</a>.`
+      : 'Его подпись и контакты стоят в основной надписи каждого листа.'}</p>
   </div>
 </section>`;
 }

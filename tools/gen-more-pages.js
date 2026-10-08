@@ -15,10 +15,16 @@
 const fs = require('fs');
 const path = require('path');
 const SHELL = require('./site-shell.js');
+const OPEN = require('./gost-open-issues.js');
 
 const SITE = path.join(__dirname, '..', 'site');
 const { AUTHOR, BASE, esc, crumbsLd } = SHELL;
 const out = [];
+// выпуски нового движка: число листов и паспорт объекта читаются с самих листов, а не пишутся руками
+const GOST = Object.fromEntries(['gost-proekt2', 'gost-kv3k'].map(slug => {
+  const r = OPEN.readRelease(SITE, slug);
+  return [slug, { total: r.total, blockers: r.blockers, ...OPEN.read(SITE, slug, r).facts }];
+}));
 const w = (rel, html) => { const p = path.join(SITE, rel); fs.mkdirSync(path.dirname(p), { recursive: true }); fs.writeFileSync(p, html); out.push(rel); };
 
 function page({ file, title, desc, h1, crumb, lead, body, jsonld, noindex, sec }) {
@@ -58,7 +64,7 @@ w('portfolio-hub/index.html', page({
   file: 'portfolio-hub/index.html',
   sec: 'cases',
   title: 'Портфолио LINEA — четыре альбома целиком, лист за листом',
-  desc: 'Проекты студии открыты полностью: четыре альбома — 45, 86, 106 и 71 лист по ГОСТ, от квартиры 56 м² до дома 120 м². Листалка, единый PDF, спецификация и смета — всё доступно без запроса.',
+  desc: `Проекты студии открыты полностью: четыре альбома — 45, 86, ${GOST['gost-proekt2'].total} и ${GOST['gost-kv3k'].total} листов по ГОСТ, от квартиры 56 м² до дома 120 м². Листалка, единый PDF, спецификация и смета — всё доступно без запроса.`,
   h1: 'Портфолио: альбомы открыты целиком',
   crumb: 'Портфолио',
   lead: 'Обычно студия показывает пять красивых кадров и обещает «полный комплект чертежей». Мы выкладываем комплект целиком — 308 листов в четырёх проектах, каждый можно открыть, увеличить и распечатать.',
@@ -99,14 +105,14 @@ w('portfolio-hub/index.html', page({
     <div class="kicker">Документация</div>
     <h2>Комплекты нового движка</h2>
     <p class="sub">Рабочую документацию студия выпускает отдельным движком: 26 специальностей,
-    868 проверок нормоконтроля, ноль блокеров на выдаче. Эти альбомы открыты так же целиком.</p>
+    868 правил проверки, блокеров на выдаче: ${Object.values(GOST).reduce((n, g) => n + g.blockers, 0)}. Комплекты предварительные — до контрольного обмера. Эти альбомы открыты так же целиком.</p>
     <div class="tiles">
       <a class="tile plain" href="../portfolio/gost-proekt2/">
-        <div class="tile-body"><span class="badge">106 листов A3</span><b>Квартира с эркерами, 13 помещений</b>
-        <span class="tile-lead">Непрямоугольный контур, два эркерных балкона, две детские, две гардеробные. 87,9 м².</span></div>
+        <div class="tile-body"><span class="badge">${GOST['gost-proekt2'].total} листов A3</span><b>Квартира с эркерами, ${GOST['gost-proekt2'].rooms} помещений</b>
+        <span class="tile-lead">Непрямоугольный контур, два эркерных балкона, две детские, две гардеробные. ${GOST['gost-proekt2'].area}.</span></div>
       </a>
       <a class="tile plain" href="../portfolio/gost-kv3k/">
-        <div class="tile-body"><span class="badge">71 лист A3</span><b>Трёхкомнатная квартира 78,9 м²</b>
+        <div class="tile-body"><span class="badge">${GOST['gost-kv3k'].total} листов A3</span><b>Трёхкомнатная квартира ${GOST['gost-kv3k'].area}</b>
         <span class="tile-lead">Кухня-гостиная, две спальни, гардеробная, два санузла. Warm Contemporary.</span></div>
       </a>
     </div>
@@ -391,6 +397,7 @@ const MAP = [
   ['Работы', [['Портфолио', 'portfolio-hub/'], ['Кейсы', 'cases/'], ['Квартира 56 м²', 'cases/kvartira-56.html'], ['Дом 120 м²', 'cases/dom-120.html'], ['Альбом квартиры', 'portfolio/demo/presentation.html'], ['Альбом дома', 'portfolio/dom-120/presentation.html']]],
   ['Разобраться', [['Сравнение с рынком', 'compare/'], ['Как проходит работа', 'process/'], ['Вопросы и ответы', 'faq/'], ['Журнал', 'journal/'], ['Состав дизайн-проекта', 'journal/sostav-dizayn-proekta.html'], ['Развёртки стен', 'journal/razvertki-sten.html'], ['Электрика в проекте', 'journal/elektrika-v-proekte.html'], ['Пирог пола', 'journal/pirog-pola.html'], ['Смета ремонта', 'journal/smeta-remonta.html']]],
   ['Стили', [['Все стили', 'style/'], ['Джапанди', 'style/japandi.html'], ['Скандинавский', 'style/scandi.html'], ['Минимализм', 'style/minimal.html'], ['Современный', 'style/modern.html'], ['Неоклассика', 'style/neoclassic.html'], ['Лофт', 'style/loft.html']]],
+  ['Документация', [['Рабочая документация по ГОСТ', 'gost/'], ['Открытые вопросы и знак «*»', 'gost/otkrytye-voprosy/'], ['Альбом: квартира с эркерами', 'portfolio/gost-proekt2/'], ['Альбом: трёхкомнатная квартира', 'portfolio/gost-kv3k/']]],
   ['Студия', [['О студии', 'about/'], ['Контакты', 'contacts/'], ['Истории', 'stories/'], ['Отзывы', 'reviews/'], ['Бриф', 'brief.html'], ['Политика обработки данных', 'policy/']]]
 ];
 w('sitemap/index.html', page({
