@@ -267,4 +267,17 @@ function read(siteDir, slug, release) {
   };
 }
 
-module.exports = { read, readRelease, runs };
+// Паспорт объекта без разбора реестра — для альбомов, у которых «честная часть» выпущена иначе (gen-gost-pages, explain: false):
+// площадь и число помещений печатаются на титуле под подписями «ОБЩАЯ ПЛОЩАДЬ» и «ПОМЕЩЕНИЙ».
+function facts(siteDir, slug, release) {
+  const dir = path.join(siteDir, 'portfolio', slug, 'sheets');
+  for (const s of release.sheets.slice(0, 3)) {
+    const tx = textsOf(fs.readFileSync(path.join(dir, s.file), 'utf8'));
+    const at = (label, re) => { const i = tx.findIndex(t => t.t === label); const m = i >= 0 && tx[i + 1] && tx[i + 1].t.match(re); return m ? m[1] : null; };
+    const area = at('ОБЩАЯ ПЛОЩАДЬ', /^([\d\s\u00a0]+,\d+) м²/), rooms = +at('ПОМЕЩЕНИЙ', /^(\d+)/);
+    if (area && rooms) return { slug, facts: { area: area.replace(/[\s\u00a0]/g, '') + ' м²', rooms } };
+  }
+  throw new Error(`${slug}: на титуле не найдены общая площадь и число помещений`);
+}
+
+module.exports = { read, readRelease, runs, facts };

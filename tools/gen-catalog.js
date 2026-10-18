@@ -21,6 +21,12 @@ const SITE = path.join(ROOT, 'site');
 const BASE = 'https://alex1986-rgb.github.io/linea-design-studio';
 const CSSV = 'v=31';
 const AUTHOR = { name: 'Кырлан Александр', role: 'дизайнер-архитектор', phone: '+7 925 733-86-40', tel: '+79257338640', email: 'optteem@mail.ru' };
+// выпуски движка GOST-DRAFT на сайте: число правил проверки и наименьший комплект — из самих выпусков (sync-gost-releases.sh)
+const GOST_DIRS = fs.existsSync(path.join(SITE, 'portfolio')) ? fs.readdirSync(path.join(SITE, 'portfolio')).filter(d => d.startsWith('gost-')) : [];
+const readNum = (d, f, re) => { try { const m = fs.readFileSync(path.join(SITE, 'portfolio', d, f), 'utf8').match(re); return m ? +m[1] : 0; } catch { return 0; } };
+const RULES = Math.max(0, ...GOST_DIRS.map(d => readNum(d, '_rules.txt', /(\d+)/)));
+const MIN_SHEETS = Math.min(...GOST_DIRS.map(d => readNum(d, '_release.html', /Листов:\s*(\d+)/)).filter(Boolean));
+if (!RULES || !Number.isFinite(MIN_SHEETS)) throw new Error('нет выпусков GOST-DRAFT на сайте — запустите tools/sync-gost-releases.sh');
 const esc = s => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 
 /* ------------------------------------------------------------------ каркас */
@@ -99,7 +105,7 @@ const SERVICES = [
     steps: [
       ['Бриф', 'Размеры, проёмы, конструктив и пожелания. Валидатор сразу ловит нестыковки геометрии.'],
       ['Планировка', 'Расстановка по эргономике с учётом радиаторов и стояков; согласуем до чертежей.'],
-      ['Альбом', 'Движок собирает комплект от 70 листов, нормоконтроль проверяет его 868 правилами с пунктами ГОСТ и СП.'],
+      ['Альбом', `Движок собирает комплект от ${MIN_SHEETS} листов, нормоконтроль проверяет его ${RULES} правилами с пунктами ГОСТ и СП.`],
       ['Выдача', 'Папка проекта: листы SVG, единый PDF, листалка для просмотра, документы и смета.']
     ],
     faq: [

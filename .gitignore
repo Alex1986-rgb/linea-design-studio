@@ -1,3 +1,5 @@
 clients/
 .DS_Store
 album.pdf
+# альбомы движка GOST-DRAFT на сайте — нужны живыми: Pages собирается из того, что лежит в git (без них кнопки PDF давали 404)
+!site/portfolio/gost-*/album.pdf

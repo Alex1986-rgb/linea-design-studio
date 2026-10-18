@@ -21,10 +21,17 @@ const SITE = path.join(__dirname, '..', 'site');
 const { AUTHOR, BASE, esc, crumbsLd } = SHELL;
 const out = [];
 // выпуски нового движка: число листов и паспорт объекта читаются с самих листов, а не пишутся руками
-const GOST = Object.fromEntries(['gost-proekt2', 'gost-kv3k'].map(slug => {
+// gost-kv65 и gost-kv58 — без разбора реестра (как в gen-gost-pages, explain: false): паспорт — с титула
+const GOST = Object.fromEntries(['gost-proekt2', 'gost-kv3k', 'gost-kv65', 'gost-kv58'].map(slug => {
   const r = OPEN.readRelease(SITE, slug);
-  return [slug, { total: r.total, blockers: r.blockers, ...OPEN.read(SITE, slug, r).facts }];
+  const facts = ['gost-kv65', 'gost-kv58'].includes(slug) ? OPEN.facts(SITE, slug, r).facts : OPEN.read(SITE, slug, r).facts;
+  return [slug, { total: r.total, blockers: r.blockers, ...facts }];
 }));
+// число правил проверки — из отчёта проверки выпуска (tools/sync-gost-releases.sh → _rules.txt)
+const RULES = Math.max(0, ...Object.keys(GOST).map(slug => { try { return +fs.readFileSync(path.join(SITE, 'portfolio', slug, '_rules.txt'), 'utf8') || 0; } catch { return 0; } }));
+if (!RULES) throw new Error('нет числа правил проверки (_rules.txt) — запустите tools/sync-gost-releases.sh');
+const GOST_SHEETS = Object.values(GOST).reduce((n, g) => n + g.total, 0);
+const ALBUMS_N = 2 + Object.keys(GOST).length;
 const w = (rel, html) => { const p = path.join(SITE, rel); fs.mkdirSync(path.dirname(p), { recursive: true }); fs.writeFileSync(p, html); out.push(rel); };
 
 function page({ file, title, desc, h1, crumb, lead, body, jsonld, noindex, sec }) {
@@ -63,11 +70,11 @@ ${SHELL.footer(u, sec || null)}
 w('portfolio-hub/index.html', page({
   file: 'portfolio-hub/index.html',
   sec: 'cases',
-  title: 'Портфолио LINEA — четыре альбома целиком, лист за листом',
-  desc: `Проекты студии открыты полностью: четыре альбома — 45, 86, ${GOST['gost-proekt2'].total} и ${GOST['gost-kv3k'].total} листов по ГОСТ, от квартиры 56 м² до дома 120 м². Листалка, единый PDF, спецификация и смета — всё доступно без запроса.`,
+  title: `Портфолио LINEA — ${ALBUMS_N === 6 ? 'шесть' : ALBUMS_N} альбомов целиком, лист за листом`,
+  desc: `Проекты студии открыты полностью: ${ALBUMS_N === 6 ? 'шесть' : ALBUMS_N} альбомов — 45, 86, ${Object.values(GOST).map(g => g.total).join(', ')} листов по ГОСТ, от квартиры 56 м² до дома 120 м². Листалка, единый PDF, спецификация и смета — всё доступно без запроса.`,
   h1: 'Портфолио: альбомы открыты целиком',
   crumb: 'Портфолио',
-  lead: 'Обычно студия показывает пять красивых кадров и обещает «полный комплект чертежей». Мы выкладываем комплект целиком — 308 листов в четырёх проектах, каждый можно открыть, увеличить и распечатать.',
+  lead: `Обычно студия показывает пять красивых кадров и обещает «полный комплект чертежей». Мы выкладываем комплект целиком — ${131 + GOST_SHEETS} листов в ${ALBUMS_N === 6 ? 'шести' : ALBUMS_N} проектах, каждый можно открыть, увеличить и распечатать.`,
   jsonld: [crumbsLd([['LINEA', BASE + '/'], ['Портфолио', BASE + '/portfolio-hub/']])],
   body: `<section class="blk">
   <div class="wrap">
@@ -105,7 +112,7 @@ w('portfolio-hub/index.html', page({
     <div class="kicker">Документация</div>
     <h2>Комплекты нового движка</h2>
     <p class="sub">Рабочую документацию студия выпускает отдельным движком: 26 специальностей,
-    868 правил проверки, блокеров на выдаче: ${Object.values(GOST).reduce((n, g) => n + g.blockers, 0)}. Комплекты предварительные — до контрольного обмера. Эти альбомы открыты так же целиком.</p>
+    ${RULES} правил проверки, блокеров на выдаче: ${Object.values(GOST).reduce((n, g) => n + g.blockers, 0)}. Комплекты предварительные — до контрольного обмера. Эти альбомы открыты так же целиком; к каждому — альбом для заказчика в подаче студии (PDF на странице альбома).</p>
     <div class="tiles">
       <a class="tile plain" href="../portfolio/gost-proekt2/">
         <div class="tile-body"><span class="badge">${GOST['gost-proekt2'].total} листов A3</span><b>Квартира с эркерами, ${GOST['gost-proekt2'].rooms} помещений</b>
@@ -114,6 +121,14 @@ w('portfolio-hub/index.html', page({
       <a class="tile plain" href="../portfolio/gost-kv3k/">
         <div class="tile-body"><span class="badge">${GOST['gost-kv3k'].total} листов A3</span><b>Трёхкомнатная квартира ${GOST['gost-kv3k'].area}</b>
         <span class="tile-lead">Кухня-гостиная, две спальни, гардеробная, два санузла. Warm Contemporary.</span></div>
+      </a>
+      <a class="tile plain" href="../portfolio/gost-kv65/">
+        <div class="tile-body"><span class="badge">${GOST['gost-kv65'].total} листов A3</span><b>Квартира ${GOST['gost-kv65'].area} после реконструкции</b>
+        <span class="tile-lead">По плану заказчика, ${GOST['gost-kv65'].rooms} помещений; визуализации — листами перед развёртками. Блокер на выдаче: спальня без окна.</span></div>
+      </a>
+      <a class="tile plain" href="../portfolio/gost-kv58/">
+        <div class="tile-body"><span class="badge">${GOST['gost-kv58'].total} листов A3</span><b>Квартира ${GOST['gost-kv58'].area}</b>
+        <span class="tile-lead">Кухня-гостиная и спальня, ${GOST['gost-kv58'].rooms} помещений. Собрана по шаблону, реальные изделия в ведомостях.</span></div>
       </a>
     </div>
     <div class="cta-row" style="margin-top:26px">

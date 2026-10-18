@@ -64,6 +64,46 @@ const ALBUMS = [
   },
 ];
 
+// Альбомы без разбора «честной части» (explain: false): реестр выпущен иначе или не выпущен вовсе, а сравнительный разбор
+// gost-explainer.js сверяет формулировки двух первых альбомов дословно. Площадь и помещения — с титула (OPEN.facts).
+ALBUMS.push(
+  {
+    slug: 'gost-kv65',
+    explain: false,
+    name: 'Квартира 65 м² после реконструкции',
+    short: 'квартира 65 м²',
+    lead: 'Собрана по плану заказчика: две спальни, кухня-гостиная, прихожая, коридор, ванная, санузел, гардеробная '
+      + 'и кладовая. К альбому — выпуск для заказчика по образцу студийных проектов: визуализации стоят листами перед '
+      + 'развёртками своих помещений.',
+    code: 'ГД-2026-007-АИ',
+    highlights: [
+      ['План заказчика — в данные', 'Планировка снята с картинки заказчика коротким файлом раскладки, начинка помещений '
+        + 'перенесена с образцов готовых проектов и подогнана под новые размеры.'],
+      ['Визуализация этой стены — на листе развёртки', 'Движок по положению камеры понимает, какую стену показывает кадр, '
+        + 'и ставит его рядом с чертежом этой стены. Узлы стены 1:10 — там же, со ссылкой на лист узлов.'],
+      ['Спальня без окна — блокер, а не допущение', 'Проверка держит выпуск, пока автор не решит: перенести спальню, '
+        + 'добавить окно или сделать помещение нежилым. Альбом показан как рабочий пример до решения.'],
+    ],
+  },
+  {
+    slug: 'gost-kv58',
+    explain: false,
+    name: 'Квартира 58 м² · кухня-гостиная и спальня',
+    short: 'квартира 58 м²',
+    lead: 'Второй объект, собранный по шаблону: планировка описана коротким файлом, начинка помещений — с образцов '
+      + 'готовых проектов. Выпуск без блокеров.',
+    code: 'ГД-2026-006-АИ',
+    highlights: [
+      ['Проект по шаблону за один проход', 'Габарит, помещения по сетке, проёмы и стояки заданы раскладкой; мебель, '
+        + 'сантехника, электроточки и отделка перенесены из помещений-образцов с подгонкой под размеры.'],
+      ['Реальные изделия в ведомостях', 'Вместо «аналога по характеристикам» — изделия из каталога с производителем, '
+        + 'коллекцией и артикулом: доска, плитка, плинтус, сантехника.'],
+      ['Выпуск для заказчика', 'Студийный выпуск: план мебели с выносками «наименование Ш×Г h В», развёртки 1:20, '
+        + 'образцы цвета в спецификации отделки.'],
+    ],
+  },
+);
+
 // человеческие названия разделов по владельцу листа
 const SECTION_OF = {
   draftsman: 'Общие данные, развёртки и узлы',
@@ -82,6 +122,7 @@ const SECTION_OF = {
   'furniture-maker': 'Встроенная мебель',
   estimator: 'Смета',
   'quality-inspector': 'Приёмка работ',
+  foreman: 'Вопросы, задание на обмер и график работ',
 };
 
 const TR = { а: 'a', б: 'b', в: 'v', г: 'g', д: 'd', е: 'e', ж: 'zh', з: 'z', и: 'i', й: 'y', к: 'k', л: 'l', м: 'm', н: 'n', о: 'o', п: 'p', р: 'r', с: 's', т: 't', у: 'u', ф: 'f', х: 'h', ц: 'c', ч: 'ch', ш: 'sh', щ: 'sch', ы: 'y', э: 'e', ю: 'yu', я: 'ya', ь: '', ъ: '', ё: 'e' };
@@ -158,9 +199,14 @@ function albumPage(a, r, honesty) {
     </div>
   </section>`).join('\n');
 
-  const pdf = fs.existsSync(path.join(SITE, 'portfolio', a.slug, 'album.pdf'))
-    ? `      <div class="cta-row" style="margin-top:26px"><a class="btn" href="album.pdf" download>Скачать альбом PDF · ${a.pdfSize}</a>
-        <a class="btn ghost" href="../../brief.html">Собрать такой же — бриф</a></div>\n`
+  // два PDF: полный альбом (рабочая документация с проверкой) и выпуск «студия» для заказчика (по эталонам студийных проектов)
+  const has = f => fs.existsSync(path.join(SITE, 'portfolio', a.slug, f));
+  const pdf = has('album.pdf') || has('studio.pdf')
+    ? `      <div class="cta-row" style="margin-top:26px">${has('album.pdf') ? `<a class="btn" href="album.pdf" download>Полный альбом PDF · ${a.pdfSize}</a>` : ''}
+        ${has('studio.pdf') ? `<a class="btn" href="studio.pdf" download>Альбом для заказчика PDF · ${a.studioSize}</a>` : ''}
+        <a class="btn ghost" href="../../brief.html">Собрать такой же — бриф</a></div>
+      <p class="sub" style="margin-top:12px">Альбом для заказчика — тот же проект в подаче студии: визуализации стоят перед
+      развёртками своих помещений, у мебели на плане выноски с размерами, узлы стены — рядом с её развёрткой.</p>\n`
     : '';
 
   const body = `  <section class="blk">
@@ -264,9 +310,9 @@ function hubPage(releases, honesty) {
   const body = `  <section class="blk">
     <div class="wrap">
       <div class="stats">
-        <div><b>868</b><span>правил проверки выпуска</span></div>
+        <div><b>${RULES}</b><span>правил проверки выпуска</span></div>
         <div><b>26</b><span>специальностей в команде</span></div>
-        <div><b>${totalSheets}</b><span>${word(totalSheets, 'лист', 'листа', 'листов')} в двух альбомах</span></div>
+        <div><b>${totalSheets}</b><span>${word(totalSheets, 'лист', 'листа', 'листов')} в ${releases.length === 2 ? 'двух' : releases.length === 3 ? 'трёх' : releases.length === 4 ? 'четырёх' : releases.length} альбомах</span></div>
         <div><b>${releases.reduce((s, x) => s + x.r.blockers, 0)}</b><span>${word(releases.reduce((s, x) => s + x.r.blockers, 0), 'блокер', 'блокера', 'блокеров')} на выдаче</span></div>
       </div>
     </div>
@@ -278,7 +324,7 @@ function hubPage(releases, honesty) {
       <h2>Альбом собирает движок — и сам себя проверяет</h2>
       <p class="sub">Объект описан данными один раз: геометрия в миллиметрах, отметки от нуля, проёмы, мебель,
       инженерные точки, отделка. Каждый раздел выпускает свой специалист движка, а проверка движка прогоняет
-      результат по 868 правилам — у каждого записан источник: пункт ГОСТ, СП или практика бюро.</p>
+      результат по ${RULES} правилам — у каждого записан источник: пункт ГОСТ, СП или практика бюро.</p>
       <div class="cards g3">
         <div class="card"><div class="num">01</div><h3>Данные вместо картинок</h3>
           <p>Лист нельзя поправить руками в файле: он строится из данных объекта. Поменялась планировка —
@@ -328,12 +374,12 @@ ${cards}
   return page({
     file: 'gost/index.html',
     title: 'Рабочая документация по ГОСТ — как собирается альбом | LINEA',
-    desc: `Комплект рабочей документации на квартиру: ${Math.min(...releases.map(x => x.r.total))}–${Math.max(...releases.map(x => x.r.total))} листов A3, 26 специальностей, 868 правил `
-      + 'проверки с пунктами ГОСТ и СП. Два альбома можно посмотреть целиком.',
+    desc: `Комплект рабочей документации на квартиру: ${Math.min(...releases.map(x => x.r.total))}–${Math.max(...releases.map(x => x.r.total))} листов A3, 26 специальностей, ${RULES} правил `
+      + `проверки с пунктами ГОСТ и СП. ${plural(releases.length, 'альбом', 'альбома', 'альбомов')} можно посмотреть целиком.`,
     h1: 'Рабочая документация по ГОСТ',
     lead: 'Комплект рабочей документации на квартиру: планировки, развёртки стен, электрика со щитом, '
       + 'вода и канализация, отопление и вентиляция, потолки с узлами, раскладка плитки, отделка, '
-      + 'встроенная мебель и смета. Два показанных альбома — предварительные: до контрольного обмера по ним не работают.',
+      + 'встроенная мебель и смета. Показанные альбомы — предварительные: до контрольного обмера по ним не работают.',
     crumb: [['Документация', null]],
     body,
     u: '../',
@@ -342,23 +388,28 @@ ${cards}
 }
 
 // ---------- сборка ----------
+const mb = f => (fs.existsSync(f) ? `${Math.round(fs.statSync(f).size / 1024 / 1024)} МБ` : '');
 for (const a of ALBUMS) {          // размер PDF показываем честно, из файла
-  const f = path.join(SITE, 'portfolio', a.slug, 'album.pdf');
-  a.pdfSize = fs.existsSync(f) ? `${Math.round(fs.statSync(f).size / 1024 / 1024)} МБ` : '';
+  a.pdfSize = mb(path.join(SITE, 'portfolio', a.slug, 'album.pdf'));
+  a.studioSize = mb(path.join(SITE, 'portfolio', a.slug, 'studio.pdf'));
 }
+// число правил проверки — из отчёта проверки выпуска (sync-gost-releases.sh кладёт _rules.txt); разные выпуски — берём наибольшее
+const RULES = Math.max(0, ...ALBUMS.map(a => +((() => { try { return fs.readFileSync(path.join(SITE, 'portfolio', a.slug, '_rules.txt'), 'utf8'); } catch { return '0'; } })()) || 0));
+if (!RULES) throw new Error('не найдено число правил проверки (_rules.txt) — запустите tools/sync-gost-releases.sh');
 const releases = ALBUMS.map(a => ({ a, r: readRelease(a.slug) }));
 // честная часть выпуска: вопросы, знак «*», задание на обмер — читается с самих листов (tools/gost-open-issues.js)
 const H = {};
 for (const { a } of releases) {
   const r = releases.find(x => x.a === a).r;
-  H[a.slug] = OPEN.read(SITE, a.slug, r);
+  H[a.slug] = a.explain === false ? OPEN.facts(SITE, a.slug, r) : OPEN.read(SITE, a.slug, r);
   a.area = H[a.slug].facts.area;          // паспорт объекта — с титула выпуска, не руками
   a.rooms = H[a.slug].facts.rooms;
   const nm = a.name.match(/(\d+) помещени/);   // число в названии альбома не пишем мимо титула
   if (nm && +nm[1] !== a.rooms) throw new Error(`${a.slug}: в названии «${a.name}» ${nm[1]} помещений, а на титуле выпуска ${a.rooms}`);
 }
-const X = EXPLAINER.build({ ALBUMS, releases, H, esc, plural, word, page, BASE, crumbsLd });
-for (const { a, r } of releases) w(`portfolio/${a.slug}/index.html`, albumPage(a, r, X.albumBlock(a.slug)));
+const explained = releases.filter(x => x.a.explain !== false);
+const X = EXPLAINER.build({ ALBUMS: ALBUMS.filter(a => a.explain !== false), releases: explained, H, esc, plural, word, page, BASE, crumbsLd });
+for (const { a, r } of releases) w(`portfolio/${a.slug}/index.html`, albumPage(a, r, a.explain === false ? '' : X.albumBlock(a.slug)));
 w('gost/index.html', hubPage(releases, X.hubSection));
 w(`gost/${X.slug}/index.html`, X.explainer);
 
