@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Правки к листам — LINEA</title>
+<meta name="robots" content="noindex">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' fill='%230F0E0C'/><text x='50' y='70' font-size='56' text-anchor='middle' fill='%23C9A45F' font-family='Georgia'>L</text></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;600&family=Inter:wght@400;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/main.css?v=31">
+<style>
+body{background:var(--bg)}
+.rv-top{position:sticky;top:0;z-index:20;background:#0F0E0Cf2;border-bottom:1px solid var(--line);padding:10px 16px;display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+.rv-top .logo{font-size:20px;margin-right:6px}
+.rv-top select{max-width:min(520px,100%);flex:1;min-width:180px}
+.rv-top button,.rv-top a.tb{background:var(--panel);border:1px solid var(--line);color:var(--ink);border-radius:4px;padding:7px 11px;cursor:pointer;font-size:14px}
+.rv-wrap{display:grid;grid-template-columns:1fr 360px;gap:16px;padding:14px 16px 40px}
+@media(max-width:900px){.rv-wrap{grid-template-columns:1fr}}
+.rv-view{overflow:auto;border:1px solid var(--line);border-radius:6px;background:#fff;max-height:calc(100vh - 140px);cursor:crosshair}
+#stage{position:relative;width:100%}
+#stage img{display:block;width:100%;height:auto;user-select:none;-webkit-user-drag:none}
+#pins{position:absolute;inset:0;pointer-events:none}
+.pin{position:absolute;transform:translate(-50%,-100%);pointer-events:auto;min-width:28px;height:28px;border-radius:14px 14px 14px 2px;border:2px solid #fff;background:#C0392B;color:#fff;font-weight:600;font-size:13px;cursor:pointer;box-shadow:0 2px 6px #0006}
+.pin.on{background:#E67E22}
+.rv-side h1{font-size:20px;margin:0 0 6px}
+.rv-side .hint{margin:6px 0}
+#list{list-style:none;padding:0;margin:10px 0}
+#list li{border:1px solid var(--line);border-radius:6px;padding:8px 10px;margin-bottom:6px;cursor:pointer;font-size:14px}
+#list li b{display:inline-block;min-width:22px;height:22px;border-radius:11px;background:#C0392B;color:#fff;text-align:center;font-size:12px;line-height:22px;margin-right:6px}
+#list li.empty{cursor:default;color:var(--mut)}
+#editor{border:1px solid var(--gold);border-radius:8px;padding:12px;margin:10px 0;background:var(--panel)}
+#editor textarea{width:100%;min-height:110px;box-sizing:border-box;font-size:16px}
+.ed-row{display:flex;gap:8px;align-items:center;margin:8px 0;flex-wrap:wrap}
+#edMic{width:64px;height:64px;border-radius:50%;border:2px solid var(--gold);background:#14120E;font-size:28px;cursor:pointer}
+#edMic.rec{background:#8a2020;border-color:#e66;animation:pul 1.2s infinite}
+@keyframes pul{50%{box-shadow:0 0 0 8px rgba(204,68,68,.25)}}
+.zoomv{color:var(--mut);font-size:13px;min-width:44px;text-align:center}
+</style>
+</head>
+<body>
+<div class="rv-top">
+  <a class="logo" href="index.html">LINE<i>A</i></a>
+  <a class="tb" id="back" href="portfolio-hub/">← к проекту</a>
+  <button id="prev" type="button" aria-label="Предыдущий лист">‹</button>
+  <select id="pick" aria-label="Лист"></select>
+  <button id="next" type="button" aria-label="Следующий лист">›</button>
+  <button id="zout" type="button" aria-label="Уменьшить">−</button><span class="zoomv" id="zoomv">100%</span><button id="zin" type="button" aria-label="Увеличить">+</button>
+  <button id="zfit" type="button">по ширине</button>
+</div>
+<div class="rv-wrap">
+  <div class="rv-view" id="view"><div id="stage"><img id="img" alt="лист проекта"><div id="pins"></div></div></div>
+  <div class="rv-side">
+    <h1 id="title">Загружаю…</h1>
+    <p class="hint"><b>Как оставить правку:</b> нажмите на место на чертеже — появится метка, скажите в 🎤 или напишите, что
+      поменять («диван развернуть к окну», «розетку выше, на 1100»). Правки к листу целиком — кнопкой ниже.</p>
+    <p class="hint" id="micHint" hidden>В этом браузере голосовой ввод не работает: на телефоне нажмите микрофон на клавиатуре.</p>
+    <div id="editor" hidden>
+      <div class="ed-row"><b>Правка №<span id="edNo"></span></b></div>
+      <div class="ed-row"><button id="edMic" type="button" aria-label="Надиктовать">🎤</button><span class="hint" id="edState">Нажмите 🎤 и скажите, что исправить</span></div>
+      <textarea id="edText" placeholder="Что исправить или доработать в этом месте…"></textarea>
+      <div class="ed-row"><button class="btn sm" id="edSave" type="button">Сохранить</button><button class="btn sm ghost" id="edDel" type="button">Удалить</button></div>
+    </div>
+    <button class="btn sm ghost" id="general" type="button">+ Правка ко всему листу</button>
+    <ul id="list"></ul>
+    <button class="btn" id="sendBtn" type="button" disabled>Отправить правки</button>
+    <p class="hint" id="sent" hidden>Если окно «Поделиться» не открылось: <a id="waLink" href="#" target="_blank" rel="noopener">отправить в WhatsApp</a> ·
+      <a id="mailLink" href="#">письмом</a> · <button class="linklike" id="copyLink" type="button">скопировать</button></p>
+    <p class="hint">Правки сохраняются в этом браузере — можно смотреть листы по очереди и отправить всё разом. <a id="raw" href="#" target="_blank" rel="noopener">Открыть лист отдельно</a></p>
+  </div>
+</div>
+<script src="js/review.js?v=1"></script>
+</body>
+</html>

@@ -231,6 +231,9 @@ ${SHELL.sticky(u)}
 // ---------- страница одного альбома ----------
 function albumPage(a, r, honesty) {
   const groups = bySection(r.sheets);
+  // список листов для страницы правок голосом (review.html): клиент открывает лист, ставит метку и надиктовывает правку
+  w(`portfolio/${a.slug}/sheets.json`, JSON.stringify(r.sheets.map(sh => ({ file: sh.file, title: sh.title, no: (sh.file.match(/^(\d+)/) || [])[1] ? +sh.file.match(/^(\d+)/)[1] : null }))));
+  const rv = f => `../../review.html?p=${a.slug}&amp;s=${encodeURIComponent(f)}`;
 
   const blocks = groups.map(g => `  <section class="blk" id="${slugify(g.sec)}">
     <div class="wrap">
@@ -238,7 +241,7 @@ function albumPage(a, r, honesty) {
       <h2>${esc(g.sec)}</h2>
       <p class="sub">Листов в разделе: ${g.items.length}</p>
       <div class="plates">
-      ${g.items.map(sh => `<a class="plate" href="sheets/${encodeURIComponent(sh.file)}" target="_blank" rel="noopener">
+      ${g.items.map(sh => `<a class="plate" href="${rv(sh.file)}" title="Открыть лист и оставить правку голосом">
         <span class="plate-img"><img loading="lazy" src="sheets/${encodeURIComponent(sh.file)}" alt="${esc(sh.title)}"></span>
         <span class="plate-cap"><i>${esc(sh.file.replace(/^(\d+).*$/, 'Лист $1'))}</i>${esc(sh.title)}</span>
       </a>`).join('\n      ')}
@@ -251,6 +254,7 @@ function albumPage(a, r, honesty) {
   const pdf = has('album.pdf') || has('studio.pdf')
     ? `      <div class="cta-row" style="margin-top:26px">${has('album.pdf') ? `<a class="btn" href="album.pdf" download>Полный альбом PDF · ${a.pdfSize}</a>` : ''}
         ${has('studio.pdf') ? `<a class="btn" href="studio.pdf" download>Альбом для заказчика PDF · ${a.studioSize}</a>` : ''}
+        <a class="btn ghost" href="../../review.html?p=${a.slug}">🎤 Проверить листы и надиктовать правки</a>
         <a class="btn ghost" href="../../brief.html">Собрать такой же — бриф</a></div>
       <p class="sub" style="margin-top:12px">Альбом для заказчика — тот же проект в подаче студии: визуализации стоят перед
       развёртками своих помещений, у мебели на плане выноски с размерами, узлы стены — рядом с её развёрткой.</p>\n`
