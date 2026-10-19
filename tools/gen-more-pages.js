@@ -22,9 +22,9 @@ const { AUTHOR, BASE, esc, crumbsLd } = SHELL;
 const out = [];
 // выпуски нового движка: число листов и паспорт объекта читаются с самих листов, а не пишутся руками
 // gost-kv65 и gost-kv58 — без разбора реестра (как в gen-gost-pages, explain: false): паспорт — с титула
-const GOST = Object.fromEntries(['gost-proekt2', 'gost-kv3k', 'gost-kv65', 'gost-kv58', 'gost-modern4k', 'gost-retro103', 'gost-dom331'].map(slug => {
+const GOST = Object.fromEntries(['gost-proekt2', 'gost-kv3k', 'gost-kv65', 'gost-kv58', 'gost-modern4k', 'gost-retro103', 'gost-dom331', 'gost-lineademo', 'gost-dom120'].map(slug => {
   const r = OPEN.readRelease(SITE, slug);
-  const facts = ['gost-kv65', 'gost-kv58', 'gost-modern4k', 'gost-retro103', 'gost-dom331'].includes(slug) ? OPEN.facts(SITE, slug, r).facts : OPEN.read(SITE, slug, r).facts;
+  const facts = ['gost-kv65', 'gost-kv58', 'gost-modern4k', 'gost-retro103', 'gost-dom331', 'gost-lineademo', 'gost-dom120'].includes(slug) ? OPEN.facts(SITE, slug, r).facts : OPEN.read(SITE, slug, r).facts;
   return [slug, { total: r.total, blockers: r.blockers, ...facts }];
 }));
 // число правил проверки — из отчёта проверки выпуска (tools/sync-gost-releases.sh → _rules.txt)
@@ -137,6 +137,14 @@ w('portfolio-hub/index.html', page({
       <a class="tile plain" href="../portfolio/gost-retro103/">
         <div class="tile-body"><span class="badge">${GOST['gost-retro103'].total} листов A3</span><b>Квартира ${GOST['gost-retro103'].area} · ретро</b>
         <span class="tile-lead">Две квартиры в одну, ${GOST['gost-retro103'].rooms} помещений: середина века и ар-деко, авторская мебель, 26 визуализаций.</span></div>
+      </a>
+      <a class="tile plain" href="../portfolio/gost-lineademo/">
+        <div class="tile-body"><span class="badge">${GOST['gost-lineademo'].total} листов A3</span><b>Квартира ${GOST['gost-lineademo'].area} · джапанди</b>
+        <span class="tile-lead">Демо студии в новом формате: ${GOST['gost-lineademo'].rooms} помещений, своя мебель, навесные шкафы, сюжеты картин.</span></div>
+      </a>
+      <a class="tile plain" href="../portfolio/gost-dom120/">
+        <div class="tile-body"><span class="badge">${GOST['gost-dom120'].total} листов A3</span><b>Дом ${GOST['gost-dom120'].area} в два этажа</b>
+        <span class="tile-lead">Демо-дом в новом формате: планы по этажам, лестница с ограждением, средиземноморская гамма.</span></div>
       </a>
       <a class="tile plain" href="../portfolio/gost-dom331/">
         <div class="tile-body"><span class="badge">${GOST['gost-dom331'].total} листов A3</span><b>Дом ${GOST['gost-dom331'].area} с мансардой</b>
