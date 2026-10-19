@@ -29,4 +29,5 @@ sync_one kv-3k gost-kv3k
 sync_one kv-65 gost-kv65
 sync_one kv-58 gost-kv58
 sync_one modern-4k gost-modern4k
+sync_one retro-103 gost-retro103
 echo "Теперь: node tools/gen-gost-pages.js"

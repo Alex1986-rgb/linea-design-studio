@@ -22,9 +22,9 @@ const { AUTHOR, BASE, esc, crumbsLd } = SHELL;
 const out = [];
 // выпуски нового движка: число листов и паспорт объекта читаются с самих листов, а не пишутся руками
 // gost-kv65 и gost-kv58 — без разбора реестра (как в gen-gost-pages, explain: false): паспорт — с титула
-const GOST = Object.fromEntries(['gost-proekt2', 'gost-kv3k', 'gost-kv65', 'gost-kv58', 'gost-modern4k'].map(slug => {
+const GOST = Object.fromEntries(['gost-proekt2', 'gost-kv3k', 'gost-kv65', 'gost-kv58', 'gost-modern4k', 'gost-retro103'].map(slug => {
   const r = OPEN.readRelease(SITE, slug);
-  const facts = ['gost-kv65', 'gost-kv58', 'gost-modern4k'].includes(slug) ? OPEN.facts(SITE, slug, r).facts : OPEN.read(SITE, slug, r).facts;
+  const facts = ['gost-kv65', 'gost-kv58', 'gost-modern4k', 'gost-retro103'].includes(slug) ? OPEN.facts(SITE, slug, r).facts : OPEN.read(SITE, slug, r).facts;
   return [slug, { total: r.total, blockers: r.blockers, ...facts }];
 }));
 // число правил проверки — из отчёта проверки выпуска (tools/sync-gost-releases.sh → _rules.txt)
@@ -133,6 +133,10 @@ w('portfolio-hub/index.html', page({
       <a class="tile plain" href="../portfolio/gost-modern4k/">
         <div class="tile-body"><span class="badge">${GOST['gost-modern4k'].total} листов A3</span><b>Квартира с кабинетом ${GOST['gost-modern4k'].area}</b>
         <span class="tile-lead">Современный модерн, ${GOST['gost-modern4k'].rooms} помещений: перепланировка, вид сверху 3D, кадр на каждой стене.</span></div>
+      </a>
+      <a class="tile plain" href="../portfolio/gost-retro103/">
+        <div class="tile-body"><span class="badge">${GOST['gost-retro103'].total} листов A3</span><b>Квартира ${GOST['gost-retro103'].area} · ретро</b>
+        <span class="tile-lead">Две квартиры в одну, ${GOST['gost-retro103'].rooms} помещений: середина века и ар-деко, авторская мебель, 26 визуализаций.</span></div>
       </a>
     </div>
     <div class="cta-row" style="margin-top:26px">
