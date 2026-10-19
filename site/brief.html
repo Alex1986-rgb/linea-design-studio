@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Бриф на дизайн-проект — LINEA | 7 минут до старта</title>
+<title>Бриф на дизайн-проект — LINEA | можно голосом</title>
 <meta name="description" content="Заполните бриф на дизайн-проект интерьера: размеры, фото и чертежи квартиры, стиль и референсы. Через 48 часов — полный комплект чертежей и смета.">
 <meta property="og:type" content="website">
 <meta property="og:title" content="Бриф на дизайн-проект LINEA">
@@ -17,6 +17,53 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,500;0,600;1,500&family=Inter:wght@400;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="css/main.css?v=31">
+<style>
+.dict-wrap{position:relative}
+.dict-wrap textarea,.dict-wrap input{padding-right:48px;width:100%;box-sizing:border-box}
+.mic{position:absolute;right:6px;top:6px;width:36px;height:36px;border-radius:50%;border:1px solid var(--line);background:var(--panel);cursor:pointer;font-size:17px;line-height:1}
+.mic.rec{background:#7a1f1f;border-color:#c44;animation:micp 1.2s infinite}
+@keyframes micp{50%{box-shadow:0 0 0 7px rgba(204,68,68,.25)}}
+textarea.big{min-height:220px;font-size:17px}
+.ref-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:12px}
+.ref{margin:0;position:relative;border:2px solid transparent;border-radius:4px;overflow:hidden;background:var(--panel)}
+.ref img{display:block;width:100%;aspect-ratio:3/2;object-fit:cover}
+.ref figcaption{font-size:12px;color:var(--mut);padding:6px 8px 8px}
+.ref-btns{position:absolute;top:8px;right:8px;display:flex;gap:6px}
+.ref-btns button{width:34px;height:34px;border-radius:50%;border:none;background:#0F0E0Ccc;color:#EDE7DC;font-size:15px;cursor:pointer}
+.ref[data-v="like"]{border-color:var(--gold)} .ref[data-v="like"] .like{background:var(--gold);color:#14120E}
+.ref[data-v="dislike"]{opacity:.45} .ref[data-v="dislike"] .dislike{background:#7a1f1f}
+.chip{display:inline-block;margin:4px 6px 0 0;padding:3px 8px;border:1px solid var(--line);border-radius:12px;font-size:13px}
+.chip button{background:none;border:none;color:var(--mut);cursor:pointer}
+.room-row{grid-template-columns:1.4fr 1.2fr .7fr .7fr auto auto}
+.room-row .r-level{max-width:90px}
+.draft-note{color:var(--gold2)}
+.voice{text-align:center;padding:10px 0 18px}
+.bigmic{width:132px;height:132px;border-radius:50%;border:2px solid var(--gold);background:radial-gradient(circle at 35% 30%,#2a241b,#14120E);font-size:52px;cursor:pointer;transition:.2s}
+.bigmic:hover{transform:scale(1.04)}
+.bigmic.rec{background:radial-gradient(circle at 35% 30%,#a33,#5c1515);border-color:#e66;animation:micp 1.2s infinite}
+.voice-state{margin-top:12px;font-size:18px;color:var(--ink)}
+.topics{display:flex;flex-wrap:wrap;gap:8px;margin:6px 0 14px;align-items:center}
+.topics-title{color:var(--mut);font-size:14px;margin-right:4px}
+.topic{padding:5px 11px;border:1px solid var(--line);border-radius:14px;font-size:13px;color:var(--mut)}
+.topic.ok{border-color:var(--gold);color:var(--gold2)}
+details.example{margin:12px 0;color:var(--mut)} details.example summary{cursor:pointer;color:var(--gold)}
+.ref-filter{display:flex;flex-wrap:wrap;gap:8px;margin:4px 0 14px}
+.ref-filter button{padding:6px 12px;border-radius:14px;border:1px solid var(--line);background:none;color:var(--mut);cursor:pointer;font-size:13px}
+.ref-filter button.on{border-color:var(--gold);color:var(--ink);background:#2a241b}
+.ref-examples{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:10px;margin:8px 0 14px}
+.ref-examples div{border:1px solid var(--line);border-radius:6px;padding:12px}
+.ref-examples small{display:block;color:var(--mut);margin-top:4px}
+.steps em{display:none;font-style:normal}
+.steps .progress{display:none}
+@media(max-width:760px){
+  .steps span:not(.on){display:none} .steps em{display:inline} .steps span.on::before{content:'Шаг '}
+  .steps .progress{display:block;width:100%;height:4px;background:var(--line);border-radius:2px;margin-top:10px}
+  .steps .progress b{display:block;height:100%;background:var(--gold);border-radius:2px}
+  .hero .hint{font-size:14px} .bigmic{width:116px;height:116px;font-size:46px}
+}
+.big-drop{padding:34px 20px;font-size:18px;line-height:1.5}
+
+</style>
 </head>
 <body>
 <div class="beta">Открытое тестирование студии · дизайн-проект делается бесплатно · <a href="#wiz">заполнить бриф</a></div>
@@ -55,67 +102,117 @@
   </div>
 </div>
 
-<section class="hero" style="padding:70px 0 30px">
+<section class="hero" style="padding:60px 0 24px">
   <div class="wrap">
-    <div class="kicker">Бриф · 7 минут</div>
-    <h1 style="font-size:clamp(28px,4vw,44px)">Расскажите о вашей квартире —<br>остальное сделает студия</h1>
+    <div class="kicker">Бриф · проще всего — голосом</div>
+    <h1 style="font-size:clamp(28px,4vw,44px)">Просто расскажите о своём доме —<br>студия сделает проект</h1>
+    <p class="hint" style="max-width:720px">Открытое тестирование: проект делается <b>бесплатно</b>. Нажмите микрофон и говорите, как другу.
+      Всё сохраняется в этом браузере — можно закрыть и вернуться.</p>
+    <p class="hint draft-note" id="draftNote" hidden>Черновик сохраняется автоматически.</p>
     <div class="steps" id="steps"></div>
   </div>
 </section>
 
-<div class="wrap" style="padding-bottom:90px">
+<div class="wrap" style="padding-bottom:90px" id="wiz">
 
-  <!-- ШАГ 1: объект -->
+  <!-- 1. Рассказ голосом -->
   <div class="panel" data-step="0">
+    <div class="voice">
+      <button class="bigmic" id="bigMic" type="button" aria-label="Нажмите и говорите">🎤</button>
+      <div class="voice-state" id="voiceState">Нажмите и говорите</div>
+      <p class="hint" id="micHint" hidden><b>В этом браузере голосовой ввод не работает.</b> На телефоне нажмите 🎤 на клавиатуре и
+        говорите в поле ниже; на компьютере откройте страницу в Chrome, Edge или Яндекс Браузере.</p>
+    </div>
+    <div class="topics" id="topics"></div>
+    <textarea id="story" class="big" rows="8" placeholder="Здесь появится ваш рассказ. Можно и написать — как удобнее."></textarea>
+    <p class="hint" id="autoFill" hidden></p>
+    <details class="example"><summary>Пример рассказа</summary>
+      <p>«Квартира 78 метров, три комнаты, новостройка без отделки. Живём втроём: я, муж и дочка 5 лет, ещё кот. Вечером все на кухне —
+      хочется большой стол и остров. Муж работает из дома, нужен тихий угол. Вещей много: нужна гардеробная. Любим тёплое дерево,
+      зелёный и лён, не любим глянец и холодный белый свет. Ремонт хотим начать весной, бюджет средний.»</p></details>
+    <p class="hint">Не хочется говорить? Просто нажмите «Далее» — заполните коротко по шагам.</p>
+  </div>
+
+  <!-- 2. Объект -->
+  <div class="panel" data-step="1" hidden>
     <h2>Объект</h2>
-    <p class="hint">Общие данные — чтобы правильно посчитать смету и подобрать решения.</p>
+    <p class="hint">Что смогли — уже заполнили из рассказа. Проверьте и дополните. Не знаете — оставьте пустым.</p>
     <div class="row3">
       <div class="field"><label>Тип объекта</label>
         <select id="objType"><option>квартира</option><option>дом</option><option>апартаменты</option><option>студия</option></select></div>
       <div class="field"><label>Площадь, м²</label><input type="number" id="objArea" placeholder="54" min="10" step="0.1"></div>
-      <div class="field"><label>Высота потолков, м</label><input type="number" id="objH" placeholder="2.7" value="2.7" step="0.05"></div>
+      <div class="field"><label>Высота потолков, м</label><input type="number" id="objH" placeholder="2.7" step="0.05"></div>
     </div>
-    <div class="field"><label>Адрес / ЖК (необязательно)</label><input type="text" id="objAddr" placeholder="ЖК «Северный парк», Москва"></div>
-  </div>
-
-  <!-- ШАГ 2: помещения и файлы -->
-  <div class="panel" data-step="1" hidden>
-    <h2>Помещения и размеры</h2>
-    <p class="hint">Добавьте каждое помещение с размерами в метрах. Не знаете точно — укажите примерно, уточним по чертежу.</p>
+    <div class="row3 house-only" hidden>
+      <div class="field"><label>Этажей</label><select id="objFloors"><option>1</option><option selected>2</option><option>3</option><option value="1.5">1 + мансарда</option><option value="2.5">2 + мансарда</option></select></div>
+      <div class="field"><label>Лестница</label><select id="objStairs"><option>на усмотрение студии</option><option>прямая одномаршевая</option><option>Г-образная с площадкой</option><option>П-образная</option><option>винтовая</option><option>уже есть, оставить</option></select></div>
+      <div class="field"><label>Участок, соток</label><input type="text" id="objPlot" placeholder="12"></div>
+    </div>
+    <div class="row2">
+      <div class="field"><label>Адрес / ЖК / посёлок</label><input type="text" id="objAddr" placeholder="ЖК «Северный парк», Москва"></div>
+      <div class="field"><label>Состояние</label><select id="objState"><option>новостройка, без отделки</option><option>новостройка, white box</option><option>вторичка, нужен ремонт</option><option>дом строится</option><option>дом построен, без отделки</option><option>жилое, частичная переделка</option></select></div>
+    </div>
+    <div style="height:18px"></div>
+    <h2 style="font-size:20px">Помещения</h2>
+    <p class="hint">Размеры в метрах — если знаете. Нет — снимем с плана. <span class="house-only" hidden>Для дома укажите этаж.</span></p>
     <div id="rooms"></div>
     <button class="btn sm ghost" id="addRoom" type="button">+ Добавить помещение</button>
-    <div style="height:26px"></div>
-    <h2 style="font-size:20px">Фото, обмеры и чертежи</h2>
-    <p class="hint">План от застройщика, фото стен, листок с обмерами — подойдёт всё. Форматы: JPG, PNG, PDF, DWG.</p>
-    <div class="drop" id="drop">Нажмите, чтобы выбрать файлы, или перетащите их сюда</div>
-    <input type="file" id="files" multiple hidden accept=".jpg,.jpeg,.png,.pdf,.dwg,.heic">
-    <div class="filelist" id="filelist"></div>
   </div>
 
-  <!-- ШАГ 3: стиль -->
+  <!-- 3. План и фото -->
   <div class="panel" data-step="2" hidden>
-    <h2>Стиль и настроение</h2>
-    <p class="hint">Выберите направление — или доверьтесь студии, и мы предложим его сами по вашим ответам.</p>
-    <div class="style-grid" id="styles"></div>
-    <div style="height:22px"></div>
-    <div class="row2">
-      <div class="field"><label>Любимые цвета и материалы</label><input type="text" id="stColors" placeholder="тёплый белый, дерево, латунь"></div>
-      <div class="field"><label>Референсы (ссылки Pinterest и т.п.)</label><input type="text" id="stRefs" placeholder="https://pin.it/..., https://..."></div>
-    </div>
+    <h2>План и фото</h2>
+    <p class="hint">Подойдёт всё: план от застройщика или БТИ, проект дома, фото стен на телефон, листок с обмерами от руки.</p>
+    <div class="drop big-drop" id="drop">📎<br><b>Добавить план или фото</b><br><small>нажмите или перетащите · JPG, PNG, PDF, DWG</small></div>
+    <input type="file" id="files" multiple hidden accept=".jpg,.jpeg,.png,.webp,.pdf,.dwg,.heic,image/*">
+    <div class="filelist" id="filelist"></div>
+    <p class="hint">Нет плана? Ничего страшного — пропустите шаг, договоримся об обмере.</p>
   </div>
 
-  <!-- ШАГ 4: наводящие вопросы -->
+  <!-- 4. Стиль и референсы -->
   <div class="panel" data-step="3" hidden>
+    <h2>Что вам нравится?</h2>
+    <p class="hint">Листайте и отмечайте: <b>♥</b> — откликается, <b>✕</b> — точно не ваше. Не думайте долго — важна первая реакция.
+      Это интерьеры из проектов студии. <b id="refCount"></b></p>
+    <div class="ref-filter" id="refFilter"></div>
+    <div class="ref-grid" id="refGallery"><p class="hint">Загружаю галерею…</p></div>
+    <div style="height:26px"></div>
+    <h2 style="font-size:20px">Свои примеры — самое ценное</h2>
+    <p class="hint">Референс — любая картинка, где вам «хорошо»: не обязательно целая комната. Что можно прислать:</p>
+    <div class="ref-examples">
+      <div><b>📌 Скриншот из Pinterest или Instagram</b><small>сохранили когда-то «на будущее» — отлично подходит</small></div>
+      <div><b>🏨 Фото у друзей, в отеле, кафе</b><small>где понравилось, как сделано — даже не очень резкое</small></div>
+      <div><b>🛋 Отдельная вещь</b><small>диван, лампа, плитка, ручка двери — то, вокруг чего хочется строить</small></div>
+      <div><b>🎨 Цвет или фактура</b><small>картина, ткань, природа — настроение важнее комнаты</small></div>
+    </div>
+    <div class="drop" id="dropRefs">🖼 Добавить фото понравившихся интерьеров</div>
+    <input type="file" id="filesRefs" multiple hidden accept="image/*,.heic">
+    <div class="filelist" id="reflist"></div>
+    <div style="height:18px"></div>
+    <h2 style="font-size:20px">Стиль <small style="font-weight:400;color:var(--mut)">— если уже знаете</small></h2>
+    <div class="style-grid" id="styles"></div>
+    <div class="row2" style="margin-top:14px">
+      <div class="field"><label>Ссылки (Pinterest, сайты, доски)</label><input type="text" id="stRefs" placeholder="https://pin.it/..., https://..."></div>
+      <div class="field"><label>Любимые цвета и материалы</label><input type="text" id="stColors" class="dict" placeholder="тёплое дерево, зелёный, латунь, лён"></div>
+    </div>
+    <div class="field"><label>Цвета и материалы, которые НЕ хочется видеть</label><input type="text" id="stAvoid" class="dict" placeholder="серый бетон, глянец, холодный белый"></div>
+  </div>
+
+  <!-- 5. Наводящие вопросы -->
+  <div class="panel" data-step="4" hidden>
     <h2>Наводящие вопросы</h2>
-    <p class="hint">Эти ответы влияют на планировку, хранение, свет и материалы сильнее, чем кажется.</p>
+    <p class="hint">Эти ответы влияют на планировку, хранение, свет и материалы сильнее, чем кажется. Можно голосом.</p>
     <div class="row2">
-      <div class="field"><label>Кто будет жить в квартире?</label><input type="text" id="qWho" placeholder="пара с ребёнком 6 лет"></div>
-      <div class="field"><label>Домашние животные</label><input type="text" id="qPets" placeholder="кот / собака / нет"></div>
+      <div class="field"><label>Кто будет жить?</label><input type="text" id="qWho" class="dict" placeholder="пара с ребёнком 6 лет и бабушка"></div>
+      <div class="field"><label>Домашние животные</label><input type="text" id="qPets" class="dict" placeholder="кот / собака / нет"></div>
       <div class="field"><label>Работаете из дома?</label>
-        <select id="qWfh"><option>нет</option><option>да, нужно рабочее место</option><option>иногда, хватит уголка</option></select></div>
+        <select id="qWfh"><option>нет</option><option>да, нужен отдельный кабинет</option><option>да, хватит рабочего места</option><option>иногда, хватит уголка</option></select></div>
       <div class="field"><label>Сколько нужно хранения?</label>
-        <select id="qStorage"><option>стандартно</option><option>много: гардеробная + антресоли</option><option>минимум, живём налегке</option></select></div>
-      <div class="field"><label>Что точно НЕ нравится?</label><input type="text" id="qDislikes" placeholder="глянец, холодный белый, ковролин"></div>
+        <select id="qStorage"><option>стандартно</option><option>много: гардеробная + кладовая</option><option>минимум, живём налегке</option></select></div>
+      <div class="field"><label>Кухня</label>
+        <select id="qKitchen"><option>готовим каждый день, нужна большая рабочая зона</option><option>готовим иногда</option><option>остров обязательно</option><option>верхние шкафы до потолка</option><option>без верхних шкафов, открытые полки</option></select></div>
+      <div class="field"><label>Спорт и хобби дома</label><input type="text" id="qSport" class="dict" placeholder="беговая дорожка, йога, мастерская, музыка"></div>
+      <div class="field"><label>Что точно НЕ нравится?</label><input type="text" id="qDislikes" class="dict" placeholder="ковролин, тёмные коридоры, открытые полки"></div>
       <div class="field"><label>Когда планируете ремонт?</label>
         <select id="qWhen"><option>в ближайшие 3 месяца</option><option>в течение 6 месяцев</option><option>в течение года</option><option>пока изучаю</option></select></div>
     </div>
@@ -126,31 +223,36 @@
         <option value="premium">Премиальный — без компромиссов</option>
       </select>
       <p class="hint" style="margin:8px 0 0">Влияет только на подбор материалов и цифры в смете. Сам проект на время теста бесплатный.</p></div>
-    <div class="field"><label>Что ещё нам важно знать?</label><textarea id="qNotes" placeholder="привычки, сценарии, особые пожелания…"></textarea></div>
+    <div class="field"><label>Что ещё нам важно знать?</label><textarea id="qNotes" class="dict" placeholder="привычки, сценарии, особые пожелания…"></textarea></div>
   </div>
 
-  <!-- ШАГ 5: контакты и итог -->
-  <div class="panel" data-step="4" hidden>
+  <!-- 6. Контакты -->
+  <div class="panel" data-step="5" hidden>
     <h2>Контакты</h2>
-    <p class="hint">Куда прислать готовую папку проекта и уточняющие вопросы.</p>
-    <div class="row3">
+    <p class="hint">Куда прислать готовый проект и уточняющие вопросы.</p>
+    <div class="row2">
       <div class="field"><label>Имя</label><input type="text" id="cName" placeholder="Александр"></div>
       <div class="field"><label>Телефон</label><input type="tel" id="cPhone" placeholder="+7 900 000-00-00"></div>
       <div class="field"><label>E-mail</label><input type="email" id="cEmail" placeholder="you@mail.ru"></div>
+      <div class="field"><label>Как удобнее связаться</label><select id="cWay"><option>WhatsApp</option><option>Telegram</option><option>звонок</option><option>почта</option></select></div>
     </div>
+    <p class="hint">Отправляя бриф, вы соглашаетесь на обработку данных для подготовки проекта — <a href="policy/">подробнее</a>.</p>
   </div>
 
-  <!-- РЕЗУЛЬТАТ -->
-  <div class="panel result" data-step="5" hidden>
-    <div class="okmsg"><b>Бриф собран.</b> Нажмите «Отправить бриф в студию» — мы подтвердим получение и вернёмся с папкой проекта в течение 48 часов. Чертежи и фото приложите ответным письмом.</div>
-    <div class="summary" id="summary"></div>
-    <div class="cta-row" style="margin-bottom:14px">
-      <a class="btn" id="mailto" href="#">Отправить бриф письмом</a>
-      <button class="btn ghost" id="copyBrief" type="button">Скопировать бриф</button>
-      <a class="btn ghost" id="waSend" href="#" target="_blank" rel="noopener">Отправить в WhatsApp</a>
+  <!-- 7. Готово -->
+  <div class="panel result" data-step="6" hidden>
+    <div class="okmsg"><b>Бриф собран.</b> Главная кнопка соберёт архив — бриф, план и фото в одном файле. На телефоне откроется
+      «Поделиться»: выберите WhatsApp или Telegram и отправьте на <b>+7 925 733-86-40</b>. На компьютере архив скачается — пришлите его
+      в мессенджер или на <b>optteem@mail.ru</b>.</div>
+    <div class="cta-row" style="margin-bottom:10px">
+      <button class="btn" id="sendZip" type="button">Отправить бриф с файлами</button>
     </div>
-    <p class="hint" id="afterSend" hidden><b>Письмо не открылось?</b> Так бывает, если на устройстве не настроена почта. Нажмите «Скопировать бриф» и пришлите текст в WhatsApp на +7 925 733-86-40 или письмом на optteem@mail.ru с любой веб-почты. Бриф уже сохранён в этом браузере — он не потеряется.</p>
-    <p class="hint">Нужна копия для себя? <button class="linklike" id="dl" type="button">скачать бриф файлом</button> · <a href="portfolio/demo/index.html">пример готовой папки</a></p>
+    <p class="hint" id="afterZip" hidden>✓ Архив готов: <b id="zipInfo"></b>. Если окно «Поделиться» не открылось — файл в загрузках, пришлите его в
+      WhatsApp на +7 925 733-86-40 или письмом на optteem@mail.ru. Мы подтвердим получение в течение дня.</p>
+    <div class="summary" id="summary"></div>
+    <p class="hint">Другие способы: <a id="waSend" href="#" target="_blank" rel="noopener">текст брифа в WhatsApp</a> ·
+      <a id="mailto" href="#">письмом</a> · <button class="linklike" id="copyBrief" type="button">скопировать бриф</button> ·
+      <button class="linklike" id="dl" type="button">скачать brief.json</button> · <a href="portfolio-hub/">примеры проектов</a></p>
     <details class="raw"><summary>Показать технические данные брифа</summary><pre id="json"></pre></details>
   </div>
 
@@ -163,7 +265,7 @@
 <a class="to-top" href="#" aria-label="Наверх">↑</a>
 <footer class="site"><div class="wrap cols"><div><div class="logo">LINE<i>A</i></div><p>дизайнер-архитектор <b>Кырлан Александр</b><br><a href="tel:+79257338640">+7 925 733-86-40</a> · <a href="mailto:optteem@mail.ru">optteem@mail.ru</a></p></div><div><p><a href="brief.html">Бриф</a> · <a href="catalog/">Каталог</a> · <a href="gost/">Документация</a> · <a href="cases/">Кейсы</a> · <a href="compare/">Сравнение</a> · <a href="style/">Стили</a> · <a href="journal/">Журнал</a> · <a href="stories/">Истории</a> · <a href="reviews/">Отзывы</a> · <a href="portfolio-hub/">Портфолио</a> · <a href="price/">Условия</a> · <a href="process/">Процесс</a> · <a href="faq/">FAQ</a> · <a href="about/">О студии</a> · <a href="contacts/">Контакты</a> · <a href="checklist/">Чек-лист приёмки</a> · <a href="sitemap/">Карта сайта</a> · <a href="policy/">Обработка данных</a></p><p>© LINEA studio, 2026</p></div></div></footer>
 
-<script src="js/brief.js?v=31"></script>
+<script src="js/brief.js?v=35"></script>
 <script>
 (function () {
   var b = document.querySelector('.burger'), m = document.querySelector('.mnav');
