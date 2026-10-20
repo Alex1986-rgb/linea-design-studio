@@ -16,7 +16,10 @@
   fetch('portfolio/' + slug + '/sheets.json').then(r => r.json()).then(list => {
     sheets = list;
     $('pick').innerHTML = list.map((s, i) => `<option value="${i}">${esc(s.no ? 'Лист ' + s.no + ' · ' : '')}${esc(s.title)}</option>`).join('');
-    const want = q.get('s'), i = list.findIndex(s => s.file === want);
+    // лист — по имени файла; если альбом перевыпущен и номер сменился — по имени без номера «NN-»
+    const want = q.get('s') || '', bare = f => String(f).replace(/^\d+-/, '');
+    let i = list.findIndex(s => s.file === want);
+    if (i < 0 && want) i = list.findIndex(s => bare(s.file) === bare(want));
     show(i >= 0 ? i : 0);
   }).catch(() => { $('title').textContent = 'Листы проекта не загрузились'; });
 
