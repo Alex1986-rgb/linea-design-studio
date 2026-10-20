@@ -157,7 +157,7 @@ const OLD = [
 const hubTitle = `Портфолио LINEA — ${NUM_W[NEW_N] || NEW_N} проектов нового формата целиком`;
 w('portfolio-hub/index.html', page({
   file: 'portfolio-hub/index.html',
-  sec: 'cases',
+  sec: 'portfolio',
   title: hubTitle,
   desc: `${plural(NEW_N, 'дизайн-проект', 'дизайн-проекта', 'дизайн-проектов')} открыты целиком: квартиры и дома от ${fmtA(AR_MIN)} до ${fmtA(AR_MAX)} м², `
     + `${plural(GOST_SHEETS, ...LIST)} A3 по ГОСТ, ${plural(VISUALS, 'визуализация', 'визуализации', 'визуализаций')} сверены с макетом. Правки голосом на листах.`,
@@ -643,6 +643,7 @@ w('checklist/index.html', page({
   lead: 'Возьмите этот список на приёмку проекта — нашего или любого другого. Если по пункту нечего показать, вы платите за картинки, а не за документацию. Страница печатается: Ctrl+P / ⌘P.',
   jsonld: [crumbsLd([['LINEA', BASE + '/'], ['Чек-лист', BASE + '/checklist/']])],
   body: `<section class="blk checklist-doc">
+  <div class="wrap"><p class="sub noprint">Как проходит приёмка и как оставить правки голосом прямо на листах — <a href="../journal/kak-prinyat-dizayn-proekt.html">статья «Как принять дизайн-проект»</a>.</p></div>
   <div class="wrap">
     ${[
       ['Состав альбома', [

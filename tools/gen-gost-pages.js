@@ -435,6 +435,9 @@ function albumPage(a, r, honesty) {
   w(`portfolio/${a.slug}/sheets.json`, JSON.stringify(r.sheets.map(sh => ({ file: sh.file, title: sh.title, no: (sh.file.match(/^(\d+)/) || [])[1] ? +sh.file.match(/^(\d+)/)[1] : null }))));
   const rv = f => `../../review.html?p=${a.slug}&amp;s=${encodeURIComponent(f)}`;
   const rvAll = `../../review.html?p=${a.slug}`;
+  // разбор решений проекта — кейс, если он есть (перелинковка альбом ↔ кейс)
+  const CASE = { 'gost-dom331': 'dom-331.html', 'gost-retro103': 'kvartira-103.html', 'gost-lineademo': 'kvartira-56.html', 'gost-dom120': 'dom-120.html' }[a.slug];
+  const caseBtn = CASE ? `\n        <a class="btn ghost" href="../../cases/${CASE}">Разбор решений проекта</a>` : '';
 
   const blocks = groups.map(g => `  <section class="blk" id="${g.id}">
     <div class="wrap">
@@ -463,7 +466,7 @@ function albumPage(a, r, honesty) {
   const has = f => fs.existsSync(path.join(SITE, 'portfolio', a.slug, f));
   const pdf = `      <div class="cta-row" style="margin-top:26px">${has('studio.pdf') ? `<a class="btn" href="studio.pdf" download>Альбом для заказчика · PDF ${a.studioSize}</a>` : ''}
         ${has('album.pdf') ? `<a class="btn ghost" href="album.pdf" download>Полный альбом по ГОСТ · PDF ${a.pdfSize}</a>` : ''}
-        <a class="btn ghost" href="${rvAll}" rel="nofollow">🎤 Оставить правку голосом</a></div>
+        <a class="btn ghost" href="${rvAll}" rel="nofollow">🎤 Оставить правку голосом</a>${caseBtn}</div>
       <p class="g-note">Альбом для заказчика — проект в подаче студии: визуализации стоят перед развёртками своих помещений,
       у мебели на плане выноски с размерами.${R.checked ? '' : ' Визуализации этого проекта с макетом ещё не сверены — на листах альбома решение точнее, чем на кадрах.'} Полный альбом — рабочая документация для строителей: все разделы, ведомости
       и смета. Файлы большие — на мобильном интернете лучше качать по Wi-Fi.</p>\n`;
@@ -621,7 +624,7 @@ ${blocks}
       provider: { '@type': 'Organization', name: 'LINEA', url: `${BASE}/` },
       areaServed: 'RU',
       offers: {
-        '@type': 'Offer', price: '0', priceCurrency: 'RUB', availability: 'https://schema.org/InStock',
+        '@type': 'Offer', price: '0', priceCurrency: 'RUB', availability: 'https://schema.org/LimitedAvailability',
         url: `${BASE}/brief.html`,
         description: `Открытое тестирование: проект бесплатно; первый вариант ${a.house ? 'проекта дома — до 72 часов' : 'проекта квартиры — до 48 часов'} от получения брифа с планом`,
       },
