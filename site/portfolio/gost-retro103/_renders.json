@@ -57,6 +57,7 @@
   "w": 1600,
   "h": 1066,
   "kind": "render",
-  "name": "3d-top"
+  "name": "3d-top",
+  "webp": "assets/portfolio/gost-retro103-hero.webp"
  }
 }

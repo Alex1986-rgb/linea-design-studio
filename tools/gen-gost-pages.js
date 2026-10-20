@@ -136,7 +136,7 @@ ALBUMS.push(
   {
     slug: 'gost-lineademo',
     explain: false,
-    name: 'Квартира 56 м² · джапанди (демо LINEA в новом формате)',
+    name: 'Квартира 56 м² · джапанди',
     short: 'квартира 56 м² в стиле джапанди',
     lead: 'Демо-квартира студии, пересобранная движком рабочей документации: кухня-гостиная, спальня, детская, санузел, '
       + 'прихожая. Джапанди — тёплый белый, дуб, серо-зелёный, без глянца; у каждой комнаты свой акцент.',
@@ -152,7 +152,7 @@ ALBUMS.push(
     slug: 'gost-dom120',
     explain: false,
     house: true, // срок для дома — до 72 часов от брифа с планом
-    name: 'Дом 120 м² в два этажа · средиземноморье (демо LINEA в новом формате)',
+    name: 'Дом 120 м² в два этажа · средиземноморье',
     short: 'дом 120 м² в два этажа',
     lead: 'Демо-дом студии в новом формате: планы по этажам, лестница с ограждением и отдельным листом, '
       + 'средиземноморско-скандинавская гамма — эгейский синий, охра, олива, песок.',
@@ -183,24 +183,24 @@ ALBUMS.push(
   },
 );
 
-// карточка проекта: тип и стиль (стиль — из project.json движка: meta.style) и честное пояснение,
+// карточка проекта: тип и стиль (стиль — из project.json движка: meta.style), стиль для title («в стиле …») и честное пояснение,
 // если площадь в названии не совпадает с экспликацией альбома. {AREA} — общая площадь с титула выпуска.
 const CARD = {
-  'gost-dom120': { type: 'Дом, 2 этажа', style: 'Средиземноморье и скандинавский',
+  'gost-dom120': { inStyle: 'в средиземноморском стиле', type: 'Дом, 2 этажа', style: 'Средиземноморье и скандинавский',
     declared: '120 м² в названии — площадь из брифа демо-дома; общая площадь по экспликации альбома — {AREA}.' },
-  'gost-lineademo': { type: 'Квартира', style: 'Джапанди' },
-  'gost-dom331': { type: 'Дом с мансардой', style: 'Шале и эко',
+  'gost-lineademo': { inStyle: 'в стиле джапанди', type: 'Квартира', style: 'Джапанди' },
+  'gost-dom331': { inStyle: 'в стиле шале', type: 'Дом с мансардой', style: 'Шале и эко',
     declared: '331 м² в названии — площадь, заявленная заказчиком на его картинке плана. Размеры на ней не читаются, '
       + 'их подобрал проектировщик, и общая площадь по экспликации альбома вышла {AREA}. Цифра уточнится после контрольного обмера.' },
-  'gost-retro103': { type: 'Квартира', style: 'Середина века и ар-деко',
+  'gost-retro103': { inStyle: 'в стиле ретро', type: 'Квартира', style: 'Середина века и ар-деко',
     declared: '103 м² в названии — общая площадь по обмерному плану (102,98 м², две квартиры с тамбуром); '
       + 'по экспликации альбома — {AREA}.' },
-  'gost-modern4k': { type: 'Квартира', style: 'Модерн и современный' },
-  'gost-kv65': { type: 'Квартира', style: 'Скандинавский' },
-  'gost-kv58': { type: 'Квартира', style: 'Скандинавский',
+  'gost-modern4k': { inStyle: 'в стиле модерн', type: 'Квартира', style: 'Модерн и современный' },
+  'gost-kv65': { inStyle: 'в скандинавском стиле', type: 'Квартира', style: 'Скандинавский' },
+  'gost-kv58': { inStyle: 'в скандинавском стиле', type: 'Квартира', style: 'Скандинавский',
     declared: '58 м² в названии — площадь из исходных данных заказчика (57,6 м²); по экспликации альбома — {AREA}.' },
-  'gost-proekt2': { type: 'Квартира', style: 'Современный' },
-  'gost-kv3k': { type: 'Квартира', style: 'Современный, тёплая гамма' },
+  'gost-proekt2': { inStyle: 'в современном стиле', type: 'Квартира', style: 'Современный' },
+  'gost-kv3k': { inStyle: 'в современном стиле', type: 'Квартира', style: 'Современный, тёплая гамма' },
 };
 // новые проекты — первыми (по номеру шифра, свежие сверху)
 const NEWEST = a => -(+(a.code.match(/-(\d{3})-/) || [])[1] || 0);
@@ -235,6 +235,22 @@ const plural = (n, one, few, many) => {
 
 // то же без числа: «<b>41</b> открытый вопрос» — число стоит в плитке отдельно
 const word = (n, one, few, many) => plural(n, one, few, many).replace(/^\d+ /, '');
+
+// диапазон с согласованием по последнему числу: «64–121 лист», «132–156 листов»
+const range = (a, b, ...f) => (a === b ? plural(b, ...f) : `${a}–${plural(b, ...f)}`);
+
+// картинка проекта: webp рядом — через <picture>, иначе просто jpg. u — путь до корня сайта
+const pic = (h, u, attrs) => {
+  const img = `<img src="${u}${h.src}" alt="${esc(h.alt)}" width="${h.w}" height="${h.h}" ${attrs}>`;
+  return h.webp ? `<picture style="display:block"><source type="image/webp" srcset="${u}${h.webp}">${img}</picture>` : img;
+};
+
+// title и description: обрезка в site-shell ставит «…» посреди фразы — поэтому выбираем первый вариант, который влезает
+const fit = (cands, max, what) => {
+  const c = cands.map(x => x.replace(/\s+/g, ' ').trim()).find(x => x.length <= max);
+  if (!c) throw new Error(`${what}: ни один вариант не влез в ${max} знаков — «${cands[cands.length - 1]}»`);
+  return c;
+};
 
 const slugify = s => String(s).toLowerCase().replace(/[а-яё]/g, c => TR[c] ?? c)
   .replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
@@ -288,6 +304,16 @@ function sips(src, dst, px) {
   fs.mkdirSync(path.dirname(dst), { recursive: true });
   require('child_process').execFileSync('sips', ['-Z', String(px), '-s', 'format', 'jpeg', '-s', 'formatOptions', '68', src, '--out', dst], { stdio: 'ignore' });
 }
+// webp рядом с jpg — для <picture>: заглавный кадр самый тяжёлый на странице. Нет cwebp — остаётся только jpg.
+function webp(jpg) {
+  const dst = jpg.replace(/\.jpe?g$/i, '.webp');
+  try {
+    if (!fs.existsSync(dst) || fs.statSync(dst).mtimeMs < fs.statSync(jpg).mtimeMs) {
+      require('child_process').execFileSync('cwebp', ['-quiet', '-q', '72', jpg, '-o', dst], { stdio: 'ignore' });
+    }
+    return fs.existsSync(dst);
+  } catch { return false; }
+}
 function dims(f) {
   try {
     const o = require('child_process').execFileSync('sips', ['-g', 'pixelWidth', '-g', 'pixelHeight', f], { encoding: 'utf8' });
@@ -312,6 +338,13 @@ function renders(a, r) {
   let heroName = (views.find(v => /^3d-top(-et1)?$/.test(v.name) && ok(v)) || {}).name;
   if (!heroName && checked) heroName = (views.find(v => /^room-(living|kitchen)/.test(v.name) && strict(v)) || views.find(strict) || {}).name;
   if (!heroName && !checked && has('3d-top')) heroName = '3d-top';      // кадр с титульного листа альбома
+  // сверки нет и вида сверху нет — кадр гостиной (кухни) из альбома для заказчика с честной подписью, а не лист плана
+  let unchecked = false;
+  if (!heroName && !checked) {
+    const v = views.find(x => /^room-living/.test(x.name) && has(x.name)) || views.find(x => /^room-kitchen/.test(x.name) && has(x.name));
+    const f = v ? v.name : (fs.readdirSync(dir).filter(n => /^room-(living|kitchen)[^.]*\.jpg$/.test(n)).sort()[0] || '').replace(/\.jpg$/, '');
+    if (f) { heroName = f; unchecked = true; }
+  }
   // лента: по одному кадру на помещение в порядке значимости, затем вторые кадры — до 8
   const pool = views.filter(v => strict(v) && v.name !== heroName && /^(room-|3d-top)/.test(v.name));
   const rank = v => { const k = roomKey(v.name); const i = ROOM_ORDER.indexOf(k); return k === '3d-top' ? -1 : i < 0 ? 99 : i; };
@@ -326,7 +359,8 @@ function renders(a, r) {
     const dst = path.join(SITE, 'assets', 'portfolio', `${a.slug}-hero.jpg`);
     sips(path.join(dir, `${heroName}.jpg`), dst, 1600);
     out.hero = { src: `assets/portfolio/${a.slug}-hero.jpg`, alt: frameAlt(a, heroName), ...dims(dst),
-      kind: checked ? 'render' : 'cover-render', name: heroName };
+      kind: checked ? 'render' : unchecked ? 'unchecked-render' : 'cover-render', name: heroName };
+    if (webp(dst)) out.hero.webp = `assets/portfolio/${a.slug}-hero.webp`;
   } else out.hero = coverHero;
   const rdir = path.join(SITE, 'assets', 'portfolio', a.slug);
   const keep = new Set();
@@ -361,6 +395,8 @@ const CSS = `<style>
 
 function page({ file, title, desc, h1, crumb, lead, body, u, jsonld, object, ogImage, ogDesc }) {
   const ld = (jsonld || []).map(o => `<script type="application/ld+json">${JSON.stringify(o)}</script>`).join('\n');
+  if (title.length > 70) console.warn(`  ! ${file}: title ${title.length} знаков (> 70)`);
+  if (desc.replace(/\s+/g, ' ').trim().length > 158) console.warn(`  ! ${file}: description длиннее 158 — site-shell обрежет его на «…»`);
   let head = SHELL.head(u, { title, desc, canonical: `${BASE}/${file.replace(/index\.html$/, '')}`, ogTitle: h1, ogDesc: ogDesc || lead });
   if (ogImage) head = head.replace(`${BASE}/assets/hero.jpg`, `${BASE}/${ogImage}`);   // превью ссылки — кадр самого проекта
   return `<!DOCTYPE html>
@@ -406,7 +442,7 @@ function albumPage(a, r, honesty) {
       <h2>${esc(g.sec)}</h2>
       <p class="sub">${plural(g.items.length, 'лист', 'листа', 'листов')}. Нажмите на лист — он откроется целиком, и к нему можно надиктовать правку.</p>
       <div class="plates">
-      ${g.items.map(sh => `<a class="plate" href="${rv(sh.file)}" title="Открыть лист и оставить правку голосом">
+      ${g.items.map(sh => `<a class="plate" href="${rv(sh.file)}" rel="nofollow" title="Открыть лист и оставить правку голосом">
         <span class="plate-img"><img loading="lazy" decoding="async" src="sheets/${encodeURIComponent(sh.file)}" alt="${esc(sh.title)}" width="1587" height="1123"></span>
         <span class="plate-cap"><i>${esc(sh.file.replace(/^(\d+).*$/, 'Лист $1'))}</i>${esc(sh.title)}</span>
       </a>`).join('\n      ')}
@@ -416,9 +452,10 @@ function albumPage(a, r, honesty) {
 
   // заглавный кадр
   const capOf = { render: 'Кадр сверен с макетом проекта: планировка и мебель — как на листах альбома.',
-    'cover-render': 'Кадр с титульного листа альбома.', sheet: 'Лист альбома. Визуализации этого проекта ещё не сверены с макетом — на сайте их пока не показываем.' };
+    'cover-render': 'Кадр с титульного листа альбома.',
+    'unchecked-render': 'Кадр из альбома для заказчика. С макетом проекта его ещё не сверяли — мебель и детали могут отличаться от листов.', sheet: 'Лист альбома. Визуализации этого проекта ещё не сверены с макетом — на сайте их пока не показываем.' };
   const hero = R.hero ? `      <figure class="g-hero${R.hero.kind === 'sheet' ? ' sheet' : ''}">
-        <img src="../../${R.hero.src}" alt="${esc(R.hero.alt)}" width="${R.hero.w}" height="${R.hero.h}" fetchpriority="high" decoding="async">
+        ${pic(R.hero, '../../', 'fetchpriority="high" decoding="async"')}
         <figcaption>${esc(R.hero.alt.replace(`${a.name} — `, '').replace(/^./, c => c.toUpperCase()))}. ${capOf[R.hero.kind] || ''}</figcaption>
       </figure>\n` : '';
 
@@ -426,9 +463,9 @@ function albumPage(a, r, honesty) {
   const has = f => fs.existsSync(path.join(SITE, 'portfolio', a.slug, f));
   const pdf = `      <div class="cta-row" style="margin-top:26px">${has('studio.pdf') ? `<a class="btn" href="studio.pdf" download>Альбом для заказчика · PDF ${a.studioSize}</a>` : ''}
         ${has('album.pdf') ? `<a class="btn ghost" href="album.pdf" download>Полный альбом по ГОСТ · PDF ${a.pdfSize}</a>` : ''}
-        <a class="btn ghost" href="${rvAll}">🎤 Оставить правку голосом</a></div>
+        <a class="btn ghost" href="${rvAll}" rel="nofollow">🎤 Оставить правку голосом</a></div>
       <p class="g-note">Альбом для заказчика — проект в подаче студии: визуализации стоят перед развёртками своих помещений,
-      у мебели на плане выноски с размерами. Полный альбом — рабочая документация для строителей: все разделы, ведомости
+      у мебели на плане выноски с размерами.${R.checked ? '' : ' Визуализации этого проекта с макетом ещё не сверены — на листах альбома решение точнее, чем на кадрах.'} Полный альбом — рабочая документация для строителей: все разделы, ведомости
       и смета. Файлы большие — на мобильном интернете лучше качать по Wi-Fi.</p>\n`;
 
   const card = CARD[a.slug] || {};
@@ -457,7 +494,7 @@ function albumPage(a, r, honesty) {
         <li><b>Скажите голосом</b><p>Или напишите. Правок к одному листу может быть сколько угодно, есть правка ко всему листу.</p></li>
         <li><b>Отправьте одним сообщением</b><p>Все метки уходят разом — через «Поделиться» или файлом. Альбом перевыпускается с правками.</p></li>
       </ol>
-      <div class="cta-row"><a class="btn" href="${rvAll}">🎤 Попробовать на этом альбоме</a>
+      <div class="cta-row"><a class="btn" href="${rvAll}" rel="nofollow">🎤 Попробовать на этом альбоме</a>
         <a class="btn ghost" href="../../brief.html">Свой проект — бриф голосом</a></div>
       <p class="hint" style="margin-top:14px">Если голосовой ввод в браузере не работает — нажмите микрофон на клавиатуре телефона.</p>
     </div>
@@ -536,12 +573,32 @@ ${blocks}
 `;
 
   const ogImg = R.hero && R.hero.kind !== 'sheet' ? R.hero.src : null;
+  // title: «Дизайн-проект квартиры 58 м² в скандинавском стиле — 64 листа по ГОСТ | LINEA». Площадь — та же, что в названии
+  // (H1), чтобы title не спорил с заголовком; если в названии её нет — общая по экспликации, округлённо.
+  const areaN = +a.area.replace(/[^\d,]/g, '').replace(',', '.');
+  const declN = +((a.name.match(/(\d+) м²/) || [])[1] || 0);
+  const what = `Дизайн-проект ${a.house ? 'дома' : 'квартиры'} ${declN || Math.round(areaN)} м²`;
+  const sheetsT = `${plural(r.total, 'лист', 'листа', 'листов')} по ГОСТ`;
+  const title = fit([
+    `${what} ${card.inStyle || ''} — ${sheetsT} | LINEA`,
+    `${what} ${card.inStyle || ''} — ${sheetsT}`,
+    `${what} — ${sheetsT} | LINEA`,
+  ], 70, `${a.slug} title`);
+  // description: законченная фраза ≤ 158 знаков. Если площадь в названии заявленная — в описании прямо «по экспликации».
+  const areaT = declN && Math.abs(declN - areaN) > 1.5 ? `площадь по экспликации ${a.area}` : `общая площадь ${a.area}`;
+  const one = R.accepted % 10 === 1 && R.accepted % 100 !== 11;
+  const visT = R.accepted ? `, ${plural(R.accepted, 'визуализация', 'визуализации', 'визуализаций')} ${one ? 'сверена' : 'сверены'} с макетом` : '';
+  const head = `${a.name.replace(/ · .*$/, '').replace(/, .*$/, '')}${card.inStyle ? ` ${card.inStyle}` : ''}`;
+  const desc = fit([
+    `${head}: ${plural(r.total, 'лист', 'листа', 'листов')} A3 по ГОСТ, ${areaT}${visT}. Альбом для заказчика и полный альбом в PDF, правки голосом на листах.`,
+    `${head}: ${plural(r.total, 'лист', 'листа', 'листов')} A3 по ГОСТ, ${areaT}${visT}. Два PDF и правки голосом на листах.`,
+    `${head}: ${plural(r.total, 'лист', 'листа', 'листов')} A3 по ГОСТ, ${areaT}. Два PDF и правки голосом на листах.`,
+  ], 158, `${a.slug} description`);
   return page({
     object: a.house ? 'house' : 'flat',
     file: `portfolio/${a.slug}/index.html`,
-    title: `${a.name} — дизайн-проект и альбом по ГОСТ | LINEA`,
-    desc: `${a.name}: ${plural(r.total, 'лист', 'листа', 'листов')} A3, ${plural(groups.length, 'раздел', 'раздела', 'разделов')}, общая площадь ${a.area}`
-      + `${R.accepted ? `, ${plural(R.accepted, 'визуализация', 'визуализации', 'визуализаций')}` : ''}. Два PDF — альбом для заказчика и полный альбом для строителей; правки голосом прямо на листах.`,
+    title,
+    desc,
     h1: a.name,
     lead: a.lead,
     ogImage: ogImg,
@@ -580,7 +637,7 @@ function hubPage(releases, honesty) {
   const cards = sorted.map(({ a, r }) => {
     const h = a.renders.hero, c = CARD[a.slug] || {};
     return `        <a class="tile" href="../portfolio/${a.slug}/">
-          ${h ? `<img src="../${h.src}" alt="${esc(h.alt)}" width="${h.w}" height="${h.h}" loading="lazy" decoding="async"${h.kind === 'sheet' ? ' class="sheet"' : ''}>` : ''}
+          ${h ? pic(h, '../', `loading="lazy" decoding="async"${h.kind === 'sheet' ? ' class="sheet"' : ''}`) : ''}
           <div class="tile-body">
             <span class="tag">${esc(c.type || '')}${c.style ? ` · ${esc(c.style)}` : ''}</span>
             <b>${esc(a.name)}</b>
@@ -660,8 +717,12 @@ ${cards}
   return page({
     file: 'gost/index.html',
     title: 'Рабочая документация по ГОСТ — как собирается альбом | LINEA',
-    desc: `Комплект рабочей документации на квартиру или дом: ${Math.min(...releases.map(x => x.r.total))}–${Math.max(...releases.map(x => x.r.total))} листов A3, 26 специальностей, ${RULES} правил `
-      + `проверки с пунктами ГОСТ и СП. ${plural(releases.length, 'альбом', 'альбома', 'альбомов')} можно посмотреть целиком.`,
+    desc: fit([
+      `Рабочая документация на квартиру или дом: ${range(Math.min(...releases.map(x => x.r.total)), Math.max(...releases.map(x => x.r.total)), 'лист', 'листа', 'листов')} A3, `
+        + `26 специальностей, ${plural(RULES, 'правило', 'правила', 'правил')} проверки по ГОСТ и СП. ${plural(releases.length, 'альбом', 'альбома', 'альбомов')} открыты целиком.`,
+      `Рабочая документация на квартиру или дом: ${range(Math.min(...releases.map(x => x.r.total)), Math.max(...releases.map(x => x.r.total)), 'лист', 'листа', 'листов')} A3 `
+        + `и ${plural(RULES, 'правило', 'правила', 'правил')} проверки по ГОСТ и СП. Альбомы открыты целиком.`,
+    ], 158, 'gost/ description'),
     h1: 'Рабочая документация по ГОСТ',
     lead: 'Комплект рабочей документации на квартиру или дом: планировки, развёртки стен, электрика со щитом, '
       + 'вода и канализация, отопление и вентиляция, потолки с узлами, раскладка плитки, отделка, '

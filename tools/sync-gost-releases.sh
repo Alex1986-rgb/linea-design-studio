@@ -8,12 +8,22 @@ set -euo pipefail
 G="${1:-$HOME/projects/gost-draft}"
 PDF="${2:-}"
 SITE="$(cd "$(dirname "$0")/.." && pwd)/site"
+# Служебная листалка публикуется вместе с сайтом (генератор читает из неё состав), но в поиск ей не надо:
+# дублирует страницу проекта. Ставим noindex и убираем ссылку на check.md — отчёт проверки на сайт не переносим.
+clean_release() {
+  perl -0pi -e 's{<meta name="robots"[^>]*>\n?}{}g; s{(<meta charset="utf-8">)}{$1<meta name="robots" content="noindex, nofollow">}; s{\s*·\s*<a href="check\.md">[^<]*</a>}{}g' "$1"
+}
+if [ "${1:-}" = "--clean-only" ]; then   # только почистить уже лежащие на сайте листалки
+  for f in "$(cd "$(dirname "$0")/.." && pwd)"/site/portfolio/*/_release.html; do clean_release "$f"; done
+  exit 0
+fi
 sync_one() {          # $1 — папка объекта в движке, $2 — слаг на сайте
   local src="$G/projects/$1/out" dst="$SITE/portfolio/$2"
   [ -d "$src/sheets" ] || { echo "нет выпуска: $src/sheets" >&2; return 1; }
   mkdir -p "$dst"
   rsync -a --delete "$src/sheets/" "$dst/sheets/"
   cp "$src/index.html" "$dst/_release.html"      # состав выпуска для генератора страниц
+  clean_release "$dst/_release.html"
   # число правил проверки — из отчёта проверки выпуска, руками не пишем
   grep -m1 -o 'правил: [0-9]*' "$src/check.md" | grep -o '[0-9]*$' > "$dst/_rules.txt" || true
   if [ -n "$PDF" ] && [ -f "$PDF/$1-full.pdf" ]; then cp "$PDF/$1-full.pdf" "$dst/album.pdf"; fi

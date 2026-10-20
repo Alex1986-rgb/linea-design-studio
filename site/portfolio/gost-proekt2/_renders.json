@@ -8,6 +8,7 @@
   "w": 1600,
   "h": 1066,
   "kind": "cover-render",
-  "name": "3d-top"
+  "name": "3d-top",
+  "webp": "assets/portfolio/gost-proekt2-hero.webp"
  }
 }

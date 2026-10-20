@@ -4,59 +4,60 @@
  "ribbon": [
   {
    "src": "assets/portfolio/gost-lineademo/room-living-wA.jpg",
-   "alt": "Квартира 56 м² · джапанди (демо LINEA в новом формате) — гостиная, визуализация",
+   "alt": "Квартира 56 м² · джапанди — гостиная, визуализация",
    "w": 1200,
    "h": 800
   },
   {
    "src": "assets/portfolio/gost-lineademo/room-bedroom-wA.jpg",
-   "alt": "Квартира 56 м² · джапанди (демо LINEA в новом формате) — спальня, визуализация",
+   "alt": "Квартира 56 м² · джапанди — спальня, визуализация",
    "w": 1200,
    "h": 800
   },
   {
    "src": "assets/portfolio/gost-lineademo/room-kids-wA.jpg",
-   "alt": "Квартира 56 м² · джапанди (демо LINEA в новом формате) — детская, визуализация",
+   "alt": "Квартира 56 м² · джапанди — детская, визуализация",
    "w": 1200,
    "h": 800
   },
   {
    "src": "assets/portfolio/gost-lineademo/room-bath-wA.jpg",
-   "alt": "Квартира 56 м² · джапанди (демо LINEA в новом формате) — ванная, визуализация",
+   "alt": "Квартира 56 м² · джапанди — ванная, визуализация",
    "w": 1200,
    "h": 800
   },
   {
    "src": "assets/portfolio/gost-lineademo/room-hall-wA.jpg",
-   "alt": "Квартира 56 м² · джапанди (демо LINEA в новом формате) — прихожая, визуализация",
+   "alt": "Квартира 56 м² · джапанди — прихожая, визуализация",
    "w": 1200,
    "h": 800
   },
   {
    "src": "assets/portfolio/gost-lineademo/room-living-wB.jpg",
-   "alt": "Квартира 56 м² · джапанди (демо LINEA в новом формате) — гостиная, визуализация",
+   "alt": "Квартира 56 м² · джапанди — гостиная, визуализация",
    "w": 1200,
    "h": 800
   },
   {
    "src": "assets/portfolio/gost-lineademo/room-living-wC.jpg",
-   "alt": "Квартира 56 м² · джапанди (демо LINEA в новом формате) — гостиная, визуализация",
+   "alt": "Квартира 56 м² · джапанди — гостиная, визуализация",
    "w": 1200,
    "h": 800
   },
   {
    "src": "assets/portfolio/gost-lineademo/room-living-wD.jpg",
-   "alt": "Квартира 56 м² · джапанди (демо LINEA в новом формате) — гостиная, визуализация",
+   "alt": "Квартира 56 м² · джапанди — гостиная, визуализация",
    "w": 1200,
    "h": 800
   }
  ],
  "hero": {
   "src": "assets/portfolio/gost-lineademo-hero.jpg",
-  "alt": "Квартира 56 м² · джапанди (демо LINEA в новом формате) — вид сверху 3D",
+  "alt": "Квартира 56 м² · джапанди — вид сверху 3D",
   "w": 1600,
   "h": 1066,
   "kind": "render",
-  "name": "3d-top"
+  "name": "3d-top",
+  "webp": "assets/portfolio/gost-lineademo-hero.webp"
  }
 }
