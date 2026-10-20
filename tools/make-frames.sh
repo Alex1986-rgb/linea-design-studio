@@ -1,53 +1,55 @@
 #!/bin/bash
 # ================================================================
-# LINEA · раскадровка hero сайта из визуализаций проекта
-#   ./tools/make-frames.sh [папка-проекта] [ширина] [качество]
-# По умолчанию: site/portfolio/demo, 1280 px, качество 55 —
-# 11 кадров примерно по 100–140 КБ вместо рендеров по 1,5 МБ.
-# Порядок кадров = проход по квартире; подписи пишутся в manifest.json,
-# его читает скрипт hero на index.html.
+# LINEA · раскадровка hero главной из визуализаций проектов GOST-DRAFT
+#   ./tools/make-frames.sh [путь-к-gost-draft] [ширина] [качество]
+# По умолчанию: ~/projects/gost-draft, 1280 px, качество 55 (jpg) / 68 (webp).
+# 11 кадров — история «дом изнутри»: прихожая → гостиные → кухня → лестница →
+# кабинет → спальня → детская → ванная → весь дом сверху. Кадры взяты из пяти
+# проектов нового формата, подпись называет проект. manifest.json читает скрипт
+# hero на index.html (frames — webp, при ошибке он сам берёт jpg).
 # ================================================================
 set -euo pipefail
-PROJ="${1:-site/portfolio/demo}"
+GD="${1:-$HOME/projects/gost-draft}"
 W="${2:-1280}"
 Q="${3:-55}"
-SRC="$PROJ/06-koncept/renders"
 OUT="site/assets/frames"
-[ -d "$SRC" ] || { echo "Нет визуализаций в $SRC" >&2; exit 1; }
+P="$GD/projects"
+[ -d "$P" ] || { echo "Нет папки проектов $P" >&2; exit 1; }
 command -v sips >/dev/null || { echo "Нужен sips (macOS)" >&2; exit 2; }
+command -v cwebp >/dev/null || { echo "Нужен cwebp (brew install webp)" >&2; exit 2; }
 
-# порядок тура: вход → общая зона → приватные → мокрая зона → финал
-ORDER=(05-prihozhaya 01-gostinaya-kuhnya 01b-gostinaya-stolovaya 01c-kuhnya-detail \
-       02-spalnya 02b-spalnya-vid-ot-krovati 03-detskaya 03b-detskaya-stol \
-       04-sanuzel 04b-sanuzel-zerkalo 05b-prihozhaya-vhod)
-CAPS=("Прихожая|— вход, зона хранения" \
-      "Гостиная-кухня|— единое пространство" \
-      "Обеденная зона|— граница зон держится светом" \
-      "Кухня|— фронт гарнитура, фартук с подсветкой" \
-      "Спальня|— изголовье к стене без окна" \
-      "Спальня|— вид от кровати" \
-      "Детская|— сон, работа, игра" \
-      "Рабочее место|— у окна, свет слева" \
-      "Санузел|— мокрая зона, отметка −0,020" \
-      "Санузел|— зеркало с подсветкой" \
-      "Готово|— альбом можно отдавать бригаде")
+# файл визуализации | помещение | подпись (проект)
+LIST=(
+  "modern-4k/renders/room-hall-wB.jpg|Прихожая|— квартира с кабинетом, модерн"
+  "dom-331/renders/room-living-wC.jpg|Гостиная|— дом 331 м², шале"
+  "linea-dom-120/renders/room-living-wA.jpg|Кухня-гостиная|— дом 120 м², средиземноморье"
+  "retro-103/renders/room-living-wA.jpg|Гостиная со столовой|— квартира 103 м², ретро"
+  "retro-103/renders/room-kitchen-wC.jpg|Кухня|— квартира 103 м², ретро"
+  "linea-dom-120/renders/room-corridor1-wB.jpg|Лестница|— дом 120 м², средиземноморье"
+  "retro-103/renders/room-study-wA.jpg|Кабинет|— квартира 103 м², ретро"
+  "linea-demo/renders/room-bedroom-wD.jpg|Спальня|— квартира 56 м², джапанди"
+  "linea-demo/renders/room-kids-wB.jpg|Детская|— квартира 56 м², джапанди"
+  "modern-4k/renders/room-bath1-wB.jpg|Ванная|— квартира с кабинетом, модерн"
+  "dom-331/renders/3d-top-et1.jpg|Весь дом|— первый этаж сверху: так он лежит в альбоме"
+)
 
-mkdir -p "$OUT"; rm -f "$OUT"/*.jpg
+mkdir -p "$OUT"; rm -f "$OUT"/*.jpg "$OUT"/*.webp
 i=0; frames=""; caps=""
-for name in "${ORDER[@]}"; do
-  f="$SRC/$name.jpg"
-  [ -f "$f" ] || { echo "пропуск: нет $name.jpg"; continue; }
+for row in "${LIST[@]}"; do
+  IFS='|' read -r rel room note <<< "$row"
+  f="$P/$rel"
+  [ -f "$f" ] || { echo "пропуск: нет $rel"; continue; }
   i=$((i+1)); nn=$(printf "%02d" $i)
   sips -Z "$W" -s format jpeg -s formatOptions "$Q" "$f" --out "$OUT/$nn.jpg" >/dev/null
-  room="${CAPS[$((i-1))]%%|*}"; note="${CAPS[$((i-1))]#*|}"
-  frames="$frames${frames:+,}\"$nn.jpg\""
+  cwebp -quiet -q 68 -resize "$W" 0 "$f" -o "$OUT/$nn.webp"
+  frames="$frames${frames:+,}\"$nn.webp\""
   caps="$caps${caps:+,}{\"room\":\"$room\",\"note\":\"$note\"}"
 done
 
 cat > "$OUT/manifest.json" <<JSON
 {
   "base": "assets/frames/",
-  "note": "Раскадровка hero: $i кадров ${W}px, качество $Q. Пересобрать: ./tools/make-frames.sh",
+  "note": "Раскадровка hero: $i кадров ${W}px, качество $Q, визуализации проектов GOST-DRAFT. Пересобрать: ./tools/make-frames.sh",
   "frames": [$frames],
   "captions": [$caps]
 }
