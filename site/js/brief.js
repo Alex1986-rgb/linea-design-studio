@@ -463,6 +463,11 @@
     const who = safe((b.client.name || 'klient').trim().replace(/\s+/g, '-'));
     return new File([zip(list)], `LINEA-brif-${who}-${b.meta.created}.zip`, { type: 'application/zip' });
   }
+  // На компьютере «Поделиться» нет — архив просто скачается, и человек думает,
+  // что бриф уже ушёл. Говорим об этом крупно до нажатия.
+  if (!(navigator.canShare && navigator.share) && $('sendMust')) {
+    $('sendMust').innerHTML = 'На компьютере архив <b>скачается в «Загрузки»</b> и сам к нам не уйдёт. После сборки <b>отправьте файл в WhatsApp</b> на <a href="https://wa.me/79257338640" target="_blank" rel="noopener">+7 925 733-86-40</a> или <b>на почту</b> <a href="mailto:optteem@mail.ru">optteem@mail.ru</a>.';
+  }
   const AFTER_ZIP = $('afterZip').innerHTML;          // после «Отменено» абзац переписан — возвращаем исходный с #zipInfo
   $('sendZip').onclick = async () => {
     const btn = $('sendZip'), old = btn.textContent;

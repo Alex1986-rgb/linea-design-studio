@@ -3,8 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>LINEA — дизайн-проект за 48 часов: бриф голосом, альбом чертежей по ГОСТ</title>
-<meta name="description" content="Расскажите о квартире голосом за 10 минут — получите полный альбом рабочих чертежей по ГОСТ: планы, развёртки, электрика, сантехника, мебель, визуализации. Квартира — до 48 часов, дом — до 72. На время теста бесплатно.">
+<title>Дизайн-проект квартиры и дома за 48 часов — бесплатно | LINEA</title>
+<meta name="description" content="Бесплатно на время теста: расскажите о квартире или доме за 10 минут — получите альбом рабочих чертежей по ГОСТ. Квартира — до 48 часов, дом — до 72.">
 <link rel="canonical" href="https://alex1986-rgb.github.io/linea-design-studio/">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="LINEA">
@@ -22,7 +22,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,500;0,600;1,500&family=Inter:wght@400;600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/main.css?v=33">
+<link rel="stylesheet" href="css/main.css?v=34">
 <link rel="preload" as="image" href="assets/frames/01.webp" fetchpriority="high" type="image/webp">
 <!-- Стили блоков только этой страницы: общий main.css не трогаем, чтобы не менять версию CSS на всём сайте -->
 <style>
@@ -75,6 +75,7 @@
 .h-pj .b{padding:18px 20px 20px;display:flex;flex-direction:column;flex:1}
 .h-pj .st{color:var(--gold);font-size:11.5px;letter-spacing:.16em;text-transform:uppercase;margin-bottom:6px}
 .h-pj h3{font-family:var(--serif);font-weight:500;font-size:20px;line-height:1.25;margin:0 0 12px}
+.h-pj .ex{margin:-6px 0 12px;color:var(--dim);font-size:12px;letter-spacing:.02em}
 .h-pj .m{margin-top:auto;display:flex;gap:16px;align-items:baseline;color:var(--mut);font-size:13px}
 .h-pj .m b{font-family:var(--serif);font-weight:500;font-size:24px;color:var(--gold2)}
 .h-pj .go{margin-left:auto;color:var(--gold);white-space:nowrap}
@@ -135,24 +136,25 @@
 {"@type":"Question","name":"Примут ли такие чертежи строители?","acceptedAnswer":{"@type":"Answer","text":"Альбом оформлен как рабочая документация по СПДС: штамп, масштаб, цепочки размеров, отметки, ведомости, узлы — бригада читает его как обычный проект. Честно: до контрольного обмера альбом предварительный. Задание на обмер лежит в самом альбоме; после обмера размеры уточняются и альбом перевыпускается."}},
 {"@type":"Question","name":"Как это возможно за 48 часов?","acceptedAnswer":{"@type":"Answer","text":"Проект квартиры — до 48 часов от получения брифа с планом, дома — до 72. Чертежи, ведомости и смету собирает движок GOST-DRAFT и сам проверяет выпуск по правилам с пунктами ГОСТ и СП. Автор смотрит решения и отвечает на вопросы."}},
 {"@type":"Question","name":"Что нужно от меня?","acceptedAnswer":{"@type":"Answer","text":"Рассказать о квартире голосом — около 10 минут — и приложить план: от застройщика, БТИ, PDF или листок от руки. Фото помещений и отметки в галерее референсов помогут, но не обязательны. Получение брифа подтвердим в течение дня."}},
-{"@type":"Question","name":"Как вносить правки?","acceptedAnswer":{"@type":"Answer","text":"Откройте лист на сайте, поставьте метку прямо на чертеже и надиктуйте или напишите замечание. В PDF альбома на каждой странице есть кнопка «Правка к этому листу». Правки уходят одним сообщением, финальный альбом пересобирается целиком — вместе со сметой."}}]}
+{"@type":"Question","name":"Как вносить правки?","acceptedAnswer":{"@type":"Answer","text":"Откройте лист на сайте, поставьте метку прямо на чертеже и надиктуйте или напишите замечание. В PDF альбома на каждой странице есть кнопка «Правка к этому листу». Правки уходят одним сообщением, финальный альбом пересобирается целиком — вместе со сметой."}},
+{"@type":"Question","name":"Сколько будет стоить после теста?","acceptedAnswer":{"@type":"Answer","text":"Стоимость после теста объявим заранее. Тестовые проекты остаются бесплатными — доплат за них не будет."}},
+{"@type":"Question","name":"Кому принадлежат права на проект?","acceptedAnswer":{"@type":"Answer","text":"Проект ваш, используйте как угодно. Студия может показывать его в портфолио только с вашего согласия."}}]}
 </script>
 </head>
 <body>
-<div class="beta">Открытое тестирование студии · дизайн-проект делается бесплатно · <a href="brief.html">заполнить бриф</a></div>
+<div class="beta">Открытый тест: дизайн-проект бесплатно, без предоплаты · <a href="brief.html">заполнить бриф</a></div>
 
 <header class="site">
   <div class="nav">
     <a class="logo" href="./">LINE<i>A</i></a>
     <nav class="links">
+      <a href="portfolio-hub/">Портфолио</a>
       <a href="catalog/">Каталог</a>
       <a href="gost/">Документация</a>
       <a href="cases/">Кейсы</a>
       <a href="compare/">Сравнение</a>
       <a href="style/">Стили</a>
       <a href="journal/">Журнал</a>
-      <a href="stories/">Истории</a>
-      <a href="reviews/">Отзывы</a>
     </nav>
     <a class="btn sm" href="brief.html">Заполнить бриф</a>
     <button class="burger" type="button" aria-label="Меню" aria-expanded="false"><i></i><i></i><i></i></button>
@@ -160,14 +162,13 @@
 </header>
 <div class="mnav" hidden>
   <nav>
+    <a href="portfolio-hub/">Портфолио</a>
     <a href="catalog/">Каталог</a>
     <a href="gost/">Документация</a>
     <a href="cases/">Кейсы</a>
     <a href="compare/">Сравнение</a>
     <a href="style/">Стили</a>
     <a href="journal/">Журнал</a>
-    <a href="stories/">Истории</a>
-    <a href="reviews/">Отзывы</a>
   </nav>
   <div class="mnav-cta">
     <a class="btn" href="brief.html">Заполнить бриф</a>
@@ -193,27 +194,27 @@
           </div>
           <div class="scene">
             <div class="kicker">Бриф голосом · около 10 минут</div>
-            <h1>Не анкета на сто полей, а <em>разговор</em></h1>
+            <div class="h1">Не анкета на сто полей, а <em>разговор</em></div>
             <p class="lead">Нажимаете микрофон и рассказываете, как живёте. Подсказки тем на экране, поля заполняются сами. План и фото, ♥ и ✕ в галерее референсов — и всё уходит одним архивом в WhatsApp.</p>
           </div>
           <div class="scene">
             <div class="kicker">Полный альбом, а не десять картинок</div>
-            <h1>Каждая стена — <em>с размерами</em> и своей визуализацией</h1>
+            <div class="h1">Каждая стена — <em>с размерами</em> и своей визуализацией</div>
             <p class="lead">Обмер, демонтаж, мебель, свет и щит, вода и канализация, отопление, потолки, плитка, встроенная мебель, лестницы, ведомости и смета. В альбомах на сайте — от 64 до 155 листов A3.</p>
           </div>
           <div class="scene">
             <div class="kicker">Проверка по нормам</div>
-            <h1>Альбом проверяют <em>до того</em>, как он попадёт к вам</h1>
+            <div class="h1">Альбом проверяют <em>до того</em>, как он попадёт к вам</div>
             <p class="lead">Движок GOST-DRAFT прогоняет выпуск по более чем 900 правилам — у каждого пункт ГОСТ, СП или практика бюро. Проём не влез в стену — выпуск останавливается.</p>
           </div>
           <div class="scene">
             <div class="kicker">Правки голосом</div>
-            <h1>Отметьте место на листе — и <em>скажите</em>, что поменять</h1>
+            <div class="h1">Отметьте место на листе — и <em>скажите</em>, что поменять</div>
             <p class="lead">Метка прямо на чертеже, замечание голосом или текстом. В PDF альбома на каждой странице — кнопка «Правка к этому листу». Финал собирается заново, вместе со сметой.</p>
           </div>
         </div>
         <div class="cta-row">
-          <a class="btn" href="brief.html">Рассказать о квартире — 10 минут</a>
+          <a class="btn" href="brief.html">Рассказать о квартире или доме — 10 минут</a>
           <a class="btn ghost" href="#portfolio">Смотреть 9 проектов</a>
         </div>
         <div class="stats">
@@ -365,16 +366,6 @@
 })();
 </script>
 
-<!-- Лента фактов: что уже есть на сайте и на каких условиях -->
-<section class="proof" aria-label="Коротко о главном">
-  <div class="wrap">
-    <div><b>9 проектов</b><span>от квартиры 56 м² до дома 331 м² — на сайте целиком</span></div>
-    <div><b>912 листов</b><span>все открыты: листайте и пробуйте ставить правки</span></div>
-    <div><b>до 48 часов</b><span>квартира от брифа с планом, дом — до 72; ответ — в течение дня</span></div>
-    <div><b>0 ₽</b><span>пока идёт открытое тестирование</span></div>
-  </div>
-</section>
-
 <section class="blk" id="process">
   <div class="wrap">
     <div class="kicker">Как это работает</div>
@@ -419,7 +410,7 @@
         <li><b>Референсы ♥ / ✕.</b> Листаете галерею интерьеров и отмечаете, что откликается и что точно не ваше.</li>
         <li><b>Отправка архивом в WhatsApp.</b> Рассказ, план, фото и отметки уходят одним файлом — ничего не теряется.</li>
       </ul>
-      <div class="cta-row"><a class="btn" href="brief.html">Начать рассказ</a></div>
+      <div class="cta-row"><a class="btn" href="brief.html">Рассказать о квартире или доме — 10 минут</a></div>
     </div>
     <div class="h-mock" aria-hidden="true">
       <div class="h-mic"><svg viewBox="0 0 40 40" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="14" y="4" width="12" height="20" rx="6"/><path d="M8 19a12 12 0 0 0 24 0M20 31v5M14 36h12"/></svg></div>
@@ -448,7 +439,7 @@
       <div class="card"><h3>Отделка</h3><p>Раскладка плитки, полы и их конструкция, ведомость отделки, колерная карта, спецификация материалов.</p></div>
       <div class="card"><h3>Мебель</h3><p>Встроенные шкафы и системы хранения, развёртка и монтажная схема кухни, ведомость фурнитуры.</p></div>
       <div class="card"><h3>Потолки и лестницы</h3><p>План потолков со светом, разрезы и узлы. В домах — лестница отдельным листом.</p></div>
-      <div class="card"><h3>Визуализации и смета</h3><p>Визуализации по стенам помещений, ведомость объёмов работ, спецификация и ориентировочная смета.</p></div>
+      <div class="card"><h3>Визуализации и смета</h3><p>Визуализации по стенам помещений: в пяти проектах — 123 визуализации, сверенные с макетом. Ведомость объёмов работ, спецификация и ориентировочная смета.</p></div>
     </div>
 
     <div class="h-walls">
@@ -473,13 +464,13 @@
     <p class="sub">Квартиры, ретро, модерн, дома в два этажа. Каждый альбом выложен целиком: страница проекта, оба PDF и все листы, к которым можно надиктовать правки.</p>
     <div class="h-pj">
       <a href="portfolio/gost-dom331/"><picture><source srcset="assets/portfolio/dom331-living.webp" type="image/webp"><img src="assets/portfolio/dom331-living.jpg" width="1200" height="800" loading="lazy" decoding="async" alt="Гостиная дома 331 м² в стиле шале — визуализация"></picture>
-        <div class="b"><span class="st">Дом · шале</span><h3>Дом 331 м² с мансардой и гаражом</h3><span class="m"><b>155</b> листов · 20 помещений<span class="go">→</span></span></div></a>
+        <div class="b"><span class="st">Дом · шале</span><h3>Дом 331 м² с мансардой и гаражом</h3><span class="ex">по экспликации 270,67 м²</span><span class="m"><b>155</b> листов · 20 помещений<span class="go">→</span></span></div></a>
       <a href="portfolio/gost-dom120/"><picture><source srcset="assets/portfolio/dom120-dining.webp" type="image/webp"><img src="assets/portfolio/dom120-dining.jpg" width="1200" height="800" loading="lazy" decoding="async" alt="Кухня-столовая дома 120 м² в средиземноморском стиле — визуализация"></picture>
-        <div class="b"><span class="st">Дом · средиземноморье</span><h3>Дом 120 м² в два этажа</h3><span class="m"><b>130</b> листов · 13 помещений<span class="go">→</span></span></div></a>
+        <div class="b"><span class="st">Дом · средиземноморье</span><h3>Дом 120 м² в два этажа</h3><span class="ex">по экспликации 147,36 м²</span><span class="m"><b>130</b> листов · 13 помещений<span class="go">→</span></span></div></a>
       <a href="portfolio/gost-lineademo/"><picture><source srcset="assets/portfolio/lineademo-kitchen.webp" type="image/webp"><img src="assets/portfolio/lineademo-kitchen.jpg" width="1200" height="800" loading="lazy" decoding="async" alt="Кухня-гостиная квартиры 56 м² в стиле джапанди — визуализация"></picture>
         <div class="b"><span class="st">Квартира · джапанди</span><h3>Квартира 56 м²</h3><span class="m"><b>81</b> лист · 5 помещений<span class="go">→</span></span></div></a>
       <a href="portfolio/gost-retro103/"><picture><source srcset="assets/portfolio/retro103-living.webp" type="image/webp"><img src="assets/portfolio/retro103-living.jpg" width="1200" height="800" loading="lazy" decoding="async" alt="Гостиная квартиры 103 м² в ретро-стиле — визуализация"></picture>
-        <div class="b"><span class="st">Квартира · ретро</span><h3>Квартира 103 м² с авторской мебелью</h3><span class="m"><b>96</b> листов · 11 помещений<span class="go">→</span></span></div></a>
+        <div class="b"><span class="st">Квартира · ретро</span><h3>Квартира 103 м² с авторской мебелью</h3><span class="ex">по экспликации 100,72 м²</span><span class="m"><b>96</b> листов · 11 помещений<span class="go">→</span></span></div></a>
       <a href="portfolio/gost-modern4k/"><picture><source srcset="assets/portfolio/modern4k-living.webp" type="image/webp"><img src="assets/portfolio/modern4k-living.jpg" width="1200" height="800" loading="lazy" decoding="async" alt="Гостиная квартиры с кабинетом в стиле современный модерн — визуализация"></picture>
         <div class="b"><span class="st">Квартира · модерн</span><h3>Квартира с кабинетом</h3><span class="m"><b>92</b> листа · 9 помещений<span class="go">→</span></span></div></a>
       <a href="portfolio/gost-proekt2/"><picture><source srcset="assets/portfolio/proekt2-living.webp" type="image/webp"><img src="assets/portfolio/proekt2-living.jpg" width="1200" height="800" loading="lazy" decoding="async" alt="Зал квартиры с эркерами — визуализация"></picture>
@@ -492,7 +483,7 @@
         <div class="b"><span class="st">Квартира · 2 комнаты</span><h3>Квартира 58 м²: кухня-гостиная и спальня</h3><span class="m"><b>64</b> листа · 6 помещений<span class="go">→</span></span></div></a>
     </div>
     <div class="cta-row" style="margin-top:30px">
-      <a class="btn" href="brief.html">Хочу такой же альбом</a>
+      <a class="btn" href="brief.html">Рассказать о квартире или доме — 10 минут</a>
       <a class="btn ghost" href="portfolio-hub/">Все альбомы и листы</a>
     </div>
   </div>
@@ -501,8 +492,8 @@
 <section class="blk" id="sheets">
   <div class="wrap">
     <div class="kicker">Листы как есть</div>
-    <h2>Не картинки — <em>листы, по которым строят</em></h2>
-    <p class="sub">Шесть листов из альбомов без ретуши. Откройте любой: увеличьте штамп и цепочки размеров — и попробуйте поставить на нём метку с правкой.</p>
+    <h2>Не картинки — <em>рабочие листы</em></h2>
+    <p class="sub">Рабочие листы: после контрольного обмера по ним строят. Шесть листов из альбомов без ретуши. Откройте любой: увеличьте штамп и цепочки размеров — и попробуйте поставить на нём метку с правкой.</p>
     <div class="plates">
       <a class="plate" href="review.html?p=gost-dom331&amp;s=24-interior-designer-furniture-et1.svg">
         <span class="plate-img"><img src="portfolio/gost-dom331/sheets/24-interior-designer-furniture-et1.svg" alt="План расстановки мебели первого этажа дома 331 м² — лист альбома" width="1587" height="1123" loading="lazy" decoding="async"></span>
@@ -559,7 +550,7 @@
   <div class="wrap">
     <div class="kicker">Почему обычно долго и дорого</div>
     <h2>Три месяца ожидания, а бригада всё равно звонит с вопросами</h2>
-    <p class="sub">Так выглядит типичный путь заказчика — и так его проходит клиент студии.</p>
+    <p class="sub">Слева — как обычно, справа — как у нас.</p>
     <div class="pas-grid">
       <div class="pas-col bad">
         <h3>Как обычно</h3>
@@ -596,7 +587,7 @@
     <div class="cards g3">
       <div class="card"><div class="num">01</div><h3>Данные вместо картинок</h3><p>Лист нельзя «подрисовать»: он строится из геометрии объекта в миллиметрах. Поменялась планировка — пересобрался весь альбом и смета вместе с ним.</p></div>
       <div class="card"><div class="num">02</div><h3>Правило с пунктом нормы</h3><p>Более 900 правил проверки — у каждого пункт ГОСТ, СП или практика бюро. Нарушение выводится с адресом: лист, элемент, что не так.</p></div>
-      <div class="card"><div class="num">03</div><h3>Блокеры не уходят в печать</h3><p>Проём не помещается в стену, подпись наехала на штамп — выпуск останавливается. Замечания по каждому альбому открыто показаны на его странице.</p></div>
+      <div class="card"><div class="num">03</div><h3>Блокеры не уходят в печать</h3><p>Проём не помещается в стену, подпись наехала на штамп — выпуск останавливается. Замечания по каждому альбому открыто показаны на его странице. Один альбом в портфолио — <a href="portfolio/gost-kv65/">квартира 65 м²</a> — выложен с открытым блокером как пример: спальня без окна ждёт решения автора.</p></div>
     </div>
     <p class="h-honest"><b>Честно о границах.</b> Альбомы на сайте предварительные: до контрольного обмера по ним не строят — задание на обмер лежит в самом альбоме, после него альбом перевыпускается. Подписей нормоконтролёра на листах нет: за проверяющих мы не расписываемся.</p>
     <div class="cta-row" style="margin-top:28px">
@@ -613,7 +604,7 @@
     <div class="grid g3">
       <div class="card feat"><span class="tag">ТЕСТ</span><h3>Полный проект</h3><b class="p">0 ₽<i class="per"> — на время теста</i></b>
         <ul><li>Альбом для заказчика и полный альбом рабочей документации</li><li>Визуализации по стенам помещений</li><li>Квартира — до 48 часов, дом — до 72 от брифа с планом</li><li>Без предоплаты и договора на этом этапе</li></ul>
-        <a class="btn sm" href="brief.html">Рассказать о квартире</a></div>
+        <a class="btn sm" href="brief.html">Рассказать о квартире или доме — 10 минут</a></div>
       <div class="card"><h3>Что нужно от вас</h3>
         <ul><li>Рассказ голосом — около 10 минут</li><li>План: фото, PDF или листок от руки</li><li>Правки на листах и честный отзыв</li></ul>
         <p style="margin-top:14px">Ваши замечания идут прямо в доработку движка — это и есть цель теста.</p></div>
@@ -634,6 +625,8 @@
     <details><summary>Как это возможно за 48 часов?</summary><p>Проект квартиры — до 48 часов от получения брифа с планом, дома — до 72. Чертежи, ведомости и смету собирает движок GOST-DRAFT и сам проверяет выпуск по правилам с пунктами ГОСТ и СП. Автор смотрит решения и отвечает на вопросы.</p></details>
     <details><summary>Что нужно от меня?</summary><p>Рассказать о квартире голосом — около 10 минут — и приложить план: от застройщика, БТИ, PDF или листок от руки. Фото помещений и отметки в галерее референсов помогут, но не обязательны. Получение брифа подтвердим в течение дня.</p></details>
     <details><summary>Как вносить правки?</summary><p>Откройте лист на сайте, поставьте метку прямо на чертеже и надиктуйте или напишите замечание. В PDF альбома на каждой странице есть кнопка «Правка к этому листу». Правки уходят одним сообщением, финальный альбом пересобирается целиком — вместе со сметой.</p></details>
+    <details><summary>Сколько будет стоить после теста?</summary><p>Стоимость после теста объявим заранее. Тестовые проекты остаются бесплатными — доплат за них не будет.</p></details>
+    <details><summary>Кому принадлежат права на проект?</summary><p>Проект ваш, используйте как угодно. Студия может показывать его в портфолио только с вашего согласия.</p></details>
     <div class="cta-row" style="margin-top:26px"><a class="btn ghost" href="faq/">Все вопросы и ответы</a></div>
   </div>
 </section>
@@ -670,7 +663,7 @@
     <p class="sub">Бриф голосом — около 10 минут. Получение подтвердим в течение дня, проект квартиры — до 48 часов от брифа с планом, дома — до 72. Понравится — работаем дальше, нет — альбом всё равно остаётся у вас. Предоплаты нет.</p>
     <p class="sub">Или напрямую: дизайнер-архитектор <b>Кырлан Александр</b>, +7 925 733-86-40, optteem@mail.ru.</p>
     <div class="cta-row">
-      <a class="btn" href="brief.html">Рассказать о квартире</a>
+      <a class="btn" href="brief.html">Рассказать о квартире или доме — 10 минут</a>
       <a class="btn ghost" href="tel:+79257338640">+7 925 733-86-40</a>
       <a class="btn ghost" href="mailto:optteem@mail.ru">optteem@mail.ru</a>
     </div>
@@ -713,7 +706,7 @@
       <p>дизайнер-архитектор <b>Кырлан Александр</b><br><a href="tel:+79257338640">+7 925 733-86-40</a> · <a href="mailto:optteem@mail.ru">optteem@mail.ru</a></p>
     </div>
     <div>
-      <p><a href="brief.html">Бриф</a> · <a href="catalog/">Каталог</a> · <a href="gost/">Документация</a> · <a href="cases/">Кейсы</a> · <a href="compare/">Сравнение</a> · <a href="style/">Стили</a> · <a href="journal/">Журнал</a> · <a href="stories/">Истории</a> · <a href="reviews/">Отзывы</a> · <a href="portfolio-hub/">Портфолио</a> · <a href="price/">Условия</a> · <a href="process/">Процесс</a> · <a href="faq/">FAQ</a> · <a href="about/">О студии</a> · <a href="contacts/">Контакты</a> · <a href="checklist/">Чек-лист приёмки</a> · <a href="sitemap/">Карта сайта</a> · <a href="policy/">Обработка данных</a> · <a href="portfolio/demo/presentation.html">Альбом</a></p>
+      <p><a href="brief.html">Бриф</a> · <a href="portfolio-hub/">Портфолио</a> · <a href="catalog/">Каталог</a> · <a href="gost/">Документация</a> · <a href="cases/">Кейсы</a> · <a href="compare/">Сравнение</a> · <a href="style/">Стили</a> · <a href="journal/">Журнал</a> · <a href="stories/">Истории</a> · <a href="reviews/">Отзывы</a> · <a href="price/">Условия</a> · <a href="process/">Процесс</a> · <a href="faq/">FAQ</a> · <a href="about/">О студии</a> · <a href="contacts/">Контакты</a> · <a href="checklist/">Чек-лист приёмки</a> · <a href="sitemap/">Карта сайта</a> · <a href="policy/">Обработка данных</a> · <a href="portfolio/demo/presentation.html">Первая версия (старый формат)</a></p>
       <p>© LINEA studio, 2026</p>
     </div>
   </div>

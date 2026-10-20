@@ -18,19 +18,23 @@ const AUTHOR = {
 };
 
 const BASE = 'https://alex1986-rgb.github.io/linea-design-studio';
-const CSSV = 'v=33';
+const CSSV = 'v=34';
 
 // Разделы сайта в порядке меню. Добавили раздел — правится только здесь.
+// menu: false — раздел живёт в подвале и крошках, но не в шапке (шапка
+// должна помещаться в один ряд на ширине от 1180).
 const SECTIONS = [
+  { key: 'portfolio', title: 'Портфолио', href: 'portfolio-hub/' },
   { key: 'catalog', title: 'Каталог', href: 'catalog/' },
   { key: 'gost', title: 'Документация', href: 'gost/' },
   { key: 'cases', title: 'Кейсы', href: 'cases/' },
   { key: 'compare', title: 'Сравнение', href: 'compare/' },
   { key: 'style', title: 'Стили', href: 'style/' },
   { key: 'journal', title: 'Журнал', href: 'journal/' },
-  { key: 'stories', title: 'Истории', href: 'stories/' },
-  { key: 'reviews', title: 'Отзывы', href: 'reviews/' },
+  { key: 'stories', title: 'Истории', href: 'stories/', menu: false },
+  { key: 'reviews', title: 'Отзывы', href: 'reviews/', menu: false },
 ];
+const MENU = SECTIONS.filter(s => s.menu !== false);
 
 // Описание для сниппета: длиннее ~160 знаков поисковик всё равно обрежет,
 // причём в произвольном месте. Режем сами — по границе слова.
@@ -46,7 +50,7 @@ const esc = s => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(
 
 // active — key раздела: его ссылка ведёт на './' (мы уже внутри)
 function header(u, active) {
-  const links = SECTIONS.map(s =>
+  const links = MENU.map(s =>
     `      <a href="${s.key === active ? './' : u + s.href}"${s.key === active ? ' aria-current="page"' : ''}>${s.title}</a>`
   ).join('\n');
   return `<header class="site">
@@ -61,7 +65,7 @@ ${links}
 </header>
 <div class="mnav" hidden>
   <nav>
-${SECTIONS.map(x => `    <a href="${x.key === active ? './' : u + x.href}">${x.title}</a>`).join('\n')}
+${MENU.map(x => `    <a href="${x.key === active ? './' : u + x.href}">${x.title}</a>`).join('\n')}
   </nav>
   <div class="mnav-cta">
     <a class="btn" href="${u}brief.html">Заполнить бриф</a>
@@ -70,7 +74,7 @@ ${SECTIONS.map(x => `    <a href="${x.key === active ? './' : u + x.href}">${x.t
 </div>`;
 }
 
-const beta = u => `<div class="beta">Открытое тестирование студии · дизайн-проект делается бесплатно · <a href="${u}brief.html">заполнить бриф</a></div>`;
+const beta = u => `<div class="beta">Открытый тест: дизайн-проект бесплатно, без предоплаты · <a href="${u}brief.html">заполнить бриф</a></div>`;
 
 const sticky = u => `<div class="sticky-cta">
   <a class="btn" href="${u}brief.html">Заполнить бриф</a>
@@ -79,7 +83,7 @@ const sticky = u => `<div class="sticky-cta">
 
 // в подвале к разделам добавляются служебные страницы
 const FOOTER_EXTRA = [
-  { title: 'Портфолио', href: 'portfolio-hub/' }, { title: 'Условия', href: 'price/' },
+  { title: 'Условия', href: 'price/' },
   { title: 'Процесс', href: 'process/' }, { title: 'FAQ', href: 'faq/' },
   { title: 'О студии', href: 'about/' }, { title: 'Контакты', href: 'contacts/' },
   { title: 'Чек-лист приёмки', href: 'checklist/' }, { title: 'Карта сайта', href: 'sitemap/' }, { title: 'Обработка данных', href: 'policy/' },
@@ -87,9 +91,9 @@ const FOOTER_EXTRA = [
 // Воронка сайта: три состояния посетителя. Полоса стоит перед подвалом на
 // каждой странице и всегда показывает, где человек сейчас и что дальше.
 const FUNNEL = [
-  { key: 'look', title: 'Посмотреть', text: 'альбомы целиком, лист за листом', href: 'portfolio-hub/', on: ['cases', 'stories', 'reviews', 'style'] },
+  { key: 'look', title: 'Посмотреть', text: 'альбомы целиком, лист за листом', href: 'portfolio-hub/', on: ['portfolio', 'cases', 'stories', 'reviews', 'style'] },
   { key: 'check', title: 'Сравнить', text: 'состав, сроки и условия с рынком', href: 'compare/', on: ['compare', 'catalog', 'journal'] },
-  { key: 'start', title: 'Начать', text: 'бриф — около 10 минут, дальше мы', href: 'brief.html', on: [] },
+  { key: 'start', title: 'Начать', text: 'бриф — около 10 минут, дальше проект делаем мы', href: 'brief.html', on: [] },
 ];
 function funnel(u, active) {
   const cur = FUNNEL.findIndex(f => f.on.includes(active));
@@ -142,7 +146,7 @@ function ctaBlock(u, active, opts = {}) {
     </div>
     <p class="hint" style="margin-top:18px">Автор проекта — ${AUTHOR.role} ${AUTHOR.name}. ${active === 'gost'
       ? `В основной надписи листов этих альбомов указана его фамилия; телефона и почты на листах нет — они <a href="${u}contacts/">на странице контактов</a>.`
-      : 'Его подпись и контакты стоят в основной надписи каждого листа.'}</p>
+      : `Фамилия автора стоит в основной надписи каждого листа, телефон — <a href="${u}contacts/">на странице контактов</a>.`}</p>
   </div>
 </section>`;
 }
@@ -212,15 +216,23 @@ const crumbsLd = items => ({
   itemListElement: items.map((it, i) => ({ '@type': 'ListItem', position: i + 1, name: it[0], item: it[1] })),
 });
 
-const head = (u, { title, desc, canonical, ogTitle, ogDesc, ogType, extra }) => `<meta charset="utf-8">
+// Картинка для превью ссылки: по умолчанию кадр hero; страница может передать
+// свою — { src (абсолютный адрес), w, h }. Размеры пишем, только когда известны.
+const OG_DEFAULT = { src: `${BASE}/assets/hero.jpg`, w: 1920, h: 1280 };
+const ogImageTags = img => `<meta property="og:image" content="${img.src}">`
+  + (img.w && img.h ? `\n<meta property="og:image:width" content="${img.w}">\n<meta property="og:image:height" content="${img.h}">` : '');
+
+const head = (u, { title, desc, canonical, ogTitle, ogDesc, ogType, ogImage, extra }) => `<meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>${esc(title)}</title>
 <meta name="description" content="${esc(clamp(desc))}">
 <link rel="canonical" href="${canonical}">
 <meta property="og:type" content="${ogType || 'website'}">
+<meta property="og:site_name" content="LINEA">
+<meta property="og:url" content="${canonical}">
 <meta property="og:title" content="${esc(ogTitle || title)}">
 <meta property="og:description" content="${esc(ogDesc || desc)}">
-<meta property="og:image" content="${BASE}/assets/hero.jpg">
+${ogImageTags(ogImage || OG_DEFAULT)}
 <meta property="og:locale" content="ru_RU">
 <meta name="twitter:card" content="summary_large_image">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><defs><linearGradient id='g' x1='0' y1='0' x2='1' y2='1'><stop offset='0' stop-color='%23EBDCA8'/><stop offset='.5' stop-color='%23C9A45F'/><stop offset='1' stop-color='%238F6B33'/></linearGradient></defs><rect width='100' height='100' fill='%230F0E0C'/><text x='50' y='70' font-size='56' text-anchor='middle' fill='url(%23g)' font-family='Georgia'>L</text><rect x='66' y='62' width='10' height='10' transform='rotate(45 71 67)' fill='%231E6E57' stroke='%23C9A45F' stroke-width='2'/></svg>">

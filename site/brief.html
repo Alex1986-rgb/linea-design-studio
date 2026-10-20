@@ -4,11 +4,15 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Бриф на дизайн-проект — LINEA | можно голосом</title>
-<meta name="description" content="Заполните бриф на дизайн-проект интерьера: размеры, фото и чертежи квартиры, стиль и референсы. Первый вариант проекта квартиры — до 48 часов от получения брифа с планом, дома — до 72: полный комплект чертежей и смета.">
+<meta name="description" content="Бесплатно на время теста: бриф на дизайн-проект квартиры или дома — около 10 минут, можно голосом. Квартира — до 48 часов от брифа с планом, дом — до 72.">
 <meta property="og:type" content="website">
 <meta property="og:title" content="Бриф на дизайн-проект LINEA">
 <meta property="og:description" content="Около 10 минут, можно начать с рассказа голосом: размеры, фото, стиль. Квартира — до 48 часов от брифа с планом, дом — до 72: альбом рабочей документации. Предоплаты нет.">
-<meta property="og:image" content="https://alex1986-rgb.github.io/linea-design-studio/assets/hero.jpg">
+<meta property="og:image" content="https://alex1986-rgb.github.io/linea-design-studio/assets/og-home.jpg">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:url" content="https://alex1986-rgb.github.io/linea-design-studio/brief.html">
+<meta property="og:site_name" content="LINEA">
 <meta name="twitter:card" content="summary_large_image">
 <link rel="canonical" href="https://alex1986-rgb.github.io/linea-design-studio/brief.html">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><defs><linearGradient id='g' x1='0' y1='0' x2='1' y2='1'><stop offset='0' stop-color='%23EBDCA8'/><stop offset='.5' stop-color='%23C9A45F'/><stop offset='1' stop-color='%238F6B33'/></linearGradient></defs><rect width='100' height='100' fill='%230F0E0C'/><text x='50' y='70' font-size='56' text-anchor='middle' fill='url(%23g)' font-family='Georgia'>L</text><rect x='66' y='62' width='10' height='10' transform='rotate(45 71 67)' fill='%231E6E57' stroke='%23C9A45F' stroke-width='2'/></svg>">
@@ -16,7 +20,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,500;0,600;1,500&family=Inter:wght@400;600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/main.css?v=33">
+<link rel="stylesheet" href="css/main.css?v=34">
 <style>
 .dict-wrap{position:relative}
 .dict-wrap textarea,.dict-wrap input{padding-right:48px;width:100%;box-sizing:border-box}
@@ -67,6 +71,8 @@ details.example{margin:12px 0;color:var(--mut)} details.example summary{cursor:p
 .mic-err{margin:6px 0 0;color:#e8a87c}
 .send-h{font-size:22px;margin:0 0 4px}
 .send-row{margin:0 0 16px}
+.send-must{margin:10px 0 18px;padding:14px 18px;border:1px solid var(--gold);border-radius:4px;background:#C29A5B14;color:var(--ink);font-size:17px;line-height:1.5}
+.send-must b{color:var(--gold2)}
 @media(max-width:600px){
   #wiz .panel{padding:24px 16px}
   .ref-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
@@ -81,20 +87,19 @@ details.example{margin:12px 0;color:var(--mut)} details.example summary{cursor:p
 </style>
 </head>
 <body>
-<div class="beta">Открытое тестирование студии · дизайн-проект делается бесплатно · <a href="#wiz">заполнить бриф</a></div>
+<div class="beta">Открытый тест: дизайн-проект бесплатно, без предоплаты · <a href="#wiz">заполнить бриф</a></div>
 
 <header class="site">
   <div class="nav">
     <a class="logo" href="./">LINE<i>A</i></a>
     <nav class="links">
+      <a href="portfolio-hub/">Портфолио</a>
       <a href="catalog/">Каталог</a>
       <a href="gost/">Документация</a>
       <a href="cases/">Кейсы</a>
       <a href="compare/">Сравнение</a>
       <a href="style/">Стили</a>
       <a href="journal/">Журнал</a>
-      <a href="stories/">Истории</a>
-      <a href="reviews/">Отзывы</a>
     </nav>
     <a class="btn sm" href="brief.html">Заполнить бриф</a>
     <button class="burger" type="button" aria-label="Меню" aria-expanded="false"><i></i><i></i><i></i></button>
@@ -102,14 +107,13 @@ details.example{margin:12px 0;color:var(--mut)} details.example summary{cursor:p
 </header>
 <div class="mnav" hidden>
   <nav>
+    <a href="portfolio-hub/">Портфолио</a>
     <a href="catalog/">Каталог</a>
     <a href="gost/">Документация</a>
     <a href="cases/">Кейсы</a>
     <a href="compare/">Сравнение</a>
     <a href="style/">Стили</a>
     <a href="journal/">Журнал</a>
-    <a href="stories/">Истории</a>
-    <a href="reviews/">Отзывы</a>
   </nav>
   <div class="mnav-cta">
     <a class="btn" href="brief.html">Заполнить бриф</a>
@@ -120,7 +124,7 @@ details.example{margin:12px 0;color:var(--mut)} details.example summary{cursor:p
 <section class="hero" style="padding:60px 0 24px">
   <div class="wrap">
     <div class="kicker">Бриф · проще всего — голосом</div>
-    <h1 style="font-size:clamp(28px,4vw,44px)">Просто расскажите о своём доме —<br>студия сделает проект</h1>
+    <h1 style="font-size:clamp(28px,4vw,44px)">Просто расскажите о своём доме — <br>студия сделает проект</h1>
     <p class="hint" style="max-width:720px">Открытое тестирование: проект делается <b>бесплатно</b>. Нажмите микрофон и говорите, как другу.
       Всё сохраняется в этом браузере — можно закрыть и вернуться.</p>
     <p class="hint draft-note" id="draftNote" hidden>Черновик сохраняется автоматически.</p>
@@ -182,7 +186,7 @@ details.example{margin:12px 0;color:var(--mut)} details.example summary{cursor:p
     <div class="drop big-drop" id="drop" role="button" tabindex="0" aria-label="Добавить план или фото: выбрать файлы">📎<br><b>Добавить план или фото</b><br><small>нажмите или перетащите · JPG, PNG, PDF, DWG</small></div>
     <input type="file" id="files" multiple hidden accept=".jpg,.jpeg,.png,.webp,.pdf,.dwg,.heic,image/*">
     <div class="filelist" id="filelist" aria-live="polite"></div>
-    <p class="hint">Нет плана? Ничего страшного — пропустите шаг, договоримся об обмере.</p>
+    <p class="hint">Нет плана? Пропустите шаг — подскажем, как снять размеры рулеткой; срок пойдёт, когда размеры будут у нас.</p>
   </div>
 
   <!-- 4. Стиль и референсы -->
@@ -235,9 +239,9 @@ details.example{margin:12px 0;color:var(--mut)} details.example summary{cursor:p
     </div>
     <div class="field"><label for="qBudget">Класс материалов в смете</label>
       <select id="qBudget">
-        <option value="econom">Практичный — надёжно и без переплат</option>
-        <option value="business" selected>Оптимальный — качественные бренды</option>
-        <option value="premium">Премиальный — без компромиссов</option>
+        <option value="econom">Эконом — надёжно и без переплат</option>
+        <option value="business" selected>Бизнес — качественные бренды</option>
+        <option value="premium">Премиум — без компромиссов</option>
       </select>
       <p class="hint" style="margin:8px 0 0">Влияет только на подбор материалов и цифры в смете. Сам проект на время теста бесплатный.</p></div>
     <div class="field"><label for="qNotes">Что ещё нам важно знать?</label><textarea id="qNotes" class="dict" placeholder="привычки, сценарии, особые пожелания…"></textarea></div>
@@ -260,6 +264,8 @@ details.example{margin:12px 0;color:var(--mut)} details.example summary{cursor:p
   <!-- 7. Готово -->
   <div class="panel result" data-step="6" hidden>
     <h2 class="send-h">Бриф собран. Как отправить</h2>
+    <p class="send-must" id="sendMust">После сборки <b>отправьте файл в WhatsApp</b> на <a href="https://wa.me/79257338640" target="_blank" rel="noopener">+7 925 733-86-40</a>
+      или <b>на почту</b> <a href="mailto:optteem@mail.ru">optteem@mail.ru</a> — сам по себе бриф к нам не уходит.</p>
     <div class="cta-row send-row">
       <button class="btn" id="sendZip" type="button">Отправить бриф с файлами</button>
     </div>
@@ -268,7 +274,7 @@ details.example{margin:12px 0;color:var(--mut)} details.example summary{cursor:p
       в мессенджер или на <b>optteem@mail.ru</b>. Получение подтвердим в течение дня; первый вариант проекта квартиры — до 48 часов
       от получения брифа с планом, дома — до 72.</div>
     <p class="hint" id="afterZip" hidden role="status">✓ Архив готов: <b id="zipInfo"></b>. Если окно «Поделиться» не открылось — файл в загрузках, пришлите его в
-      WhatsApp на +7 925 733-86-40 или письмом на optteem@mail.ru. Мы подтвердим получение в течение дня.</p>
+      WhatsApp на +7 925 733-86-40 или письмом на optteem@mail.ru. Мы подтвердим получение в течение дня. <a href="thanks/">Что дальше →</a></p>
     <div class="summary" id="summary"></div>
     <p class="hint">Другие способы: <a id="waSend" href="#" target="_blank" rel="noopener">текст брифа в WhatsApp</a> ·
       <a id="mailto" href="#">письмом</a> · <button class="linklike" id="copyBrief" type="button">скопировать бриф</button> ·
@@ -283,9 +289,9 @@ details.example{margin:12px 0;color:var(--mut)} details.example summary{cursor:p
 </div>
 
 <a class="to-top" href="#" aria-label="Наверх">↑</a>
-<footer class="site"><div class="wrap cols"><div><div class="logo">LINE<i>A</i></div><p>дизайнер-архитектор <b>Кырлан Александр</b><br><a href="tel:+79257338640">+7 925 733-86-40</a> · <a href="mailto:optteem@mail.ru">optteem@mail.ru</a></p></div><div><p><a href="brief.html">Бриф</a> · <a href="catalog/">Каталог</a> · <a href="gost/">Документация</a> · <a href="cases/">Кейсы</a> · <a href="compare/">Сравнение</a> · <a href="style/">Стили</a> · <a href="journal/">Журнал</a> · <a href="stories/">Истории</a> · <a href="reviews/">Отзывы</a> · <a href="portfolio-hub/">Портфолио</a> · <a href="price/">Условия</a> · <a href="process/">Процесс</a> · <a href="faq/">FAQ</a> · <a href="about/">О студии</a> · <a href="contacts/">Контакты</a> · <a href="checklist/">Чек-лист приёмки</a> · <a href="sitemap/">Карта сайта</a> · <a href="policy/">Обработка данных</a></p><p>© LINEA studio, 2026</p></div></div></footer>
+<footer class="site"><div class="wrap cols"><div><div class="logo">LINE<i>A</i></div><p>дизайнер-архитектор <b>Кырлан Александр</b><br><a href="tel:+79257338640">+7 925 733-86-40</a> · <a href="mailto:optteem@mail.ru">optteem@mail.ru</a></p></div><div><p><a href="brief.html">Бриф</a> · <a href="portfolio-hub/">Портфолио</a> · <a href="catalog/">Каталог</a> · <a href="gost/">Документация</a> · <a href="cases/">Кейсы</a> · <a href="compare/">Сравнение</a> · <a href="style/">Стили</a> · <a href="journal/">Журнал</a> · <a href="stories/">Истории</a> · <a href="reviews/">Отзывы</a> · <a href="price/">Условия</a> · <a href="process/">Процесс</a> · <a href="faq/">FAQ</a> · <a href="about/">О студии</a> · <a href="contacts/">Контакты</a> · <a href="checklist/">Чек-лист приёмки</a> · <a href="sitemap/">Карта сайта</a> · <a href="policy/">Обработка данных</a></p><p>© LINEA studio, 2026</p></div></div></footer>
 
-<script src="js/brief.js?v=38"></script>
+<script src="js/brief.js?v=39"></script>
 <script>
 (function () {
   var b = document.querySelector('.burger'), m = document.querySelector('.mnav');

@@ -18,8 +18,9 @@ const SHELL = require('./site-shell.js');
 const SITE = path.join(__dirname, '..', 'site');
 const CHECK = process.argv.includes('--check');
 
-// у главной в подвале дополнительно ссылка на альбом — она уместна и остаётся
-const EXTRA = { 'index.html': ' · <a href="portfolio/demo/presentation.html">Альбом</a>' };
+// у главной в подвале дополнительно ссылка на первый демо-альбом старого движка;
+// подписана честно — это не нынешний формат выпуска
+const EXTRA = { 'index.html': ' · <a href="portfolio/demo/presentation.html">Первая версия (старый формат)</a>' };
 
 let drift = 0;
 for (const file of ['index.html', 'brief.html']) {
