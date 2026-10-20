@@ -82,7 +82,7 @@ const COPY = {
     ]
   },
   loft: {
-    lead: 'Честные фактуры: бетон, кирпич, чёрный металл и тёмное дерево, открытые коммуникации и свободная планировка.',
+    lead: 'Фактуры без маскировки: бетон, кирпич, чёрный металл и тёмное дерево, открытые коммуникации и свободная планировка.',
     fits: ['квартирам-студиям и апартаментам с высоким потолком', 'тем, кто не хочет прятать инженерию за коробами', 'холостяцким квартирам и рабочим пространствам'],
     spend: 'Инженерия и свет. Открытые коммуникации требуют аккуратной трассировки и качественной арматуры — то, что обычно прячут за ГКЛ, здесь остаётся на виду и должно выглядеть намеренно.',
     mistake: 'Оставить бетонный потолок в квартире с плохой плитой. Лофт — это выбранная фактура, а не сэкономленная отделка: перекрытие всё равно требует шлифовки, ремонта швов и окраски.',
@@ -94,6 +94,9 @@ const COPY = {
   }
 };
 
+// короткая подпись направления в списке «другие стили» (вместо первой фразы concept из пресета)
+const TAG = { japandi: 'Спокойный тёплый минимализм', scandi: 'Светло, уютно и функционально', minimal: 'Чистая геометрия', modern: 'Сдержанная современность', neoclassic: 'Классические пропорции в современном прочтении', loft: 'Бетон, кирпич и металл без маскировки' };
+const D = (s, where) => G.desc(s, where);
 const esc = s => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 const rub = n => n.toLocaleString('ru-RU').replace(/ /g, ' ') + ' ₽';
 
@@ -193,7 +196,7 @@ function stylePage(key) {
 <head>
 ${HEAD_COMMON}
 <title>Интерьер в стиле «${s.title}» — палитра и материалы | LINEA</title>
-<meta name="description" content="${esc(SHELL.clamp(`${esc(s.title)} в дизайн-проекте LINEA: палитра, отделка стен и пола, потолок, двери и плинтус, конкретные артикулы в спецификации и ориентир по стоимости материалов. ${esc(c.lead)}`))}">
+<meta name="description" content="${esc(D(`Интерьер в стиле «${s.title}» в проекте LINEA: палитра, отделка стен и пола, потолок, двери, позиции спецификации и цена материалов по трём тарифам.`, 'style/' + key))}">
 <link rel="canonical" href="${url}">
 <meta property="og:type" content="article">
 <meta property="og:title" content="Интерьер в стиле «${esc(s.title)}» — что попадёт в ваш проект">
@@ -256,8 +259,8 @@ ${ex && ex.imgs.length ? `<section class="blk">
 <section class="blk">
   <div class="wrap">
     <div class="kicker">Спецификация</div>
-    <h2>Артикулы, а не «что-то похожее»</h2>
-    <p class="sub">Так выглядит базовый набор направления. В спецификации альбома каждая позиция выходит с производителем, коллекцией и артикулом — с этим списком можно идти в магазин или отдать снабженцу.</p>
+    <h2>Конкретные позиции, а не «что-то похожее»</h2>
+    <p class="sub">Так выглядит базовый набор направления. В спецификации альбома краски и сантехника выходят с артикулом, мебель и текстиль — по характеристикам, под подбор: с этим списком можно идти в магазин или отдать снабженцу.</p>
     <ul class="sku">
       ${Object.keys(s.skus).map(k => `<li><span>${skuNames[k] || k}</span>${esc(s.skus[k])}</li>`).join('\n      ')}
     </ul>
@@ -268,7 +271,7 @@ ${ex && ex.imgs.length ? `<section class="blk">
 
 <section class="blk">
   <div class="wrap">
-    <div class="kicker">Честно о стиле</div>
+    <div class="kicker">О стиле без прикрас</div>
     <h2>Кому подходит и где обычно ошибаются</h2>
     <div class="cards g3">
       <div class="card"><h3>Кому подходит</h3><ul>${c.fits.map(f => `<li>${esc(f)}</li>`).join('')}</ul></div>
@@ -288,7 +291,7 @@ ${ex && ex.imgs.length ? `<section class="blk">
       <tr><td>Отделка</td><td>${LIVE('finisher-finish-schedule', 'Ведомость отделки помещений')} — что на какой стене, полу и потолке</td></tr>
       <tr><td>Полы</td><td>${LIVE('finisher-floors', 'План полов')} — покрытия и стыки</td></tr>
       <tr><td>Развёртки</td><td>${LIVE('draftsman-elev-r1-1', 'Развёртки стен')} — фронты мебели, высоты, привязки</td></tr>
-      <tr><td>Материалы</td><td>${LIVE('colorist-materials-spec', 'Спецификация отделочных материалов')} — производитель, артикул, расход</td></tr>
+      <tr><td>Материалы</td><td>${LIVE('colorist-materials-spec', 'Спецификация отделочных материалов')} — позиции, расход, артикулы там, где позиция выбрана</td></tr>
       <tr><td>Смета</td><td>${LIVE('estimator-estimate', 'Смета ориентировочная')} — работы и материалы по тарифу</td></tr>
     </table>
   </div>
@@ -309,7 +312,7 @@ ${ex && ex.imgs.length ? `<section class="blk">
     <div class="slist">
       ${others.map(k => {
     const o = STYLES[k];
-    return `<a href="${k}.html"><div class="sw">${o.palette.map(h => `<i style="background:${h}"></i>`).join('')}</div><b>${o.title}</b><small>${esc(o.concept.split(':')[0])}</small></a>`;
+    return `<a href="${k}.html"><div class="sw">${o.palette.map(h => `<i style="background:${h}"></i>`).join('')}</div><b>${o.title}</b><small>${esc(TAG[k] || o.concept.split(':')[0])}</small></a>`;
   }).join('\n      ')}
     </div>
     <div class="cta-row" style="margin-top:28px">
@@ -340,13 +343,14 @@ function hubPage() {
 <head>
 ${HEAD_COMMON}
 <title>Стили интерьера в проектах LINEA — 6 направлений</title>
-<meta name="description" content="${esc(SHELL.clamp(`Шесть стилей, в которых студия собирает дизайн-проект: джапанди, скандинавский, минимализм, современный, неоклассика, лофт. По каждому — палитра, отделка, артикулы в спецификации и ориентир по стоимости материалов.`))}">
+<meta name="description" content="${esc(D('Шесть стилей проектов LINEA: джапанди, сканди, минимализм, современный, неоклассика и лофт. Палитра, отделка, позиции спецификации и цена материалов.', 'style/index'))}">
 <link rel="canonical" href="${url}">
 <meta property="og:type" content="website">
 <meta property="og:title" content="Стили интерьера в проектах LINEA">
-<meta property="og:description" content="Палитры, материалы и артикулы шести стилей — то, что реально попадает в чертежи и смету.">
+<meta property="og:description" content="Палитры, материалы и позиции спецификации шести стилей — то, что реально попадает в чертежи и смету.">
 <meta property="og:image" content="${BASE}/assets/hero.jpg">
 <script type="application/ld+json">${JSON.stringify(list)}</script>
+<script type="application/ld+json">${JSON.stringify({ '@context': 'https://schema.org', '@type': 'BreadcrumbList', itemListElement: [{ '@type': 'ListItem', position: 1, name: 'LINEA', item: BASE + '/' }, { '@type': 'ListItem', position: 2, name: 'Стили интерьера', item: url }] })}</script>
 ${LOCAL_CSS}
 </head>
 <body>
@@ -375,7 +379,7 @@ ${SHELL.crumbsAuto(`../`, 'style', null)}
     <h2>Стиль меняет материалы, а не состав альбома</h2>
     <div class="cards g3">
       <div class="card"><h3>Состав листов одинаков</h3><p>Обмер, демонтаж и монтаж, мебель, двери, электрика, свет, сантехника, отопление и вентиляция, потолки, полы, плитка, мебель на заказ, ведомости и смета — независимо от стиля.</p></div>
-      <div class="card"><h3>Меняется наполнение</h3><p>Палитра, покрытия, текстиль, мебель и светильники — свои у каждой комнаты, с кодами цвета в колерной карте и артикулами в спецификации.</p></div>
+      <div class="card"><h3>Меняется наполнение</h3><p>Палитра, покрытия, текстиль, мебель и светильники — свои у каждой комнаты, с кодами цвета в колерной карте и позициями в спецификации.</p></div>
       <div class="card"><h3>Смета пересчитывается</h3><p>Цены материалов зависят от тарифа: эконом, бизнес, премиум. Один и тот же стиль можно собрать в трёх бюджетах.</p></div>
     </div>
     <div class="cta-row" style="margin-top:28px">

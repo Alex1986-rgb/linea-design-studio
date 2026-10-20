@@ -101,8 +101,9 @@ function norm(t) {
     .replace(/^Лестница Л-\d+.*/, 'Лестница: план марша, разрез, ограждение')
     .trim();
 }
-function composition() {
-  const A = all();
+// pick — фильтр альбомов (например, только квартиры): у квартиры и дома свои таблицы состава
+function composition(pick) {
+  const A = pick ? all().filter(pick) : all();
   const byRole = {};
   for (const f of A) {
     const counts = {};
@@ -125,8 +126,18 @@ function composition() {
 }
 
 const plural = (n, one, few, many) => { const a = n % 10, b = n % 100; return n + ' ' + (a === 1 && b !== 11 ? one : a >= 2 && a <= 4 && (b < 12 || b > 14) ? few : many); };
+// то же без числа: word(81, 'лист', 'листа', 'листов') → «лист»; для диапазона «64–156» — по последнему числу
+const word = (n, one, few, many) => plural(n, one, few, many).replace(/^\d+ /, '');
+// родительный падеж после «от / до / из»: gen(61, 'листа', 'листов') → «61 листа», gen(64, …) → «64 листов»
+const gen = (n, one, many) => n + ' ' + (n % 10 === 1 && n % 100 !== 11 ? one : many);
+// мета-описание: законченная фраза не длиннее 158 знаков (дальше site-shell режет с «…») — иначе сборка падает
+const desc = (s, where) => {
+  s = String(s).replace(/\s+/g, ' ').trim();
+  if (s.length > 158 || /…\s*$/.test(s) || !/[.!?»]$/.test(s)) throw new Error(`description ${where || ''}: ${s.length} зн., нужна законченная фраза ≤ 158 — «${s}»`);
+  return s;
+};
 
-module.exports = { all, get, sheet, reviewHref, composition, plural, ROLE };
+module.exports = { all, get, sheet, reviewHref, composition, plural, word, gen, desc, ROLE };
 
 /* ---------- разметка, общая для генераторов ---------- */
 const escA = s => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
@@ -148,7 +159,7 @@ function tile(u, f, lead) {
           <span class="tag">${escA(f.house ? 'Дом' : 'Квартира')} · ${escA(f.style)}</span>
           <b>${escA(f.short)}</b>
           ${lead ? `<span class="tile-lead">${escA(lead)}</span>` : ''}
-          <span class="tile-figs"><i><b>${f.sheets}</b> ${plural(f.sheets, 'лист', 'листа', 'листов').replace(/^\d+ /, '')}</i><i><b>${escA(f.area)}</b> м²</i><i><b>${f.rooms}</b> помещ.</i></span>
+          <span class="tile-figs"><i><b>${f.sheets}</b> ${word(f.sheets, 'лист', 'листа', 'листов')}</i><i><b>${escA(f.area)}</b> м²</i><i><b>${f.rooms}</b> помещ.</i></span>
         </div>
       </a>`;
 }
