@@ -151,6 +151,7 @@ ALBUMS.push(
   {
     slug: 'gost-dom120',
     explain: false,
+    house: true, // срок для дома — до 72 часов от брифа с планом
     name: 'Дом 120 м² в два этажа · средиземноморье (демо LINEA в новом формате)',
     short: 'дом 120 м² в два этажа',
     lead: 'Демо-дом студии в новом формате: планы по этажам, лестница с ограждением и отдельным листом, '
@@ -165,6 +166,7 @@ ALBUMS.push(
   {
     slug: 'gost-dom331',
     explain: false,
+    house: true,
     name: 'Дом 331 м² с мансардой и гаражом',
     short: 'двухэтажный дом с мансардой',
     lead: 'Частный дом: 1-й этаж — гостиная с камином, кухня-столовая, кабинет, веранда, гараж и котельная; мансарда — '
@@ -228,7 +230,7 @@ function bySection(sheets) {
   return order.map(sec => ({ sec, items: map.get(sec) }));
 }
 
-function page({ file, title, desc, h1, crumb, lead, body, u, jsonld }) {
+function page({ file, title, desc, h1, crumb, lead, body, u, jsonld, object }) {
   const ld = (jsonld || []).map(o => `<script type="application/ld+json">${JSON.stringify(o)}</script>`).join('\n');
   return `<!DOCTYPE html>
 <html lang="ru">
@@ -248,7 +250,7 @@ ${SHELL.crumbsBar(u, crumb)}
     </div>
   </section>
 ${body}
-${SHELL.ctaBlock(u, 'gost')}
+${SHELL.ctaBlock(u, 'gost', { object })}
 </main>
 ${SHELL.footer(u, 'gost')}
 ${SHELL.sticky(u)}
@@ -322,7 +324,7 @@ ${honesty}
       <div class="kicker">Условия</div>
       <h2>Сколько стоит и сколько ждать</h2>
       <div class="stats">
-        <div><b>24–48 ч</b><span>срок выпуска комплекта</span></div>
+        <div><b>до ${a.house ? 72 : 48} ч</b><span>первый вариант ${a.house ? 'проекта дома' : 'проекта квартиры'} — от получения брифа с планом</span></div>
         <div><b>0 ₽</b><span>на время открытого теста</span></div>
         <div><b>${r.total}</b><span>листов в этом альбоме</span></div>
       </div>
@@ -347,6 +349,7 @@ ${blocks}
 `;
 
   return page({
+    object: a.house ? 'house' : 'flat',
     file: `portfolio/${a.slug}/index.html`,
     title: `${a.name} — рабочая документация | LINEA`,
     desc: `${a.name}: комплект рабочей документации на ${plural(r.total, 'лист', 'листа', 'листов')} A3, ${groups.length} разделов, `
@@ -368,7 +371,7 @@ ${blocks}
       offers: {
         '@type': 'Offer', price: '0', priceCurrency: 'RUB', availability: 'https://schema.org/InStock',
         url: `${BASE}/catalog/rabochaya-dokumentatsiya.html`,
-        description: 'Открытое тестирование: комплект рабочей документации выпускается бесплатно, срок 24–48 часов',
+        description: `Открытое тестирование: комплект рабочей документации выпускается бесплатно; первый вариант ${a.house ? 'проекта дома — до 72 часов' : 'проекта квартиры — до 48 часов'} от получения брифа с планом`,
       },
     }],
   });

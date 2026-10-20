@@ -17,7 +17,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,500;0,600;1,500&family=Inter:wght@400;600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="../css/main.css?v=32">
+<link rel="stylesheet" href="../css/main.css?v=31">
 <script type="application/ld+json">{"@context":"https://schema.org","@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"LINEA","item":"https://alex1986-rgb.github.io/linea-design-studio/"},{"@type":"ListItem","position":2,"name":"Каталог","item":"https://alex1986-rgb.github.io/linea-design-studio/catalog/"}]}</script>
 <script type="application/ld+json">{"@context":"https://schema.org","@type":"ItemList","itemListElement":[{"@type":"ListItem","position":1,"name":"Дизайн-проект квартиры","url":"https://alex1986-rgb.github.io/linea-design-studio/catalog/dizayn-proekt-kvartiry.html"},{"@type":"ListItem","position":2,"name":"Дизайн-проект дома","url":"https://alex1986-rgb.github.io/linea-design-studio/catalog/dizayn-proekt-doma.html"},{"@type":"ListItem","position":3,"name":"Только рабочая документация","url":"https://alex1986-rgb.github.io/linea-design-studio/catalog/rabochaya-dokumentatsiya.html"},{"@type":"ListItem","position":4,"name":"Планировочное решение","url":"https://alex1986-rgb.github.io/linea-design-studio/catalog/planirovochnoe-reshenie.html"},{"@type":"ListItem","position":5,"name":"Визуализации по геометрии","url":"https://alex1986-rgb.github.io/linea-design-studio/catalog/vizualizatsii.html"},{"@type":"ListItem","position":6,"name":"Смета и комплектация","url":"https://alex1986-rgb.github.io/linea-design-studio/catalog/smeta-i-komplektatsiya.html"}]}</script>
 </head>
@@ -78,7 +78,7 @@
           <span class="tag">Основная услуга</span>
           <b>Дизайн-проект квартиры</b>
           <span class="tile-lead">Полный альбом рабочей документации на квартиру: от обмерного плана до сметы. Комплект, по которому работает бригада,…</span>
-          <span class="tile-figs"><i><b>48 часов</b> срок</i><i><b>от 70 листов A3</b> объём</i></span>
+          <span class="tile-figs"><i><b>до 48 часов</b> срок</i><i><b>от 70 листов A3</b> объём</i></span>
         </div>
       </a>
       <a class="tile" href="dizayn-proekt-doma.html">
@@ -87,7 +87,7 @@
           <span class="tag">Основная услуга</span>
           <b>Дизайн-проект дома</b>
           <span class="tile-lead">Дом в два-три этажа: те же разделы, что в квартире, плюс лестница с расчётом, поэтажная инженерия и увязка отметок м…</span>
-          <span class="tile-figs"><i><b>48–72 часа</b> срок</i><i><b>56 листов A3</b> объём</i></span>
+          <span class="tile-figs"><i><b>до 72 часов</b> срок</i><i><b>56 листов A3</b> объём</i></span>
         </div>
       </a>
       <a class="tile" href="rabochaya-dokumentatsiya.html">
@@ -96,7 +96,7 @@
           <span class="tag">Для тех, у кого есть концепция</span>
           <b>Только рабочая документация</b>
           <span class="tile-lead">У вас есть планировка и визуализации от другого дизайнера, но строить по ним нельзя: нет развёрток, узлов и инженери…</span>
-          <span class="tile-figs"><i><b>24–48 часов</b> срок</i><i><b>от 30 листов</b> объём</i></span>
+          <span class="tile-figs"><i><b>до 48 ч, дом — до 72</b> срок</i><i><b>от 30 листов</b> объём</i></span>
         </div>
       </a>
       <a class="tile" href="planirovochnoe-reshenie.html">
@@ -157,7 +157,7 @@
     if (ans[2] === 'viz') return ['vizualizatsii.html', 'Визуализации по геометрии', 'Кадры вашей квартиры по фактической геометрии — той же, что пойдёт в чертежи.'];
     return ans[0] === 'house'
       ? ['dizayn-proekt-doma.html', 'Дизайн-проект дома', 'Полный альбом на дом: поэтажные планы, лестница с расчётом, инженерия по уровням.']
-      : ['dizayn-proekt-kvartiry.html', 'Дизайн-проект квартиры', 'Полный альбом: от 70 листов от обмера до сметы за 48 часов.'];
+      : ['dizayn-proekt-kvartiry.html', 'Дизайн-проект квартиры', 'Полный альбом: от 70 листов от обмера до сметы, первый вариант — до 48 часов от брифа с планом.'];
   };
   root.addEventListener('click', function (e) {
     if (e.target.closest('[data-reset]')) {
@@ -216,7 +216,7 @@
 <section class="blk cta-blk">
   <div class="wrap">
     <div class="kicker">Всё сходится?</div>
-    <h2>Тогда дальше — бриф, семь минут</h2>
+    <h2>Тогда дальше — бриф, около 10 минут</h2>
     <p class="sub">Размеры, фото, пожелания по стилю и бюджету. На время открытого тестирования проект делается бесплатно, предоплаты нет, альбом остаётся у вас в любом случае.</p>
     <div class="cta-row">
       <a class="btn" href="../brief.html">Заполнить бриф</a>
@@ -247,7 +247,7 @@
     <a class="fstep" href="../brief.html">
       <span class="fnum">03</span>
       <span class="ftitle">Начать</span>
-      <span class="ftext">бриф — семь минут, дальше мы</span>
+      <span class="ftext">бриф — около 10 минут, дальше мы</span>
     </a>
   </div>
 </section>
