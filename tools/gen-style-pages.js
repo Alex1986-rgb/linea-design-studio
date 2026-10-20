@@ -14,6 +14,7 @@
 const fs = require('fs');
 const path = require('path');
 const SHELL = require('./site-shell.js');
+const G = require('./gost-facts.js');
 const { STYLES, TIERS } = require('../engine/presets.js');
 
 const ROOT = path.join(__dirname, '..');
@@ -105,7 +106,7 @@ const HEAD_COMMON = `<meta charset="utf-8">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,500;0,600;1,500&family=Inter:wght@400;600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="../css/main.css?v=31">`;
+<link rel="stylesheet" href="../css/main.css?${SHELL.CSSV}">`;
 
 /* Локальные стили страниц раздела: не трогаем main.css, чтобы не сбрасывать кеш всему сайту. */
 const LOCAL_CSS = `<style>
@@ -131,6 +132,21 @@ const LOCAL_CSS = `<style>
 .slist small{color:var(--mut)}
 @media(max-width:720px){.tiers{grid-template-columns:1fr}.pal i{height:56px}}
 </style>`;
+
+/* Альбомы нового формата, ближе всего к направлению (подпись направления — tools/gost-facts.js).
+   imgs — только файлы, которые лежат в git; case — разбор проекта, если он есть. */
+const EXAMPLE = {
+  japandi: { slug: 'gost-lineademo', exact: true, case: '../cases/kvartira-56.html', imgs: [['assets/portfolio/lineademo-living.jpg', 'Кухня-гостиная в джапанди', 1200, 800], ['assets/refs/linea-demo-bedroom-wA.jpg', 'Спальня в джапанди'], ['assets/refs/linea-demo-kids-wA.jpg', 'Детская в джапанди']] },
+  scandi: { slug: 'gost-kv65', exact: true, imgs: [['assets/refs/kv-65-living.jpg', 'Гостиная'], ['assets/refs/kv-65-kitchen.jpg', 'Кухня'], ['assets/refs/kv-65-kids.jpg', 'Детская']] },
+  minimal: { slug: 'gost-kv58', exact: false, imgs: [['assets/refs/kv-58-living-wB.jpg', 'Кухня-гостиная']] },
+  modern: { slug: 'gost-kv3k', exact: true, imgs: [['assets/refs/kv-3k-living-wB.jpg', 'Гостиная'], ['assets/refs/kv-3k-kitchen.jpg', 'Кухня'], ['assets/refs/kv-3k-bedroom1-wA.jpg', 'Спальня']] },
+};
+for (const k of Object.keys(EXAMPLE)) {
+  EXAMPLE[k].imgs = EXAMPLE[k].imgs.filter(i => fs.existsSync(path.join(ROOT, 'site', i[0])));
+  EXAMPLE[k].f = G.get(EXAMPLE[k].slug);
+}
+const DEMO = 'gost-lineademo';
+const LIVE = (key, text) => `<a href="../${G.reviewHref(DEMO, key)}">${text}</a>`;
 
 const header = () => `${SHELL.header(`../`, 'style')}`;
 
@@ -169,6 +185,7 @@ function stylePage(key) {
     return `<div><small>${T.title}</small><b>${rub(Math.round(s.floor.priceM2 * T.kMat))}</b><small>за м² покрытия пола</small></div>`;
   }).join('');
 
+  const ex = EXAMPLE[key];
   const skuNames = { paint: 'Краска', floor: 'Пол', tile: 'Плитка', plinth: 'Плинтус', doors: 'Двери', led: 'Свет' };
 
   return `<!DOCTYPE html>
@@ -202,30 +219,28 @@ ${SHELL.crumbsAuto(`../`, 'style', `Интерьер «${s.title}»`)}
     <p>${esc(s.concept)}</p>
     <div class="cta-row">
       <a class="btn" href="../brief.html?style=${key}">Заполнить бриф в этом стиле</a>
-      <a class="btn ghost" href="../portfolio/demo/presentation.html">Посмотреть альбом проекта</a>
+      <a class="btn ghost" href="../${ex ? ex.f.url : 'portfolio-hub/'}">${ex ? 'Альбом проекта в этом стиле' : 'Посмотреть альбомы'}</a>
     </div>
   </div>
 </section>
 
-${key === 'japandi' ? `<section class="blk">
+${ex && ex.imgs.length ? `<section class="blk">
   <div class="wrap">
     <div class="kicker">Живой пример</div>
-    <h2>Наш демо-проект собран именно в джапанди</h2>
-    <p class="sub">Квартира 56 м²: 30 листов документации и 11 визуализаций в этом стиле — открыты целиком.</p>
+    <h2>${ex.exact ? 'Проект в этом стиле' : 'Ближе всего к этому направлению'}: ${esc(ex.f.short.toLowerCase())}</h2>
+    <p class="sub">${esc(ex.f.name)}: ${ex.f.sheets} ${G.plural(ex.f.sheets, 'лист', 'листа', 'листов').replace(/^\d+ /, '')} рабочей документации и альбом для заказчика с визуализацией каждой стены — открыты целиком. Направление проекта — «${esc(ex.f.style)}».</p>
     <div class="gal">
-      ${SHELL.pic('../portfolio/demo/06-koncept/renders/01-gostinaya-kuhnya.jpg', 'Гостиная-кухня в джапанди', 1200, 800)}
-      ${SHELL.pic('../portfolio/demo/06-koncept/renders/02-spalnya.jpg', 'Спальня в джапанди', 1200, 800)}
-      ${SHELL.pic('../portfolio/demo/06-koncept/renders/04-sanuzel.jpg', 'Санузел в джапанди', 1200, 800)}
+      ${ex.imgs.map(i => G.img('../', i[0], i[1], i[2], i[3])).join('\n      ')}
     </div>
-    <div class="cta-row" style="margin-top:24px"><a class="btn ghost" href="../cases/kvartira-56.html">Разбор этого проекта</a><a class="btn ghost" href="../portfolio/demo/presentation.html">Листать альбом</a></div>
+    <div class="cta-row" style="margin-top:24px">${ex.case ? `<a class="btn ghost" href="${ex.case}">Разбор этого проекта</a>` : ''}<a class="btn ghost" href="../${ex.f.url}">Листать альбом</a></div>
   </div>
 </section>
 
 ` : ''}<section class="blk">
   <div class="wrap">
     <div class="kicker">Решения проекта</div>
-    <h2>Что конвейер применит в чертежах</h2>
-    <p class="sub">Эти решения движок подставляет в развёртки, планы полов, ведомость отделки и смету — они же попадут в ваш альбом.</p>
+    <h2>С чего начинается проект в этом стиле</h2>
+    <p class="sub">Это отправная точка направления. В вашем проекте коды цвета и материалы подбираются под бриф — и попадают в колерную карту, ведомость отделки, развёртки и смету.</p>
     <table class="spec">
       <tr><td>Стены</td><td>${esc(s.wall.finish)} · ${s.wall.color}</td></tr>
       <tr><td>Акцент</td><td>${esc(s.accent.finish)} · ${s.accent.color}</td></tr>
@@ -242,7 +257,7 @@ ${key === 'japandi' ? `<section class="blk">
   <div class="wrap">
     <div class="kicker">Спецификация</div>
     <h2>Артикулы, а не «что-то похожее»</h2>
-    <p class="sub">В разделе «Материалы» альбома каждая позиция выходит с брендом и артикулом — с этим списком можно идти в магазин или отдать снабженцу.</p>
+    <p class="sub">Так выглядит базовый набор направления. В спецификации альбома каждая позиция выходит с производителем, коллекцией и артикулом — с этим списком можно идти в магазин или отдать снабженцу.</p>
     <ul class="sku">
       ${Object.keys(s.skus).map(k => `<li><span>${skuNames[k] || k}</span>${esc(s.skus[k])}</li>`).join('\n      ')}
     </ul>
@@ -267,13 +282,14 @@ ${key === 'japandi' ? `<section class="blk">
   <div class="wrap">
     <div class="kicker">В альбоме</div>
     <h2>Где стиль виден в рабочей документации</h2>
-    <p class="sub">Демо-проект собран в стиле «Джапанди», но состав листов одинаков для любого направления — меняются материалы, цвета и артикулы.</p>
+    <p class="sub">Состав листов одинаков для любого направления — меняются материалы, цвета и артикулы. Ссылки ведут на листы квартиры 56 м² в джапанди; к любому можно оставить правку голосом.</p>
     <table class="spec">
-      <tr><td>Отделка стен</td><td><a href="../portfolio/demo/01-kvartira/kvartira-12-otdelka-sten.svg">План отделки с кодами и ведомостью</a> — какая краска или штукатурка на какой стене</td></tr>
-      <tr><td>Полы</td><td><a href="../portfolio/demo/01-kvartira/kvartira-11-poly.svg">План полов</a> — раскладка, направление укладки, стыки покрытий</td></tr>
-      <tr><td>Развёртки</td><td><a href="../portfolio/demo/presentation.html">Развёртки стен</a> — фронты мебели, высоты, привязки</td></tr>
-      <tr><td>Материалы</td><td><a href="../portfolio/demo/07-materialy/specification.html">Спецификация</a> — бренды, артикулы, расход</td></tr>
-      <tr><td>Смета</td><td><a href="../portfolio/demo/index.html">Смета реализации</a> — работы, материалы, мебель по тарифу</td></tr>
+      <tr><td>Цвет</td><td>${LIVE('colorist-color-card', 'Колерная карта')} — коды цвета каждой поверхности</td></tr>
+      <tr><td>Отделка</td><td>${LIVE('finisher-finish-schedule', 'Ведомость отделки помещений')} — что на какой стене, полу и потолке</td></tr>
+      <tr><td>Полы</td><td>${LIVE('finisher-floors', 'План полов')} — покрытия и стыки</td></tr>
+      <tr><td>Развёртки</td><td>${LIVE('draftsman-elev-r1-1', 'Развёртки стен')} — фронты мебели, высоты, привязки</td></tr>
+      <tr><td>Материалы</td><td>${LIVE('colorist-materials-spec', 'Спецификация отделочных материалов')} — производитель, артикул, расход</td></tr>
+      <tr><td>Смета</td><td>${LIVE('estimator-estimate', 'Смета ориентировочная')} — работы и материалы по тарифу</td></tr>
     </table>
   </div>
 </section>
@@ -358,13 +374,24 @@ ${SHELL.crumbsAuto(`../`, 'style', null)}
     <div class="kicker">Как это работает</div>
     <h2>Стиль меняет материалы, а не состав альбома</h2>
     <div class="cards g3">
-      <div class="card"><h3>Состав листов одинаков</h3><p>Обмер, демонтаж и монтаж, мебель, двери, розетки, потолки, свет, полы, отделка, тёплые полы, сантехника, узлы, разрезы, щит — независимо от стиля.</p></div>
-      <div class="card"><h3>Меняется наполнение</h3><p>Палитра, покрытия, плинтус, тип дверей и светильники подставляются из пресета стиля — вместе с брендами и артикулами в спецификации.</p></div>
+      <div class="card"><h3>Состав листов одинаков</h3><p>Обмер, демонтаж и монтаж, мебель, двери, электрика, свет, сантехника, отопление и вентиляция, потолки, полы, плитка, мебель на заказ, ведомости и смета — независимо от стиля.</p></div>
+      <div class="card"><h3>Меняется наполнение</h3><p>Палитра, покрытия, текстиль, мебель и светильники — свои у каждой комнаты, с кодами цвета в колерной карте и артикулами в спецификации.</p></div>
       <div class="card"><h3>Смета пересчитывается</h3><p>Цены материалов зависят от тарифа: эконом, бизнес, премиум. Один и тот же стиль можно собрать в трёх бюджетах.</p></div>
     </div>
     <div class="cta-row" style="margin-top:28px">
       <a class="btn" href="../brief.html">Заполнить бриф — около 10 минут</a>
-      <a class="btn ghost" href="../portfolio/demo/presentation.html">Листать альбом проекта</a>
+      <a class="btn ghost" href="../portfolio-hub/">Посмотреть альбомы</a>
+    </div>
+  </div>
+</section>
+
+<section class="blk">
+  <div class="wrap">
+    <div class="kicker">В наших альбомах</div>
+    <h2>Стили не ограничены шестью направлениями</h2>
+    <p class="sub">Шесть стилей выше — быстрый старт для брифа. В реальных проектах встречаются и другие: середина века с ар-деко, модерн, средиземноморье, загородное шале. Опишите своими словами или голосом — подберём.</p>
+    <div class="tiles">
+${G.all().map(f => '      ' + G.tile('../', f)).join('\n')}
     </div>
   </div>
 </section>
