@@ -81,17 +81,17 @@ w('portfolio-hub/index.html', page({
     <div class="kicker">Проекты</div>
     <h2>Два альбома и три способа их смотреть</h2>
     <div class="tiles">
-      <a class="tile" href="../portfolio/demo/presentation.html">
-        <img src="../portfolio/demo/06-koncept/renders/01-gostinaya-kuhnya.jpg" alt="Квартира 56 м² — визуализация гостиной" width="1200" height="800" loading="lazy" decoding="async">
-        <div class="tile-body"><span class="badge">30 листов A3</span><span class="tag" style="margin-left:10px">Джапанди</span><b>Квартира 56 м²</b>
-        <span class="tile-lead">Гостиная-кухня, спальня, детская, санузел, прихожая. Смета 2 514 162 ₽ в тарифе «бизнес».</span>
-        <span class="tile-figs"><i><b>20</b> развёрток</i><i><b>11</b> визуализаций</i><i><b>5</b> узлов</i></span></div>
+      <a class="tile" href="../portfolio/gost-lineademo/">
+        <img src="../assets/portfolio/lineademo-living.jpg" alt="Квартира 56 м², джапанди — визуализация гостиной" width="1200" height="800" loading="lazy" decoding="async">
+        <div class="tile-body"><span class="badge">${GOST['gost-lineademo'].total} листов A3</span><span class="tag" style="margin-left:10px">Джапанди</span><b>Квартира 56 м²</b>
+        <span class="tile-lead">Гостиная-кухня, спальня, детская, санузел, прихожая — полный альбом с проверкой по нормам, 21 визуализация, правки голосом по листам.</span>
+        <span class="tile-figs"><i><b>21</b> визуализация</i><i><b>5</b> помещений</i><i><b>0</b> блокеров</i></span></div>
       </a>
-      <a class="tile" href="../portfolio/dom-120/presentation.html">
-        <img src="../portfolio/dom-120/06-koncept/renders/05-holl-lestnica.jpg" alt="Дом 120 м² — холл с лестницей" width="1200" height="800" loading="lazy" decoding="async">
-        <div class="tile-body"><span class="badge">56 листов A3</span><span class="tag" style="margin-left:10px">Современный</span><b>Дом 120 м², два этажа</b>
-        <span class="tile-lead">Общая зона и кабинет внизу, три спальни наверху, лестница с расчётом. Смета 4 871 834 ₽.</span>
-        <span class="tile-figs"><i><b>44</b> развёртки</i><i><b>2</b> этажа</i><i><b>1</b> лестница</i></span></div>
+      <a class="tile" href="../portfolio/gost-dom120/">
+        <img src="../assets/portfolio/dom120-top.jpg" alt="Дом 120 м² в два этажа — вид сверху 3D" width="1200" height="800" loading="lazy" decoding="async">
+        <div class="tile-body"><span class="badge">${GOST['gost-dom120'].total} листов A3</span><span class="tag" style="margin-left:10px">Средиземноморье</span><b>Дом 120 м², два этажа</b>
+        <span class="tile-lead">Планы по этажам, лестница с ограждением отдельным листом, у каждой комнаты свой акцент, 22 визуализации.</span>
+        <span class="tile-figs"><i><b>22</b> визуализации</i><i><b>2</b> этажа</i><i><b>1</b> лестница</i></span></div>
       </a>
     </div>
     <table class="tbl" style="margin-top:34px">
