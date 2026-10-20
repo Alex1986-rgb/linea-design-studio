@@ -31,16 +31,59 @@ const GOST = Object.fromEntries(['gost-proekt2', 'gost-kv3k', 'gost-kv65', 'gost
 const RULES = Math.max(0, ...Object.keys(GOST).map(slug => { try { return +fs.readFileSync(path.join(SITE, 'portfolio', slug, '_rules.txt'), 'utf8') || 0; } catch { return 0; } }));
 if (!RULES) throw new Error('нет числа правил проверки (_rules.txt) — запустите tools/sync-gost-releases.sh');
 const GOST_SHEETS = Object.values(GOST).reduce((n, g) => n + g.total, 0);
-const ALBUMS_N = 2 + Object.keys(GOST).length;
+// карточки проектов пишет tools/gen-gost-pages.js (_card.json: название, тип, стиль, площадь, кадр) — запускать его первым
+const CARDS = Object.keys(GOST).map(slug => {
+  const c = JSON.parse(fs.readFileSync(path.join(SITE, 'portfolio', slug, '_card.json'), 'utf8'));
+  c.total = JSON.parse(fs.readFileSync(path.join(SITE, 'portfolio', slug, 'sheets.json'), 'utf8')).length;   // листов — из sheets.json
+  c.elev = fs.readdirSync(path.join(SITE, 'portfolio', slug, 'sheets')).filter(f => /-elev-/.test(f)).length;
+  return c;
+}).sort((a, b) => (+(b.code.match(/-(\d{3})-/) || [])[1] || 0) - (+(a.code.match(/-(\d{3})-/) || [])[1] || 0));   // новые первыми
+const NEW_N = CARDS.length;
+const NUM_W = { 2: 'два', 3: 'три', 4: 'четыре', 5: 'пять', 6: 'шесть', 7: 'семь', 8: 'восемь', 9: 'девять', 10: 'десять', 11: 'одиннадцать' };
+const NUM_IN = { 2: 'двух', 3: 'трёх', 4: 'четырёх', 5: 'пяти', 6: 'шести', 7: 'семи', 8: 'восьми', 9: 'девяти', 10: 'десяти', 11: 'одиннадцати' };
+const plural = (n, one, few, many) => { const a = Math.abs(n) % 100, b = a % 10; return `${n} ${a > 10 && a < 20 ? many : b === 1 ? one : b >= 2 && b <= 4 ? few : many}`; };
+const word = (n, ...f) => plural(n, ...f).replace(/^\S+ /, '');
+const areaNum = c => +c.area.replace(/[^\d,]/g, '').replace(',', '.');
+const FLATS = CARDS.filter(c => !c.house), HOUSES = CARDS.filter(c => c.house);
+const span = (arr, f) => [Math.min(...arr.map(f)), Math.max(...arr.map(f))];
+const [FL_MIN, FL_MAX] = span(FLATS, c => c.total), [HS_MIN, HS_MAX] = span(HOUSES, c => c.total);
+const fmtA = n => String(n.toFixed(2)).replace('.', ',');
+const [AR_MIN, AR_MAX] = span(CARDS, areaNum);
+const VISUALS = CARDS.reduce((n, c) => n + (c.visuals || 0), 0);
+// калькулятор листов: прямая по выпущенным альбомам квартир (листы от числа помещений, метод наименьших квадратов),
+// второй этаж — средняя прибавка домов к этой прямой. Пересобрали выпуски — коэффициенты пересчитались сами.
+const LS = (() => {
+  const n = FLATS.length, mx = FLATS.reduce((s, c) => s + c.rooms, 0) / n, my = FLATS.reduce((s, c) => s + c.total, 0) / n;
+  const k = FLATS.reduce((s, c) => s + (c.rooms - mx) * (c.total - my), 0) / (FLATS.reduce((s, c) => s + (c.rooms - mx) ** 2, 0) || 1);
+  const b = my - k * mx;
+  const floor = HOUSES.length ? HOUSES.reduce((s, c) => s + c.total - (b + k * c.rooms), 0) / HOUSES.length : 15;
+  const dev = Math.max(...FLATS.map(c => Math.abs(c.total - (b + k * c.rooms))));
+  const elev = CARDS.reduce((s, c) => s + c.elev, 0) / CARDS.reduce((s, c) => s + c.rooms, 0);
+  return { k: +k.toFixed(2), b: +b.toFixed(1), floor: Math.round(floor), dev: Math.ceil(dev), elev: +elev.toFixed(2) };
+})();
+// разделы альбома — по фактическому составу выпуска (порядок как в альбоме), см. bySection в gen-gost-pages.js
+const SECTIONS_FACT = ['титульный лист и общие данные с ведомостью чертежей', 'открытые вопросы, задание на контрольный обмер и график закупок и работ',
+  'обмерный план, демонтаж и монтаж перегородок, двери', 'концепция интерьера, расстановка и спецификация мебели',
+  'электрика: розетки, свет, выключатели со схемой включения, щит, слаботочные сети',
+  'отопление и вентиляция', 'водоснабжение и канализация', 'освещение со спецификацией светильников', 'потолки и конструкции из ГКЛ с узлами',
+  'раскладка плитки', 'полы и отделка', 'цвет и материалы, колерная карта', 'декор и текстиль', 'встроенная мебель с монтажными схемами',
+  'развёртки каждой стены и узлы', 'ведомость объёмов работ, спецификация материалов и ориентировочная смета'];
 const w = (rel, html) => { const p = path.join(SITE, rel); fs.mkdirSync(path.dirname(p), { recursive: true }); fs.writeFileSync(p, html); out.push(rel); };
 
-function page({ file, title, desc, h1, crumb, lead, body, jsonld, noindex, sec }) {
+function page({ file, title, desc, h1, crumb, lead, body, jsonld, noindex, sec, ogImage }) {
   const u = '../';
   const ld = (jsonld || []).map(o => `<script type="application/ld+json">${JSON.stringify(o)}</script>`).join('\n');
+  let head = SHELL.head(u, { title, desc, canonical: `${BASE}/${file.replace(/index\.html$/, '')}`, ogTitle: h1, ogDesc: lead.replace(/\s+/g, ' ') });
+  if (ogImage) head = head.replace(`${BASE}/assets/hero.jpg`, `${BASE}/${ogImage}`);
   return `<!DOCTYPE html>
 <html lang="ru">
 <head>
-${SHELL.head(u, { title, desc, canonical: `${BASE}/${file.replace(/index\.html$/, '')}`, ogTitle: h1, ogDesc: lead })}${noindex ? '\n<meta name="robots" content="noindex">' : ''}
+${head}
+<style>.g-steps{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:18px;margin:0;padding:0;list-style:none;counter-reset:st}
+.g-steps li{border:1px solid var(--line);border-radius:4px;padding:20px 22px;background:var(--panel);counter-increment:st}
+.g-steps li::before{content:counter(st,decimal-leading-zero);display:block;color:var(--gold);font-family:var(--serif);font-size:22px;margin-bottom:8px}
+.g-steps h3{margin:0 0 8px;font-size:18px}.g-steps p{margin:0 0 8px;color:var(--mut);font-size:14px;line-height:1.55}.g-steps .hint{font-size:12.5px;margin:0}
+@media (max-width:760px){.stats{gap:22px 30px}.cta-row .btn{white-space:normal;text-align:center}}</style>${noindex ? '\n<meta name="robots" content="noindex">' : ''}
 ${ld}
 </head>
 <body>
@@ -67,92 +110,87 @@ ${SHELL.footer(u, sec || null)}
 }
 
 /* ---------------------------------------------------------- портфолио */
+// карточка проекта нового формата: кадр, тип и стиль, площадь по экспликации, листов из sheets.json
+const firstSentence = t => (t.match(/^.+?[.!?](\s|$)/) || [t])[0].trim();
+const tileOf = c => {
+  const h = c.hero;
+  const decl = (c.name.match(/(\d+) м²/) || [])[1];
+  const declTxt = decl && Math.abs(+decl - areaNum(c)) > 1.5 ? `<span class="tile-lead" style="font-size:12.5px;margin-top:8px">В названии — заявленная площадь ${decl} м²; в цифрах ниже — по экспликации альбома.</span>` : '';
+  return `      <a class="tile" href="../portfolio/${c.slug}/">
+        ${h ? `<img src="../${h.src}" alt="${esc(h.alt)}" width="${h.w}" height="${h.h}" loading="lazy" decoding="async"${h.kind === 'sheet' ? ' style="object-fit:contain;background:#f4f1ea"' : ''}>` : ''}
+        <div class="tile-body"><span class="tag">${esc(c.type)} · ${esc(c.style)}</span><b>${esc(c.name)}</b>
+        <span class="tile-lead">${esc(firstSentence(c.lead))}</span>${declTxt}
+        <span class="tile-figs"><i><b>${c.total}</b>${word(c.total, 'лист', 'листа', 'листов')}</i><i><b>${c.area.replace(' м²', '')}</b>м²</i><i><b>${c.rooms}</b>${word(c.rooms, 'помещение', 'помещения', 'помещений')}</i>${c.visuals ? `<i><b>${c.visuals}</b>${word(c.visuals, 'визуализация', 'визуализации', 'визуализаций')}</i>` : ''}</span></div>
+      </a>`;
+};
+// листы крупно — по одному типовому листу из разных альбомов (ищем по названию в sheets.json)
+const PLATES = [
+  ['gost-lineademo', /^План расстановки мебели/, 'Планировочное решение'],
+  ['gost-dom331', /^Развёртк/, 'Развёртка стен'],
+  ['gost-retro103', /^Однолинейная схема щита/, 'Щит: однолинейная схема'],
+  ['gost-kv3k', /^Раскладка плитки\. Ванная/, 'Раскладка плитки в ванной'],
+  ['gost-modern4k', /^Разрезы и узлы потолков/, 'Разрезы и узлы потолков'],
+  ['gost-dom120', /^Смета ориентировочная/, 'Смета'],
+].map(([slug, re, cap]) => {
+  const list = JSON.parse(fs.readFileSync(path.join(SITE, 'portfolio', slug, 'sheets.json'), 'utf8'));
+  const sh = list.find(x => re.test(x.title));
+  return sh && { slug, sh, cap, name: CARDS.find(c => c.slug === slug).name };
+}).filter(Boolean);
+const OLD = [
+  { href: '../portfolio/demo/presentation.html', img: '../portfolio/demo/06-koncept/renders/01-gostinaya-kuhnya.jpg', w: 1536, h: 1024,
+    name: 'Квартира 56 м², джапанди', sheets: 30, note: 'Тот же бриф, что у демо-квартиры нового формата выше: сравните 30 листов первой версии с полным альбомом.' },
+  { href: '../portfolio/dom-120/presentation.html', img: '../portfolio/dom-120/06-koncept/renders/02-gostinaya-kuhnya.jpg', w: 1536, h: 1024,
+    name: 'Дом 120 м² в два этажа', sheets: 56, note: 'Первая версия демо-дома: планы, развёртки, узлы и смета без проверки по нормам.' },
+];
+const hubTitle = `Портфолио LINEA — ${NUM_W[NEW_N] || NEW_N} проектов нового формата целиком`;
 w('portfolio-hub/index.html', page({
   file: 'portfolio-hub/index.html',
   sec: 'cases',
-  title: `Портфолио LINEA — ${ALBUMS_N === 6 ? 'шесть' : ALBUMS_N} альбомов целиком, лист за листом`,
-  desc: `Проекты студии открыты полностью: ${ALBUMS_N === 6 ? 'шесть' : ALBUMS_N} альбомов — 45, 86, ${Object.values(GOST).map(g => g.total).join(', ')} листов по ГОСТ, от квартиры 56 м² до дома 120 м². Листалка, единый PDF, спецификация и смета — всё доступно без запроса.`,
-  h1: 'Портфолио: альбомы открыты целиком',
+  title: hubTitle,
+  desc: `${NEW_N} дизайн-проектов нового формата открыты полностью: квартиры и дома от ${fmtA(AR_MIN)} до ${fmtA(AR_MAX)} м², ${GOST_SHEETS} листов A3 по ГОСТ, `
+    + `${VISUALS} визуализаций, сверенных с макетом. У каждого — альбом для заказчика и полный альбом PDF, правки голосом прямо на листах.`,
+  h1: 'Портфолио: проекты открыты целиком',
   crumb: 'Портфолио',
-  lead: `Обычно студия показывает пять красивых кадров и обещает «полный комплект чертежей». Мы выкладываем комплект целиком — ${131 + GOST_SHEETS} листов в ${ALBUMS_N === 6 ? 'шести' : ALBUMS_N} проектах, каждый можно открыть, увеличить и распечатать.`,
-  jsonld: [crumbsLd([['LINEA', BASE + '/'], ['Портфолио', BASE + '/portfolio-hub/']])],
+  lead: `Обычно студия показывает пять красивых кадров и обещает «полный комплект чертежей». Мы выкладываем комплект целиком:
+    ${NUM_W[NEW_N] || NEW_N} проектов нового формата, ${GOST_SHEETS} листов — каждый можно открыть, рассмотреть и оставить к нему правку голосом.`,
+  ogImage: CARDS.find(c => c.hero && c.hero.kind === 'render').hero.src,
+  jsonld: [crumbsLd([['LINEA', BASE + '/'], ['Портфолио', BASE + '/portfolio-hub/']]), {
+    '@context': 'https://schema.org', '@type': 'ItemList', name: 'Проекты LINEA нового формата',
+    itemListElement: CARDS.map((c, i) => ({ '@type': 'ListItem', position: i + 1, url: `${BASE}/portfolio/${c.slug}/`, name: c.name })),
+  }],
   body: `<section class="blk">
   <div class="wrap">
-    <div class="kicker">Проекты</div>
-    <h2>Два альбома и три способа их смотреть</h2>
-    <div class="tiles">
-      <a class="tile" href="../portfolio/gost-lineademo/">
-        <img src="../assets/portfolio/lineademo-living.jpg" alt="Квартира 56 м², джапанди — визуализация гостиной" width="1200" height="800" loading="lazy" decoding="async">
-        <div class="tile-body"><span class="badge">${GOST['gost-lineademo'].total} листов A3</span><span class="tag" style="margin-left:10px">Джапанди</span><b>Квартира 56 м²</b>
-        <span class="tile-lead">Гостиная-кухня, спальня, детская, санузел, прихожая — полный альбом с проверкой по нормам, 21 визуализация, правки голосом по листам.</span>
-        <span class="tile-figs"><i><b>21</b> визуализация</i><i><b>5</b> помещений</i><i><b>0</b> блокеров</i></span></div>
-      </a>
-      <a class="tile" href="../portfolio/gost-dom120/">
-        <img src="../assets/portfolio/dom120-top.jpg" alt="Дом 120 м² в два этажа — вид сверху 3D" width="1200" height="800" loading="lazy" decoding="async">
-        <div class="tile-body"><span class="badge">${GOST['gost-dom120'].total} листов A3</span><span class="tag" style="margin-left:10px">Средиземноморье</span><b>Дом 120 м², два этажа</b>
-        <span class="tile-lead">Планы по этажам, лестница с ограждением отдельным листом, у каждой комнаты свой акцент, 22 визуализации.</span>
-        <span class="tile-figs"><i><b>22</b> визуализации</i><i><b>2</b> этажа</i><i><b>1</b> лестница</i></span></div>
-      </a>
-    </div>
-    <table class="tbl" style="margin-top:34px">
-      <tr><th>Способ</th><th>Что это</th><th>Кому удобнее</th></tr>
-      <tr><td><a href="../portfolio/demo/presentation.html">Листалка</a></td><td>полноэкранный просмотр листов со стрелками и миниатюрами</td><td>заказчику — посмотреть альбом как презентацию</td></tr>
-      <tr><td><a href="../portfolio/demo/index.html">Все файлы</a></td><td>дерево папок проекта: чертежи, документы, визуализации</td><td>прорабу — найти нужный лист по названию</td></tr>
-      <tr><td><a href="../portfolio/demo/print.html">Версия для печати</a></td><td>источник единого PDF: титул, оглавление, документы, листы A3</td><td>тому, кто печатает альбом целиком</td></tr>
-    </table>
-    <div class="cta-row" style="margin-top:28px">
-      <a class="btn ghost" href="../cases/">Разбор решений в кейсах</a>
-      <a class="btn ghost" href="../catalog/">Что можно заказать</a>
+    <div class="stats" style="margin-top:0">
+      <div><b>${NEW_N}</b><span>проектов нового формата</span></div>
+      <div><b>${GOST_SHEETS}</b><span>${word(GOST_SHEETS, 'лист', 'листа', 'листов')} A3 по ГОСТ</span></div>
+      <div><b>${VISUALS}</b><span>визуализаций сверены с макетом</span></div>
+      <div><b>${FL_MIN}–${FL_MAX}</b><span>листов в альбоме квартиры</span></div>
+      <div><b>${HS_MIN}–${HS_MAX}</b><span>листов в альбоме дома</span></div>
     </div>
   </div>
 </section>
 
 <section class="blk">
   <div class="wrap">
-    <div class="kicker">Документация</div>
-    <h2>Комплекты нового движка</h2>
-    <p class="sub">Рабочую документацию студия выпускает отдельным движком: 26 специальностей,
-    ${RULES} правил проверки, блокеров на выдаче: ${Object.values(GOST).reduce((n, g) => n + g.blockers, 0)}. Комплекты предварительные — до контрольного обмера. Эти альбомы открыты так же целиком; к каждому — альбом для заказчика в подаче студии (PDF на странице альбома).</p>
+    <div class="kicker">Новый формат · 2026</div>
+    <h2>${NUM_W[NEW_N] ? NUM_W[NEW_N][0].toUpperCase() + NUM_W[NEW_N].slice(1) : NEW_N} проектов — новые первыми</h2>
+    <p class="sub">Каждый проект — это полный альбом по ГОСТ с проверкой по нормам и альбом для заказчика с визуализациями.
+    Площадь в карточках — общая по экспликации альбома (сумма помещений с титульного листа). Комплекты предварительные:
+    до контрольного обмера по ним не строят.</p>
     <div class="tiles">
-      <a class="tile plain" href="../portfolio/gost-proekt2/">
-        <div class="tile-body"><span class="badge">${GOST['gost-proekt2'].total} листов A3</span><b>Квартира с эркерами, ${GOST['gost-proekt2'].rooms} помещений</b>
-        <span class="tile-lead">Непрямоугольный контур, два эркерных балкона, две детские, две гардеробные. ${GOST['gost-proekt2'].area}.</span></div>
-      </a>
-      <a class="tile plain" href="../portfolio/gost-kv3k/">
-        <div class="tile-body"><span class="badge">${GOST['gost-kv3k'].total} листов A3</span><b>Трёхкомнатная квартира ${GOST['gost-kv3k'].area}</b>
-        <span class="tile-lead">Кухня-гостиная, две спальни, гардеробная, два санузла. Warm Contemporary.</span></div>
-      </a>
-      <a class="tile plain" href="../portfolio/gost-kv65/">
-        <div class="tile-body"><span class="badge">${GOST['gost-kv65'].total} листов A3</span><b>Квартира ${GOST['gost-kv65'].area} после реконструкции</b>
-        <span class="tile-lead">По плану заказчика, ${GOST['gost-kv65'].rooms} помещений; визуализации — листами перед развёртками. Блокер на выдаче: спальня без окна.</span></div>
-      </a>
-      <a class="tile plain" href="../portfolio/gost-kv58/">
-        <div class="tile-body"><span class="badge">${GOST['gost-kv58'].total} листов A3</span><b>Квартира ${GOST['gost-kv58'].area}</b>
-        <span class="tile-lead">Кухня-гостиная и спальня, ${GOST['gost-kv58'].rooms} помещений. Собрана по шаблону, реальные изделия в ведомостях.</span></div>
-      </a>
-      <a class="tile plain" href="../portfolio/gost-modern4k/">
-        <div class="tile-body"><span class="badge">${GOST['gost-modern4k'].total} листов A3</span><b>Квартира с кабинетом ${GOST['gost-modern4k'].area}</b>
-        <span class="tile-lead">Современный модерн, ${GOST['gost-modern4k'].rooms} помещений: перепланировка, вид сверху 3D, кадр на каждой стене.</span></div>
-      </a>
-      <a class="tile plain" href="../portfolio/gost-retro103/">
-        <div class="tile-body"><span class="badge">${GOST['gost-retro103'].total} листов A3</span><b>Квартира ${GOST['gost-retro103'].area} · ретро</b>
-        <span class="tile-lead">Две квартиры в одну, ${GOST['gost-retro103'].rooms} помещений: середина века и ар-деко, авторская мебель, 26 визуализаций.</span></div>
-      </a>
-      <a class="tile plain" href="../portfolio/gost-lineademo/">
-        <div class="tile-body"><span class="badge">${GOST['gost-lineademo'].total} листов A3</span><b>Квартира ${GOST['gost-lineademo'].area} · джапанди</b>
-        <span class="tile-lead">Демо студии в новом формате: ${GOST['gost-lineademo'].rooms} помещений, своя мебель, навесные шкафы, сюжеты картин.</span></div>
-      </a>
-      <a class="tile plain" href="../portfolio/gost-dom120/">
-        <div class="tile-body"><span class="badge">${GOST['gost-dom120'].total} листов A3</span><b>Дом ${GOST['gost-dom120'].area} в два этажа</b>
-        <span class="tile-lead">Демо-дом в новом формате: планы по этажам, лестница с ограждением, средиземноморская гамма.</span></div>
-      </a>
-      <a class="tile plain" href="../portfolio/gost-dom331/">
-        <div class="tile-body"><span class="badge">${GOST['gost-dom331'].total} листов A3</span><b>Дом ${GOST['gost-dom331'].area} с мансардой</b>
-        <span class="tile-lead">Два этажа, ${GOST['gost-dom331'].rooms} помещений: потолки мансарды по скату кровли, спортзона, гараж и веранда.</span></div>
-      </a>
+${CARDS.map(tileOf).join('\n')}
     </div>
-    <div class="cta-row" style="margin-top:26px">
-      <a class="btn ghost" href="../gost/">Как устроен и проверяется комплект</a>
+  </div>
+</section>
+
+<section class="blk">
+  <div class="wrap">
+    <div class="kicker">Как смотреть</div>
+    <h2>Три способа посмотреть любой проект</h2>
+    <div class="cards g3">
+      <div class="card"><h3>Страница проекта</h3><p>Визуализации, цифры и все листы по разделам — в том же порядке, что в выданном альбоме.</p></div>
+      <div class="card"><h3>Два PDF</h3><p>Альбом для заказчика — с визуализациями перед развёртками своих стен; полный альбом — для строителей, со всеми разделами и сметой.</p></div>
+      <div class="card"><h3>Правки голосом</h3><p>Откройте лист, нажмите на нужное место и скажите, что поменять. В PDF на каждой странице есть кнопка «Правка к этому листу».</p></div>
     </div>
   </div>
 </section>
@@ -160,53 +198,103 @@ w('portfolio-hub/index.html', page({
 <section class="blk">
   <div class="wrap">
     <div class="kicker">Листы крупно</div>
-    <h2>Шесть листов из двух альбомов — как есть</h2>
+    <h2>${NUM_W[PLATES.length] ? NUM_W[PLATES.length][0].toUpperCase() + NUM_W[PLATES.length].slice(1) : PLATES.length} листов из разных альбомов — как есть</h2>
     <div class="plates">
-      ${[
-        ['demo/01-kvartira/kvartira-04-mebel.svg', 'Лист 6', 'Планировочное решение'],
-        ['demo/04-razvertki/01-gostinaya-kuhnya-steny-ABCD.svg', 'Лист 20', 'Развёртки стен гостиной-кухни'],
-        ['demo/01-kvartira/kvartira-11b-plintus.svg', 'Лист 14', 'Плинтусы и порожки'],
-        ['dom-120/10-uzly/lestnitsa.svg', 'Дом', 'Лестница: планы и расчёт'],
-        ['dom-120/10-uzly/razrez-1-1.svg', 'Дом', 'Разрез 1—1'],
-        ['demo/10-uzly/uzly-V-D-mokraya-plintus.svg', 'Лист 45', 'Узлы В и Д'],
-      ].map(pl => `<a class="plate" href="../portfolio/${pl[0]}" target="_blank" rel="noopener">
-        <span class="plate-img"><img src="../portfolio/${pl[0]}" alt="${pl[2]} — лист альбома LINEA" width="1587" height="1123" loading="lazy" decoding="async"></span>
-        <span class="plate-cap"><i>${pl[1]}</i>${pl[2]}</span>
+      ${PLATES.map(p => `<a class="plate" href="../review.html?p=${p.slug}&amp;s=${encodeURIComponent(p.sh.file)}">
+        <span class="plate-img"><img src="../portfolio/${p.slug}/sheets/${encodeURIComponent(p.sh.file)}" alt="${esc(p.cap)} — ${esc(p.name)}" width="1587" height="1123" loading="lazy" decoding="async"></span>
+        <span class="plate-cap"><i>Лист ${p.sh.no}</i>${esc(p.cap)} · ${esc(p.name)}</span>
       </a>`).join('\n      ')}
     </div>
+    <div class="cta-row" style="margin-top:26px">
+      <a class="btn" href="../brief.html">Свой проект — бриф голосом</a>
+      <a class="btn ghost" href="../gost/">Как устроен и проверяется альбом</a>
+    </div>
+  </div>
+</section>
+
+<section class="blk">
+  <div class="wrap">
+    <div class="kicker">Архив</div>
+    <h2>Первая версия (2025), старый формат</h2>
+    <p class="sub">С этих двух демо студия начиналась. Альбомы короче, без проверки по нормам и без альбома для заказчика —
+    оставлены для сравнения. Новые версии этих же объектов — в списке выше.</p>
+    <div class="tiles">
+${OLD.map(o => `      <a class="tile" href="${o.href}">
+        <img src="${o.img}" alt="${esc(o.name)} — визуализация первой версии" width="${o.w}" height="${o.h}" loading="lazy" decoding="async" style="filter:saturate(.75)">
+        <div class="tile-body"><span class="tag">Первая версия (2025) · старый формат</span><b>${esc(o.name)}</b>
+        <span class="tile-lead">${esc(o.note)}</span>
+        <span class="tile-figs"><i><b>${o.sheets}</b>листов</i></span></div>
+      </a>`).join('\n')}
+    </div>
+    <p class="hint" style="margin-top:18px">У первой версии три входа: <a href="../portfolio/demo/presentation.html">листалка</a>,
+    <a href="../portfolio/demo/index.html">все файлы</a> и <a href="../portfolio/demo/print.html">версия для печати</a> (на примере квартиры).</p>
   </div>
 </section>`
 }));
 
 /* ---------------------------------------------------------- процесс */
+// путь клиента: голосовой бриф → альбом → правки голосом на листах → финал. Сроки — одно правило студии (site-shell.js).
+const STEPS = [
+  ['Бриф голосом', 'около 10 минут', 'Расскажите о квартире или доме голосом или заполните форму: что за объект, кто живёт, что нравится. Приложите план — от застройщика, БТИ, фото листка с размерами от руки.',
+    'Получение брифа подтверждаем в течение дня. Если что-то не сходится — зададим вопросы.'],
+  ['Альбом', `до 48 часов — квартира, до 72 — дом`, 'Собираем два альбома: полный по ГОСТ для строителей — с проверкой по нормам — и альбом для заказчика с визуализациями. Срок — от получения брифа с планом.',
+    `Квартира — ${FL_MIN}–${FL_MAX} листов A3, дом — ${HS_MIN}–${HS_MAX} (так вышло на наших ${NEW_N} проектах).`],
+  ['Правки голосом на листах', 'когда удобно', 'Открываете лист на сайте или в PDF, нажимаете на место на чертеже и говорите, что поменять: «диван к окну», «розетку выше». Все правки уходят одним сообщением.',
+    'В PDF на каждой странице есть кнопка «Правка к этому листу».'],
+  ['Финальный выпуск', 'после правок', 'Вносим правки в данные проекта — и альбом пересобирается целиком: листы, ведомости и смета меняются вместе, ничего не забыто.',
+    'Перед работами — контрольный обмер: задание на него уже лежит в альбоме.'],
+];
 w('process/index.html', page({
   file: 'process/index.html',
   sec: 'compare',
-  title: 'Как проходит работа над проектом — этапы LINEA',
-  desc: 'Пять этапов от брифа до выдачи альбома: что происходит на каждом, сколько занимает, что требуется от заказчика и чем этап заканчивается.',
+  title: 'Как проходит работа — бриф голосом, альбом, правки на листах | LINEA',
+  desc: 'Четыре шага: бриф голосом за 10 минут, альбом по ГОСТ и альбом с визуализациями (квартира до 48 часов, дом до 72 от брифа с планом), правки голосом прямо на листах, финальный выпуск. На время теста бесплатно.',
   h1: 'Как проходит работа',
   crumb: 'Процесс',
-  lead: 'От брифа с планом до первого варианта проекта — до 48 часов для квартиры и до 72 для дома, пять этапов. Ниже — что делаем мы, что нужно от вас и по какому результату понятно, что этап закрыт.',
+  lead: 'Четыре шага: рассказать о доме, получить альбом, надиктовать правки прямо на листах, забрать финальный выпуск. Первый вариант квартиры — до 48 часов, дома — до 72 от получения брифа с планом. На время открытого тестирования — бесплатно.',
   jsonld: [
     crumbsLd([['LINEA', BASE + '/'], ['Процесс', BASE + '/process/']]),
-    { '@context': 'https://schema.org', '@type': 'HowTo', name: 'Как проходит работа над дизайн-проектом в LINEA', totalTime: 'PT48H',
-      step: [['Бриф', 'Заказчик заполняет форму: размеры, проёмы, конструктив, пожелания'], ['Планировка', 'Студия расставляет мебель и согласует решение'], ['Инженерия', 'Электрика, свет, тёплые полы и сантехника привязываются к мебели'], ['Альбом', 'Конвейер собирает листы, три программы проверяют выпуск'], ['Выдача', 'Папка проекта, единый PDF, смета и спецификация']]
-        .map((s, i) => ({ '@type': 'HowToStep', position: i + 1, name: s[0], text: s[1] })) }
+    { '@context': 'https://schema.org', '@type': 'HowTo', name: 'Как получить дизайн-проект в LINEA',
+      estimatedCost: { '@type': 'MonetaryAmount', currency: 'RUB', value: '0' },
+      step: STEPS.map((st, i) => ({ '@type': 'HowToStep', position: i + 1, name: st[0], text: `${st[2]} ${st[3]}`, url: `${BASE}/process/#step-${i + 1}` })) },
   ],
   body: `<section class="blk">
   <div class="wrap">
-    <div class="kicker">Этапы</div>
-    <h2>Пять шагов и что закрывает каждый</h2>
-    <div class="scroll-x">
-      <table class="tbl">
-        <tr><th>Этап</th><th>Сколько</th><th>Что делаем</th><th>Что нужно от вас</th><th>Результат</th></tr>
-        <tr><td>1. Бриф</td><td>около 10 минут</td><td>Подтверждаем получение в течение дня, разбираем ответы, задаём уточняющие вопросы</td><td>Рассказ голосом, план, размеры, фото, пожелания по стилю и бюджету</td><td>Проверенная геометрия объекта</td></tr>
-        <tr><td>2. Планировка</td><td>2–4 часа</td><td>Расставляем мебель по эргономике, показываем варианты</td><td>Согласовать или сказать, что не так</td><td>Утверждённое планировочное решение</td></tr>
-        <tr><td>3. Инженерия</td><td>2 часа</td><td>Привязываем розетки к мебели, раскладываем свет, считаем щит</td><td>Список техники, если он уже есть</td><td>Планы электрики, воды и тепла</td></tr>
-        <tr><td>4. Альбом</td><td>до 48 часов от брифа с планом, дом — до 72</td><td>Собираем чертежи, спецификацию, смету, визуализации</td><td>Ничего — работаем сами</td><td>от 70 листов A3 и документы</td></tr>
-        <tr><td>5. Выдача</td><td>сразу</td><td>Отдаём папку проекта и объясняем, как ей пользоваться</td><td>Прочитать и задать вопросы</td><td>Комплект на руках, предоплаты нет</td></tr>
-      </table>
+    <div class="kicker">Путь клиента</div>
+    <h2>Четыре шага</h2>
+    <ol class="g-steps">
+      ${STEPS.map((st, i) => `<li id="step-${i + 1}"><h3>${esc(st[0])}</h3><p><b>${esc(st[1])}</b></p><p>${esc(st[2])}</p><p class="hint">${esc(st[3])}</p></li>`).join('\n      ')}
+    </ol>
+    <div class="cta-row" style="margin-top:28px">
+      <a class="btn" href="../brief.html">🎤 Начать бриф голосом</a>
+      <a class="btn ghost" href="../review.html?p=gost-lineademo">Попробовать правки на демо-альбоме</a>
     </div>
+  </div>
+</section>
+
+<section class="blk">
+  <div class="wrap">
+    <div class="kicker">Что на руках</div>
+    <h2>Два альбома вместо одного</h2>
+    <div class="pas-grid">
+      <div class="pas-col good">
+        <h3>Альбом для заказчика</h3>
+        <ul>
+          <li>Визуализации стоят перед развёртками своих стен — видно, что и где будет</li>
+          <li>План мебели с выносками «наименование, ширина × глубина, высота»</li>
+          <li>Цвета и материалы с образцами</li>
+        </ul>
+      </div>
+      <div class="pas-col good">
+        <h3>Полный альбом по ГОСТ</h3>
+        <ul>
+          <li>Рабочая документация для строителей: размеры, отметки, узлы, ведомости</li>
+          <li>Каждый лист прошёл проверку по нормам; что осталось решить — на листе «Открытые вопросы»</li>
+          <li>Смета и спецификация считаются из тех же данных, что чертежи</li>
+        </ul>
+      </div>
+    </div>
+    <p class="sub" style="margin-top:26px">Состав полного альбома по фактическим разделам: ${SECTIONS_FACT.join('; ')}.</p>
   </div>
 </section>
 
@@ -216,44 +304,48 @@ w('process/index.html', page({
     <h2>Что происходит, когда что-то не нравится</h2>
     <div class="pas-grid">
       <div class="pas-col">
-        <h3>Как в ручной студии</h3>
+        <h3>Как обычно</h3>
         <ul>
-          <li>Правка планировки тянет за собой переделку каждого листа руками</li>
-          <li>Круг правок — от недели; часть листов забывают обновить</li>
+          <li>Список замечаний письмом: «на третьем листе справа внизу…»</li>
+          <li>Правка планировки — переделка каждого листа руками; часть листов забывают обновить</li>
           <li>Смета пересчитывается отдельно и расходится с чертежами</li>
         </ul>
       </div>
       <div class="pas-col good">
         <h3>Как у нас</h3>
         <ul>
-          <li>Меняется исходная геометрия — альбом пересобирается целиком</li>
-          <li>Пересборка занимает минуты, забыть лист технически невозможно</li>
-          <li>Смета и спецификация считаются из той же геометрии, что чертежи</li>
+          <li>Правка ставится меткой прямо на лист и надиктовывается голосом</li>
+          <li>Правка вносится в данные проекта — альбом пересобирается целиком, забыть лист нельзя</li>
+          <li>Смета и спецификация пересчитываются вместе с чертежами</li>
         </ul>
       </div>
     </div>
     <div class="cta-row" style="margin-top:28px">
       <a class="btn" href="../brief.html">Начать с брифа</a>
-      <a class="btn ghost" href="../catalog/">Выбрать услугу</a>
+      <a class="btn ghost" href="../faq/">Частые вопросы</a>
     </div>
   </div>
 </section>`
 }));
 
 /* ---------------------------------------------------------- условия и цены */
+// объёмы — по фактическим выпускам (sheets.json), так же как в каталоге услуг
+const cntBy = re => CARDS.map(c => JSON.parse(fs.readFileSync(path.join(SITE, 'portfolio', c.slug, 'sheets.json'), 'utf8')).filter(x => re.test(x.file)).length);
+const MIN_DOCS = Math.min(...FLATS.map(c => JSON.parse(fs.readFileSync(path.join(SITE, 'portfolio', c.slug, 'sheets.json'), 'utf8')).filter(x => !/-decorator-|concept/.test(x.file)).length));
+const PLAN_N = cntBy(/-(architect|interior-designer)-/), EST_N = cntBy(/-(estimator|colorist)-/);
 w('price/index.html', page({
   file: 'price/index.html',
   sec: 'compare',
-  title: 'Стоимость дизайн-проекта — условия студии LINEA',
-  desc: 'Сколько стоит дизайн-проект в LINEA: на время открытого тестирования проектирование бесплатно, предоплаты нет. Что входит, за что платить не нужно и как считается смета реализации.',
+  title: 'Стоимость дизайн-проекта — бесплатно на время теста | LINEA',
+  desc: `Дизайн-проект в LINEA на время открытого тестирования бесплатно, без предоплаты: альбом по ГОСТ (квартира ${FL_MIN}–${FL_MAX} листов, дом ${HS_MIN}–${HS_MAX}), альбом для заказчика с визуализациями, правки голосом. Что входит и что не входит.`,
   h1: 'Стоимость и условия',
   crumb: 'Условия',
-  lead: 'Студия работает в режиме открытого тестирования: проектирование бесплатно, предоплаты нет, альбом остаётся у вас в любом случае. Ниже — что это значит на практике и чем стоимость проекта отличается от бюджета ремонта.',
+  lead: 'Студия работает в режиме открытого тестирования: проект бесплатно, предоплаты нет, альбомы остаются у вас в любом случае. Ниже — что входит, чего нет и чем стоимость проекта отличается от бюджета ремонта.',
   jsonld: [
     crumbsLd([['LINEA', BASE + '/'], ['Условия', BASE + '/price/']]),
-    { '@context': 'https://schema.org', '@type': 'Offer', name: 'Дизайн-проект интерьера', price: '0', priceCurrency: 'RUB',
-      availability: 'https://schema.org/LimitedAvailability', description: 'Открытое тестирование студии: проектирование бесплатно, предоплаты нет',
-      seller: { '@type': 'ProfessionalService', name: 'LINEA', telephone: AUTHOR.tel, email: AUTHOR.email } }
+    { '@context': 'https://schema.org', '@type': 'Offer', name: 'Дизайн-проект интерьера: альбом по ГОСТ и альбом для заказчика', price: '0', priceCurrency: 'RUB',
+      url: `${BASE}/price/`, availability: 'https://schema.org/LimitedAvailability', description: 'Открытое тестирование студии: проект бесплатно, предоплаты нет; квартира — до 48 часов, дом — до 72 часов от получения брифа с планом',
+      seller: { '@type': 'ProfessionalService', name: 'LINEA', url: `${BASE}/`, telephone: AUTHOR.tel, email: AUTHOR.email } }
   ],
   body: `<section class="blk">
   <div class="wrap">
@@ -262,15 +354,43 @@ w('price/index.html', page({
     <div class="scroll-x">
       <table class="tbl">
         <tr><th>Услуга</th><th>Объём</th><th>Срок</th><th class="hi">Цена в тесте</th></tr>
-        <tr><td><a href="../catalog/dizayn-proekt-kvartiry.html">Дизайн-проект квартиры</a></td><td>от 70 листов A3 + документы</td><td>до 48 часов</td><td class="hi">0 ₽</td></tr>
-        <tr><td><a href="../catalog/dizayn-proekt-doma.html">Дизайн-проект дома</a></td><td>56 листов A3 + документы</td><td>до 72 часов</td><td class="hi">0 ₽</td></tr>
-        <tr><td><a href="../catalog/rabochaya-dokumentatsiya.html">Только рабочая документация</a></td><td>от 30 листов</td><td>до 48 ч, дом — до 72</td><td class="hi">0 ₽</td></tr>
-        <tr><td><a href="../catalog/planirovochnoe-reshenie.html">Планировочное решение</a></td><td>4–8 листов</td><td>24 часа</td><td class="hi">0 ₽</td></tr>
-        <tr><td><a href="../catalog/vizualizatsii.html">Визуализации</a></td><td>6–12 кадров</td><td>24 часа</td><td class="hi">0 ₽</td></tr>
-        <tr><td><a href="../catalog/smeta-i-komplektatsiya.html">Смета и комплектация</a></td><td>спецификация + смета</td><td>24 часа</td><td class="hi">0 ₽</td></tr>
+        <tr><td><a href="../catalog/dizayn-proekt-kvartiry.html">Дизайн-проект квартиры</a></td><td>альбом по ГОСТ ${FL_MIN}–${FL_MAX} листов A3 + альбом для заказчика</td><td>до 48 часов</td><td class="hi">0 ₽</td></tr>
+        <tr><td><a href="../catalog/dizayn-proekt-doma.html">Дизайн-проект дома</a></td><td>альбом по ГОСТ ${HS_MIN}–${HS_MAX} листов A3 + альбом для заказчика</td><td>до 72 часов</td><td class="hi">0 ₽</td></tr>
+        <tr><td><a href="../catalog/rabochaya-dokumentatsiya.html">Только рабочая документация</a></td><td>от ${MIN_DOCS} ${MIN_DOCS % 10 === 1 && MIN_DOCS % 100 !== 11 ? 'листа' : 'листов'} A3</td><td>до 48 ч, дом — до 72</td><td class="hi">0 ₽</td></tr>
+        <tr><td><a href="../catalog/planirovochnoe-reshenie.html">Планировочное решение</a></td><td>${Math.min(...PLAN_N)}–${Math.max(...PLAN_N)} листов</td><td>до 48 ч, дом — до 72</td><td class="hi">0 ₽</td></tr>
+        <tr><td><a href="../catalog/vizualizatsii.html">Визуализации</a></td><td>в альбоме для заказчика, перед развёртками своих стен</td><td>вместе с проектом</td><td class="hi">0 ₽</td></tr>
+        <tr><td><a href="../catalog/smeta-i-komplektatsiya.html">Смета и комплектация</a></td><td>${Math.min(...EST_N)}–${Math.max(...EST_N)} листов в составе альбома</td><td>вместе с проектом</td><td class="hi">0 ₽</td></tr>
       </table>
     </div>
-    <p class="hint" style="margin-top:14px">Срок — до первого варианта проекта, отсчёт от получения брифа с планом. Тестирование не бессрочное: о старте платного периода предупредим заранее, участникам теста цена фиксируется.</p>
+    <p class="hint" style="margin-top:14px">Срок — до первого варианта проекта, отсчёт от получения брифа с планом; получение брифа подтверждаем в течение дня.
+    Объёмы — по нашим ${NUM_IN[NEW_N] || NEW_N} выпущенным проектам, у вашего объекта число листов зависит от числа помещений.
+    Тестирование не бессрочное: о старте платного периода предупредим заранее, участникам теста цена фиксируется.</p>
+  </div>
+</section>
+
+<section class="blk">
+  <div class="wrap">
+    <div class="kicker">Честно</div>
+    <h2>Что входит бесплатно, а чего мы не делаем</h2>
+    <div class="pas-grid">
+      <div class="pas-col good">
+        <h3>Входит</h3>
+        <ul>
+          <li>Бриф голосом или формой и вопросы по нему</li>
+          <li>Полный альбом по ГОСТ с проверкой по нормам и альбом для заказчика с визуализациями</li>
+          <li>Правки голосом прямо на листах и перевыпуск альбома с ними</li>
+          <li>Смета, спецификация и задание на контрольный обмер — в составе альбома</li>
+        </ul>
+      </div>
+      <div class="pas-col">
+        <h3>Не входит</h3>
+        <ul>
+          <li>Выезд и обмер на объекте: работаем удалённо, контрольный обмер — перед закупкой и работами</li>
+          <li>Согласование перепланировки в жилинспекции и расчёт несущих конструкций — это работа организаций с допуском</li>
+          <li>Строительные работы и авторский надзор на объекте</li>
+        </ul>
+      </div>
+    </div>
   </div>
 </section>
 
@@ -278,20 +398,20 @@ w('price/index.html', page({
   <div class="wrap">
     <div class="kicker">Калькулятор</div>
     <h2>Сколько листов будет в вашем альбоме</h2>
-    <p class="sub">Формула откалибрована по выпущенным альбомам нового движка: трёхкомнатная на 8 помещений — 71 лист, четырёхкомнатная на 13 помещений — 105. Отметьте, что есть у вас.</p>
+    <p class="sub">Оценка по ${NUM_IN[NEW_N] || NEW_N} выпущенным альбомам: квартиры на ${Math.min(...FLATS.map(c => c.rooms))}–${Math.max(...FLATS.map(c => c.rooms))} помещений — ${FL_MIN}–${FL_MAX} листов, дома — ${HS_MIN}–${HS_MAX}. Разброс у реальных проектов — до ±${LS.dev} листов: больше мебели на заказ и мокрых зон — больше листов.</p>
     <div class="calc" data-calc>
-      <div class="calc-row"><span>Помещений (комнаты, кухня, санузлы, прихожая)</span>
-        <div class="calc-num"><button type="button" data-mm="-1" aria-label="Меньше помещений">−</button><b data-rooms>5</b><button type="button" data-mm="1" aria-label="Больше помещений">+</button></div>
+      <div class="calc-row"><span>Помещений (комнаты, кухня, санузлы, прихожая, гардеробная)</span>
+        <div class="calc-num"><button type="button" data-mm="-1" aria-label="Меньше помещений">−</button><b data-rooms>6</b><button type="button" data-mm="1" aria-label="Больше помещений">+</button></div>
       </div>
       <div class="calc-row"><span>Этажей</span>
         <div class="calc-num"><button type="button" data-fm="-1" aria-label="Меньше этажей">−</button><b data-floors>1</b><button type="button" data-fm="1" aria-label="Больше этажей">+</button></div>
       </div>
       <div class="calc-out">
-        <div><b data-base>70</b><span>листов в комплекте</span></div>
-        <div><b data-full>26</b><span>разделов по специальностям</span></div>
-        <div><b data-elev>18</b><span>из них развёрток стен</span></div>
+        <div><b data-base>—</b><span>листов в альбоме, около</span></div>
+        <div><b>${SECTIONS_FACT.length}</b><span>разделов</span></div>
+        <div><b data-elev>—</b><span>из них развёрток стен, около</span></div>
       </div>
-      <p class="hint">В комплект входят: титул и общие данные с ведомостью чертежей, обмер, демонтаж и монтаж, планировочное решение со спецификацией, двери, электрика со щитом и слаботочкой, освещение, отопление и вентиляция, вода и канализация, потолки с узлами, раскладка плитки, полы и отделка, цвет и материалы, декор, встроенная мебель с монтажными схемами, развёртки стен, узлы и смета.</p>
+      <p class="hint">Разделы альбома: ${SECTIONS_FACT.join('; ')}. Плюс отдельный альбом для заказчика с визуализациями.</p>
       <div class="cta-row"><a class="btn" href="../brief.html">Собрать такой альбом — бриф</a></div>
     </div>
   </div>
@@ -299,22 +419,19 @@ w('price/index.html', page({
 <script>
 (function () {
   var root = document.querySelector('[data-calc]'); if (!root) return;
-  var rooms = 5, floors = 1;
+  var rooms = 6, floors = 1;
   var $ = function (sel) { return root.querySelector(sel); };
   function render() {
     $('[data-rooms]').textContent = rooms;
     $('[data-floors]').textContent = floors;
-    // Калибровка по двум выпускам движка: 8 помещений — 71 лист, 13 помещений — 105.
-    // Отсюда 14 листов общей части плюс 7 на каждое помещение; второй этаж добавляет
-    // свой комплект сводных планов.
-    var base = 14 + 7 * rooms + 16 * (floors - 1) + (floors > 1 ? 1 : 0);
-    $('[data-base]').textContent = base;
-    $('[data-full]').textContent = 26;
-    $('[data-elev]').textContent = Math.round(2.2 * rooms);
+    // коэффициенты посчитаны генератором по выпущенным альбомам (tools/gen-more-pages.js, LS):
+    // листы квартиры ≈ ${LS.b} + ${LS.k} × помещений; каждый следующий этаж ≈ +${LS.floor}; развёрток ≈ ${LS.elev} на помещение
+    $('[data-base]').textContent = Math.round(${LS.b} + ${LS.k} * rooms + ${LS.floor} * (floors - 1));
+    $('[data-elev]').textContent = Math.round(${LS.elev} * rooms);
   }
   root.addEventListener('click', function (e) {
     var b = e.target.closest('button[data-mm],button[data-fm]'); if (!b) return;
-    if (b.dataset.mm) rooms = Math.min(20, Math.max(2, rooms + (+b.dataset.mm)));
+    if (b.dataset.mm) rooms = Math.min(25, Math.max(2, rooms + (+b.dataset.mm)));
     if (b.dataset.fm) floors = Math.min(3, Math.max(1, floors + (+b.dataset.fm)));
     render();
   });
@@ -342,26 +459,44 @@ w('price/index.html', page({
 }));
 
 /* ---------------------------------------------------------- FAQ */
+// Ответы — только то, что подтверждается выпусками и устройством сайта. Цифр «на всякий случай» не пишем.
 const FAQ = [
-  ['Что входит в дизайн-проект?', 'Планировки с расстановкой, развёртка каждой стены, планы полов, потолков и отделки, электрика с привязками и щитом, сантехника, разрезы и узлы, спецификация с артикулами, смета и визуализации. В базовом пакете на квартиру это 30 листов A3 и семь документов.'],
-  ['Почему 48 часов, а не три месяца?', 'Первый вариант проекта квартиры — до 48 часов от получения брифа с планом, дома — до 72. Черновую работу делает программный конвейер: он строит листы по согласованной геометрии и сам проверяет их тремя программами. Человек тратит время на смысл — бриф, планировку и приёмку, а не на вычерчивание.'],
-  ['Проект правда бесплатный?', 'Да, на время открытого тестирования. Предоплаты нет ни на одном этапе, альбом остаётся у вас, даже если работать дальше не станем. Взамен просим честную обратную связь.'],
-  ['Что нужно от меня на старте?', 'Размеры помещений и проёмов, высота потолка, тип дома, фотографии объекта и пожелания по стилю и бюджету. Подойдёт планировка застройщика или фото листа с рулеткой.'],
-  ['Можно ли вносить правки?', 'Да. Правка вносится в исходную геометрию, после чего альбом пересобирается целиком за минуты — забыть обновить лист технически невозможно.'],
-  ['Вы делаете перепланировку и согласование?', 'Показываем варианты перепланировки, но согласование в жилинспекции и расчёт несущих конструкций не берём: это работа организаций с допуском.'],
-  ['Смета — это точная цена ремонта?', 'Это расчёт на дату выпуска из объёмов по чертежам. Работы обычно попадают в 10 %, материалы зависят от момента закупки. Офертой смета не является.'],
-  ['Кто ведёт проект?', `${AUTHOR.role[0].toUpperCase() + AUTHOR.role.slice(1)} ${AUTHOR.name}. Его имя и контакты стоят в основной надписи каждого листа — вопросы по любому размеру можно задать напрямую.`],
-  ['Работаете удалённо или нужен выезд?', 'Основной формат — удалённо: этого достаточно, если есть размеры. Контрольный обмер на объекте рекомендуем перед закупкой материалов.'],
-  ['Что если бригада не поймёт чертежи?', 'Альбом сделан в стандарте проектных бюро: штамп, масштаб, цепочки размеров, узлы. Если вопрос всё же возник — звонок автору проекта, чьи контакты на каждом листе.']
+  ['В чём подвох, если проект бесплатный?', 'Подвоха нет, но есть причина: студия в открытом тестировании и проверяет свой способ работы на настоящих объектах. '
+    + 'Предоплаты нет ни на одном шаге, оба альбома остаются у вас, даже если дальше работать не станем. Взамен просим честную обратную связь — что понятно, '
+    + 'что нет, что пришлось переспрашивать у строителей. Тестирование не бессрочное: о платном периоде предупредим заранее, участникам теста цена фиксируется.'],
+  ['Что я получу на руки?', `Два PDF. Полный альбом по ГОСТ — рабочая документация для строителей: ${SECTIONS_FACT.join('; ')}. `
+    + `На наших проектах это ${FL_MIN}–${FL_MAX} листов A3 для квартиры и ${HS_MIN}–${HS_MAX} для дома. И альбом для заказчика: визуализации стоят перед развёртками своих стен, у мебели на плане — размеры.`],
+  ['Сколько ждать?', 'Первый вариант проекта квартиры — до 48 часов, дома — до 72 часов от получения брифа с планом. Получение брифа подтверждаем в течение дня. '
+    + 'Сам бриф занимает около 10 минут, начать можно с рассказа голосом.'],
+  ['Примут ли альбом строители?', 'Полный альбом оформлен по правилам проектной документации (СПДС): штамп, масштаб из ряда ГОСТ, цепочки размеров, отметки, узлы, '
+    + 'ведомости и смета. Каждый лист проходит автоматическую проверку по нормам — у каждого правила записан источник: пункт ГОСТ, СП или практика бюро. Но честно о границах: '
+    + 'размеры сняты с вашего плана, поэтому альбом предварительный — на листах напечатано «не для производства работ», пока не сделан контрольный обмер. '
+    + 'Задание на обмер уже лежит в альбоме. Подписей проверяющего и нормоконтролёра на листах нет: в штампе стоит фамилия автора проекта.'],
+  ['Как оставить правки?', 'Голосом прямо на листе. Откройте лист на странице проекта или нажмите в PDF кнопку «Правка к этому листу», ткните в нужное место чертежа — '
+    + 'появится метка — и скажите, что поменять: «диван развернуть к окну», «розетку выше». Можно и текстом. Все правки уходят одним сообщением через «Поделиться» '
+    + 'или файлом. Мы вносим их в данные проекта, и альбом пересобирается целиком — листы, ведомости и смета меняются вместе.'],
+  ['Что если у меня нет плана?', 'Подойдёт любой: от застройщика, из БТИ, проект дома, фото листка с размерами от руки или фото стен на телефон. Если нет совсем ничего — '
+    + 'шаг с планом в брифе можно пропустить, договоримся, как снять размеры. Срок «до 48 / до 72 часов» отсчитывается от момента, когда план с размерами у нас: '
+    + 'без размеров чертежи не строятся.'],
+  ['Что такое «открытые вопросы» в альбоме — это ошибки?', 'Нет. Проверка делит находки на два вида. Блокеры — то, с чем альбом не выдаётся: проём не помещается '
+    + 'в стену, лист вылез за формат, жилая комната без окна. Всё остальное — вопросы и рекомендации: что уточнить на обмере, какое допущение принято, '
+    + 'где можно сделать лучше. Они собраны на листе «Открытые вопросы» в начале альбома и решаются вместе с вами.'],
+  ['Вы делаете перепланировку и согласование?', 'Предлагаем перепланировку и показываем её на листах демонтажа и монтажа, но согласование в жилинспекции и расчёт несущих '
+    + 'конструкций не берём: это работа организаций с допуском. Если несущие не определены, это вынесено в открытые вопросы.'],
+  ['Смета — это точная цена ремонта?', 'Это ориентировочный расчёт на дату выпуска: объёмы взяты из чертежей, цены — на момент расчёта. Материалы дорожают и дешевеют, '
+    + 'поэтому перед закупкой цены нужно сверить. Офертой смета не является.'],
+  ['Нужен ли выезд на объект?', 'Проект делается удалённо — достаточно плана с размерами и фото. Контрольный обмер на объекте нужен перед закупкой и работами: '
+    + 'что именно померить и проверить, написано в задании на обмер внутри альбома.'],
+  ['Кто ведёт проект?', `${AUTHOR.role[0].toUpperCase() + AUTHOR.role.slice(1)} ${AUTHOR.name}. Его фамилия стоит в основной надписи листов; телефон и почта — на странице контактов и внизу каждой страницы сайта.`],
 ];
 w('faq/index.html', page({
   file: 'faq/index.html',
   sec: 'compare',
-  title: 'Вопросы и ответы о дизайн-проекте — LINEA',
-  desc: 'Десять частых вопросов о работе студии: что входит в проект, почему 48 часов, правда ли бесплатно, что нужно от заказчика, как вносятся правки и что со сметой.',
+  title: 'Вопросы и ответы о дизайн-проекте — бесплатно, правки голосом | LINEA',
+  desc: 'В чём подвох бесплатного проекта, что получу на руки, сколько ждать, примут ли альбом строители, как оставить правки голосом и что делать, если нет плана.',
   h1: 'Вопросы и ответы',
   crumb: 'FAQ',
-  lead: 'Собрали то, что спрашивают чаще всего — от состава альбома до условий тестирования. Если вопроса здесь нет, звоните: телефон внизу каждой страницы.',
+  lead: 'Честно о главном — от того, зачем мы делаем проект бесплатно, до того, что строители скажут об альбоме. Если вопроса нет — звоните или пишите: контакты внизу каждой страницы.',
   jsonld: [
     crumbsLd([['LINEA', BASE + '/'], ['FAQ', BASE + '/faq/']]),
     { '@context': 'https://schema.org', '@type': 'FAQPage', mainEntity: FAQ.map(f => ({ '@type': 'Question', name: f[0], acceptedAnswer: { '@type': 'Answer', text: f[1] } })) }
@@ -369,8 +504,12 @@ w('faq/index.html', page({
   body: `<section class="blk">
   <div class="wrap">
     <div class="kicker">Коротко о главном</div>
-    <h2>Десять вопросов</h2>
+    <h2>${plural(FAQ.length, 'вопрос', 'вопроса', 'вопросов')}</h2>
     ${FAQ.map((f, i) => `<details${i === 0 ? ' open' : ''}><summary>${esc(f[0])}</summary><p>${esc(f[1])}</p></details>`).join('\n    ')}
+    <div class="cta-row" style="margin-top:30px">
+      <a class="btn" href="../brief.html">🎤 Бриф голосом — около 10 минут</a>
+      <a class="btn ghost" href="../portfolio-hub/">Посмотреть проекты</a>
+    </div>
   </div>
 </section>`
 }));
@@ -429,11 +568,11 @@ w('policy/index.html', page({
 /* ---------------------------------------------------------- карта сайта */
 const MAP = [
   ['Услуги', [['Каталог услуг', 'catalog/'], ['Дизайн-проект квартиры', 'catalog/dizayn-proekt-kvartiry.html'], ['Дизайн-проект дома', 'catalog/dizayn-proekt-doma.html'], ['Только рабочая документация', 'catalog/rabochaya-dokumentatsiya.html'], ['Планировочное решение', 'catalog/planirovochnoe-reshenie.html'], ['Визуализации', 'catalog/vizualizatsii.html'], ['Смета и комплектация', 'catalog/smeta-i-komplektatsiya.html'], ['Стоимость и условия', 'price/']]],
-  ['Работы', [['Портфолио', 'portfolio-hub/'], ['Кейсы', 'cases/'], ['Квартира 56 м²', 'cases/kvartira-56.html'], ['Дом 120 м²', 'cases/dom-120.html'], ['Альбом квартиры', 'portfolio/demo/presentation.html'], ['Альбом дома', 'portfolio/dom-120/presentation.html']]],
+  ['Работы', [['Портфолио', 'portfolio-hub/'], ...CARDS.map(c => [c.name, `portfolio/${c.slug}/`]), ['Кейсы', 'cases/'], ['Первая версия: квартира (2025)', 'portfolio/demo/presentation.html'], ['Первая версия: дом (2025)', 'portfolio/dom-120/presentation.html']]],
   ['Разобраться', [['Сравнение с рынком', 'compare/'], ['Как проходит работа', 'process/'], ['Вопросы и ответы', 'faq/'], ['Журнал', 'journal/'], ['Состав дизайн-проекта', 'journal/sostav-dizayn-proekta.html'], ['Развёртки стен', 'journal/razvertki-sten.html'], ['Электрика в проекте', 'journal/elektrika-v-proekte.html'], ['Пирог пола', 'journal/pirog-pola.html'], ['Смета ремонта', 'journal/smeta-remonta.html']]],
   ['Стили', [['Все стили', 'style/'], ['Джапанди', 'style/japandi.html'], ['Скандинавский', 'style/scandi.html'], ['Минимализм', 'style/minimal.html'], ['Современный', 'style/modern.html'], ['Неоклассика', 'style/neoclassic.html'], ['Лофт', 'style/loft.html']]],
-  ['Документация', [['Рабочая документация по ГОСТ', 'gost/'], ['Открытые вопросы и знак «*»', 'gost/otkrytye-voprosy/'], ['Альбом: квартира с эркерами', 'portfolio/gost-proekt2/'], ['Альбом: трёхкомнатная квартира', 'portfolio/gost-kv3k/']]],
-  ['Студия', [['О студии', 'about/'], ['Контакты', 'contacts/'], ['Истории', 'stories/'], ['Отзывы', 'reviews/'], ['Бриф', 'brief.html'], ['Политика обработки данных', 'policy/']]]
+  ['Документация', [['Рабочая документация по ГОСТ', 'gost/'], ['Открытые вопросы и знак «*»', 'gost/otkrytye-voprosy/'], ['Правки голосом на листах', 'review.html?p=gost-lineademo']]],
+  ['Студия', [['О студии', 'about/'], ['Контакты', 'contacts/'], ['Истории', 'stories/'], ['Отзывы', 'reviews/'], ['Бриф голосом', 'brief.html'], ['Чек-лист приёмки проекта', 'checklist/'], ['Политика обработки данных', 'policy/']]]
 ];
 w('sitemap/index.html', page({
   file: 'sitemap/index.html',
@@ -464,14 +603,15 @@ w('thanks/index.html', page({
   body: `<section class="blk">
   <div class="wrap">
     <div class="kicker">Что дальше</div>
-    <h2>Три шага, которые сделаем без вас</h2>
+    <h2>Что будет дальше</h2>
     <ol class="steps-list">
-      <li><h3>Разберём геометрию</h3><p>Проверим размеры и проёмы валидатором, вернёмся с вопросами, если что-то не сходится.</p></li>
-      <li><h3>Соберём планировку</h3><p>Покажем расстановку до чертежей — на этом шаге правки бесплатны и быстры.</p></li>
-      <li><h3>Выпустим альбом</h3><p>Первый вариант проекта — до 48 часов от получения брифа с планом, для дома — до 72: полный комплект с документами и сметой.</p></li>
+      <li><h3>Подтвердим получение</h3><p>В течение дня. Если в размерах что-то не сходится — вернёмся с вопросами.</p></li>
+      <li><h3>Выпустим альбом</h3><p>Первый вариант проекта квартиры — до 48 часов от получения брифа с планом, дома — до 72: полный альбом по ГОСТ и альбом для заказчика с визуализациями.</p></li>
+      <li><h3>Вы надиктуете правки</h3><p>Прямо на листах: откройте лист, нажмите на нужное место и скажите, что поменять. Альбом перевыпустим с правками.</p></li>
     </ol>
     <div class="cta-row" style="margin-top:30px">
-      <a class="btn ghost" href="../portfolio-hub/">Посмотреть альбомы, пока ждёте</a>
+      <a class="btn ghost" href="../portfolio-hub/">Посмотреть проекты, пока ждёте</a>
+      <a class="btn ghost" href="../review.html?p=gost-lineademo">Попробовать правки голосом на демо</a>
       <a class="btn ghost" href="tel:${AUTHOR.tel}">${AUTHOR.phone}</a>
     </div>
   </div>
@@ -523,7 +663,7 @@ w('checklist/index.html', page({
         'Смета построчная: работы, материалы, мебель, свет — по разделам',
         'Объёмы сметы взяты из чертежей (спросите, откуда цифра плитки)',
         'Понятно, как вносятся правки и что при этом происходит с листами',
-        'На чертежах есть контакты автора, которому можно позвонить',
+        'В штампе указан автор проекта, и понятно, как с ним связаться',
       ]],
     ].map(g => `<h2>${g[0]}</h2>
     <ul class="check-print">${g[1].map(li => `<li><span class="cbx"></span>${li}</li>`).join('')}</ul>`).join('\n    ')}

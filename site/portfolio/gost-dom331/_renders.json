@@ -1,0 +1,62 @@
+{
+ "checked": true,
+ "accepted": 30,
+ "ribbon": [
+  {
+   "src": "assets/portfolio/gost-dom331/3d-top-et2.jpg",
+   "alt": "Дом 331 м² с мансардой и гаражом — вид сверху 3D, второй этаж",
+   "w": 1200,
+   "h": 800
+  },
+  {
+   "src": "assets/portfolio/gost-dom331/room-living-wA.jpg",
+   "alt": "Дом 331 м² с мансардой и гаражом — гостиная, визуализация",
+   "w": 1200,
+   "h": 800
+  },
+  {
+   "src": "assets/portfolio/gost-dom331/room-kitchen-wA.jpg",
+   "alt": "Дом 331 м² с мансардой и гаражом — кухня-столовая, визуализация",
+   "w": 1200,
+   "h": 800
+  },
+  {
+   "src": "assets/portfolio/gost-dom331/room-bedroom2-wB.jpg",
+   "alt": "Дом 331 м² с мансардой и гаражом — спальня, визуализация",
+   "w": 1200,
+   "h": 800
+  },
+  {
+   "src": "assets/portfolio/gost-dom331/room-kids2-wA.jpg",
+   "alt": "Дом 331 м² с мансардой и гаражом — детская, визуализация",
+   "w": 1200,
+   "h": 800
+  },
+  {
+   "src": "assets/portfolio/gost-dom331/room-study-wA.jpg",
+   "alt": "Дом 331 м² с мансардой и гаражом — кабинет, визуализация",
+   "w": 1200,
+   "h": 800
+  },
+  {
+   "src": "assets/portfolio/gost-dom331/room-bath1-wide.jpg",
+   "alt": "Дом 331 м² с мансардой и гаражом — ванная, визуализация",
+   "w": 1200,
+   "h": 800
+  },
+  {
+   "src": "assets/portfolio/gost-dom331/room-bath2-wide.jpg",
+   "alt": "Дом 331 м² с мансардой и гаражом — ванная, визуализация",
+   "w": 1200,
+   "h": 800
+  }
+ ],
+ "hero": {
+  "src": "assets/portfolio/gost-dom331-hero.jpg",
+  "alt": "Дом 331 м² с мансардой и гаражом — вид сверху 3D, первый этаж",
+  "w": 1600,
+  "h": 1066,
+  "kind": "render",
+  "name": "3d-top-et1"
+ }
+}

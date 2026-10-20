@@ -1,0 +1,62 @@
+{
+ "checked": true,
+ "accepted": 26,
+ "ribbon": [
+  {
+   "src": "assets/portfolio/gost-retro103/room-living-wA.jpg",
+   "alt": "Квартира 103 м² · ретро с авторской мебелью — гостиная, визуализация",
+   "w": 1200,
+   "h": 800
+  },
+  {
+   "src": "assets/portfolio/gost-retro103/room-kitchen-wB.jpg",
+   "alt": "Квартира 103 м² · ретро с авторской мебелью — кухня-столовая, визуализация",
+   "w": 1200,
+   "h": 800
+  },
+  {
+   "src": "assets/portfolio/gost-retro103/room-bedroom1-wD.jpg",
+   "alt": "Квартира 103 м² · ретро с авторской мебелью — спальня, визуализация",
+   "w": 1200,
+   "h": 800
+  },
+  {
+   "src": "assets/portfolio/gost-retro103/room-bedroom2-wA.jpg",
+   "alt": "Квартира 103 м² · ретро с авторской мебелью — спальня, визуализация",
+   "w": 1200,
+   "h": 800
+  },
+  {
+   "src": "assets/portfolio/gost-retro103/room-study-wA.jpg",
+   "alt": "Квартира 103 м² · ретро с авторской мебелью — кабинет, визуализация",
+   "w": 1200,
+   "h": 800
+  },
+  {
+   "src": "assets/portfolio/gost-retro103/room-bath1-wC.jpg",
+   "alt": "Квартира 103 м² · ретро с авторской мебелью — ванная, визуализация",
+   "w": 1200,
+   "h": 800
+  },
+  {
+   "src": "assets/portfolio/gost-retro103/room-bath2-wide.jpg",
+   "alt": "Квартира 103 м² · ретро с авторской мебелью — ванная, визуализация",
+   "w": 1200,
+   "h": 800
+  },
+  {
+   "src": "assets/portfolio/gost-retro103/room-hall-wA.jpg",
+   "alt": "Квартира 103 м² · ретро с авторской мебелью — прихожая, визуализация",
+   "w": 1200,
+   "h": 800
+  }
+ ],
+ "hero": {
+  "src": "assets/portfolio/gost-retro103-hero.jpg",
+  "alt": "Квартира 103 м² · ретро с авторской мебелью — вид сверху 3D",
+  "w": 1600,
+  "h": 1066,
+  "kind": "render",
+  "name": "3d-top"
+ }
+}

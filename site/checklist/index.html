@@ -18,6 +18,11 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,500;0,600;1,500&family=Inter:wght@400;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="../css/main.css?v=32">
+<style>.g-steps{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:18px;margin:0;padding:0;list-style:none;counter-reset:st}
+.g-steps li{border:1px solid var(--line);border-radius:4px;padding:20px 22px;background:var(--panel);counter-increment:st}
+.g-steps li::before{content:counter(st,decimal-leading-zero);display:block;color:var(--gold);font-family:var(--serif);font-size:22px;margin-bottom:8px}
+.g-steps h3{margin:0 0 8px;font-size:18px}.g-steps p{margin:0 0 8px;color:var(--mut);font-size:14px;line-height:1.55}.g-steps .hint{font-size:12.5px;margin:0}
+@media (max-width:760px){.stats{gap:22px 30px}.cta-row .btn{white-space:normal;text-align:center}}</style>
 <script type="application/ld+json">{"@context":"https://schema.org","@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"LINEA","item":"https://alex1986-rgb.github.io/linea-design-studio/"},{"@type":"ListItem","position":2,"name":"Чек-лист","item":"https://alex1986-rgb.github.io/linea-design-studio/checklist/"}]}</script>
 </head>
 <body>
@@ -76,7 +81,7 @@
     <h2>Узлы и высоты</h2>
     <ul class="check-print"><li><span class="cbx"></span>Есть узлы пирога пола — жилой и мокрой зоны с гидроизоляцией</li><li><span class="cbx"></span>Пол мокрой зоны ниже на 15–20 мм или отделён порогом (СП 29.13330)</li><li><span class="cbx"></span>Есть хотя бы два разреза с отметками уровней</li><li><span class="cbx"></span>Стыки покрытий — на осях дверных полотен</li></ul>
     <h2>Документы</h2>
-    <ul class="check-print"><li><span class="cbx"></span>Спецификация — с брендами и артикулами, а не «плитка бежевая»</li><li><span class="cbx"></span>Смета построчная: работы, материалы, мебель, свет — по разделам</li><li><span class="cbx"></span>Объёмы сметы взяты из чертежей (спросите, откуда цифра плитки)</li><li><span class="cbx"></span>Понятно, как вносятся правки и что при этом происходит с листами</li><li><span class="cbx"></span>На чертежах есть контакты автора, которому можно позвонить</li></ul>
+    <ul class="check-print"><li><span class="cbx"></span>Спецификация — с брендами и артикулами, а не «плитка бежевая»</li><li><span class="cbx"></span>Смета построчная: работы, материалы, мебель, свет — по разделам</li><li><span class="cbx"></span>Объёмы сметы взяты из чертежей (спросите, откуда цифра плитки)</li><li><span class="cbx"></span>Понятно, как вносятся правки и что при этом происходит с листами</li><li><span class="cbx"></span>В штампе указан автор проекта, и понятно, как с ним связаться</li></ul>
     <p class="hint" style="margin-top:26px">Составлен по канону студии LINEA (ГОСТ 21.507-81, ГОСТ Р 21.101-2020, СП 29.13330.2011, ПУЭ гл. 7.1). Раздаётся свободно — заберите на встречу с любой студией.</p>
     <div class="cta-row noprint" style="margin-top:20px">
       <button class="btn ghost" onclick="print()">Распечатать чек-лист</button>

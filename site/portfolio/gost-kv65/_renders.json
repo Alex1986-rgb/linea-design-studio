@@ -1,0 +1,13 @@
+{
+ "checked": false,
+ "accepted": 0,
+ "ribbon": [],
+ "hero": {
+  "src": "assets/portfolio/gost-kv65-hero.jpg",
+  "alt": "Квартира 65 м² после реконструкции — вид сверху 3D",
+  "w": 1600,
+  "h": 1066,
+  "kind": "cover-render",
+  "name": "3d-top"
+ }
+}

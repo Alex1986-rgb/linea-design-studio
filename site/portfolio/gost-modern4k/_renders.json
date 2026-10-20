@@ -1,0 +1,62 @@
+{
+ "checked": true,
+ "accepted": 24,
+ "ribbon": [
+  {
+   "src": "assets/portfolio/gost-modern4k/room-living-wB.jpg",
+   "alt": "Квартира с кабинетом · современный модерн — гостиная, визуализация",
+   "w": 1200,
+   "h": 800
+  },
+  {
+   "src": "assets/portfolio/gost-modern4k/room-bedroom-wB.jpg",
+   "alt": "Квартира с кабинетом · современный модерн — спальня, визуализация",
+   "w": 1200,
+   "h": 800
+  },
+  {
+   "src": "assets/portfolio/gost-modern4k/room-kids-wB.jpg",
+   "alt": "Квартира с кабинетом · современный модерн — детская, визуализация",
+   "w": 1200,
+   "h": 800
+  },
+  {
+   "src": "assets/portfolio/gost-modern4k/room-study-wD.jpg",
+   "alt": "Квартира с кабинетом · современный модерн — кабинет, визуализация",
+   "w": 1200,
+   "h": 800
+  },
+  {
+   "src": "assets/portfolio/gost-modern4k/room-bath1-wC.jpg",
+   "alt": "Квартира с кабинетом · современный модерн — ванная, визуализация",
+   "w": 1200,
+   "h": 800
+  },
+  {
+   "src": "assets/portfolio/gost-modern4k/room-bath2-wide.jpg",
+   "alt": "Квартира с кабинетом · современный модерн — ванная, визуализация",
+   "w": 1200,
+   "h": 800
+  },
+  {
+   "src": "assets/portfolio/gost-modern4k/room-hall-wD.jpg",
+   "alt": "Квартира с кабинетом · современный модерн — прихожая, визуализация",
+   "w": 1200,
+   "h": 800
+  },
+  {
+   "src": "assets/portfolio/gost-modern4k/room-wardrobe-wide.jpg",
+   "alt": "Квартира с кабинетом · современный модерн — гардеробная, визуализация",
+   "w": 1200,
+   "h": 800
+  }
+ ],
+ "hero": {
+  "src": "assets/portfolio/gost-modern4k-hero.jpg",
+  "alt": "Квартира с кабинетом · современный модерн — вид сверху 3D",
+  "w": 1600,
+  "h": 1066,
+  "kind": "render",
+  "name": "3d-top"
+ }
+}

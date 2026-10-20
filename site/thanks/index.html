@@ -18,6 +18,11 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,500;0,600;1,500&family=Inter:wght@400;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="../css/main.css?v=32">
+<style>.g-steps{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:18px;margin:0;padding:0;list-style:none;counter-reset:st}
+.g-steps li{border:1px solid var(--line);border-radius:4px;padding:20px 22px;background:var(--panel);counter-increment:st}
+.g-steps li::before{content:counter(st,decimal-leading-zero);display:block;color:var(--gold);font-family:var(--serif);font-size:22px;margin-bottom:8px}
+.g-steps h3{margin:0 0 8px;font-size:18px}.g-steps p{margin:0 0 8px;color:var(--mut);font-size:14px;line-height:1.55}.g-steps .hint{font-size:12.5px;margin:0}
+@media (max-width:760px){.stats{gap:22px 30px}.cta-row .btn{white-space:normal;text-align:center}}</style>
 <meta name="robots" content="noindex">
 
 </head>
@@ -69,14 +74,15 @@
 <section class="blk">
   <div class="wrap">
     <div class="kicker">Что дальше</div>
-    <h2>Три шага, которые сделаем без вас</h2>
+    <h2>Что будет дальше</h2>
     <ol class="steps-list">
-      <li><h3>Разберём геометрию</h3><p>Проверим размеры и проёмы валидатором, вернёмся с вопросами, если что-то не сходится.</p></li>
-      <li><h3>Соберём планировку</h3><p>Покажем расстановку до чертежей — на этом шаге правки бесплатны и быстры.</p></li>
-      <li><h3>Выпустим альбом</h3><p>Первый вариант проекта — до 48 часов от получения брифа с планом, для дома — до 72: полный комплект с документами и сметой.</p></li>
+      <li><h3>Подтвердим получение</h3><p>В течение дня. Если в размерах что-то не сходится — вернёмся с вопросами.</p></li>
+      <li><h3>Выпустим альбом</h3><p>Первый вариант проекта квартиры — до 48 часов от получения брифа с планом, дома — до 72: полный альбом по ГОСТ и альбом для заказчика с визуализациями.</p></li>
+      <li><h3>Вы надиктуете правки</h3><p>Прямо на листах: откройте лист, нажмите на нужное место и скажите, что поменять. Альбом перевыпустим с правками.</p></li>
     </ol>
     <div class="cta-row" style="margin-top:30px">
-      <a class="btn ghost" href="../portfolio-hub/">Посмотреть альбомы, пока ждёте</a>
+      <a class="btn ghost" href="../portfolio-hub/">Посмотреть проекты, пока ждёте</a>
+      <a class="btn ghost" href="../review.html?p=gost-lineademo">Попробовать правки голосом на демо</a>
       <a class="btn ghost" href="tel:+79257338640">+7 925 733-86-40</a>
     </div>
   </div>

@@ -170,7 +170,8 @@ ALBUMS.push(
     name: 'Дом 331 м² с мансардой и гаражом',
     short: 'двухэтажный дом с мансардой',
     lead: 'Частный дом: 1-й этаж — гостиная с камином, кухня-столовая, кабинет, веранда, гараж и котельная; мансарда — '
-      + 'четыре спальни, гардеробная, санузлы и спортзона в холле. Современная классика со скандинавским светом.',
+      + 'четыре спальни, гардеробная, санузлы и спортзона в холле. Современное шале с эко-теплом: дуб и лиственница, '
+      + 'натуральный камень у камина, у каждой комнаты свой цветовой акцент.',
     code: 'ГД-2026-010-АИ',
     highlights: [
       ['Планы по этажам', 'Каждый план выпущен отдельно для 1-го этажа и мансарды; этаж — в заголовке и штампе.'],
@@ -181,6 +182,28 @@ ALBUMS.push(
     ],
   },
 );
+
+// карточка проекта: тип и стиль (стиль — из project.json движка: meta.style) и честное пояснение,
+// если площадь в названии не совпадает с экспликацией альбома. {AREA} — общая площадь с титула выпуска.
+const CARD = {
+  'gost-dom120': { type: 'Дом, 2 этажа', style: 'Средиземноморье и скандинавский',
+    declared: '120 м² в названии — площадь из брифа демо-дома; общая площадь по экспликации альбома — {AREA}.' },
+  'gost-lineademo': { type: 'Квартира', style: 'Джапанди' },
+  'gost-dom331': { type: 'Дом с мансардой', style: 'Шале и эко',
+    declared: '331 м² в названии — площадь, заявленная заказчиком на его картинке плана. Размеры на ней не читаются, '
+      + 'их подобрал проектировщик, и общая площадь по экспликации альбома вышла {AREA}. Цифра уточнится после контрольного обмера.' },
+  'gost-retro103': { type: 'Квартира', style: 'Середина века и ар-деко',
+    declared: '103 м² в названии — общая площадь по обмерному плану (102,98 м², две квартиры с тамбуром); '
+      + 'по экспликации альбома — {AREA}.' },
+  'gost-modern4k': { type: 'Квартира', style: 'Модерн и современный' },
+  'gost-kv65': { type: 'Квартира', style: 'Скандинавский' },
+  'gost-kv58': { type: 'Квартира', style: 'Скандинавский',
+    declared: '58 м² в названии — площадь из исходных данных заказчика (57,6 м²); по экспликации альбома — {AREA}.' },
+  'gost-proekt2': { type: 'Квартира', style: 'Современный' },
+  'gost-kv3k': { type: 'Квартира', style: 'Современный, тёплая гамма' },
+};
+// новые проекты — первыми (по номеру шифра, свежие сверху)
+const NEWEST = a => -(+(a.code.match(/-(\d{3})-/) || [])[1] || 0);
 
 // человеческие названия разделов по владельцу листа
 const SECTION_OF = {
@@ -219,23 +242,132 @@ const slugify = s => String(s).toLowerCase().replace(/[а-яё]/g, c => TR[c] ??
 // ---------- читаем выпуск ----------
 const readRelease = slug => OPEN.readRelease(SITE, slug);
 
-// группировка листов по разделам в порядке появления
+// Разделы — в том порядке, в каком листы идут в выданном альбоме: соседние листы одного владельца — один раздел.
+// Титульный лист (его выпускает декоратор) и «Общие данные» — первым разделом; поздние листы чертёжника
+// (реестры, развёртки, узлы) — своим разделом, а не вместе с общими данными.
 function bySection(sheets) {
-  const order = [], map = new Map();
-  for (const s of sheets) {
-    const sec = SECTION_OF[s.owner] || 'Прочие листы';
-    if (!map.has(sec)) { map.set(sec, []); order.push(sec); }
-    map.get(sec).push(s);
-  }
-  return order.map(sec => ({ sec, items: map.get(sec) }));
+  const runs = [];
+  sheets.forEach((s, i) => {
+    let sec = SECTION_OF[s.owner] || 'Прочие листы';
+    if ((i === 0 && /cover/.test(s.file)) || (s.owner === 'draftsman' && /^Общие данные/.test(s.title))) sec = 'Общие данные';
+    else if (s.owner === 'draftsman') sec = 'Развёртки стен, узлы и реестры';
+    const last = runs[runs.length - 1];
+    if (last && last.sec === sec) last.items.push(s); else runs.push({ sec, items: [s] });
+  });
+  const seen = {};
+  for (const g of runs) { const id = slugify(g.sec); seen[id] = (seen[id] || 0) + 1; g.id = seen[id] > 1 ? `${id}-${seen[id]}` : id; }
+  return runs;
 }
 
-function page({ file, title, desc, h1, crumb, lead, body, u, jsonld, object }) {
+// ---------- визуализации проекта ----------
+// Берутся из движка: ~/projects/gost-draft/projects/<объект>/renders, связка объект → слаг — в sync-gost-releases.sh.
+// В ленту идут только кадры, принятые при сверке с макетом (views.json → checked.verdict «принят»). Заглавный кадр —
+// вид сверху 3D, если он принят (допускается «принят с отклонениями» — отклонения в мебели, не в планировке).
+// У выпусков, где сверки не было, заглавным идёт вид сверху 3D с титульного листа альбома, а если его нет — сам титул;
+// ленты у них нет. Копии ужимаются до 1600 px (лента — 1200 px) и лежат в site/assets/portfolio; если движка рядом нет,
+// берётся то, что уже лежит на сайте (_renders.json).
+const GD = process.env.GOST_DRAFT || path.join(require('os').homedir(), 'projects', 'gost-draft');
+const OBJ = (() => {
+  try {
+    const sh = fs.readFileSync(path.join(__dirname, 'sync-gost-releases.sh'), 'utf8');
+    return Object.fromEntries([...sh.matchAll(/^sync_one\s+(\S+)\s+(\S+)/gm)].map(m => [m[2], m[1]]));
+  } catch { return {}; }
+})();
+const ROOM_RU = { living: 'гостиная', kitchen: 'кухня-столовая', bedroom: 'спальня', kids: 'детская', study: 'кабинет',
+  bath: 'ванная', wc: 'санузел', hall: 'прихожая', corridor: 'холл', wardrobe: 'гардеробная', storage: 'кладовая',
+  balcony: 'балкон', '3d-top': 'вид сверху 3D' };
+const ROOM_ORDER = ['living', 'kitchen', 'bedroom', 'kids', 'study', 'bath', 'hall', 'wardrobe', 'balcony', 'corridor', 'wc', 'storage'];
+const roomKey = n => (n.match(/^room-([a-z]+)/) || [])[1] || (/^3d-top/.test(n) ? '3d-top' : '');
+const frameAlt = (a, n) => {
+  if (/^3d-top/.test(n)) return `${a.name} — вид сверху 3D${/et2/.test(n) ? ', второй этаж' : /et1/.test(n) ? ', первый этаж' : ''}`;
+  const k = roomKey(n);
+  return `${a.name} — ${ROOM_RU[k] || 'интерьер'}, визуализация`;
+};
+function sips(src, dst, px) {
+  if (fs.existsSync(dst) && fs.statSync(dst).mtimeMs >= fs.statSync(src).mtimeMs) return;
+  fs.mkdirSync(path.dirname(dst), { recursive: true });
+  require('child_process').execFileSync('sips', ['-Z', String(px), '-s', 'format', 'jpeg', '-s', 'formatOptions', '68', src, '--out', dst], { stdio: 'ignore' });
+}
+function dims(f) {
+  try {
+    const o = require('child_process').execFileSync('sips', ['-g', 'pixelWidth', '-g', 'pixelHeight', f], { encoding: 'utf8' });
+    return { w: +(o.match(/pixelWidth: (\d+)/) || [])[1] || 1600, h: +(o.match(/pixelHeight: (\d+)/) || [])[1] || 1067 };
+  } catch { return { w: 1600, h: 1067 }; }
+}
+function renders(a, r) {
+  const man = path.join(SITE, 'portfolio', a.slug, '_renders.json');
+  const dir = OBJ[a.slug] && path.join(GD, 'projects', OBJ[a.slug], 'renders');
+  // без визуализации заглавным идёт лист расстановки мебели — по нему сразу видно планировку (титул без кадра пустоват)
+  const plan = r.sheets.find(x => /^План расстановки мебели/.test(x.title)) || r.sheets[0];
+  const coverHero = { src: `portfolio/${a.slug}/sheets/${plan.file}`, alt: `${a.name} — ${plan.title.replace(/^./, c => c.toLowerCase())}`, w: 1587, h: 1123, kind: 'sheet' };
+  if (!dir || !fs.existsSync(dir)) {
+    try { return JSON.parse(fs.readFileSync(man, 'utf8')); } catch { return { hero: coverHero, ribbon: [], accepted: 0, checked: false }; }
+  }
+  let views = [];
+  try { views = JSON.parse(fs.readFileSync(path.join(dir, 'views.json'), 'utf8')); } catch { /* сверки нет */ }
+  const has = n => fs.existsSync(path.join(dir, `${n}.jpg`));
+  const ok = v => v.checked && /^принят/.test(v.checked.verdict || '') && has(v.name);
+  const strict = v => ok(v) && v.checked.verdict === 'принят';
+  const checked = views.some(v => v.checked);
+  let heroName = (views.find(v => /^3d-top(-et1)?$/.test(v.name) && ok(v)) || {}).name;
+  if (!heroName && checked) heroName = (views.find(v => /^room-(living|kitchen)/.test(v.name) && strict(v)) || views.find(strict) || {}).name;
+  if (!heroName && !checked && has('3d-top')) heroName = '3d-top';      // кадр с титульного листа альбома
+  // лента: по одному кадру на помещение в порядке значимости, затем вторые кадры — до 8
+  const pool = views.filter(v => strict(v) && v.name !== heroName && /^(room-|3d-top)/.test(v.name));
+  const rank = v => { const k = roomKey(v.name); const i = ROOM_ORDER.indexOf(k); return k === '3d-top' ? -1 : i < 0 ? 99 : i; };
+  pool.sort((x, y) => rank(x) - rank(y));
+  const pick = [], used = new Set();
+  for (const v of pool) { const k = roomKey(v.name) + (v.name.match(/^room-[a-z]+(\d*)/) || [])[1]; if (!used.has(k)) { used.add(k); pick.push(v); } }
+  for (const v of pool) if (pick.length < 8 && !pick.includes(v)) pick.push(v);
+  const ribbonViews = pick.slice(0, 8);
+  // копии на сайт; лишние файлы прошлых прогонов убираем
+  const out = { checked, accepted: views.filter(ok).length, ribbon: [] };
+  if (heroName) {
+    const dst = path.join(SITE, 'assets', 'portfolio', `${a.slug}-hero.jpg`);
+    sips(path.join(dir, `${heroName}.jpg`), dst, 1600);
+    out.hero = { src: `assets/portfolio/${a.slug}-hero.jpg`, alt: frameAlt(a, heroName), ...dims(dst),
+      kind: checked ? 'render' : 'cover-render', name: heroName };
+  } else out.hero = coverHero;
+  const rdir = path.join(SITE, 'assets', 'portfolio', a.slug);
+  const keep = new Set();
+  for (const v of ribbonViews) {
+    const dst = path.join(rdir, `${v.name}.jpg`);
+    sips(path.join(dir, `${v.name}.jpg`), dst, 1200);
+    keep.add(`${v.name}.jpg`);
+    out.ribbon.push({ src: `assets/portfolio/${a.slug}/${v.name}.jpg`, alt: frameAlt(a, v.name), ...dims(dst) });
+  }
+  if (fs.existsSync(rdir)) for (const f of fs.readdirSync(rdir)) if (!keep.has(f)) fs.unlinkSync(path.join(rdir, f));
+  return out;
+}
+
+// стили страниц раздела: заглавный кадр, лента визуализаций, шаги правок. Общий main.css не трогаем — правят другие
+const CSS = `<style>
+.g-hero{margin:0}.g-hero img{display:block;width:100%;height:auto;max-height:640px;object-fit:cover;border:1px solid var(--line);border-radius:4px;background:#14130f}
+.g-hero.sheet img{object-fit:contain;background:#f4f1ea}
+.g-hero figcaption{color:var(--dim);font-size:13px;margin-top:10px;line-height:1.5}
+.g-ribbon{display:grid;grid-auto-flow:column;grid-auto-columns:minmax(240px,31%);gap:14px;overflow-x:auto;scroll-snap-type:x mandatory;padding-bottom:10px;-webkit-overflow-scrolling:touch}
+.g-ribbon a{scroll-snap-align:start;display:block}
+.g-ribbon img{display:block;width:100%;aspect-ratio:3/2;height:auto;object-fit:cover;border:1px solid var(--line);border-radius:3px}
+.g-ribbon span{display:block;color:var(--dim);font-size:12.5px;margin-top:6px}
+.g-note{color:var(--mut);font-size:14px;line-height:1.6;max-width:760px;margin:18px 0 0}
+.g-steps{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:18px;margin:0 0 26px;padding:0;list-style:none;counter-reset:st}
+.g-steps li{border:1px solid var(--line);border-radius:4px;padding:18px 20px;background:var(--panel);counter-increment:st}
+.g-steps li::before{content:counter(st,decimal-leading-zero);display:block;color:var(--gold);font-family:var(--serif);font-size:20px;margin-bottom:6px}
+.g-steps b{display:block;margin-bottom:6px}.g-steps p{margin:0;color:var(--mut);font-size:14px;line-height:1.55}
+.tile .g-type{display:block;color:var(--dim);font-size:12.5px;margin:-4px 0 10px}
+.tile img.sheet{object-fit:contain;background:#f4f1ea}
+@media (max-width:760px){.g-ribbon{grid-auto-columns:78%}.stats{gap:22px 30px}.cta-row .btn{white-space:normal;text-align:center}}
+</style>`;
+
+function page({ file, title, desc, h1, crumb, lead, body, u, jsonld, object, ogImage, ogDesc }) {
   const ld = (jsonld || []).map(o => `<script type="application/ld+json">${JSON.stringify(o)}</script>`).join('\n');
+  let head = SHELL.head(u, { title, desc, canonical: `${BASE}/${file.replace(/index\.html$/, '')}`, ogTitle: h1, ogDesc: ogDesc || lead });
+  if (ogImage) head = head.replace(`${BASE}/assets/hero.jpg`, `${BASE}/${ogImage}`);   // превью ссылки — кадр самого проекта
   return `<!DOCTYPE html>
 <html lang="ru">
 <head>
-${SHELL.head(u, { title, desc, canonical: `${BASE}/${file.replace(/index\.html$/, '')}`, ogTitle: h1, ogDesc: lead })}
+${head}
+${CSS}
 ${ld}
 </head>
 <body>
@@ -262,76 +394,117 @@ ${SHELL.sticky(u)}
 // ---------- страница одного альбома ----------
 function albumPage(a, r, honesty) {
   const groups = bySection(r.sheets);
+  const R = a.renders;
   // список листов для страницы правок голосом (review.html): клиент открывает лист, ставит метку и надиктовывает правку
   w(`portfolio/${a.slug}/sheets.json`, JSON.stringify(r.sheets.map(sh => ({ file: sh.file, title: sh.title, no: (sh.file.match(/^(\d+)/) || [])[1] ? +sh.file.match(/^(\d+)/)[1] : null }))));
   const rv = f => `../../review.html?p=${a.slug}&amp;s=${encodeURIComponent(f)}`;
+  const rvAll = `../../review.html?p=${a.slug}`;
 
-  const blocks = groups.map(g => `  <section class="blk" id="${slugify(g.sec)}">
+  const blocks = groups.map(g => `  <section class="blk" id="${g.id}">
     <div class="wrap">
       <div class="kicker">Раздел</div>
       <h2>${esc(g.sec)}</h2>
-      <p class="sub">Листов в разделе: ${g.items.length}</p>
+      <p class="sub">${plural(g.items.length, 'лист', 'листа', 'листов')}. Нажмите на лист — он откроется целиком, и к нему можно надиктовать правку.</p>
       <div class="plates">
       ${g.items.map(sh => `<a class="plate" href="${rv(sh.file)}" title="Открыть лист и оставить правку голосом">
-        <span class="plate-img"><img loading="lazy" src="sheets/${encodeURIComponent(sh.file)}" alt="${esc(sh.title)}"></span>
+        <span class="plate-img"><img loading="lazy" decoding="async" src="sheets/${encodeURIComponent(sh.file)}" alt="${esc(sh.title)}" width="1587" height="1123"></span>
         <span class="plate-cap"><i>${esc(sh.file.replace(/^(\d+).*$/, 'Лист $1'))}</i>${esc(sh.title)}</span>
       </a>`).join('\n      ')}
       </div>
     </div>
   </section>`).join('\n');
 
-  // два PDF: полный альбом (рабочая документация с проверкой) и выпуск «студия» для заказчика (по эталонам студийных проектов)
-  const has = f => fs.existsSync(path.join(SITE, 'portfolio', a.slug, f));
-  const pdf = has('album.pdf') || has('studio.pdf')
-    ? `      <div class="cta-row" style="margin-top:26px">${has('album.pdf') ? `<a class="btn" href="album.pdf" download>Полный альбом PDF · ${a.pdfSize}</a>` : ''}
-        ${has('studio.pdf') ? `<a class="btn" href="studio.pdf" download>Альбом для заказчика PDF · ${a.studioSize}</a>` : ''}
-        <a class="btn ghost" href="../../review.html?p=${a.slug}">🎤 Проверить листы и надиктовать правки</a>
-        <a class="btn ghost" href="../../brief.html">Собрать такой же — бриф</a></div>
-      <p class="sub" style="margin-top:12px">Альбом для заказчика — тот же проект в подаче студии: визуализации стоят перед
-      развёртками своих помещений, у мебели на плане выноски с размерами, узлы стены — рядом с её развёрткой.</p>\n`
-    : '';
+  // заглавный кадр
+  const capOf = { render: 'Кадр сверен с макетом проекта: планировка и мебель — как на листах альбома.',
+    'cover-render': 'Кадр с титульного листа альбома.', sheet: 'Лист альбома. Визуализации этого проекта ещё не сверены с макетом — на сайте их пока не показываем.' };
+  const hero = R.hero ? `      <figure class="g-hero${R.hero.kind === 'sheet' ? ' sheet' : ''}">
+        <img src="../../${R.hero.src}" alt="${esc(R.hero.alt)}" width="${R.hero.w}" height="${R.hero.h}" fetchpriority="high" decoding="async">
+        <figcaption>${esc(R.hero.alt.replace(`${a.name} — `, '').replace(/^./, c => c.toUpperCase()))}. ${capOf[R.hero.kind] || ''}</figcaption>
+      </figure>\n` : '';
 
-  const body = `  <section class="blk">
+  // два PDF: полный альбом (рабочая документация с проверкой) и альбом для заказчика с визуализациями
+  const has = f => fs.existsSync(path.join(SITE, 'portfolio', a.slug, f));
+  const pdf = `      <div class="cta-row" style="margin-top:26px">${has('studio.pdf') ? `<a class="btn" href="studio.pdf" download>Альбом для заказчика · PDF ${a.studioSize}</a>` : ''}
+        ${has('album.pdf') ? `<a class="btn ghost" href="album.pdf" download>Полный альбом по ГОСТ · PDF ${a.pdfSize}</a>` : ''}
+        <a class="btn ghost" href="${rvAll}">🎤 Оставить правку голосом</a></div>
+      <p class="g-note">Альбом для заказчика — проект в подаче студии: визуализации стоят перед развёртками своих помещений,
+      у мебели на плане выноски с размерами. Полный альбом — рабочая документация для строителей: все разделы, ведомости
+      и смета. Файлы большие — на мобильном интернете лучше качать по Wi-Fi.</p>\n`;
+
+  const card = CARD[a.slug] || {};
+  const areaNote = card.declared ? `      <p class="g-note"><b>Про площадь.</b> ${esc(card.declared.replace('{AREA}', a.area))}</p>\n` : '';
+
+  const ribbon = R.ribbon.length ? `  <section class="blk">
     <div class="wrap">
-      <div class="stats">
-        <div><b>${r.total}</b><span>${word(r.total, 'лист', 'листа', 'листов')} A3</span></div>
-        <div><b>${a.area}</b><span>площадь</span></div>
-        <div><b>${a.rooms}</b><span>помещений</span></div>
-        <div><b>${r.blockers}</b><span>${word(r.blockers, 'блокер', 'блокера', 'блокеров')} проверки движка</span></div>
-        <div><b>${r.issues}</b><span>${word(r.issues, 'замечание', 'замечания', 'замечаний')} проверки в выпуске</span></div>
-        <div><b>${groups.length}</b><span>разделов комплекта</span></div>
+      <div class="kicker">Визуализации</div>
+      <h2>Как это будет выглядеть</h2>
+      <p class="sub">${plural(R.ribbon.length, 'кадр', 'кадра', 'кадров')} из ${R.accepted}, принятых при сверке с макетом проекта: мебель,
+      окна и двери стоят там же, где на чертежах. Остальные — в альбоме для заказчика, перед развёртками своих стен.</p>
+      <div class="g-ribbon">
+      ${R.ribbon.map(f => `<a href="../../${f.src}" target="_blank" rel="noopener"><img src="../../${f.src}" alt="${esc(f.alt)}" width="${f.w}" height="${f.h}" loading="lazy" decoding="async"><span>${esc(f.alt.replace(`${a.name} — `, '').replace(', визуализация', ''))}</span></a>`).join('\n      ')}
       </div>
-${pdf}${r.blockers ? `      <p class="sub" style="margin-top:18px">Блокеров на выдаче: ${r.blockers}. Это открытые вопросы
-      по исходным данным, а не ошибки оформления: проверка движка держит комплект невыданным, пока они не закрыты.
-      Здесь альбом показан как рабочий пример — так выглядит выпуск до контрольного обмера.</p>\n` : ''}    </div>
+    </div>
+  </section>\n` : '';
+
+  const voice = `  <section class="blk" id="pravki">
+    <div class="wrap">
+      <div class="kicker">Правки</div>
+      <h2>Как оставить правку голосом</h2>
+      <p class="sub">Писать письма со списком замечаний не нужно — правка ставится прямо на лист, к нужному месту чертежа.</p>
+      <ol class="g-steps">
+        <li><b>Откройте лист</b><p>Любой лист ниже или в PDF: в альбоме на каждой странице есть кнопка «Правка к этому листу».</p></li>
+        <li><b>Нажмите на место</b><p>На чертеже появится метка — к ней и относится правка: «диван развернуть к окну», «розетку выше».</p></li>
+        <li><b>Скажите голосом</b><p>Или напишите. Правок к одному листу может быть сколько угодно, есть правка ко всему листу.</p></li>
+        <li><b>Отправьте одним сообщением</b><p>Все метки уходят разом — через «Поделиться» или файлом. Альбом перевыпускается с правками.</p></li>
+      </ol>
+      <div class="cta-row"><a class="btn" href="${rvAll}">🎤 Попробовать на этом альбоме</a>
+        <a class="btn ghost" href="../../brief.html">Свой проект — бриф голосом</a></div>
+      <p class="hint" style="margin-top:14px">Если голосовой ввод в браузере не работает — нажмите микрофон на клавиатуре телефона.</p>
+    </div>
+  </section>\n`;
+
+  const check = `  <section class="blk">
+    <div class="wrap">
+      <div class="kicker">Проверка по нормам</div>
+      <h2>Что значит «проверено»</h2>
+      <div class="cards g3">
+        <div class="card"><h3>${r.blockers ? `${plural(r.blockers, 'блокер', 'блокера', 'блокеров')} на выдаче` : 'Блокеров нет'}</h3>
+          <p>Блокер — то, с чем альбом не выдаётся: проём не помещается в стену, лист вылез за формат, жилая комната без окна.
+          ${r.blockers ? 'Здесь он остался открытым вопросом по исходным данным — ниже объяснено, каким.' : 'В этом альбоме таких нет.'}</p></div>
+        <div class="card"><h3>Открытые вопросы — не брак</h3>
+          <p>Кроме блокеров, проверка оставляет в выпуске вопросы и рекомендации: что уточнить на обмере, где можно лучше,
+          какое допущение принято. Они собраны на листе «Открытые вопросы» в начале альбома — их решают вместе с заказчиком.</p></div>
+        <div class="card"><h3>До обмера — предварительно</h3>
+          <p>Размеры сняты с плана заказчика. Перед работами нужен контрольный обмер — в альбоме есть готовое задание на него:
+          что именно померить и проверить.</p></div>
+      </div>
+${r.blockers ? `      <p class="g-note">Блокеров на выдаче: ${r.blockers}. Это открытый вопрос по исходным данным, а не ошибка оформления:
+      проверка держит комплект невыданным, пока он не закрыт. Здесь альбом показан как рабочий пример — так выглядит выпуск
+      до решения заказчика.</p>\n` : ''}    </div>
+  </section>\n`;
+
+  const body = `  <section class="blk" style="padding-top:0">
+    <div class="wrap">
+${hero}      <div class="stats" style="margin-top:40px">
+        <div><b>${r.total}</b><span>${word(r.total, 'лист', 'листа', 'листов')} A3</span></div>
+        <div><b>${a.area}</b><span>общая площадь по экспликации</span></div>
+        <div><b>${a.rooms}</b><span>${word(a.rooms, 'помещение', 'помещения', 'помещений')}</span></div>
+        <div><b>${groups.length}</b><span>${word(groups.length, 'раздел', 'раздела', 'разделов')} комплекта</span></div>
+        ${R.accepted ? `<div><b>${R.accepted}</b><span>${word(R.accepted, 'визуализация', 'визуализации', 'визуализаций')}</span></div>` : ''}
+      </div>
+${areaNote}${pdf}    </div>
   </section>
 
-${honesty}
+${ribbon}${voice}${check}${honesty}
   <section class="blk">
     <div class="wrap">
       <div class="kicker">Состав</div>
       <h2>Что внутри альбома</h2>
-      <p class="sub">Шифр комплекта ${esc(a.code)}. Листы идут в том же порядке, что в выданном альбоме:
-      титульный лист, общие данные с ведомостью чертежей, дальше разделы по специальностям.</p>
+      <p class="sub">Шифр комплекта ${esc(a.code)}. Разделы идут в том же порядке, что в выданном альбоме:
+      титульный лист и общие данные, открытые вопросы и задание на обмер, дальше разделы по специальностям, в конце — развёртки, узлы и смета.</p>
       <div class="cards g3">
-        ${groups.map(g => `<div class="card"><h3>${esc(g.sec)}</h3><p>${plural(g.items.length, 'лист', 'листа', 'листов')}</p></div>`).join('\n        ')}
+        ${groups.map(g => `<a class="card" href="#${g.id}"><h3>${esc(g.sec)}</h3><p>${plural(g.items.length, 'лист', 'листа', 'листов')}</p></a>`).join('\n        ')}
       </div>
-    </div>
-  </section>
-
-  <section class="blk">
-    <div class="wrap">
-      <div class="kicker">Условия</div>
-      <h2>Сколько стоит и сколько ждать</h2>
-      <div class="stats">
-        <div><b>до ${a.house ? 72 : 48} ч</b><span>первый вариант ${a.house ? 'проекта дома' : 'проекта квартиры'} — от получения брифа с планом</span></div>
-        <div><b>0 ₽</b><span>на время открытого теста</span></div>
-        <div><b>${r.total}</b><span>листов в этом альбоме</span></div>
-      </div>
-      <p class="sub">Тот же комплект на вашей геометрии — позиция каталога
-      <a href="../../catalog/rabochaya-dokumentatsiya.html">«Только рабочая документация»</a>.
-      Соседние работы — в <a href="../../portfolio-hub/">портфолио</a> и в разделе
-      <a href="../../gost/">«Документация»</a>.</p>
     </div>
   </section>
 
@@ -345,33 +518,55 @@ ${honesty}
     </div>
   </section>
 
+  <section class="blk">
+    <div class="wrap">
+      <div class="kicker">Условия</div>
+      <h2>Такой же альбом на ваш объект</h2>
+      <div class="stats">
+        <div><b>0 ₽</b><span>на время открытого тестирования</span></div>
+        <div><b>~10 мин</b><span>бриф — можно рассказать голосом</span></div>
+        <div><b>до ${a.house ? 72 : 48} ч</b><span>первый вариант ${a.house ? 'проекта дома' : 'проекта квартиры'} — от получения брифа с планом</span></div>
+      </div>
+      <p class="g-note">Получение брифа подтверждаем в течение дня. Соседние работы — в <a href="../../portfolio-hub/">портфолио</a>,
+      как устроена проверка — в разделе <a href="../../gost/">«Документация»</a>.</p>
+    </div>
+  </section>
+
 ${blocks}
 `;
 
+  const ogImg = R.hero && R.hero.kind !== 'sheet' ? R.hero.src : null;
   return page({
     object: a.house ? 'house' : 'flat',
     file: `portfolio/${a.slug}/index.html`,
-    title: `${a.name} — рабочая документация | LINEA`,
-    desc: `${a.name}: комплект рабочей документации на ${plural(r.total, 'лист', 'листа', 'листов')} A3, ${groups.length} разделов, `
-      + `проверка движка: блокеров ${r.blockers}, замечаний ${r.issues}. Комплект предварительный — до контрольного обмера. Каждый лист можно рассмотреть целиком.`,
+    title: `${a.name} — дизайн-проект и альбом по ГОСТ | LINEA`,
+    desc: `${a.name}: ${plural(r.total, 'лист', 'листа', 'листов')} A3, ${plural(groups.length, 'раздел', 'раздела', 'разделов')}, общая площадь ${a.area}`
+      + `${R.accepted ? `, ${plural(R.accepted, 'визуализация', 'визуализации', 'визуализаций')}` : ''}. Два PDF — альбом для заказчика и полный альбом для строителей; правки голосом прямо на листах.`,
     h1: a.name,
     lead: a.lead,
-    crumb: [['Документация', '../../gost/'], [a.name, null]],
+    ogImage: ogImg,
+    crumb: [['Портфолио', '../../portfolio-hub/'], [a.name, null]],
     body,
     u: '../../',
     jsonld: [crumbsLd([
       ['LINEA', `${BASE}/`],
-      ['Документация', `${BASE}/gost/`],
+      ['Портфолио', `${BASE}/portfolio-hub/`],
       [a.name, `${BASE}/portfolio/${a.slug}/`],
     ]), {
+      '@context': 'https://schema.org', '@type': 'CreativeWork',
+      name: a.name, description: a.lead, url: `${BASE}/portfolio/${a.slug}/`, inLanguage: 'ru',
+      genre: 'Дизайн-проект интерьера, рабочая документация', ...(ogImg ? { image: `${BASE}/${ogImg}` } : {}),
+      author: { '@type': 'Person', name: SHELL.AUTHOR.name }, publisher: { '@type': 'Organization', name: 'LINEA', url: `${BASE}/` },
+      ...(R.ribbon.length ? { associatedMedia: R.ribbon.map(f => ({ '@type': 'ImageObject', contentUrl: `${BASE}/${f.src}`, caption: f.alt })) } : {}),
+    }, {
       '@context': 'https://schema.org', '@type': 'Service',
-      name: 'Рабочая документация по ГОСТ', serviceType: 'Дизайн-проект: рабочая документация',
+      name: a.house ? 'Дизайн-проект дома' : 'Дизайн-проект квартиры', serviceType: 'Дизайн-проект интерьера с рабочей документацией',
       provider: { '@type': 'Organization', name: 'LINEA', url: `${BASE}/` },
       areaServed: 'RU',
       offers: {
         '@type': 'Offer', price: '0', priceCurrency: 'RUB', availability: 'https://schema.org/InStock',
-        url: `${BASE}/catalog/rabochaya-dokumentatsiya.html`,
-        description: `Открытое тестирование: комплект рабочей документации выпускается бесплатно; первый вариант ${a.house ? 'проекта дома — до 72 часов' : 'проекта квартиры — до 48 часов'} от получения брифа с планом`,
+        url: `${BASE}/brief.html`,
+        description: `Открытое тестирование: проект бесплатно; первый вариант ${a.house ? 'проекта дома — до 72 часов' : 'проекта квартиры — до 48 часов'} от получения брифа с планом`,
       },
     }],
   });
@@ -380,23 +575,30 @@ ${blocks}
 // ---------- страница раздела ----------
 function hubPage(releases, honesty) {
   const totalSheets = releases.reduce((s, x) => s + x.r.total, 0);
-  const cards = releases.map(({ a, r }) => `        <a class="tile plain" href="../portfolio/${a.slug}/">
+  const NUM_IN = { 2: 'двух', 3: 'трёх', 4: 'четырёх', 5: 'пяти', 6: 'шести', 7: 'семи', 8: 'восьми', 9: 'девяти', 10: 'десяти' };
+  const sorted = [...releases].sort((x, y) => NEWEST(x.a) - NEWEST(y.a));
+  const cards = sorted.map(({ a, r }) => {
+    const h = a.renders.hero, c = CARD[a.slug] || {};
+    return `        <a class="tile" href="../portfolio/${a.slug}/">
+          ${h ? `<img src="../${h.src}" alt="${esc(h.alt)}" width="${h.w}" height="${h.h}" loading="lazy" decoding="async"${h.kind === 'sheet' ? ' class="sheet"' : ''}>` : ''}
           <div class="tile-body">
-            <span class="tag">${plural(r.total, 'лист', 'листа', 'листов')} A3</span>
+            <span class="tag">${esc(c.type || '')}${c.style ? ` · ${esc(c.style)}` : ''}</span>
             <b>${esc(a.name)}</b>
             <span class="tile-lead">${esc(a.lead)}</span>
-            <div class="tile-figs"><i><b>${a.area}</b>площадь</i><i><b>${a.rooms}</b>помещений</i><i><b>${r.blockers}</b>блокеров</i></div>
+            ${c.declared ? `<span class="tile-lead" style="font-size:12.5px;margin-top:8px">В названии — заявленная площадь; в цифрах ниже — общая по экспликации альбома.</span>` : ''}
+            <div class="tile-figs"><i><b>${r.total}</b>${word(r.total, 'лист', 'листа', 'листов')}</i><i><b>${a.area.replace(' м²', '')}</b>м²</i><i><b>${a.rooms}</b>${word(a.rooms, 'помещение', 'помещения', 'помещений')}</i></div>
             <span class="more">Смотреть листы →</span>
           </div>
-        </a>`).join('\n');
-
+        </a>`;
+  }).join('\n');
+  const blockers = releases.reduce((s, x) => s + x.r.blockers, 0);
   const body = `  <section class="blk">
     <div class="wrap">
       <div class="stats">
         <div><b>${RULES}</b><span>правил проверки выпуска</span></div>
         <div><b>26</b><span>специальностей в команде</span></div>
-        <div><b>${totalSheets}</b><span>${word(totalSheets, 'лист', 'листа', 'листов')} в ${releases.length === 2 ? 'двух' : releases.length === 3 ? 'трёх' : releases.length === 4 ? 'четырёх' : releases.length} альбомах</span></div>
-        <div><b>${releases.reduce((s, x) => s + x.r.blockers, 0)}</b><span>${word(releases.reduce((s, x) => s + x.r.blockers, 0), 'блокер', 'блокера', 'блокеров')} на выдаче</span></div>
+        <div><b>${totalSheets}</b><span>${word(totalSheets, 'лист', 'листа', 'листов')} в ${NUM_IN[releases.length] || releases.length} альбомах</span></div>
+        <div><b>${blockers}</b><span>${word(blockers, 'блокер', 'блокера', 'блокеров')} на выдаче</span></div>
       </div>
     </div>
   </section>
@@ -417,8 +619,9 @@ function hubPage(releases, honesty) {
           и куда смотреть в норме.</p></div>
         <div class="card"><div class="num">03</div><h3>Блокеры не уходят в печать</h3>
           <p>Проём не помещается в стену, содержимое вылезло за край листа — выпуск останавливается.
-          Блокеров на выдаче: ${releases.map(x => `${x.a.short} — ${x.r.blockers}`).join('; ')}. Замечания проверки блокерами не являются и остаются в выпуске: ${releases.map(x => `${x.a.short} — ${x.r.issues}`).join('; ')}.
-          Подписей проверяющего и нормоконтролёра на листах нет — об этом ниже, в разделе о честности выпуска.</p></div>
+          Блокеров на выдаче во всех ${NUM_IN[releases.length] || releases.length} альбомах: ${blockers}${blockers ? ` (${releases.filter(x => x.r.blockers).map(x => x.a.short).join(', ')})` : ''}.
+          Остальное, что находит проверка, — открытые вопросы и рекомендации, а не брак: они собраны на листе «Открытые вопросы»
+          в начале альбома. Подписей проверяющего и нормоконтролёра на листах нет — об этом ниже, в разделе о честности выпуска.</p></div>
       </div>
     </div>
   </section>
@@ -446,7 +649,7 @@ ${honesty}
       <div class="kicker">Альбомы</div>
       <h2>Посмотреть листы целиком</h2>
       <p class="sub">Это не картинки для сайта, а листы выпуска: со штампом, размерными цепочками, ведомостями
-      и примечаниями. Комплекты предварительные: на листах напечатано «не для производства работ».</p>
+      и примечаниями. Новые проекты — первыми. Комплекты предварительные, до контрольного обмера: на листах напечатано «не для производства работ».</p>
       <div class="tiles">
 ${cards}
       </div>
@@ -457,21 +660,22 @@ ${cards}
   return page({
     file: 'gost/index.html',
     title: 'Рабочая документация по ГОСТ — как собирается альбом | LINEA',
-    desc: `Комплект рабочей документации на квартиру: ${Math.min(...releases.map(x => x.r.total))}–${Math.max(...releases.map(x => x.r.total))} листов A3, 26 специальностей, ${RULES} правил `
+    desc: `Комплект рабочей документации на квартиру или дом: ${Math.min(...releases.map(x => x.r.total))}–${Math.max(...releases.map(x => x.r.total))} листов A3, 26 специальностей, ${RULES} правил `
       + `проверки с пунктами ГОСТ и СП. ${plural(releases.length, 'альбом', 'альбома', 'альбомов')} можно посмотреть целиком.`,
     h1: 'Рабочая документация по ГОСТ',
-    lead: 'Комплект рабочей документации на квартиру: планировки, развёртки стен, электрика со щитом, '
+    lead: 'Комплект рабочей документации на квартиру или дом: планировки, развёртки стен, электрика со щитом, '
       + 'вода и канализация, отопление и вентиляция, потолки с узлами, раскладка плитки, отделка, '
       + 'встроенная мебель и смета. Показанные альбомы — предварительные: до контрольного обмера по ним не работают.',
     crumb: [['Документация', null]],
     body,
+    ogImage: (sorted.find(x => x.a.renders.hero && x.a.renders.hero.kind === 'render') || { a: { renders: { hero: {} } } }).a.renders.hero.src,
     u: '../',
     jsonld: [crumbsLd([['LINEA', `${BASE}/`], ['Документация', `${BASE}/gost/`]])],
   });
 }
 
 // ---------- сборка ----------
-const mb = f => (fs.existsSync(f) ? `${Math.round(fs.statSync(f).size / 1024 / 1024)} МБ` : '');
+const mb = f => (fs.existsSync(f) ? `${Math.round(fs.statSync(f).size / 1024 / 1024)}\u00a0МБ` : '');
 for (const a of ALBUMS) {          // размер PDF показываем честно, из файла
   a.pdfSize = mb(path.join(SITE, 'portfolio', a.slug, 'album.pdf'));
   a.studioSize = mb(path.join(SITE, 'portfolio', a.slug, 'studio.pdf'));
@@ -489,6 +693,18 @@ for (const { a } of releases) {
   a.rooms = H[a.slug].facts.rooms;
   const nm = a.name.match(/(\d+) помещени/);   // число в названии альбома не пишем мимо титула
   if (nm && +nm[1] !== a.rooms) throw new Error(`${a.slug}: в названии «${a.name}» ${nm[1]} помещений, а на титуле выпуска ${a.rooms}`);
+}
+// визуализации и карточка проекта для портфолио (gen-more-pages.js читает _card.json, а не дублирует метаданные)
+for (const { a, r } of releases) {
+  a.renders = renders(a, r);
+  w(`portfolio/${a.slug}/_renders.json`, JSON.stringify(a.renders, null, 1));
+  const c = CARD[a.slug] || {};
+  w(`portfolio/${a.slug}/_card.json`, JSON.stringify({
+    slug: a.slug, name: a.name, lead: a.lead, code: a.code, house: !!a.house, type: c.type || '', style: c.style || '',
+    area: a.area, declared: c.declared ? c.declared.replace('{AREA}', a.area) : '', rooms: a.rooms, total: r.total,
+    blockers: r.blockers, hero: a.renders.hero || null, visuals: a.renders.accepted,
+    studioSize: a.studioSize, pdfSize: a.pdfSize,
+  }, null, 1));
 }
 const explained = releases.filter(x => x.a.explain !== false);
 const X = EXPLAINER.build({ ALBUMS: ALBUMS.filter(a => a.explain !== false), releases: explained, H, esc, plural, word, page, BASE, crumbsLd });
@@ -512,4 +728,4 @@ if (fs.existsSync(smPath)) {
 
 console.log('Собрано:');
 for (const f of out) console.log('  ' + f);
-for (const { a, r } of releases) console.log(`  ${a.slug}: ${r.total} листов, блокеров ${r.blockers}, замечаний ${r.issues}`);
+for (const { a, r } of releases) console.log(`  ${a.slug}: ${r.total} листов, блокеров ${r.blockers}, вопросов и рекомендаций ${r.issues}; кадров принято ${a.renders.accepted}, в ленте ${a.renders.ribbon.length}, заглавный — ${a.renders.hero ? a.renders.hero.kind : 'нет'}`);
