@@ -30,8 +30,9 @@
   // ── шаги
   const stepsEl = $('steps');
   function renderSteps() {
-    stepsEl.innerHTML = STEPS.map((t, i) => `<span class="${i === step ? 'on' : i < step ? 'done' : ''}">${i + 1}<em> из ${STEPS.length}</em> · ${t}</span>`).join('')
-      + `<i class="progress"><b style="width:${Math.round((step / LAST) * 100)}%"></b></i>`;
+    stepsEl.innerHTML = STEPS.map((t, i) => `<span class="${i === step ? 'on' : i < step ? 'done' : ''}"${i === step ? ' aria-current="step"' : ''}>${i + 1}<em> из ${STEPS.length}</em> · ${t}</span>`).join('')
+      + `<i class="progress" aria-hidden="true"><b style="width:${Math.round((step / LAST) * 100)}%"></b></i>`;
+    $('stepLive').textContent = `Шаг ${step + 1} из ${STEPS.length}: ${STEPS[step]}`;   // объявление для экранного диктора
     document.querySelectorAll('.panel').forEach(p => { p.hidden = +p.dataset.step !== step; });
     $('prev').style.visibility = step === 0 ? 'hidden' : 'visible';
     $('next').textContent = step === FORM_LAST ? 'Собрать бриф ✓' : 'Далее →';
@@ -57,18 +58,23 @@
   function addRoom(name, type, w, l, level) {
     const row = document.createElement('div');
     row.className = 'room-row';
+    row.setAttribute('role', 'group');
     row.innerHTML = `
-      <input type="text" class="r-name" placeholder="Название" value="${(name || '').replace(/"/g, '&quot;')}">
-      <select class="r-type">${ROOM_TYPES.map(t => `<option value="${t[0]}"${t[0] === type ? ' selected' : ''}>${t[1]}</option>`).join('')}</select>
-      <input type="number" class="r-w" placeholder="шир., м" step="0.1" min="1" value="${w || ''}">
-      <input type="number" class="r-l" placeholder="дл., м" step="0.1" min="1" value="${l || ''}">
-      <select class="r-level" title="Этаж"><option value="1">1 эт.</option><option value="2"${level == 2 ? ' selected' : ''}>2 эт.</option><option value="3"${level == 3 ? ' selected' : ''}>3 эт.</option><option value="0"${level == 0 ? ' selected' : ''}>цоколь</option></select>
-      <button class="x" type="button" title="Удалить">✕</button>`;
+      <input type="text" class="r-name" placeholder="Название" aria-label="Название помещения" value="${(name || '').replace(/"/g, '&quot;')}">
+      <select class="r-type" aria-label="Тип помещения">${ROOM_TYPES.map(t => `<option value="${t[0]}"${t[0] === type ? ' selected' : ''}>${t[1]}</option>`).join('')}</select>
+      <input type="number" class="r-w" placeholder="шир., м" aria-label="Ширина, м — можно оставить пустым" step="0.1" min="1" value="${w || ''}">
+      <input type="number" class="r-l" placeholder="дл., м" aria-label="Длина, м — можно оставить пустым" step="0.1" min="1" value="${l || ''}">
+      <select class="r-level" title="Этаж" aria-label="Этаж"><option value="1">1 эт.</option><option value="2"${level == 2 ? ' selected' : ''}>2 эт.</option><option value="3"${level == 3 ? ' selected' : ''}>3 эт.</option><option value="0"${level == 0 ? ' selected' : ''}>цоколь</option></select>
+      <button class="x" type="button" title="Удалить" aria-label="Удалить помещение">✕</button>`;
+    const label = () => row.setAttribute('aria-label', 'Помещение: ' + (row.querySelector('.r-name').value || row.querySelector('.r-type').selectedOptions[0].textContent));
+    row.querySelector('.r-name').addEventListener('input', label);
     row.querySelector('.x').onclick = () => { row.remove(); save(); };
     row.querySelector('.r-type').onchange = e => {
       const nameInp = row.querySelector('.r-name');
       if (!nameInp.value) nameInp.value = e.target.selectedOptions[0].textContent;
+      label();
     };
+    label();
     roomsEl.appendChild(row);
     houseUI();
   }
@@ -77,6 +83,7 @@
   // ── файлы: план и фото квартиры; свои референсы
   function fileZone(dropId, inputId, listId, bucket) {
     $(dropId).onclick = () => $(inputId).click();
+    $(dropId).onkeydown = e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); $(inputId).click(); } };
     $(dropId).ondragover = e => { e.preventDefault(); };
     $(dropId).ondrop = e => { e.preventDefault(); take(e.dataTransfer.files); };
     $(inputId).onchange = e => take(e.target.files);
@@ -86,8 +93,8 @@
       save();
     }
     function show() {
-      $(listId).innerHTML = files[bucket].map((f, i) => `<span class="chip">${f.name.replace(/</g, '&lt;')} · ${Math.round(f.size / 1024)} КБ <button type="button" data-i="${i}" title="Убрать">✕</button></span>`).join('');
-      $(listId).querySelectorAll('button').forEach(b => { b.onclick = () => { files[bucket].splice(+b.dataset.i, 1); show(); }; });
+      $(listId).innerHTML = files[bucket].map((f, i) => `<span class="chip">${f.name.replace(/</g, '&lt;')} · ${Math.round(f.size / 1024)} КБ <button type="button" data-i="${i}" title="Убрать" aria-label="Убрать файл ${f.name.replace(/[<"]/g, '')}">✕</button></span>`).join('');
+      $(listId).querySelectorAll('button').forEach(b => { b.onclick = () => { files[bucket].splice(+b.dataset.i, 1); show(); save(); }; });
     }
   }
   fileZone('drop', 'files', 'filelist', 'plans');
@@ -129,20 +136,25 @@
   // ── галерея референсов: визуализации проектов студии, «нравится / не нравится»
   const gal = $('refGallery');
   let REFS = [];
-  fetch('assets/refs/refs.json').then(r => r.json()).then(list => {
+  fetch('assets/refs/refs.json?v=2').then(r => r.json()).then(list => {
     REFS = list;
-    const styles = [...new Set(list.map(m => m.style))];
-    $('refFilter').innerHTML = ['Все', ...styles].map((t, i) => `<button type="button" class="${i ? '' : 'on'}" data-s="${i ? t : ''}">${t}</button>`).join('');
+    // фильтр — теми же стилями, что и карточки ниже (styleKey); кадры без пары в брифе — под своим названием
+    const groupOf = m => { const st = STYLES.find(s => s.key === m.styleKey); return st ? st.title : m.style; };
+    const order = g => { const i = STYLES.findIndex(s => s.title === g); return i < 0 ? 99 : i; };
+    const groups = [...new Set(list.map(groupOf))].sort((a, b) => order(a) - order(b));
+    $('refFilter').setAttribute('role', 'group');
+    $('refFilter').setAttribute('aria-label', 'Показать стиль');
+    $('refFilter').innerHTML = ['Все', ...groups].map((t, i) => `<button type="button" class="${i ? '' : 'on'}" aria-pressed="${!i}" data-s="${i ? esc(t) : ''}">${esc(t)}</button>`).join('');
     $('refFilter').onclick = e => {
       const b = e.target.closest('button'); if (!b) return;
-      $('refFilter').querySelectorAll('button').forEach(x => x.classList.toggle('on', x === b));
+      $('refFilter').querySelectorAll('button').forEach(x => { x.classList.toggle('on', x === b); x.setAttribute('aria-pressed', String(x === b)); });
       gal.querySelectorAll('.ref').forEach(f => { f.hidden = !!b.dataset.s && f.dataset.s !== b.dataset.s; });
     };
     gal.innerHTML = list.map(m => `
-      <figure class="ref" data-id="${m.id}" data-s="${m.style}">
-        <img src="${m.src}" alt="${m.style}, ${m.room}" loading="lazy">
-        <figcaption>${m.style} · ${m.room}</figcaption>
-        <div class="ref-btns"><button type="button" class="like" aria-label="Нравится">♥</button><button type="button" class="dislike" aria-label="Не нравится">✕</button></div>
+      <figure class="ref" data-id="${esc(m.id)}" data-s="${esc(groupOf(m))}">
+        <img src="${esc(m.src)}" alt="${esc(m.style)}, ${esc(m.room)}" loading="lazy">
+        <figcaption>${esc(m.style)} · ${esc(m.room)}</figcaption>
+        <div class="ref-btns"><button type="button" class="like" aria-pressed="false" aria-label="Нравится: ${esc(m.style)}, ${esc(m.room)}">♥</button><button type="button" class="dislike" aria-pressed="false" aria-label="Не моё: ${esc(m.style)}, ${esc(m.room)}">✕</button></div>
       </figure>`).join('');
     paintRefs();
   }).catch(() => { gal.innerHTML = '<p class="hint">Галерея не загрузилась — пришлите свои фото или ссылки ниже.</p>'; });
@@ -154,7 +166,12 @@
     paintRefs(); save();
   };
   function paintRefs() {
-    gal.querySelectorAll('.ref').forEach(f => { f.dataset.v = refs[f.dataset.id] || ''; });
+    gal.querySelectorAll('.ref').forEach(f => {
+      const v = refs[f.dataset.id] || '';
+      f.dataset.v = v;
+      f.querySelector('.like').setAttribute('aria-pressed', String(v === 'like'));
+      f.querySelector('.dislike').setAttribute('aria-pressed', String(v === 'dislike'));
+    });
     const n = Object.values(refs), l = n.filter(v => v === 'like').length, d = n.filter(v => v === 'dislike').length;
     $('refCount').textContent = l || d ? `нравится: ${l} · не нравится: ${d}` : '';
   }
@@ -167,7 +184,7 @@
   function dictate(field, b, onState) {
     if (rec && recField === field) { stopRec(); return; }
     stopRec();
-    rec = new SR(); rec.lang = 'ru-RU'; rec.continuous = true; rec.interimResults = true;
+    const r = rec = new SR(); rec.lang = 'ru-RU'; rec.continuous = true; rec.interimResults = true;
     recField = field; recBtn = b;
     const base = field.value ? field.value.replace(/\s*$/, ' ') : '';
     let finalText = '';
@@ -180,40 +197,60 @@
       field.value = base + finalText + interim;
       field.dispatchEvent(new Event('input', { bubbles: true }));
     };
-    rec.onend = () => { field.value = field.value.trim(); rec = null; recField = null; onState(false); save(); };
-    rec.onerror = ev => { if (ev.error === 'not-allowed' || ev.error === 'service-not-allowed') { $('micHint').hidden = false; $('micHint').innerHTML = '<b>Микрофон не разрешён.</b> Нажмите значок замка в адресной строке и разрешите микрофон — или нажмите 🎤 на клавиатуре телефона и говорите в поле.'; } };
-    try { rec.start(); onState(true); } catch (e) { onState(false); }
+    let err = '';
+    rec.onend = () => { field.value = field.value.trim(); if (rec === r) { rec = null; recField = null; } onState(false, err); save(); };   // старый сеанс не гасит уже начатый новый
+    rec.onerror = ev => {
+      if (ev.error === 'aborted') return;                // сами остановили — не ошибка
+      err = REC_ERR[ev.error] || REC_ERR.other;
+      if (ev.error === 'not-allowed' || ev.error === 'service-not-allowed') { $('micHint').hidden = false; $('micHint').innerHTML = '<b>Микрофон не разрешён.</b> Нажмите значок замка в адресной строке и разрешите микрофон — или нажмите 🎤 на клавиатуре телефона и говорите в поле.'; }
+    };
+    try { rec.start(); onState(true); } catch (e) { rec = null; recField = null; onState(false, REC_ERR.other); }
   }
+  // понятные причины, почему не распознали (коды Web Speech API)
+  const REC_ERR = {
+    'not-allowed': 'Микрофон не разрешён — подсказка ниже',
+    'service-not-allowed': 'Микрофон не разрешён — подсказка ниже',
+    'no-speech': 'Не расслышали. Говорите ближе к микрофону и нажмите ещё раз',
+    'audio-capture': 'Микрофон не найден. Проверьте, что он подключён, — или напишите текстом',
+    'network': 'Распознаванию речи нужен интернет. Проверьте связь — или напишите текстом',
+    'language-not-supported': 'Этот браузер не распознаёт русскую речь. Напишите текстом или откройте страницу в Chrome',
+    other: 'Голосовой ввод не сработал. Нажмите ещё раз — или напишите текстом'
+  };
   function micFor(field) {
     const b = document.createElement('button');
     b.type = 'button'; b.className = 'mic'; b.title = 'Надиктовать'; b.setAttribute('aria-label', 'Надиктовать голосом');
     b.textContent = '🎤';
+    const note = document.createElement('p');
+    note.className = 'hint mic-err'; note.hidden = true; note.setAttribute('role', 'status');
     b.onclick = () => {
-      if (!SR) { $('micHint').hidden = false; field.focus(); return; }
-      dictate(field, b, on => b.classList.toggle('rec', on));
+      if (!SR) { $('micHint').hidden = false; note.hidden = false; note.textContent = 'Голосовой ввод в этом браузере не работает — нажмите 🎤 на клавиатуре телефона или напишите текстом.'; field.focus(); return; }
+      note.hidden = true;
+      dictate(field, b, (on, err) => { b.classList.toggle('rec', on); if (!on && err) { note.hidden = false; note.textContent = err; } });
     };
     const wrap = document.createElement('div');
     wrap.className = 'dict-wrap';
     field.parentNode.insertBefore(wrap, field);
     wrap.appendChild(field); wrap.appendChild(b);
+    wrap.after(note);
   }
   document.querySelectorAll('textarea.dict, input.dict').forEach(micFor);
 
   // ── главный экран: рассказ голосом. Подсказки-темы загораются, когда о них сказано; из рассказа заполняется, что можно
   const TOPICS = [
-    ['Кто живёт', /(живу|живём|живем|муж|жена|дет|сын|доч|реб[её]н|бабушк|дедушк|пара|вдво[её]м|втро[её]м|вчетвером|одна|один)/i],
-    ['Площадь и комнаты', /(\d+\s*(кв|м²|м2|метр|квадрат)|комнат|тр[её]шк|двушк|однушк|студи|этаж|спальн)/i],
-    ['Как проходит день', /(вечер|утр|выходн|гост|готов|смотр|чита|игра|отдыха)/i],
-    ['Кухня', /(кухн|остров|готов|плит|посуд)/i],
-    ['Хранение', /(хранен|шкаф|гардероб|кладов|вещ)/i],
-    ['Работа, хобби, спорт', /(работ|хобби|спорт|тренаж|музык|рису|мастерск|йог|бег)/i],
-    ['Стиль и цвета', /(стил|цвет|дерев|бел|сер|зел[её]н|син|беж|скандинав|классик|лофт|минимал|уют|т[её]пл)/i],
-    ['Что не нравится', /(не нрав|ненавиж|раздража|терпеть не|не хочу|не люблю|не надо)/i],
-    ['Сроки и бюджет', /(бюджет|деньг|тысяч|миллион|срок|месяц|весн|лет|осен|зим|переезд|въех)/i]
+    ['Кто живёт', /(живу|живём|живем|живут|муж|мужа|мужем|жена|жены|женой|дети|детей|детьми|детям|ребён[а-яё]*|ребен[а-яё]*|сын[а-яё]*|доч[а-яё]*|бабушк[а-яё]*|дедушк[а-яё]*|пара|парой|вдво[её]м|втро[её]м|вчетвером|впятером|семь[яиюёе][а-яё]*)/],
+    ['Площадь и комнаты', /(\d+\s*(кв|м²|м2|метр|квадрат)[а-яё]*|комнат[а-яё]*|тр[её]шк[а-яё]*|двушк[а-яё]*|однушк[а-яё]*|студи[яиюейа]|этаж[а-яё]*|спальн[а-яё]*)/],
+    ['Как проходит день', /(вечер[а-яё]*|утр(о|ом|а|ам)|утрам|выходн[а-яё]*|гост(и|ей|ям|ями|ях)|готов(им|ит|ить|лю|ят|ишь|ка|ку|ке)|смотр(им|ит|еть|ю|ят)|чита(ем|ю|ет|ть|ют)|игра(ем|ет|ют|ть|ю)|отдыха(ем|ть|ет|ют|ю)|отдых(а|ом|е)?)/],
+    ['Кухня', /(кухн[а-яё]*|остров[а-яё]*|готов(им|ит|ить|лю|ят|ишь|ка|ку|ке)|плит(а|у|ой|ы|е)|посуд[а-яё]*)/],
+    ['Хранение', /(хранен[а-яё]*|хранить|храним|шкаф[а-яё]*|гардероб[а-яё]*|кладов[а-яё]*|вещ(и|ей|ам|ами|ах|ь))/],
+    ['Работа, хобби, спорт', /(работ[а-яё]*|хобби|спорт[а-яё]*|тренаж[а-яё]*|музык[а-яё]*|рису(ю|ет|ем|ют|нк[а-яё]*)|мастерск[а-яё]*|йог(а|у|ой|и)|бег(аю|ать|ает|аем|ом|ов(ая|ую|ой))?)/],
+    ['Стиль и цвета', /(стил[а-яё]*|цвет[а-яё]*|дерев[а-яё]*|бел(ый|ая|ое|ые|ого|ой|ую|ым|ых|ыми|ом)|сер(ый|ая|ое|ые|ого|ой|ую|ым|ых|ыми|ом)|зел[её]н[а-яё]*|син(ий|яя|ее|ие|его|ей|юю|им|их|ими)|бежев[а-яё]*|светл[а-яё]*|т[её]пл(ый|ая|ое|ые|ого|ой|ую|ым|ых|ыми|о)|скандинав[а-яё]*|классик[а-яё]*|лофт[а-яё]*|минимал[а-яё]*|уют[а-яё]*|мрамор[а-яё]*|бетон[а-яё]*|латун[а-яё]*)/],
+    ['Что не нравится', /(не нрав[а-яё]*|ненавиж[а-яё]*|раздража[а-яё]*|терпеть не|не хочу|не хотим|не люблю|не любим|не надо)/],
+    ['Сроки и бюджет', /(бюджет[а-яё]*|деньг[а-яё]*|тысяч[а-яё]*|миллион[а-яё]*|срок[а-яё]*|месяц[а-яё]*|весн[а-яё]*|весной|лет(о|ом)|осен[а-яё]*|зим(а|ой|у|ы)|переезд[а-яё]*|въех[а-яё]*|ремонт[а-яё]*)/]
   ];
+  // тема — целым словом: «бел» не в «колыбели», «сер» не в «серьёзно», «пара» не в «параметрах»
+  const wholeWord = re => new RegExp('(?:^|[^а-яёa-z])(?:' + re.source + ')(?![а-яёa-z])', 'i');
+  TOPICS.forEach(tp => { tp[1] = wholeWord(tp[1]); });
   const story = $('story');
-  const startWord = re => new RegExp('(?:^|[^а-яёa-z])(?:' + re.source + ')', 'i');   // тема — с начала слова: «бел» не в «колыбели»
-  TOPICS.forEach(tp => { tp[1] = startWord(tp[1]); });
   function paintTopics() {
     const t = story.value;
     $('topics').innerHTML = '<span class="topics-title">О чём рассказать:</span>' + TOPICS.map(([n, re]) => `<span class="topic${re.test(t) ? ' ok' : ''}">${re.test(t) ? '✓ ' : ''}${n}</span>`).join('');
@@ -225,20 +262,29 @@
     const set = (id, v, label) => { const el = $(id); if (el && !el.value && v) { el.value = v; done.push(label + ': ' + v); } };
     const area = t.match(/(\d{2,3}(?:[.,]\d)?)\s*(?:кв|квадрат|м²|м2|метр)/i);
     if (area) set('objArea', area[1].replace(',', '.'), 'площадь');
-    if (/(^|[^а-яё])(дом|коттедж|дача|дачу)([^а-яё]|$)/i.test(t) && !/квартир/i.test(t) && $('objType').value === 'квартира') { $('objType').value = 'дом'; houseUI(); done.push('тип: дом'); }
     const W = w => new RegExp('(^|[^а-яё])(' + w + ')([^а-яё]|$)', 'i');   // целое слово: «котором», «котельная» — не кот
+    // дом — только по явным признакам: «дом, в котором мы живём» в рассказе о квартире домом объект не делает
+    if (W('коттедж[а-яё]*|дач[аеуи]|таунхаус[а-яё]*|частн[а-яё]* дом[а-яё]*|загородн[а-яё]* дом[а-яё]*|[а-яё]*этажн[а-яё]* дом[а-яё]*|строим дом|построили дом|участ(ок|ке|ка)|мансард[а-яё]*').test(t)
+      && !/квартир/i.test(t) && $('objType').value === 'квартира') { $('objType').value = 'дом'; houseUI(); done.push('тип: дом'); }
     const pets = [W('кот|кота|коты|котов|кошка|кошки|котик|кошек').test(t) && 'кот', W('собака|собаки|собак|пёс|пес|щенок').test(t) && 'собака'].filter(Boolean).join(', ');
     set('qPets', pets, 'животные');
-    const who = t.match(/((?:живу|живём|живем)[^.!?,;]{0,60})/i);
-    if (who) set('qWho', who[1].trim(), 'кто живёт');
+    // «Кто живёт» — предложение целиком, если оно про состав семьи и короткое; иначе только подсказка на шаге вопросов
+    const sentences = t.split(/(?<=[.!?…])\s+|\n+/).map(x => x.trim()).filter(Boolean);
+    const whoS = sentences.find(x => W('живу|живём|живем|живут').test(x)
+      && W('я|муж[а-яё]*|жен[аоыу]й?|дет[а-яё]*|реб[её]н[а-яё]*|сын[а-яё]*|доч[а-яё]*|бабушк[а-яё]*|дедушк[а-яё]*|сем[ьей][а-яё]*|вдво[её]м|втро[её]м|вчетвером|впятером|одна|один|пар[аой]').test(x));
+    $('whoHint').hidden = true;
+    if (whoS && whoS.length <= 160) set('qWho', whoS.replace(/[.!…]+$/, ''), 'кто живёт');
+    else if (whoS && !$('qWho').value) $('whoHint').hidden = false;
     if (done.length) { $('autoFill').hidden = false; $('autoFill').textContent = '✓ Из рассказа заполнили — ' + done.join('; ') + '. Проверьте на следующих шагах.'; save(); }
   }
   const bigMic = $('bigMic');
   bigMic.onclick = () => {
     if (!SR) { $('micHint').hidden = false; story.focus(); return; }
-    dictate(story, bigMic, on => {
-      $('voiceState').textContent = on ? 'Слушаю… говорите. Нажмите ещё раз, чтобы закончить' : 'Готово. Можно дополнить — нажмите снова';
+    dictate(story, bigMic, (on, err) => {
+      $('voiceState').textContent = on ? 'Слушаю… говорите. Нажмите ещё раз, чтобы закончить'
+        : err ? err : story.value.trim() ? 'Готово. Можно дополнить — нажмите снова' : 'Нажмите и говорите';
       bigMic.classList.toggle('rec', on);
+      bigMic.setAttribute('aria-pressed', String(on));
       if (!on) { paintTopics(); autoFill(); }
     });
   };
@@ -417,6 +463,7 @@
     const who = safe((b.client.name || 'klient').trim().replace(/\s+/g, '-'));
     return new File([zip(list)], `LINEA-brif-${who}-${b.meta.created}.zip`, { type: 'application/zip' });
   }
+  const AFTER_ZIP = $('afterZip').innerHTML;          // после «Отменено» абзац переписан — возвращаем исходный с #zipInfo
   $('sendZip').onclick = async () => {
     const btn = $('sendZip'), old = btn.textContent;
     btn.disabled = true; btn.textContent = 'Собираю архив…';
@@ -426,6 +473,7 @@
         try { await navigator.share({ files: [f], title: 'Бриф LINEA', text: 'Бриф на дизайн-проект: ' + (lastBrief && lastBrief.client.name || '') }); }
         catch (e) { if (e.name === 'AbortError') { $('afterZip').hidden = false; $('afterZip').innerHTML = 'Отправка отменена. Нажмите кнопку ещё раз — или <button type="button" class="linklike" id="zipDl">скачайте архив</button> и пришлите его в WhatsApp на +7 925 733-86-40.'; $('zipDl').onclick = () => saveBlob(f, f.name); return; } saveBlob(f, f.name); }
       } else saveBlob(f, f.name);
+      $('afterZip').innerHTML = AFTER_ZIP;
       $('afterZip').hidden = false;
       $('zipInfo').textContent = f.name + ' · ' + (f.size < 1048576 ? Math.max(1, Math.round(f.size / 1024)) + ' КБ' : (f.size / 1048576).toFixed(1) + ' МБ');
     } finally { btn.disabled = false; btn.textContent = old; }

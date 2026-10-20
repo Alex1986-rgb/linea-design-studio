@@ -10,18 +10,40 @@
   try { notes = JSON.parse(localStorage.getItem(KEY) || '[]'); } catch (e) { notes = []; }
   const save = () => { try { localStorage.setItem(KEY, JSON.stringify(notes)); } catch (e) {} paintCount(); };
   const esc = s => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;');
-  if (!slug) { $('title').textContent = 'Не указан проект'; return; }
+  // нет проекта или битая ссылка — понятное сообщение вместо пустого листа
+  function fail(head, text) {
+    $('title').textContent = head;
+    $('loading').hidden = true;
+    $('view').classList.add('rv-fail');
+    $('view').innerHTML = `<div class="rv-msg"><b>${esc(head)}</b><p>${text}</p><a class="btn sm" href="portfolio-hub/">Открыть портфолио</a></div>`;
+    ['prev', 'next', 'pick', 'zin', 'zout', 'zfit', 'general'].forEach(id => { $(id).disabled = true; });
+    $('pick').innerHTML = '<option>Листов нет</option>';
+    $('back').href = 'portfolio-hub/'; $('back').textContent = '← портфолио';
+    document.body.classList.add('rv-off');            // боковая панель правок без листов не нужна
+  }
+  if (!slug) { fail('Не указан проект', 'Откройте эту страницу по ссылке из альбома — кнопка «Проверить листы и надиктовать правки» на странице проекта.'); return; }
   $('back').href = 'portfolio/' + slug + '/';
+  let projName = slug;
 
-  fetch('portfolio/' + slug + '/sheets.json').then(r => r.json()).then(list => {
+  // человекочитаемое название проекта — из <title> страницы альбома
+  fetch('portfolio/' + slug + '/index.html').then(r => r.ok ? r.text() : '').then(html => {
+    const m = /<title>([^<]+)<\/title>/i.exec(html || ''); if (!m) return;
+    const t = m[1].replace(/&amp;/g, '&').replace(/&quot;/g, '"').replace(/\s*[—|-]\s*(рабочая документация|дизайн-проект|альбом|LINEA).*$/i, '').trim();
+    if (!t) return;
+    projName = t; $('proj').textContent = t; document.title = 'Правки · ' + t + ' — LINEA';
+  }).catch(() => {});
+
+  fetch('portfolio/' + slug + '/sheets.json').then(r => { if (!r.ok) throw new Error(r.status); return r.json(); }).then(list => {
+    if (!Array.isArray(list) || !list.length) throw new Error('empty');
     sheets = list;
-    $('pick').innerHTML = list.map((s, i) => `<option value="${i}">${esc(s.no ? 'Лист ' + s.no + ' · ' : '')}${esc(s.title)}</option>`).join('');
+    ['prev', 'next', 'pick', 'zin', 'zout', 'zfit', 'general'].forEach(id => { $(id).disabled = false; });
+    $('pick').innerHTML = list.map((s, i) => `<option value="${i}">${esc(s.no ? s.no + ' · ' : '')}${esc(s.title)}</option>`).join('');
     // лист — по имени файла; если альбом перевыпущен и номер сменился — по имени без номера «NN-»
     const want = q.get('s') || '', bare = f => String(f).replace(/^\d+-/, '');
     let i = list.findIndex(s => s.file === want);
     if (i < 0 && want) i = list.findIndex(s => bare(s.file) === bare(want));
     show(i >= 0 ? i : 0);
-  }).catch(() => { $('title').textContent = 'Листы проекта не загрузились'; });
+  }).catch(() => fail('Проект не найден', 'По ссылке «' + esc(slug) + '» листов нет — возможно, ссылка обрезалась при пересылке. Выберите проект в портфолио или попросите прислать ссылку ещё раз.'));
 
   // текст правки не теряется: при смене метки, листа и отправке открытая правка сохраняется, пустая — удаляется
   function commitEditing() {
@@ -31,23 +53,42 @@
     renumber(); save();
   }
   function show(i) {
+    if (!sheets.length) return;                        // клик до загрузки sheets.json
     commitEditing();
     cur = Math.max(0, Math.min(sheets.length - 1, i));
     const s = sheets[cur];
     $('pick').value = String(cur);
     $('title').textContent = (s.no ? 'Лист ' + s.no + ' · ' : '') + s.title;
-    $('img').src = 'portfolio/' + slug + '/sheets/' + encodeURIComponent(s.file);
+    $('sheetName').textContent = $('title').textContent;
+    const src = 'portfolio/' + slug + '/sheets/' + encodeURIComponent(s.file);
+    if ($('img').getAttribute('src') !== src) { $('loading').hidden = false; $('loadTxt').textContent = 'Загружаю лист…'; $('loading').classList.remove('err'); }
+    $('img').src = src;
     $('raw').href = $('img').src;
     history.replaceState(null, '', '?p=' + slug + '&s=' + encodeURIComponent(s.file));
     closeEditor();
     paintPins(); paintList();
   }
+  $('img').addEventListener('load', () => { $('loading').hidden = true; });
+  $('img').addEventListener('error', () => { if (!$('img').getAttribute('src')) return; $('loading').hidden = false; $('loading').classList.add('err'); $('loadTxt').textContent = 'Лист не загрузился — проверьте связь и обновите страницу'; });
   $('prev').onclick = () => show(cur - 1);
   $('next').onclick = () => show(cur + 1);
   $('pick').onchange = e => show(+e.target.value);
 
-  // масштаб: кнопки и колесо с Ctrl; прокрутка контейнера — перемещение
-  function setZoom(z) { zoom = Math.max(1, Math.min(5, z)); $('stage').style.width = (zoom * 100) + '%'; $('zoomv').textContent = Math.round(zoom * 100) + '%'; }
+  // масштаб: кнопки и колесо с Ctrl (и щипок на тачпаде); прокрутка контейнера — перемещение
+  function setZoom(z, cx, cy) {
+    const v = $('view'), old = zoom;
+    zoom = Math.max(1, Math.min(5, z));
+    // точка под курсором остаётся на месте
+    const r = v.getBoundingClientRect(), px = cx == null ? r.width / 2 : cx - r.left, py = cy == null ? r.height / 2 : cy - r.top;
+    const fx = (v.scrollLeft + px) / old, fy = (v.scrollTop + py) / old;
+    $('stage').style.width = (zoom * 100) + '%'; $('zoomv').textContent = Math.round(zoom * 100) + '%';
+    v.scrollLeft = fx * zoom - px; v.scrollTop = fy * zoom - py;
+  }
+  $('view').addEventListener('wheel', e => {
+    if (!e.ctrlKey || !sheets.length) return;
+    e.preventDefault();
+    setZoom(zoom * Math.exp(-e.deltaY * 0.004), e.clientX, e.clientY);
+  }, { passive: false });
   $('zin').onclick = () => setZoom(zoom * 1.5);
   $('zout').onclick = () => setZoom(zoom / 1.5);
   $('zfit').onclick = () => setZoom(1);
@@ -118,8 +159,14 @@
       for (let i = ev.resultIndex; i < ev.results.length; i++) { const t = ev.results[i][0].transcript; if (ev.results[i].isFinal) fin += t.trim() + ' '; else mid += t; }
       f.value = base + fin + mid;
     };
-    rec.onend = () => { $('edMic').classList.remove('rec'); $('edState').textContent = 'Нажмите 🎤 и скажите, что исправить'; f.value = f.value.trim(); rec = null; };
-    rec.onerror = ev => { if (ev.error === 'not-allowed' || ev.error === 'service-not-allowed') { $('micHint').hidden = false; $('micHint').textContent = 'Микрофон не разрешён: нажмите значок замка в адресной строке и разрешите микрофон — или наберите текст (на телефоне — микрофон на клавиатуре).'; } };
+    let err = '';
+    const ERR = { 'no-speech': 'Не расслышали — нажмите 🎤 и говорите ближе к микрофону', 'audio-capture': 'Микрофон не найден — напишите текстом', 'network': 'Распознаванию нужен интернет — проверьте связь или напишите текстом', 'not-allowed': 'Микрофон не разрешён — напишите текстом', 'service-not-allowed': 'Микрофон не разрешён — напишите текстом' };
+    rec.onend = () => { $('edMic').classList.remove('rec'); $('edState').textContent = err || 'Нажмите 🎤 и скажите, что исправить'; f.value = f.value.trim(); rec = null; };
+    rec.onerror = ev => {
+      if (ev.error === 'aborted') return;
+      err = ERR[ev.error] || 'Голосовой ввод не сработал — нажмите 🎤 ещё раз или напишите текстом';
+      if (ev.error === 'not-allowed' || ev.error === 'service-not-allowed') { $('micHint').hidden = false; $('micHint').textContent = 'Микрофон не разрешён: нажмите значок замка в адресной строке и разрешите микрофон — или наберите текст (на телефоне — микрофон на клавиатуре).'; }
+    };
     $('edMic').classList.add('rec'); $('edState').textContent = 'Слушаю… нажмите 🎤 ещё раз, чтобы закончить';
     try { rec.start(); } catch (e) { $('edMic').classList.remove('rec'); }
   };
@@ -128,7 +175,7 @@
   function summary() {
     const by = {};
     notes.filter(n => n.text).forEach(n => { (by[n.file] = by[n.file] || []).push(n); });
-    const out = ['Правки к проекту ' + slug + ' (' + new Date().toLocaleDateString('ru-RU') + ')'];
+    const out = ['Правки к проекту «' + projName + '»' + (projName !== slug ? ' [' + slug + ']' : '') + ' (' + new Date().toLocaleDateString('ru-RU') + ')'];
     sheets.forEach(s => {
       const m = by[s.file]; if (!m) return;
       out.push('', (s.no ? 'Лист ' + s.no + ' · ' : '') + s.title);
@@ -146,7 +193,7 @@
     $('waLink').href = 'https://wa.me/79257338640?text=' + encodeURIComponent(text.slice(0, 3500));
     $('cutNote').hidden = text.length <= 1800;
     $('dlJson').onclick = () => { const a = document.createElement('a'); a.href = URL.createObjectURL(file); a.download = file.name; document.body.appendChild(a); a.click(); a.remove(); };
-    $('mailLink').href = 'mailto:optteem@mail.ru?subject=' + encodeURIComponent('Правки к проекту ' + slug) + '&body=' + encodeURIComponent(text.slice(0, 1800));
+    $('mailLink').href = 'mailto:optteem@mail.ru?subject=' + encodeURIComponent('Правки к проекту ' + projName) + '&body=' + encodeURIComponent(text.slice(0, 1800));
     $('copyLink').onclick = () => { navigator.clipboard && navigator.clipboard.writeText(text); $('copyLink').textContent = 'Скопировано ✓'; };
     if (navigator.canShare && navigator.canShare({ files: [file] })) {
       try { await navigator.share({ title: 'Правки LINEA', text, files: [file] }); return; } catch (e) { if (e.name === 'AbortError') return; }

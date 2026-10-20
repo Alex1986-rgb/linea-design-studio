@@ -4,174 +4,305 @@
   "src": "assets/refs/retro-103-living-wA.jpg",
   "style": "Ретро середины века",
   "room": "гостиная",
-  "project": "retro-103"
+  "project": "retro-103",
+  "styleKey": "retro"
  },
  {
   "id": "retro-103-bedroom1-wA",
   "src": "assets/refs/retro-103-bedroom1-wA.jpg",
   "style": "Ретро середины века",
   "room": "спальня",
-  "project": "retro-103"
+  "project": "retro-103",
+  "styleKey": "retro"
  },
  {
   "id": "retro-103-study-wA",
   "src": "assets/refs/retro-103-study-wA.jpg",
   "style": "Ретро середины века",
   "room": "кабинет",
-  "project": "retro-103"
+  "project": "retro-103",
+  "styleKey": "retro"
  },
  {
   "id": "retro-103-kitchen-wB",
   "src": "assets/refs/retro-103-kitchen-wB.jpg",
   "style": "Ретро середины века",
   "room": "кухня",
-  "project": "retro-103"
+  "project": "retro-103",
+  "styleKey": "retro"
  },
  {
   "id": "modern-4k-living-wA",
   "src": "assets/refs/modern-4k-living-wA.jpg",
   "style": "Модерн 2026",
   "room": "гостиная",
-  "project": "modern-4k"
+  "project": "modern-4k",
+  "styleKey": "modern"
  },
  {
   "id": "modern-4k-bedwA",
   "src": "assets/refs/modern-4k-bedwA.jpg",
   "style": "Модерн 2026",
   "room": "спальня",
-  "project": "modern-4k"
+  "project": "modern-4k",
+  "styleKey": "modern"
  },
  {
   "id": "modern-4k-study-wA",
   "src": "assets/refs/modern-4k-study-wA.jpg",
   "style": "Модерн 2026",
   "room": "кабинет",
-  "project": "modern-4k"
+  "project": "modern-4k",
+  "styleKey": "modern"
  },
  {
   "id": "modern-4k-bath1-wC",
   "src": "assets/refs/modern-4k-bath1-wC.jpg",
   "style": "Модерн 2026",
   "room": "санузел",
-  "project": "modern-4k"
+  "project": "modern-4k",
+  "styleKey": "modern"
  },
  {
   "id": "kv-3k-living-wB",
   "src": "assets/refs/kv-3k-living-wB.jpg",
   "style": "Современный",
   "room": "гостиная",
-  "project": "kv-3k"
+  "project": "kv-3k",
+  "styleKey": "modern"
  },
  {
   "id": "kv-3k-kitchen",
   "src": "assets/refs/kv-3k-kitchen.jpg",
   "style": "Современный",
   "room": "кухня",
-  "project": "kv-3k"
+  "project": "kv-3k",
+  "styleKey": "modern"
  },
  {
   "id": "kv-3k-bedroom1-wA",
   "src": "assets/refs/kv-3k-bedroom1-wA.jpg",
   "style": "Современный",
   "room": "спальня",
-  "project": "kv-3k"
+  "project": "kv-3k",
+  "styleKey": "modern"
  },
  {
   "id": "kv-3k-bath",
   "src": "assets/refs/kv-3k-bath.jpg",
   "style": "Современный",
   "room": "санузел",
-  "project": "kv-3k"
+  "project": "kv-3k",
+  "styleKey": "modern"
  },
  {
   "id": "kv-65-living",
   "src": "assets/refs/kv-65-living.jpg",
   "style": "Скандинавский",
   "room": "гостиная",
-  "project": "kv-65"
+  "project": "kv-65",
+  "styleKey": "scandi"
  },
  {
   "id": "kv-65-kids",
   "src": "assets/refs/kv-65-kids.jpg",
   "style": "Скандинавский",
   "room": "детская",
-  "project": "kv-65"
+  "project": "kv-65",
+  "styleKey": "scandi"
  },
  {
   "id": "kv-65-kitchen",
   "src": "assets/refs/kv-65-kitchen.jpg",
   "style": "Скандинавский",
   "room": "кухня",
-  "project": "kv-65"
+  "project": "kv-65",
+  "styleKey": "scandi"
  },
  {
   "id": "kv-65-bath",
   "src": "assets/refs/kv-65-bath.jpg",
   "style": "Скандинавский",
   "room": "санузел",
-  "project": "kv-65"
+  "project": "kv-65",
+  "styleKey": "scandi"
  },
  {
   "id": "proekt-2-living1-wA",
   "src": "assets/refs/proekt-2-living1-wA.jpg",
   "style": "Светлый современный",
   "room": "гостиная",
-  "project": "proekt-2"
+  "project": "proekt-2",
+  "styleKey": "minimal"
  },
  {
   "id": "proekt-2-kitchen-wA",
   "src": "assets/refs/proekt-2-kitchen-wA.jpg",
   "style": "Светлый современный",
   "room": "кухня",
-  "project": "proekt-2"
+  "project": "proekt-2",
+  "styleKey": "minimal"
  },
  {
   "id": "proekt-2-kids1-wC",
   "src": "assets/refs/proekt-2-kids1-wC.jpg",
   "style": "Светлый современный",
   "room": "детская",
-  "project": "proekt-2"
+  "project": "proekt-2",
+  "styleKey": "minimal"
  },
  {
   "id": "proekt-2-bath-wB",
   "src": "assets/refs/proekt-2-bath-wB.jpg",
   "style": "Светлый современный",
   "room": "санузел",
-  "project": "proekt-2"
+  "project": "proekt-2",
+  "styleKey": "minimal"
  },
  {
   "id": "dom-331-living-wD",
   "src": "assets/refs/dom-331-living-wD.jpg",
   "style": "Загородный дом",
   "room": "гостиная",
-  "project": "dom-331"
+  "project": "dom-331",
+  "styleKey": "chalet"
  },
  {
   "id": "dom-331-kitchen-wA",
   "src": "assets/refs/dom-331-kitchen-wA.jpg",
   "style": "Загородный дом",
   "room": "кухня",
-  "project": "dom-331"
+  "project": "dom-331",
+  "styleKey": "chalet"
  },
  {
   "id": "dom-331-balcony1-wC",
   "src": "assets/refs/dom-331-balcony1-wC.jpg",
   "style": "Загородный дом",
   "room": "веранда",
-  "project": "dom-331"
+  "project": "dom-331",
+  "styleKey": "chalet"
  },
  {
   "id": "dom-331-study-wD",
   "src": "assets/refs/dom-331-study-wD.jpg",
   "style": "Загородный дом",
   "room": "кабинет",
-  "project": "dom-331"
+  "project": "dom-331",
+  "styleKey": "chalet"
  },
  {
   "id": "kv-58-living-wB",
   "src": "assets/refs/kv-58-living-wB.jpg",
   "style": "Скандинавский минимализм",
   "room": "гостиная",
-  "project": "kv-58"
+  "project": "kv-58",
+  "styleKey": "scandi"
+ },
+ {
+  "id": "linea-demo-living-wA",
+  "src": "assets/refs/linea-demo-living-wA.jpg",
+  "style": "Джапанди",
+  "room": "гостиная",
+  "project": "linea-demo",
+  "styleKey": "japandi"
+ },
+ {
+  "id": "linea-demo-living-wC",
+  "src": "assets/refs/linea-demo-living-wC.jpg",
+  "style": "Джапанди",
+  "room": "гостиная",
+  "project": "linea-demo",
+  "styleKey": "japandi"
+ },
+ {
+  "id": "linea-demo-bedroom-wA",
+  "src": "assets/refs/linea-demo-bedroom-wA.jpg",
+  "style": "Джапанди",
+  "room": "спальня",
+  "project": "linea-demo",
+  "styleKey": "japandi"
+ },
+ {
+  "id": "linea-demo-kids-wA",
+  "src": "assets/refs/linea-demo-kids-wA.jpg",
+  "style": "Джапанди",
+  "room": "детская",
+  "project": "linea-demo",
+  "styleKey": "japandi"
+ },
+ {
+  "id": "linea-demo-bath-wA",
+  "src": "assets/refs/linea-demo-bath-wA.jpg",
+  "style": "Джапанди",
+  "room": "санузел",
+  "project": "linea-demo",
+  "styleKey": "japandi"
+ },
+ {
+  "id": "linea-demo-hall-wA",
+  "src": "assets/refs/linea-demo-hall-wA.jpg",
+  "style": "Джапанди",
+  "room": "прихожая",
+  "project": "linea-demo",
+  "styleKey": "japandi"
+ },
+ {
+  "id": "dom-120-living-wA",
+  "src": "assets/refs/dom-120-living-wA.jpg",
+  "style": "Средиземноморье",
+  "room": "гостиная-кухня",
+  "project": "linea-dom-120"
+ },
+ {
+  "id": "dom-120-living-wB",
+  "src": "assets/refs/dom-120-living-wB.jpg",
+  "style": "Средиземноморье",
+  "room": "гостиная-кухня",
+  "project": "linea-dom-120"
+ },
+ {
+  "id": "dom-120-study-wA",
+  "src": "assets/refs/dom-120-study-wA.jpg",
+  "style": "Средиземноморье",
+  "room": "кабинет",
+  "project": "linea-dom-120"
+ },
+ {
+  "id": "dom-120-bedroom-wD",
+  "src": "assets/refs/dom-120-bedroom-wD.jpg",
+  "style": "Средиземноморье",
+  "room": "спальня",
+  "project": "linea-dom-120"
+ },
+ {
+  "id": "dom-120-kids1-wA",
+  "src": "assets/refs/dom-120-kids1-wA.jpg",
+  "style": "Средиземноморье",
+  "room": "детская",
+  "project": "linea-dom-120"
+ },
+ {
+  "id": "dom-120-bath-wide",
+  "src": "assets/refs/dom-120-bath-wide.jpg",
+  "style": "Средиземноморье",
+  "room": "санузел",
+  "project": "linea-dom-120"
+ },
+ {
+  "id": "dom-331-bedroom2-wA",
+  "src": "assets/refs/dom-331-bedroom2-wA.jpg",
+  "style": "Загородный дом",
+  "room": "спальня",
+  "project": "dom-331",
+  "styleKey": "chalet"
+ },
+ {
+  "id": "dom-331-kids2-wA",
+  "src": "assets/refs/dom-331-kids2-wA.jpg",
+  "style": "Загородный дом",
+  "room": "детская",
+  "project": "dom-331",
+  "styleKey": "chalet"
  }
 ]
