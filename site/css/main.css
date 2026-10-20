@@ -26,6 +26,7 @@ header.site{position:sticky;top:0;z-index:50;background:#0F0E0Cf0;backdrop-filte
 .nav .links a:hover{color:var(--ink)}
 .btn{display:inline-block;background:var(--gold);color:#14120E;padding:14px 30px;border-radius:2px;font-weight:600;letter-spacing:1px;font-size:14px;border:1px solid var(--gold);cursor:pointer;transition:.2s}
 .btn:hover{background:var(--gold2);border-color:var(--gold2);color:#14120E}
+.btn:disabled,.btn[disabled]{opacity:.42;cursor:not-allowed;pointer-events:none}
 .btn.ghost{background:transparent;color:var(--gold)}
 .btn.ghost:hover{background:#c29a5b14;color:var(--gold2)}
 .btn.sm{padding:10px 20px;font-size:13px}
