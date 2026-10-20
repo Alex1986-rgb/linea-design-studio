@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Рабочая документация по ГОСТ — как собирается альбом | LINEA</title>
-<meta name="description" content="Комплект рабочей документации на квартиру или дом: 64–155 листов A3, 26 специальностей, 928 правил проверки с пунктами ГОСТ и СП. 9 альбомов можно посмотреть…">
+<meta name="description" content="Комплект рабочей документации на квартиру или дом: 64–156 листов A3, 26 специальностей, 928 правил проверки с пунктами ГОСТ и СП. 9 альбомов можно посмотреть…">
 <link rel="canonical" href="https://alex1986-rgb.github.io/linea-design-studio/gost/">
 <meta property="og:type" content="website">
 <meta property="og:title" content="Рабочая документация по ГОСТ">
@@ -17,7 +17,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,500;0,600;1,500&family=Inter:wght@400;600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="../css/main.css?v=32">
+<link rel="stylesheet" href="../css/main.css?v=33">
 <style>
 .g-hero{margin:0}.g-hero img{display:block;width:100%;height:auto;max-height:640px;object-fit:cover;border:1px solid var(--line);border-radius:4px;background:#14130f}
 .g-hero.sheet img{object-fit:contain;background:#f4f1ea}
@@ -85,7 +85,7 @@
       <div class="stats">
         <div><b>928</b><span>правил проверки выпуска</span></div>
         <div><b>26</b><span>специальностей в команде</span></div>
-        <div><b>912</b><span>листов в девяти альбомах</span></div>
+        <div><b>915</b><span>листов в девяти альбомах</span></div>
         <div><b>1</b><span>блокер на выдаче</span></div>
       </div>
     </div>
@@ -162,7 +162,7 @@
             <b>Дом 120 м² в два этажа · средиземноморье (демо LINEA в новом формате)</b>
             <span class="tile-lead">Демо-дом студии в новом формате: планы по этажам, лестница с ограждением и отдельным листом, средиземноморско-скандинавская гамма — эгейский синий, охра, олива, песок.</span>
             <span class="tile-lead" style="font-size:12.5px;margin-top:8px">В названии — заявленная площадь; в цифрах ниже — общая по экспликации альбома.</span>
-            <div class="tile-figs"><i><b>130</b>листов</i><i><b>147,36</b>м²</i><i><b>13</b>помещений</i></div>
+            <div class="tile-figs"><i><b>132</b>листа</i><i><b>147,36</b>м²</i><i><b>13</b>помещений</i></div>
             <span class="more">Смотреть листы →</span>
           </div>
         </a>
@@ -184,7 +184,7 @@
             <b>Дом 331 м² с мансардой и гаражом</b>
             <span class="tile-lead">Частный дом: 1-й этаж — гостиная с камином, кухня-столовая, кабинет, веранда, гараж и котельная; мансарда — четыре спальни, гардеробная, санузлы и спортзона в холле. Современное шале с эко-теплом: дуб и лиственница, натуральный камень у камина, у каждой комнаты свой цветовой акцент.</span>
             <span class="tile-lead" style="font-size:12.5px;margin-top:8px">В названии — заявленная площадь; в цифрах ниже — общая по экспликации альбома.</span>
-            <div class="tile-figs"><i><b>155</b>листов</i><i><b>270,67</b>м²</i><i><b>20</b>помещений</i></div>
+            <div class="tile-figs"><i><b>156</b>листов</i><i><b>270,67</b>м²</i><i><b>20</b>помещений</i></div>
             <span class="more">Смотреть листы →</span>
           </div>
         </a>
@@ -316,9 +316,12 @@
     m.hidden = !open;
     b.classList.toggle('on', open);
     b.setAttribute('aria-expanded', open ? 'true' : 'false');
+    b.setAttribute('aria-label', open ? 'Закрыть меню' : 'Меню');
     document.documentElement.style.overflow = open ? 'hidden' : '';
+    document.documentElement.classList.toggle('menu-open', open);   // шапка с кнопкой — над меню, иначе меню не закрыть
   });
-  m.addEventListener('click', function (e) { if (e.target.tagName === 'A') b.click(); });
+  m.addEventListener('click', function (e) { if (e.target.tagName === 'A' || e.target === m) b.click(); });
+  document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && !m.hidden) b.click(); });
 })();
 </script>
 <div class="sticky-cta">

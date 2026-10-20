@@ -17,7 +17,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,500;0,600;1,500&family=Inter:wght@400;600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="../css/main.css?v=32">
+<link rel="stylesheet" href="../css/main.css?v=33">
 <script type="application/ld+json">{"@context":"https://schema.org","@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"LINEA","item":"https://alex1986-rgb.github.io/linea-design-studio/"},{"@type":"ListItem","position":2,"name":"Кейсы","item":"https://alex1986-rgb.github.io/linea-design-studio/cases/"}]}</script>
 </head>
 <body>
@@ -77,7 +77,7 @@
           <span class="tag">Загородный дом · шале и эко</span>
           <b>Дом с мансардой, гаражом и спортзоной</b>
           <span class="tile-lead">Внизу — гостиная с камином, кухня-столовая, кабинет, веранда, гараж и котельная; в мансарде — четыре спальни…</span>
-          <span class="tile-figs"><i><b>155</b> листов</i><i><b>270,67</b> м²</i><i><b>20</b> помещ.</i></span>
+          <span class="tile-figs"><i><b>156</b> листов</i><i><b>270,67</b> м²</i><i><b>20</b> помещ.</i></span>
         </div>
       </a>
       <a class="tile" href="kvartira-103.html">
@@ -104,7 +104,7 @@
           <span class="tag">Средиземноморье и сканди</span>
           <b>Дом 120 м² в два этажа · средиземноморье</b>
           <span class="tile-lead">Демо-дом студии: два этажа, лестница из холла, кабинет, две детские. Первый вариант был собран старым движком на 56…</span>
-          <span class="tile-figs"><i><b>130</b> листов</i><i><b>147,36</b> м²</i><i><b>13</b> помещ.</i></span>
+          <span class="tile-figs"><i><b>132</b> листа</i><i><b>147,36</b> м²</i><i><b>13</b> помещ.</i></span>
         </div>
       </a>
     </div>
@@ -136,7 +136,7 @@
     <div class="scroll-x">
       <table class="tbl">
         <tr><th>Параметр</th><th>Квартира 56 м²</th><th>Дом с мансардой</th></tr>
-        <tr><td>Листов в рабочем альбоме</td><td>81</td><td>155</td></tr>
+        <tr><td>Листов в рабочем альбоме</td><td>81</td><td>156</td></tr>
         <tr><td>Помещений</td><td>5</td><td>20</td></tr>
         <tr><td>Планы</td><td>один комплект</td><td>по комплекту на этаж</td></tr>
         <tr><td>Лестница</td><td>—</td><td>отдельный лист с расчётом подъёмов</td></tr>
@@ -214,9 +214,12 @@
     m.hidden = !open;
     b.classList.toggle('on', open);
     b.setAttribute('aria-expanded', open ? 'true' : 'false');
+    b.setAttribute('aria-label', open ? 'Закрыть меню' : 'Меню');
     document.documentElement.style.overflow = open ? 'hidden' : '';
+    document.documentElement.classList.toggle('menu-open', open);   // шапка с кнопкой — над меню, иначе меню не закрыть
   });
-  m.addEventListener('click', function (e) { if (e.target.tagName === 'A') b.click(); });
+  m.addEventListener('click', function (e) { if (e.target.tagName === 'A' || e.target === m) b.click(); });
+  document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && !m.hidden) b.click(); });
 })();
 </script>
 </body>

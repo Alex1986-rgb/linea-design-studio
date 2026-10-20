@@ -17,7 +17,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,500;0,600;1,500&family=Inter:wght@400;600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="../css/main.css?v=32">
+<link rel="stylesheet" href="../css/main.css?v=33">
 <script type="application/ld+json">{"@context":"https://schema.org","@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"LINEA","item":"https://alex1986-rgb.github.io/linea-design-studio/"},{"@type":"ListItem","position":2,"name":"Журнал","item":"https://alex1986-rgb.github.io/linea-design-studio/journal/"},{"@type":"ListItem","position":3,"name":"Как принять дизайн-проект и оставить правки, которые поймут","item":"https://alex1986-rgb.github.io/linea-design-studio/journal/kak-prinyat-dizayn-proekt.html"}]}</script>
 <script type="application/ld+json">{"@context":"https://schema.org","@type":"Article","headline":"Как принять дизайн-проект и оставить правки, которые поймут","description":"Что проверить в альбоме до того, как отдавать его бригаде, в каком порядке смотреть листы и как сформулировать правку так, чтобы её не пришлось объяснять второй раз.","author":{"@type":"Person","name":"Кырлан Александр","jobTitle":"дизайнер-архитектор","telephone":"+79257338640","email":"optteem@mail.ru"},"publisher":{"@type":"Organization","name":"LINEA","url":"https://alex1986-rgb.github.io/linea-design-studio/"},"mainEntityOfPage":"https://alex1986-rgb.github.io/linea-design-studio/journal/kak-prinyat-dizayn-proekt.html","inLanguage":"ru-RU","datePublished":"2026-10-20","dateModified":"2026-10-20"}</script>
 <script type="application/ld+json">{"@context":"https://schema.org","@type":"FAQPage","mainEntity":[{"@type":"Question","name":"Сколько кругов правок можно сделать?","acceptedAnswer":{"@type":"Answer","text":"Каждый круг — это перевыпуск альбома, а не ручная переделка листов, поэтому правки не копятся неделями. Удобнее собирать замечания пачкой: пройти альбом целиком и отправить список одним сообщением."}},{"@type":"Question","name":"Можно ли править визуализацию?","acceptedAnswer":{"@type":"Answer","text":"Да. Кнопка «Правка к этому листу» есть и на листах с визуализациями: если кадр показал не то — переснимаем."}},{"@type":"Question","name":"Что делать, если бригада говорит «так нельзя»?","acceptedAnswer":{"@type":"Answer","text":"Пусть оставит правку на том листе, о котором речь, или пришлёт фото. Если замечание по делу — исправим в проекте, и исправление попадёт во все связанные листы."}}]}</script>
@@ -176,9 +176,12 @@
     m.hidden = !open;
     b.classList.toggle('on', open);
     b.setAttribute('aria-expanded', open ? 'true' : 'false');
+    b.setAttribute('aria-label', open ? 'Закрыть меню' : 'Меню');
     document.documentElement.style.overflow = open ? 'hidden' : '';
+    document.documentElement.classList.toggle('menu-open', open);   // шапка с кнопкой — над меню, иначе меню не закрыть
   });
-  m.addEventListener('click', function (e) { if (e.target.tagName === 'A') b.click(); });
+  m.addEventListener('click', function (e) { if (e.target.tagName === 'A' || e.target === m) b.click(); });
+  document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && !m.hidden) b.click(); });
 })();
 </script>
 </body>

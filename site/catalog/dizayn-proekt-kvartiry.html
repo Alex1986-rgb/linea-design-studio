@@ -17,7 +17,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,500;0,600;1,500&family=Inter:wght@400;600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="../css/main.css?v=32">
+<link rel="stylesheet" href="../css/main.css?v=33">
 <script type="application/ld+json">{"@context":"https://schema.org","@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"LINEA","item":"https://alex1986-rgb.github.io/linea-design-studio/"},{"@type":"ListItem","position":2,"name":"Каталог","item":"https://alex1986-rgb.github.io/linea-design-studio/catalog/"},{"@type":"ListItem","position":3,"name":"Дизайн-проект квартиры","item":"https://alex1986-rgb.github.io/linea-design-studio/catalog/dizayn-proekt-kvartiry.html"}]}</script>
 <script type="application/ld+json">{"@context":"https://schema.org","@type":"Service","name":"Дизайн-проект квартиры","serviceType":"Дизайн интерьера","description":"Два альбома на вашу квартиру: рабочая документация по ГОСТ, по которой бригада строит и закупает, и альбом для заказчика с визуализацией каждой стены. Правки — голосом прямо на листах.","areaServed":"RU","url":"https://alex1986-rgb.github.io/linea-design-studio/catalog/dizayn-proekt-kvartiry.html","image":"https://alex1986-rgb.github.io/linea-design-studio/assets/refs/retro-103-living-wA.jpg","provider":{"@type":"ProfessionalService","name":"LINEA","url":"https://alex1986-rgb.github.io/linea-design-studio/","telephone":"+79257338640","email":"optteem@mail.ru"},"offers":{"@type":"Offer","price":"0","priceCurrency":"RUB","availability":"https://schema.org/LimitedAvailability","description":"Открытое тестирование студии: проект делается бесплатно, предоплаты нет. Первый вариант проекта квартиры — до 48 часов от получения брифа с планом."}}</script>
 <script type="application/ld+json">{"@context":"https://schema.org","@type":"FAQPage","mainEntity":[{"@type":"Question","name":"Что значит «первый вариант за 48 часов»?","acceptedAnswer":{"@type":"Answer","text":"Это полный комплект — рабочий альбом и альбом для заказчика, собранные по вашему брифу. Отсчёт идёт от получения брифа с планом; бриф подтверждаем в течение дня. Дальше — ваши правки и перевыпуск."}},{"@type":"Question","name":"Как вносить правки?","acceptedAnswer":{"@type":"Answer","text":"Откройте лист на сайте или нажмите «Правка к этому листу» в PDF — она есть на каждой странице альбома для заказчика. Поставьте метку на чертеже и скажите, что поменять. Правки собираются в один список и уходят нам одним сообщением."}},{"@type":"Question","name":"А если обмера нет?","acceptedAnswer":{"@type":"Answer","text":"Начнём по плану застройщика или даже по картинке. Чего нет в исходных данных, движок не придумывает: записывает допущением в реестр открытых вопросов и печатает задание на контрольный обмер. До обмера альбом помечен «предварительно»."}},{"@type":"Question","name":"Сколько стоит?","acceptedAnswer":{"@type":"Answer","text":"На время открытого тестирования — бесплатно, предоплаты нет. Альбомы остаются у вас, даже если работать дальше не станем. Взамен просим честную обратную связь."}}]}</script>
@@ -99,7 +99,7 @@
       <tr><td>Отопление и вентиляция</td><td>План вентиляции; План отопления</td><td>2–4</td></tr>
       <tr><td>Водоснабжение и канализация</td><td>План выводов сантехники; Схема разводки водопровода и канализации; Спецификация сантехнического оборудования</td><td>3–5</td></tr>
       <tr><td>Освещение</td><td>Спецификация светильников и сценарии освещения</td><td>1</td></tr>
-      <tr><td>Потолки и перегородки</td><td>План потолков<br><span class="hint">по объекту: разрезы и узлы потолков; схема каркаса перегородок</span></td><td>1–3</td></tr>
+      <tr><td>Потолки и перегородки</td><td>План потолков; Разрезы и узлы потолков<br><span class="hint">по объекту: схема каркаса перегородок</span></td><td>1–3</td></tr>
       <tr><td>Раскладка плитки</td><td>Раскладка плитки. Планы полов; Раскладка плитки по стенам мокрых зон и фартуку</td><td>2–6</td></tr>
       <tr><td>Полы и отделка</td><td>План полов; Ведомость отделки помещений<br><span class="hint">по объекту: конструкции полов и стыки покрытий</span></td><td>2–6</td></tr>
       <tr><td>Цвет и материалы</td><td>Колерная карта; Спецификация отделочных материалов</td><td>2–5</td></tr>
@@ -262,9 +262,12 @@
     m.hidden = !open;
     b.classList.toggle('on', open);
     b.setAttribute('aria-expanded', open ? 'true' : 'false');
+    b.setAttribute('aria-label', open ? 'Закрыть меню' : 'Меню');
     document.documentElement.style.overflow = open ? 'hidden' : '';
+    document.documentElement.classList.toggle('menu-open', open);   // шапка с кнопкой — над меню, иначе меню не закрыть
   });
-  m.addEventListener('click', function (e) { if (e.target.tagName === 'A') b.click(); });
+  m.addEventListener('click', function (e) { if (e.target.tagName === 'A' || e.target === m) b.click(); });
+  document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && !m.hidden) b.click(); });
 })();
 </script>
 </body>

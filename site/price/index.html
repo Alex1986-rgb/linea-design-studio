@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Стоимость дизайн-проекта — бесплатно на время теста | LINEA</title>
-<meta name="description" content="Дизайн-проект в LINEA на время открытого тестирования бесплатно, без предоплаты: альбом по ГОСТ (квартира 64–121 листов, дом 130–155), альбом для заказчика с…">
+<meta name="description" content="Дизайн-проект в LINEA на время открытого тестирования бесплатно, без предоплаты: альбом по ГОСТ (квартира 64–121 листов, дом 132–156), альбом для заказчика с…">
 <link rel="canonical" href="https://alex1986-rgb.github.io/linea-design-studio/price/">
 <meta property="og:type" content="website">
 <meta property="og:title" content="Стоимость и условия">
@@ -17,7 +17,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,500;0,600;1,500&family=Inter:wght@400;600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="../css/main.css?v=32">
+<link rel="stylesheet" href="../css/main.css?v=33">
 <style>.g-steps{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:18px;margin:0;padding:0;list-style:none;counter-reset:st}
 .g-steps li{border:1px solid var(--line);border-radius:4px;padding:20px 22px;background:var(--panel);counter-increment:st}
 .g-steps li::before{content:counter(st,decimal-leading-zero);display:block;color:var(--gold);font-family:var(--serif);font-size:22px;margin-bottom:8px}
@@ -79,7 +79,7 @@
       <table class="tbl">
         <tr><th>Услуга</th><th>Объём</th><th>Срок</th><th class="hi">Цена в тесте</th></tr>
         <tr><td><a href="../catalog/dizayn-proekt-kvartiry.html">Дизайн-проект квартиры</a></td><td>альбом по ГОСТ 64–121 листов A3 + альбом для заказчика</td><td>до 48 часов</td><td class="hi">0 ₽</td></tr>
-        <tr><td><a href="../catalog/dizayn-proekt-doma.html">Дизайн-проект дома</a></td><td>альбом по ГОСТ 130–155 листов A3 + альбом для заказчика</td><td>до 72 часов</td><td class="hi">0 ₽</td></tr>
+        <tr><td><a href="../catalog/dizayn-proekt-doma.html">Дизайн-проект дома</a></td><td>альбом по ГОСТ 132–156 листов A3 + альбом для заказчика</td><td>до 72 часов</td><td class="hi">0 ₽</td></tr>
         <tr><td><a href="../catalog/rabochaya-dokumentatsiya.html">Только рабочая документация</a></td><td>от 61 листа A3</td><td>до 48 ч, дом — до 72</td><td class="hi">0 ₽</td></tr>
         <tr><td><a href="../catalog/planirovochnoe-reshenie.html">Планировочное решение</a></td><td>6–16 листов</td><td>до 48 ч, дом — до 72</td><td class="hi">0 ₽</td></tr>
         <tr><td><a href="../catalog/vizualizatsii.html">Визуализации</a></td><td>в альбоме для заказчика, перед развёртками своих стен</td><td>вместе с проектом</td><td class="hi">0 ₽</td></tr>
@@ -122,7 +122,7 @@
   <div class="wrap">
     <div class="kicker">Калькулятор</div>
     <h2>Сколько листов будет в вашем альбоме</h2>
-    <p class="sub">Оценка по девяти выпущенным альбомам: квартиры на 5–13 помещений — 64–121 листов, дома — 130–155. Разброс у реальных проектов — до ±13 листов: больше мебели на заказ и мокрых зон — больше листов.</p>
+    <p class="sub">Оценка по девяти выпущенным альбомам: квартиры на 5–13 помещений — 64–121 листов, дома — 132–156. Разброс у реальных проектов — до ±13 листов: больше мебели на заказ и мокрых зон — больше листов.</p>
     <div class="calc" data-calc>
       <div class="calc-row"><span>Помещений (комнаты, кухня, санузлы, прихожая, гардеробная)</span>
         <div class="calc-num"><button type="button" data-mm="-1" aria-label="Меньше помещений">−</button><b data-rooms>6</b><button type="button" data-mm="1" aria-label="Больше помещений">+</button></div>
@@ -149,8 +149,8 @@
     $('[data-rooms]').textContent = rooms;
     $('[data-floors]').textContent = floors;
     // коэффициенты посчитаны генератором по выпущенным альбомам (tools/gen-more-pages.js, LS):
-    // листы квартиры ≈ 42.5 + 5.4 × помещений; каждый следующий этаж ≈ +11; развёрток ≈ 2.26 на помещение
-    $('[data-base]').textContent = Math.round(42.5 + 5.4 * rooms + 11 * (floors - 1));
+    // листы квартиры ≈ 42.5 + 5.4 × помещений; каждый следующий этаж ≈ +12; развёрток ≈ 2.26 на помещение
+    $('[data-base]').textContent = Math.round(42.5 + 5.4 * rooms + 12 * (floors - 1));
     $('[data-elev]').textContent = Math.round(2.26 * rooms);
   }
   root.addEventListener('click', function (e) {
@@ -230,9 +230,12 @@
     m.hidden = !open;
     b.classList.toggle('on', open);
     b.setAttribute('aria-expanded', open ? 'true' : 'false');
+    b.setAttribute('aria-label', open ? 'Закрыть меню' : 'Меню');
     document.documentElement.style.overflow = open ? 'hidden' : '';
+    document.documentElement.classList.toggle('menu-open', open);   // шапка с кнопкой — над меню, иначе меню не закрыть
   });
-  m.addEventListener('click', function (e) { if (e.target.tagName === 'A') b.click(); });
+  m.addEventListener('click', function (e) { if (e.target.tagName === 'A' || e.target === m) b.click(); });
+  document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && !m.hidden) b.click(); });
 })();
 </script>
 </body>

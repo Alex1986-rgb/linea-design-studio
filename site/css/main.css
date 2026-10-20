@@ -632,6 +632,7 @@ a.logo:hover i,.logo:hover i{animation:logoSheen 1.1s ease}
 .burger.on i:nth-child(1){transform:translateY(9px) rotate(45deg)}
 .burger.on i:nth-child(2){opacity:0}
 .burger.on i:nth-child(3){transform:translateY(-9px) rotate(-45deg)}
+.menu-open header.site{z-index:80}
 .mnav{position:fixed;inset:0;z-index:70;background:#0F0E0Cf5;backdrop-filter:blur(18px);display:flex;flex-direction:column;justify-content:center;padding:8vh 8vw}
 /* авторский display:flex сильнее UA-правила [hidden] — возвращаем скрытие явно,
    иначе оверлей меню перекрывал первый экран на каждой странице */

@@ -16,7 +16,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,500;0,600;1,500&family=Inter:wght@400;600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/main.css?v=32">
+<link rel="stylesheet" href="css/main.css?v=33">
 <style>
 .dict-wrap{position:relative}
 .dict-wrap textarea,.dict-wrap input{padding-right:48px;width:100%;box-sizing:border-box}
@@ -85,7 +85,7 @@ details.example{margin:12px 0;color:var(--mut)} details.example summary{cursor:p
 
 <header class="site">
   <div class="nav">
-    <a class="logo" href="">LINE<i>A</i></a>
+    <a class="logo" href="./">LINE<i>A</i></a>
     <nav class="links">
       <a href="catalog/">Каталог</a>
       <a href="gost/">Документация</a>
@@ -296,8 +296,10 @@ details.example{margin:12px 0;color:var(--mut)} details.example summary{cursor:p
     b.classList.toggle('on', open);
     b.setAttribute('aria-expanded', open ? 'true' : 'false');
     document.documentElement.style.overflow = open ? 'hidden' : '';
+    document.documentElement.classList.toggle('menu-open', open);
   });
-  m.addEventListener('click', function (e) { if (e.target.tagName === 'A') b.click(); });
+  m.addEventListener('click', function (e) { if (e.target.tagName === 'A' || e.target === m) b.click(); });
+  document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && !m.hidden) b.click(); });
 })();
 </script>
 </body>
