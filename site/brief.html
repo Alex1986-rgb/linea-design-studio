@@ -16,7 +16,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,500;0,600;1,500&family=Inter:wght@400;600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/main.css?v=31">
+<link rel="stylesheet" href="css/main.css?v=32">
 <style>
 .dict-wrap{position:relative}
 .dict-wrap textarea,.dict-wrap input{padding-right:48px;width:100%;box-sizing:border-box}
@@ -34,7 +34,7 @@ textarea.big{min-height:220px;font-size:17px}
 .ref[data-v="dislike"]{opacity:.45} .ref[data-v="dislike"] .dislike{background:#7a1f1f}
 .chip{display:inline-block;margin:4px 6px 0 0;padding:3px 8px;border:1px solid var(--line);border-radius:12px;font-size:13px}
 .chip button{background:none;border:none;color:var(--mut);cursor:pointer}
-.room-row{grid-template-columns:1.4fr 1.2fr .7fr .7fr auto auto}
+@media(min-width:761px){.room-row{grid-template-columns:1.4fr 1.2fr .7fr .7fr auto auto}}
 .room-row .r-level{max-width:90px}
 .draft-note{color:var(--gold2)}
 .voice{text-align:center;padding:10px 0 18px}
@@ -70,7 +70,7 @@ details.example{margin:12px 0;color:var(--mut)} details.example summary{cursor:p
 
 <header class="site">
   <div class="nav">
-    <a class="logo" href="">LINE<i>A</i></a>
+    <a class="logo" href="./">LINE<i>A</i></a>
     <nav class="links">
       <a href="catalog/">Каталог</a>
       <a href="gost/">Документация</a>
@@ -236,6 +236,7 @@ details.example{margin:12px 0;color:var(--mut)} details.example summary{cursor:p
       <div class="field"><label>E-mail</label><input type="email" id="cEmail" placeholder="you@mail.ru"></div>
       <div class="field"><label>Как удобнее связаться</label><select id="cWay"><option>WhatsApp</option><option>Telegram</option><option>звонок</option><option>почта</option></select></div>
     </div>
+    <p class="hint" id="needContact" hidden style="color:#e8a87c"><b>Оставьте телефон или e-mail</b> — иначе мы не сможем прислать проект.</p>
     <p class="hint">Отправляя бриф, вы соглашаетесь на обработку данных для подготовки проекта — <a href="policy/">подробнее</a>.</p>
   </div>
 
@@ -265,7 +266,7 @@ details.example{margin:12px 0;color:var(--mut)} details.example summary{cursor:p
 <a class="to-top" href="#" aria-label="Наверх">↑</a>
 <footer class="site"><div class="wrap cols"><div><div class="logo">LINE<i>A</i></div><p>дизайнер-архитектор <b>Кырлан Александр</b><br><a href="tel:+79257338640">+7 925 733-86-40</a> · <a href="mailto:optteem@mail.ru">optteem@mail.ru</a></p></div><div><p><a href="brief.html">Бриф</a> · <a href="catalog/">Каталог</a> · <a href="gost/">Документация</a> · <a href="cases/">Кейсы</a> · <a href="compare/">Сравнение</a> · <a href="style/">Стили</a> · <a href="journal/">Журнал</a> · <a href="stories/">Истории</a> · <a href="reviews/">Отзывы</a> · <a href="portfolio-hub/">Портфолио</a> · <a href="price/">Условия</a> · <a href="process/">Процесс</a> · <a href="faq/">FAQ</a> · <a href="about/">О студии</a> · <a href="contacts/">Контакты</a> · <a href="checklist/">Чек-лист приёмки</a> · <a href="sitemap/">Карта сайта</a> · <a href="policy/">Обработка данных</a></p><p>© LINEA studio, 2026</p></div></div></footer>
 
-<script src="js/brief.js?v=35"></script>
+<script src="js/brief.js?v=36"></script>
 <script>
 (function () {
   var b = document.querySelector('.burger'), m = document.querySelector('.mnav');

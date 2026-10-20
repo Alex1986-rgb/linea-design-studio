@@ -33,12 +33,15 @@
     stepsEl.innerHTML = STEPS.map((t, i) => `<span class="${i === step ? 'on' : i < step ? 'done' : ''}">${i + 1}<em> из ${STEPS.length}</em> · ${t}</span>`).join('')
       + `<i class="progress"><b style="width:${Math.round((step / LAST) * 100)}%"></b></i>`;
     document.querySelectorAll('.panel').forEach(p => { p.hidden = +p.dataset.step !== step; });
-    $('prev').style.visibility = step === 0 || step === LAST ? 'hidden' : 'visible';
+    $('prev').style.visibility = step === 0 ? 'hidden' : 'visible';
     $('next').textContent = step === FORM_LAST ? 'Собрать бриф ✓' : 'Далее →';
     $('next').style.display = step === LAST ? 'none' : '';
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    if (renderSteps.done) $('steps').scrollIntoView({ behavior: 'smooth', block: 'start' });   // к форме, не к заголовку страницы
+    renderSteps.done = true;
   }
-  $('next').onclick = () => { if (step === 0) autoFill(); if (step === FORM_LAST) buildResult(); step = Math.min(LAST, step + 1); renderSteps(); save(); };
+  $('next').onclick = () => {
+    if (step === FORM_LAST && !val('cPhone').trim() && !val('cEmail').trim()) { $('needContact').hidden = false; $('cPhone').focus(); return; }   // без способа связи бриф бесполезен
+    if (step === 0) autoFill(); if (step === FORM_LAST) buildResult(); step = Math.min(LAST, step + 1); renderSteps(); save(); };
   $('prev').onclick = () => { step = Math.max(0, step - 1); renderSteps(); };
 
   // ── дом: этажи, лестница, участок
@@ -178,7 +181,7 @@
       field.dispatchEvent(new Event('input', { bubbles: true }));
     };
     rec.onend = () => { field.value = field.value.trim(); rec = null; recField = null; onState(false); save(); };
-    rec.onerror = ev => { if (ev.error === 'not-allowed' || ev.error === 'service-not-allowed') alert('Разрешите доступ к микрофону для этой страницы (значок замка в адресной строке) — или нажмите микрофон на клавиатуре телефона.'); };
+    rec.onerror = ev => { if (ev.error === 'not-allowed' || ev.error === 'service-not-allowed') { $('micHint').hidden = false; $('micHint').innerHTML = '<b>Микрофон не разрешён.</b> Нажмите значок замка в адресной строке и разрешите микрофон — или нажмите 🎤 на клавиатуре телефона и говорите в поле.'; } };
     try { rec.start(); onState(true); } catch (e) { onState(false); }
   }
   function micFor(field) {
@@ -209,6 +212,8 @@
     ['Сроки и бюджет', /(бюджет|деньг|тысяч|миллион|срок|месяц|весн|лет|осен|зим|переезд|въех)/i]
   ];
   const story = $('story');
+  const startWord = re => new RegExp('(?:^|[^а-яёa-z])(?:' + re.source + ')', 'i');   // тема — с начала слова: «бел» не в «колыбели»
+  TOPICS.forEach(tp => { tp[1] = startWord(tp[1]); });
   function paintTopics() {
     const t = story.value;
     $('topics').innerHTML = '<span class="topics-title">О чём рассказать:</span>' + TOPICS.map(([n, re]) => `<span class="topic${re.test(t) ? ' ok' : ''}">${re.test(t) ? '✓ ' : ''}${n}</span>`).join('');
@@ -221,7 +226,8 @@
     const area = t.match(/(\d{2,3}(?:[.,]\d)?)\s*(?:кв|квадрат|м²|м2|метр)/i);
     if (area) set('objArea', area[1].replace(',', '.'), 'площадь');
     if (/(^|[^а-яё])(дом|коттедж|дача|дачу)([^а-яё]|$)/i.test(t) && !/квартир/i.test(t) && $('objType').value === 'квартира') { $('objType').value = 'дом'; houseUI(); done.push('тип: дом'); }
-    const pets = [/(кот|кошк)/i.test(t) && 'кот', /(собак|пёс|пес\b)/i.test(t) && 'собака'].filter(Boolean).join(', ');
+    const W = w => new RegExp('(^|[^а-яё])(' + w + ')([^а-яё]|$)', 'i');   // целое слово: «котором», «котельная» — не кот
+    const pets = [W('кот|кота|коты|котов|кошка|кошки|котик|кошек').test(t) && 'кот', W('собака|собаки|собак|пёс|пес|щенок').test(t) && 'собака'].filter(Boolean).join(', ');
     set('qPets', pets, 'животные');
     const who = t.match(/((?:живу|живём|живем)[^.!?,;]{0,60})/i);
     if (who) set('qWho', who[1].trim(), 'кто живёт');
@@ -299,6 +305,7 @@
     (d.rooms && d.rooms.length ? d.rooms : [{ name: 'Гостиная-кухня', type: 'living-kitchen' }]).forEach(r => addRoom(r.name, r.type, r.width, r.length, r.level));
     if (d.style && cardOf(d.style)) pickStyle(cardOf(d.style));
     Object.assign(refs, d.refs || {});
+    if (Number.isInteger(d.step) && d.step > 0 && d.step < LAST) step = d.step;   // продолжить с того же шага
     const lost = d.files ? d.files.plans.length + d.files.photos.length : 0;
     $('draftNote').hidden = false;
     $('draftNote').innerHTML = 'Черновик восстановлен — продолжайте с того места, где остановились.' + (lost ? ' Файлы браузер не сохраняет: выберите их ещё раз.' : '')
@@ -417,10 +424,10 @@
       const f = await makeArchive();
       if (navigator.canShare && navigator.canShare({ files: [f] })) {
         try { await navigator.share({ files: [f], title: 'Бриф LINEA', text: 'Бриф на дизайн-проект: ' + (lastBrief && lastBrief.client.name || '') }); }
-        catch (e) { if (e.name !== 'AbortError') saveBlob(f, f.name); }
+        catch (e) { if (e.name === 'AbortError') { $('afterZip').hidden = false; $('afterZip').innerHTML = 'Отправка отменена. Нажмите кнопку ещё раз — или <button type="button" class="linklike" id="zipDl">скачайте архив</button> и пришлите его в WhatsApp на +7 925 733-86-40.'; $('zipDl').onclick = () => saveBlob(f, f.name); return; } saveBlob(f, f.name); }
       } else saveBlob(f, f.name);
       $('afterZip').hidden = false;
-      $('zipInfo').textContent = f.name + ' · ' + (f.size / 1048576).toFixed(1) + ' МБ';
+      $('zipInfo').textContent = f.name + ' · ' + (f.size < 1048576 ? Math.max(1, Math.round(f.size / 1024)) + ' КБ' : (f.size / 1048576).toFixed(1) + ' МБ');
     } finally { btn.disabled = false; btn.textContent = old; }
   };
 

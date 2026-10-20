@@ -9,7 +9,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;600&family=Inter:wght@400;600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/main.css?v=31">
+<link rel="stylesheet" href="css/main.css?v=32">
 <style>
 body{background:var(--bg)}
 .rv-top{position:sticky;top:0;z-index:20;background:#0F0E0Cf2;border-bottom:1px solid var(--line);padding:10px 16px;display:flex;flex-wrap:wrap;gap:10px;align-items:center}
@@ -18,7 +18,7 @@ body{background:var(--bg)}
 .rv-top button,.rv-top a.tb{background:var(--panel);border:1px solid var(--line);color:var(--ink);border-radius:4px;padding:7px 11px;cursor:pointer;font-size:14px}
 .rv-wrap{display:grid;grid-template-columns:1fr 360px;gap:16px;padding:14px 16px 40px}
 @media(max-width:900px){.rv-wrap{grid-template-columns:1fr}}
-.rv-view{overflow:auto;border:1px solid var(--line);border-radius:6px;background:#fff;max-height:calc(100vh - 140px);cursor:crosshair}
+.rv-view{min-height:260px;overflow:auto;border:1px solid var(--line);border-radius:6px;background:#fff;max-height:calc(100vh - 140px);cursor:crosshair}
 #stage{position:relative;width:100%}
 #stage img{display:block;width:100%;height:auto;user-select:none;-webkit-user-drag:none}
 #pins{position:absolute;inset:0;pointer-events:none}
@@ -37,6 +37,7 @@ body{background:var(--bg)}
 #edMic.rec{background:#8a2020;border-color:#e66;animation:pul 1.2s infinite}
 @keyframes pul{50%{box-shadow:0 0 0 8px rgba(204,68,68,.25)}}
 .zoomv{color:var(--mut);font-size:13px;min-width:44px;text-align:center}
+@media(max-width:600px){.rv-top{gap:6px;padding:8px 10px}.rv-top .logo,#zfit,.zoomv{display:none}.rv-top select{order:9;flex-basis:100%}.rv-top button,.rv-top a.tb{padding:6px 9px}}
 </style>
 </head>
 <body>
@@ -64,12 +65,15 @@ body{background:var(--bg)}
     </div>
     <button class="btn sm ghost" id="general" type="button">+ Правка ко всему листу</button>
     <ul id="list"></ul>
+    <div class="field" style="margin:8px 0"><label for="who">Ваше имя</label><input type="text" id="who" placeholder="чтобы мы знали, чьи правки"></div>
     <button class="btn" id="sendBtn" type="button" disabled>Отправить правки</button>
     <p class="hint" id="sent" hidden>Если окно «Поделиться» не открылось: <a id="waLink" href="#" target="_blank" rel="noopener">отправить в WhatsApp</a> ·
-      <a id="mailLink" href="#">письмом</a> · <button class="linklike" id="copyLink" type="button">скопировать</button></p>
+      <a id="mailLink" href="#">письмом</a> · <button class="linklike" id="copyLink" type="button">скопировать</button> ·
+      <button class="linklike" id="dlJson" type="button">скачать файл правок</button></p>
+    <p class="hint" id="cutNote" hidden>Правок много: в письмо войдёт только начало — пришлите лучше файл правок или текст в WhatsApp.</p>
     <p class="hint">Правки сохраняются в этом браузере — можно смотреть листы по очереди и отправить всё разом. <a id="raw" href="#" target="_blank" rel="noopener">Открыть лист отдельно</a></p>
   </div>
 </div>
-<script src="js/review.js?v=1"></script>
+<script src="js/review.js?v=2"></script>
 </body>
 </html>

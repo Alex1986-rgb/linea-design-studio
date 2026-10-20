@@ -20,7 +20,15 @@
     show(i >= 0 ? i : 0);
   }).catch(() => { $('title').textContent = 'Листы проекта не загрузились'; });
 
+  // текст правки не теряется: при смене метки, листа и отправке открытая правка сохраняется, пустая — удаляется
+  function commitEditing() {
+    if (!editing) return;
+    const n = notes.find(m => m.id === editing);
+    if (n) { n.text = $('edText').value.trim(); if (!n.text) notes = notes.filter(m => m !== n); }
+    renumber(); save();
+  }
   function show(i) {
+    commitEditing();
     cur = Math.max(0, Math.min(sheets.length - 1, i));
     const s = sheets[cur];
     $('pick').value = String(cur);
@@ -47,13 +55,15 @@
     $('pins').innerHTML = mine().map(n => `<button type="button" class="pin${editing === n.id ? ' on' : ''}" data-id="${n.id}" style="left:${n.x}%;top:${n.y}%">${n.n}</button>`).join('');
   }
   $('stage').addEventListener('click', e => {
+    if (!sheets.length) return;                        // листы ещё не загрузились
     const pin = e.target.closest('.pin');
-    if (pin) { openEditor(notes.find(n => n.id === pin.dataset.id)); return; }
+    if (pin) { commitEditing(); openEditor(notes.find(n => n.id === pin.dataset.id)); paintList(); return; }
+    commitEditing();
     const r = $('img').getBoundingClientRect();
     const x = +((e.clientX - r.left) / r.width * 100).toFixed(1), y = +((e.clientY - r.top) / r.height * 100).toFixed(1);
     if (x < 0 || y < 0 || x > 100 || y > 100) return;
     const n = { id: Date.now().toString(36), file: sheets[cur].file, title: sheets[cur].title, no: sheets[cur].no, x, y, n: mine().length + 1, text: '' };
-    notes.push(n); save(); openEditor(n, true);
+    notes.push(n); save(); openEditor(n, true); paintList();
   });
   function openEditor(n, fresh) {
     editing = n.id;
@@ -61,6 +71,7 @@
     $('edNo').textContent = n.n;
     $('edText').value = n.text;
     paintPins();
+    if (window.innerWidth < 900) $('editor').scrollIntoView({ behavior: 'smooth', block: 'center' });
     if (fresh && SR) $('edMic').click(); else $('edText').focus();
   }
   function closeEditor() { stopRec(); editing = null; $('editor').hidden = true; paintPins(); }
@@ -73,8 +84,10 @@
   $('edDel').onclick = () => { notes = notes.filter(m => m.id !== editing); renumber(); save(); closeEditor(); paintList(); };
   function renumber() { const seq = {}; notes.forEach(n => { seq[n.file] = (seq[n.file] || 0) + 1; n.n = seq[n.file]; }); }
   $('general').onclick = () => {           // замечание ко всему листу, без точки
+    if (!sheets.length) return;
+    commitEditing();
     const n = { id: Date.now().toString(36), file: sheets[cur].file, title: sheets[cur].title, no: sheets[cur].no, x: null, y: null, n: mine().length + 1, text: '' };
-    notes.push(n); save(); openEditor(n, true);
+    notes.push(n); save(); openEditor(n, true); paintList();
   };
   function paintList() {
     const m = mine();
@@ -103,7 +116,7 @@
       f.value = base + fin + mid;
     };
     rec.onend = () => { $('edMic').classList.remove('rec'); $('edState').textContent = 'Нажмите 🎤 и скажите, что исправить'; f.value = f.value.trim(); rec = null; };
-    rec.onerror = ev => { if (ev.error === 'not-allowed' || ev.error === 'service-not-allowed') alert('Разрешите доступ к микрофону для этой страницы — или нажмите микрофон на клавиатуре телефона.'); };
+    rec.onerror = ev => { if (ev.error === 'not-allowed' || ev.error === 'service-not-allowed') { $('micHint').hidden = false; $('micHint').textContent = 'Микрофон не разрешён: нажмите значок замка в адресной строке и разрешите микрофон — или наберите текст (на телефоне — микрофон на клавиатуре).'; } };
     $('edMic').classList.add('rec'); $('edState').textContent = 'Слушаю… нажмите 🎤 ещё раз, чтобы закончить';
     try { rec.start(); } catch (e) { $('edMic').classList.remove('rec'); }
   };
@@ -121,10 +134,15 @@
     return out.join('\n');
   }
   $('sendBtn').onclick = async () => {
-    const text = summary(), json = JSON.stringify({ project: slug, date: new Date().toISOString(), notes: notes.filter(n => n.text) }, null, 2);
-    const file = new File([json], `LINEA-pravki-${slug}.json`, { type: 'application/json' });
+    commitEditing(); paintList(); paintPins();
+    const who = ($('who').value || '').trim();
+    try { localStorage.setItem('linea_review_who', who); } catch (e) {}
+    const body = summary(), text = (who ? 'От: ' + who + '\n' : '') + body, json = JSON.stringify({ project: slug, from: who, date: new Date().toISOString(), notes: notes.filter(n => n.text) }, null, 2);
+    const file = new File([json], `LINEA-pravki-${slug}${who ? '-' + who.replace(/[^\wа-яё]+/gi, '-') : ''}.json`, { type: 'application/json' });
     $('sent').hidden = false;
     $('waLink').href = 'https://wa.me/79257338640?text=' + encodeURIComponent(text.slice(0, 3500));
+    $('cutNote').hidden = text.length <= 1800;
+    $('dlJson').onclick = () => { const a = document.createElement('a'); a.href = URL.createObjectURL(file); a.download = file.name; document.body.appendChild(a); a.click(); a.remove(); };
     $('mailLink').href = 'mailto:optteem@mail.ru?subject=' + encodeURIComponent('Правки к проекту ' + slug) + '&body=' + encodeURIComponent(text.slice(0, 1800));
     $('copyLink').onclick = () => { navigator.clipboard && navigator.clipboard.writeText(text); $('copyLink').textContent = 'Скопировано ✓'; };
     if (navigator.canShare && navigator.canShare({ files: [file] })) {
@@ -132,5 +150,6 @@
     }
     if (navigator.share) { try { await navigator.share({ title: 'Правки LINEA', text }); return; } catch (e) { if (e.name === 'AbortError') return; } }
   };
+  try { $('who').value = localStorage.getItem('linea_review_who') || ''; } catch (e) {}
   paintCount();
 })();
