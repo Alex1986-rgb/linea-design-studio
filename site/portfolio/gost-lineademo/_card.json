@@ -9,7 +9,7 @@
  "area": "56,37 м²",
  "declared": "",
  "rooms": 5,
- "total": 81,
+ "total": 82,
  "blockers": 0,
  "hero": {
   "src": "assets/portfolio/gost-lineademo-hero.jpg",
@@ -22,5 +22,5 @@
  },
  "visuals": 21,
  "studioSize": "11 МБ",
- "pdfSize": "17 МБ"
+ "pdfSize": "18 МБ"
 }
