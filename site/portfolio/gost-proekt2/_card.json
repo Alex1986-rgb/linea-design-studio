@@ -9,7 +9,7 @@
  "area": "102,67 м²",
  "declared": "",
  "rooms": 13,
- "total": 122,
+ "total": 124,
  "blockers": 0,
  "hero": {
   "src": "assets/portfolio/gost-proekt2-hero.jpg",
@@ -22,5 +22,5 @@
  },
  "visuals": 0,
  "studioSize": "15 МБ",
- "pdfSize": "28 МБ"
+ "pdfSize": "29 МБ"
 }

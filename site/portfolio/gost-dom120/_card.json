@@ -9,7 +9,7 @@
  "area": "147,36 м²",
  "declared": "120 м² в названии — площадь из брифа демо-дома; общая площадь по экспликации альбома — 147,36 м².",
  "rooms": 13,
- "total": 136,
+ "total": 139,
  "blockers": 0,
  "hero": {
   "src": "assets/portfolio/gost-dom120-hero.jpg",
@@ -22,5 +22,5 @@
  },
  "visuals": 22,
  "studioSize": "16 МБ",
- "pdfSize": "23 МБ"
+ "pdfSize": "24 МБ"
 }
