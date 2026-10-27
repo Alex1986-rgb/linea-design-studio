@@ -18,7 +18,7 @@ const G = require('./gost-facts.js');
 
 const ROOT = path.join(__dirname, '..');
 const SITE = path.join(ROOT, 'site');
-const BASE = 'https://alex1986-rgb.github.io/linea-design-studio';
+const BASE = SHELL.BASE;   // адрес сайта — только из site-shell.js
 const AUTHOR = SHELL.AUTHOR;
 // живые листы — из альбомов нового формата (tools/gost-facts.js): ссылка ведёт на лист с правкой голосом
 const LIVE = (slug, key, text) => `<a href="../${G.reviewHref(slug, key)}">${text}</a>`;

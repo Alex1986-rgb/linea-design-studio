@@ -17,7 +17,25 @@ const AUTHOR = {
   email: 'optteem@mail.ru',
 };
 
-const BASE = 'https://alex1986-rgb.github.io/linea-design-studio';
+// ── Адрес сайта: ЕДИНСТВЕННЫЙ источник ─────────────────────────────────────────
+// Все генераторы, sitemap, canonical, og:url и schema.org берут BASE отсюда.
+// Где живёт сайт:
+//   pages   — GitHub Pages (подпапка /linea-design-studio/), пока домен не подтверждён — основной;
+//   preview — технический адрес на Beget (без SSL, закрыт от индекса);
+//   domain  — дизайн-студия-квартир.рф. В машинных адресах (canonical, og:url, sitemap, robots,
+//             schema.org) — Punycode: так требует Яндекс для robots.txt и протокол Sitemap (RFC 3986).
+// Выбор при сборке: LINEA_SITE=pages|preview|domain или LINEA_BASE=<полный адрес без «/» в конце>.
+// Переключение на домен навсегда — поменять SITE_DEFAULT на 'domain' (см. docs/reports/2026-10-27-pereezd-beget.md).
+const SITE_BASES = {
+  pages: 'https://alex1986-rgb.github.io/linea-design-studio',
+  preview: 'http://linea.aleks2si.beget.tech',
+  domain: 'https://xn-----6kccjicviedfr1b2cbishm8w.xn--p1ai',
+};
+const SITE_DOMAIN_RU = 'дизайн-студия-квартир.рф';   // для текста, который читает человек
+const SITE_DEFAULT = 'pages';
+const SITE = process.env.LINEA_SITE || SITE_DEFAULT;
+if (!process.env.LINEA_BASE && !SITE_BASES[SITE]) throw new Error(`LINEA_SITE=${SITE}: нет такого адреса (${Object.keys(SITE_BASES).join('|')})`);
+const BASE = String(process.env.LINEA_BASE || SITE_BASES[SITE]).replace(/\/+$/, '');
 const CSSV = 'v=34';
 
 // Разделы сайта в порядке меню. Добавили раздел — правится только здесь.
@@ -242,4 +260,4 @@ ${ogImageTags(ogImage || OG_DEFAULT)}
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,500;0,600;1,500&family=Inter:wght@400;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="${u}css/main.css?${CSSV}">${extra || ''}`;
 
-module.exports = { AUTHOR, BASE, CSSV, SECTIONS, FOOTER_EXTRA, FUNNEL, funnel, ctaBlock, crumbsBar, crumbsAuto, pic, esc, clamp, header, footer, beta, sticky, crumbsLd, head };
+module.exports = { AUTHOR, BASE, SITE, SITE_BASES, SITE_DOMAIN_RU, CSSV, SECTIONS, FOOTER_EXTRA, FUNNEL, funnel, ctaBlock, crumbsBar, crumbsAuto, pic, esc, clamp, header, footer, beta, sticky, crumbsLd, head };

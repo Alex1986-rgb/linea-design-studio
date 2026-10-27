@@ -95,6 +95,17 @@ push-события сборку не запускают — на деле их 
 push без ручного запуска отработал `success`. Статус — `gh run list --workflow=pages.yml -L 1`,
 сборка около минуты. Старая схема (`git subtree split --prefix site -b gh-pages` + Jekyll-сборка ветки) отменена: legacy-сборщик падал на альбомах в сотни SVG даже с `.nojekyll`. Живой адрес — https://alex1986-rgb.github.io/linea-design-studio/
 
+### Beget (с 27.10.2026) — переезд на дизайн-студия-квартир.рф
+- Адрес сайта — **только** `tools/site-shell.js` (`SITE_BASES`, `SITE_DEFAULT`; при сборке `LINEA_SITE=pages|preview|domain`
+  или `LINEA_BASE=…`). Генераторы и `touch-sitemap.js` берут его оттуда; руками адрес в генераторы не вписывать.
+- Выкладка: `./tools/deploy-beget.sh` (технический адрес http://linea.aleks2si.beget.tech, закрыт от индекса) или
+  `--site=domain`. Скрипт собирает копию `site/` под адрес в `.deploy/<site>/` (`tools/site-rebase.js`: canonical, sitemap,
+  robots, `.htaccess`), льёт только изменившееся партиями (rsync, при обрыве — tar | ssh), сверяет размеры и прозванивает
+  адреса. Сайт Beget — `dizain-studiya-kvartir` (id 9469516), SSH `beget-en0`. `site/` при этом остаётся под GitHub Pages.
+- Переезд на домен после подтверждения Госуслуг — `./tools/switch-to-domain.sh` (`--check` — только проверить шаг).
+- API Beget — `python3 -I tools/beget-api.py <метод> ['<json>']` (пароль не печатается). Чужие сайты аккаунта не трогать.
+- Подробно и что осталось — `docs/reports/2026-10-27-pereezd-beget.md`.
+
 ## Канон чертежей
 Правила самих чертежей — `docs/cad-canon.md` (нормативная база СПДС/ЕСКД с пунктами, анатомия листа, чек-листы по каждому типу листа, нормируемые зазоры). Регламент работы — навык `cad-drawings`. Роли: агент `draftsman` (правит движок), `cad-normcontrol` (нормоконтроль), `cad-acceptance` (приёмка перед выдачей).
 

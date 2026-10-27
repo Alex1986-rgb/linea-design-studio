@@ -14,7 +14,9 @@ const fs = require('fs');
 const path = require('path');
 
 const SITE = path.join(__dirname, '..', 'site');
-const BASE = 'https://alex1986-rgb.github.io/linea-design-studio/';
+// адрес сайта — только из site-shell.js; в sitemap могут остаться адреса прошлой площадки — снимаем любой из известных
+const SHELL = require('./site-shell.js');
+const BASES = [...new Set([SHELL.BASE, ...Object.values(SHELL.SITE_BASES)])].map(b => b + '/');
 const smPath = path.join(SITE, 'sitemap.xml');
 
 let sm = fs.readFileSync(smPath, 'utf8');
@@ -23,7 +25,9 @@ let touched = 0, missing = 0;
 sm = sm.replace(/<url>([\s\S]*?)<\/url>/g, (block, inner) => {
   const loc = (inner.match(/<loc>([^<]+)<\/loc>/) || [])[1];
   if (!loc) return block;
-  let rel = loc.replace(BASE, '');
+  const b = BASES.find(x => loc.startsWith(x));
+  if (!b) { missing++; return block; }
+  let rel = loc.slice(b.length);
   if (rel === '' || rel.endsWith('/')) rel += 'index.html';
   const file = path.join(SITE, rel);
   if (!fs.existsSync(file)) { missing++; return block; }
