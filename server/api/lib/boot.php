@@ -143,6 +143,32 @@ function linea_price(string $kind, ?float $area): ?int
     return null;
 }
 
+/** Соединение защищено? Beget: nginx перед Apache — признак в HTTPS или X-Forwarded-Proto. */
+function linea_https(): bool
+{
+    return ($_SERVER['HTTPS'] ?? '') === 'on' || ($_SERVER['HTTP_X_FORWARDED_PROTO'] ?? '') === 'https';
+}
+
+/** Проверка на маке: php -S 127.0.0.1:<порт>. Нужны оба признака — на Beget Apache тоже видит 127.0.0.1 (запрос от nginx). */
+function linea_local(): bool
+{
+    $host = (string)($_SERVER['HTTP_HOST'] ?? '');
+    return in_array((string)($_SERVER['REMOTE_ADDR'] ?? ''), ['127.0.0.1', '::1'], true)
+        && preg_match('/^(127\.0\.0\.1|localhost|\[::1\])(:\d+)?$/', $host) === 1
+        && empty($_SERVER['HTTP_X_FORWARDED_FOR']) && empty($_SERVER['HTTP_X_REAL_IP']);
+}
+
+/**
+ * Персональные данные (бриф, правки с телефоном, оплата) — только по https (второй круг критиков 27.10.2026: технический
+ * адрес Beget без SSL). Исключения: наши проверки (test=1, заказ помечается тестовым, писем нет) и запуск на маке.
+ * Боевой приём включается сам, когда сайт откроется по https (домен + Let's Encrypt в панели Beget).
+ */
+function linea_require_https(bool $test = false): void
+{
+    if ($test || linea_https() || linea_local()) { return; }
+    linea_fail('Приём через сайт работает только по защищённому адресу (https). Пришлите архив брифа или правки в WhatsApp: +7 925 733-86-40 или на optteem@mail.ru', 403);
+}
+
 /** Адрес сайта для ссылок (return_url, письма). */
 function linea_base(): string
 {

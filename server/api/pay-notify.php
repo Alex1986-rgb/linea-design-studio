@@ -11,6 +11,7 @@ require __DIR__ . '/lib/boot.php';
 require __DIR__ . '/lib/yookassa.php';
 
 if (($_SERVER['REQUEST_METHOD'] ?? '') !== 'POST') { http_response_code(405); exit; }
+if (!linea_https() && !linea_local()) { http_response_code(403); exit; }   // ЮKassa шлёт только на https; по http — не наше
 $raw = (string)file_get_contents('php://input', false, null, 0, 65536);
 $in = json_decode($raw, true);
 $id = is_array($in) ? (string)($in['object']['id'] ?? '') : '';

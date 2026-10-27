@@ -6,7 +6,7 @@
 #   ./tools/deploy-beget.sh --site=domain      # боевой https://дизайн-студия-квартир.рф (после регистрации и SSL)
 #   ./tools/deploy-beget.sh --dry-run          # показать, что поедет, ничего не менять
 #   ./tools/deploy-beget.sh --check            # только связь, папка и прозвон живого адреса
-#   ./tools/deploy-beget.sh --prune            # дополнительно удалить на сервере файлы, которых нет в выпуске
+#   ./tools/deploy-beget.sh --prune            # убрать с сайта файлы, которых нет в выпуске (не удаляет: переносит в <docroot>_backup/<дата>/ вне веб-корня)
 #
 # Как устроено:
 #   1. tools/site-rebase.js собирает копию site/ под нужный адрес в .deploy/<site>/ (canonical, sitemap, robots,
@@ -177,7 +177,12 @@ if [ "$ONLY_CHECK" = 0 ]; then
   EX=$(wc -l < "$TMP/extra" | tr -d ' ')
   if [ "$EX" -gt 0 ]; then
     if [ "$PRUNE" = 1 ]; then
-      rssh "cd '$DOCROOT' && while IFS= read -r f; do rm -f -- \"\$f\"; done" < "$TMP/extra" && ok "удалено лишних на сервере: $EX"
+      # не rm: переносим рядом с веб-корнем (правило «ничего не удалять на проде без бэкапа рядом»); снаружи — 404
+      BK="${DOCROOT%/}_backup/$(date +%Y%m%d-%H%M%S)"
+      rssh "while IFS= read -r f; do mkdir -p \"$BK/\$(dirname -- \"\$f\")\" && mv -f -- \"$DOCROOT/\$f\" \"$BK/\$f\"; done" < "$TMP/extra" \
+        && ok "убрано лишних с сайта: $EX → ~/$BK (вне веб-корня; вернуть — mv обратно)" \
+        || die "перенос лишних в $BK не прошёл"
+      head -12 "$TMP/extra" | sed 's/^/       /'; [ "$EX" -gt 12 ] && echo "       … и ещё $((EX - 12))"
     else warn "на сервере $EX лишних файлов (нет в выпуске) — убрать: $0 --site=$SITE --prune"; fi
   fi
 

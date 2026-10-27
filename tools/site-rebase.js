@@ -77,6 +77,25 @@ let files = 0, hits = 0;
   }
 })(out);
 
+// 2а. Как уходит бриф: фраза из TERMS.intake под площадку. С приёмником и https — «одной кнопкой, страница заказа с номером»;
+// GitHub Pages и технический адрес без https — «соберите архив и отправьте в WhatsApp/на почту» (там приёмник ПДн не берёт).
+const online = withApi && SHELL.intakeOnline(site, base);
+let intakeFiles = 0, intakeHits = 0;
+(function walk(dir) {
+  for (const e of fs.readdirSync(dir, { withFileTypes: true })) {
+    const p = path.join(dir, e.name);
+    if (e.isDirectory()) { walk(p); continue; }
+    if (!/\.(html?|json)$/i.test(e.name)) continue;
+    const s0 = fs.readFileSync(p, 'utf8');
+    const [t, n] = SHELL.swapIntake(s0, online);
+    if (!n) continue;
+    const st = fs.statSync(p);
+    fs.writeFileSync(p, t);
+    fs.utimesSync(p, st.atime, st.mtime);
+    intakeFiles++; intakeHits += n;
+  }
+})(out);
+
 // 2б. Приёмник: страницам с отправкой говорим, где api (brief.js / review.js / order.js без меты работают по-старому — WhatsApp/почта)
 const API_PAGES = ['brief.html', 'review.html', 'order.html'];
 let apiPages = 0;
@@ -161,4 +180,15 @@ const left = [];
 })(out);
 console.log(`site-rebase: ${site} → ${base}\n  копия: ${out}\n  адрес заменён в ${files} файлах (${hits} вхождений), robots ${noindex ? 'закрыт' : 'открыт'}, .htaccess${httpsRedirect ? ' с 301 на https' : ''}`
   + (withApi ? `\n  приёмник: api/ из server/api, мета linea-api на ${apiPages} стр.` : ''));
+// без приёмника по https сайт не должен обещать отправку «одной кнопкой» — ни на одной странице
+const promise = [];
+if (!online) (function walk(dir) {
+  for (const e of fs.readdirSync(dir, { withFileTypes: true })) {
+    const p = path.join(dir, e.name);
+    if (e.isDirectory()) walk(p);
+    else if (/\.html?$/i.test(e.name) && fs.readFileSync(p, 'utf8').includes('одной кнопкой')) promise.push(path.relative(out, p));
+  }
+})(out);
+console.log(`  отправка брифа: ${online ? 'приёмник по https (одной кнопкой)' : 'архивом в WhatsApp/на почту'}, фраза заменена в ${intakeFiles} файлах (${intakeHits})`);
+if (promise.length) { console.error(`  ✗ «одной кнопкой» без приёмника по https: ${promise.slice(0, 8).join(', ')}`); process.exit(1); }
 if (left.length) { console.error(`  ✗ старый адрес остался в ${left.length} файлах: ${left.slice(0, 5).join(', ')}`); process.exit(1); }

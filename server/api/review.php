@@ -13,6 +13,7 @@ if (($_SERVER['REQUEST_METHOD'] ?? '') !== 'POST') { header('Allow: POST'); line
 if ((int)($_SERVER['CONTENT_LENGTH'] ?? 0) > 1048576) { linea_fail('Слишком много текста — отправьте частями', 413); }
 $in = json_decode((string)file_get_contents('php://input', false, null, 0, 1048577), true);
 if (!is_array($in)) { linea_fail('Правки не прочитались — нажмите «Отправить» ещё раз'); }
+linea_require_https(!empty($in['test']));   // имя и телефон автора правок — только по https (кроме наших проверок)
 if (trim((string)($in['website'] ?? '')) !== '') { linea_json(['ok' => true, 'number' => 'R-0000']); }
 $slug = preg_replace('/[^a-z0-9-]/i', '', (string)($in['project'] ?? '')) ?? '';
 $notes = array_values(array_filter(is_array($in['notes'] ?? null) ? $in['notes'] : [], fn($n) => is_array($n) && trim((string)($n['text'] ?? '')) !== ''));

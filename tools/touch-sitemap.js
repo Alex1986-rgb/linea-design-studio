@@ -21,6 +21,7 @@ const smPath = path.join(SITE, 'sitemap.xml');
 
 let sm = fs.readFileSync(smPath, 'utf8');
 let touched = 0, missing = 0;
+const dropped = [];
 
 sm = sm.replace(/<url>([\s\S]*?)<\/url>/g, (block, inner) => {
   const loc = (inner.match(/<loc>([^<]+)<\/loc>/) || [])[1];
@@ -31,11 +32,14 @@ sm = sm.replace(/<url>([\s\S]*?)<\/url>/g, (block, inner) => {
   if (rel === '' || rel.endsWith('/')) rel += 'index.html';
   const file = path.join(SITE, rel);
   if (!fs.existsSync(file)) { missing++; return block; }
+  // страница закрыта от индекса (архив первой версии, черновик оферты) — в sitemap ей не место
+  if (/\.html?$/.test(rel) && /<meta name="robots" content="[^"]*noindex/i.test(fs.readFileSync(file, 'utf8'))) { dropped.push(rel); return ''; }
   const d = fs.statSync(file).mtime.toISOString().slice(0, 10);
   const cleaned = inner.replace(/<lastmod>[^<]*<\/lastmod>/, '');
   touched++;
   return `<url>${cleaned.replace('</loc>', `</loc><lastmod>${d}</lastmod>`)}</url>`;
 });
 
+sm = sm.replace(/\n[ \t]*(?=\n)/g, '');
 fs.writeFileSync(smPath, sm);
-console.log(`lastmod проставлен: ${touched} адресов${missing ? `, без файла: ${missing}` : ''}`);
+console.log(`lastmod проставлен: ${touched} адресов${missing ? `, без файла: ${missing}` : ''}${dropped.length ? `; убраны страницы с noindex: ${dropped.join(', ')}` : ''}`);

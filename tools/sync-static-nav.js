@@ -20,9 +20,9 @@ const CHECK = process.argv.includes('--check');
 // --only=brief.html — синхронизировать один файл (главную правит отдельный шаг)
 const ONLY = (process.argv.find(a => a.startsWith('--only=')) || '').slice(7);
 
-// у главной в подвале дополнительно ссылка на первый демо-альбом старого движка;
-// подписана честно — это не нынешний формат выпуска
-const EXTRA = { 'index.html': ' · <a href="portfolio/demo/presentation.html">Первая версия (старый формат)</a>' };
+// Ссылку на первый демо-альбом старого движка из подвала главной сняли (второй круг критиков 27.10.2026):
+// его визуализации с планом не сверены, архив закрыт от индекса (tools/archive-old-demos.js).
+const EXTRA = {};
 
 let drift = 0;
 for (const file of ['index.html', 'brief.html'].filter(f => !ONLY || f === ONLY)) {

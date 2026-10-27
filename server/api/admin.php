@@ -19,7 +19,17 @@ header('X-Frame-Options: DENY');
 header("Content-Security-Policy: default-src 'self'; style-src 'unsafe-inline'; img-src 'self' data:");
 
 $cfg = linea_cfg();
-$https = ($_SERVER['HTTPS'] ?? '') === 'on' || ($_SERVER['HTTP_X_FORWARDED_PROTO'] ?? '') === 'https';
+$https = linea_https();
+// Пароль и сессионная кука по открытому каналу не ходят (второй круг критиков 27.10.2026): по http страница заказов закрыта
+// целиком — до session_start, чтобы кука даже не выдавалась. Исключение — проверка на маке (php -S 127.0.0.1).
+if (!$https && !linea_local()) {
+    http_response_code(403);
+    header('Content-Type: text/html; charset=utf-8');
+    echo '<!DOCTYPE html><html lang="ru"><head><meta charset="utf-8"><meta name="robots" content="noindex,nofollow"><title>Только https — LINEA</title></head>'
+        . '<body style="font:16px/1.5 sans-serif;max-width:640px;margin:40px auto;padding:0 16px"><h1>Страница заказов — только по https</h1>'
+        . '<p>По незащищённому адресу пароль и данные заказов не передаём. Откройте страницу на домене с SSL.</p></body></html>';
+    exit;
+}
 linea_mkdir(linea_private() . '/sessions');
 // На Beget по умолчанию свой обработчик сессий (save_handler=beget, путь tcp://127.0.0.1:6380): с путём-папкой он молча
 // ничего не сохраняет, и вход по паролю зацикливается. Сессии — файлами в linea-private/sessions (вне веб-корня).

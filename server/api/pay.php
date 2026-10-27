@@ -8,6 +8,7 @@ require __DIR__ . '/lib/boot.php';
 require __DIR__ . '/lib/yookassa.php';
 
 if (($_SERVER['REQUEST_METHOD'] ?? '') !== 'POST') { header('Allow: POST'); linea_fail('Только POST', 405); }
+linea_require_https();   // оплата и возврат с неё — только по https
 $in = json_decode((string)file_get_contents('php://input'), true);
 $o = linea_order_by_token((string)($in['t'] ?? $_POST['t'] ?? ''));
 if (!$o) { linea_fail('Заказ не найден — проверьте ссылку', 404); }

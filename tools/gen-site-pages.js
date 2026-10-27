@@ -177,7 +177,7 @@ const CASES = [
       ['foreman-open-issues', 'Открытые вопросы и допущения'],
     ],
     renders: [['assets/portfolio/lineademo-living.jpg', 'Кухня-гостиная', 1200, 800], ['assets/refs/linea-demo-bedroom-wA.jpg', 'Спальня'], ['assets/refs/linea-demo-kids-wA.jpg', 'Детская'], ['assets/refs/linea-demo-bath-wA.jpg', 'Санузел']],
-    first: ['../portfolio/demo/presentation.html', 'Первая версия (август 2026): 30 листов старого движка'],
+    first: ['../portfolio/demo/presentation.html', 'Архив первой версии программы (август 2026): 30 листов, визуализации с планом не сверены'],
   },
   {
     slug: 'dom-120', project: 'gost-dom120', published: '2026-08-07', modified: '2026-10-20',
@@ -206,7 +206,7 @@ const CASES = [
       ['estimator-estimate', 'Смета ориентировочная'],
     ],
     renders: [['assets/portfolio/dom120-top.jpg', 'Вид сверху 3D', 1200, 800], ['assets/refs/dom-120-living-wA.jpg', 'Гостиная-кухня'], ['assets/refs/dom-120-study-wA.jpg', 'Кабинет'], ['assets/refs/dom-120-kids1-wA.jpg', 'Детская']],
-    first: ['../portfolio/dom-120/presentation.html', 'Первая версия (август 2026): 56 листов старого движка'],
+    first: ['../portfolio/dom-120/presentation.html', 'Архив первой версии программы (август 2026): 56 листов, визуализации с планом не сверены'],
   },
 ];
 // визуализации берём только существующие — сборка не публикует пустых кадров
@@ -453,7 +453,7 @@ ${rend}
     <div class="kicker">Границы</div>
     <h2>Что осталось открытым</h2>
     <ul class="checklist">${c.open.map(t => `<li>${esc(t)}</li>`).join('')}</ul>
-    <p class="hint" style="margin-top:14px">Эти пункты стоят в реестре открытых вопросов альбома; пока они не закрыты, на каждом листе пометка «ПРЕДВАРИТЕЛЬНО» и по комплекту не строят.${c.first ? ` <a href="${c.first[0]}">${esc(c.first[1])}</a>.` : ''}</p>
+    <p class="hint" style="margin-top:14px">Эти пункты стоят в реестре открытых вопросов альбома; пока они не закрыты, на каждом листе пометка «ПРЕДВАРИТЕЛЬНО» и по комплекту не строят.${c.first ? ` <a href="${c.first[0]}" rel="nofollow">${esc(c.first[1])}</a>.` : ''}</p>
   </div>
 </section>`,
   }));

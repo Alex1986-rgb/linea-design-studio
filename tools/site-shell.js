@@ -127,6 +127,51 @@ const TERMS = {
     'строительные работы, закупка материалов и авторский надзор на объекте'],
 };
 
+// ── Как уходит бриф: ЕДИНСТВЕННЫЙ источник фразы (второй круг критиков 27.10.2026) ────────────────────
+// Приёмник (server/api на Beget) принимает бриф с персональными данными только по https. Пока сайт живёт на GitHub Pages
+// (PHP нет) и на техническом адресе Beget (только http), кнопка брифа собирает архив, и клиент сам отправляет его в
+// WhatsApp или на почту, — сайт обязан говорить именно это. «Одной кнопкой … страница заказа с номером» — только на адресе
+// с https и приёмником (домен после SSL). Пары [без приёмника, с приёмником]; в строках нет кавычек, &, < > вне тегов —
+// они одинаково выглядят в разметке и в JSON-LD, поэтому site-rebase.js меняет вариант при выкладке простой заменой
+// (swapIntake). Новая фраза про отправку брифа или правок — только сюда, руками в генераторы не вписывать.
+const INTAKE = {
+  brief: ['Бриф собирается в архив прямо в браузере — отправьте его нам в WhatsApp или на почту, номер заказа пришлём в ответ',
+    'Бриф уходит в студию одной кнопкой — сразу открывается страница заказа с номером'],
+  briefShort: ['архив брифа отправляете нам в WhatsApp или на почту',
+    'уходит в студию одной кнопкой'],
+  sendItem: ['<b>Отправка архивом.</b> Рассказ, план, фото и отметки собираются в один архив — его вы отправляете нам в WhatsApp или на почту, номер заказа приходит в ответ.',
+    '<b>Отправка одной кнопкой.</b> Рассказ, план, фото и отметки уходят в студию одним архивом, сразу открывается страница заказа с номером. Связь подвела — тот же архив можно отправить в WhatsApp или на почту.'],
+  reviewSend: ['все метки собираются в одно сообщение — WhatsApp, почта или файл.',
+    'все метки уходят в студию одной кнопкой и привязываются к вашему заказу.'],
+  reviewStep: ['<b>Отправьте правки</b><p>Все метки собираются в одно сообщение: WhatsApp, почта или файл. Альбом перевыпускается с правками.</p>',
+    '<b>Отправьте одной кнопкой</b><p>Все метки уходят разом и привязываются к вашему заказу. Альбом перевыпускается с правками.</p>'],
+  orderNo: ['Номер заказа, цену и счёт пришлём в ответ на бриф — в WhatsApp или на почту.',
+    'После отправки брифа открывается страница заказа с номером — сохраните ссылку.'],
+  contactsDesc: ['Бриф заполняется на сайте и отправляется архивом в WhatsApp или на почту.',
+    'Бриф заполняется на сайте и уходит в студию одной кнопкой.'],
+  contactsRow: ['собранный архив вы отправляете в WhatsApp или на почту',
+    'уходит к нам одной кнопкой (запасной путь — архивом в WhatsApp или на почту)'],
+  sumWhere: ['Сумму пришлём в WhatsApp или на почту.',
+    'Сумма появляется на странице заказа.'],
+  policy: ['Сейчас бриф и правки к листам на наш сервер не уходят: кнопка собирает архив в вашем браузере, и вы сами отправляете его в WhatsApp или на почту. Приём на сервер (Beget) включим только на адресе с защищённым соединением (https) — тогда эта строка изменится',
+    'Бриф и правки к листам уходят на наш сервер (Beget) по защищённому соединению (https). Связь подвела — тот же архив можно отправить в WhatsApp или на почту'],
+};
+const intakeOnline = (site, base) => site !== 'pages' && /^https:\/\//.test(String(base));
+const INTAKE_ONLINE = intakeOnline(SITE, BASE);
+// текст → вариант для адреса (online = есть приёмник по https); возвращает [текст, число замен]
+function swapIntake(text, online) {
+  let n = 0;
+  for (const pair of Object.values(INTAKE)) {
+    const from = pair[online ? 0 : 1], to = pair[online ? 1 : 0];
+    const parts = text.split(from);
+    n += parts.length - 1;
+    text = parts.join(to);
+  }
+  return [text, n];
+}
+TERMS.intake = Object.fromEntries(Object.entries(INTAKE).map(([k, v]) => [k, v[INTAKE_ONLINE ? 1 : 0]]));
+TERMS.intakeOnline = INTAKE_ONLINE;
+
 const beta = u => `<div class="beta">Работа — после оплаты, цену называем до старта · <a href="${u}brief.html">заполнить бриф</a></div>`;
 
 const sticky = u => `<div class="sticky-cta">
@@ -297,4 +342,4 @@ ${ogImageTags(ogImage || OG_DEFAULT)}
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,500;0,600;1,500&family=Inter:wght@400;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="${u}css/main.css?${CSSV}">${extra || ''}`;
 
-module.exports = { TERMS, AUTHOR, BASE, SITE, SITE_BASES, SITE_DOMAIN_RU, CSSV, SECTIONS, FOOTER_EXTRA, FUNNEL, funnel, ctaBlock, crumbsBar, crumbsAuto, pic, esc, clamp, header, footer, beta, sticky, crumbsLd, head };
+module.exports = { TERMS, INTAKE, intakeOnline, swapIntake, AUTHOR, BASE, SITE, SITE_BASES, SITE_DOMAIN_RU, CSSV, SECTIONS, FOOTER_EXTRA, FUNNEL, funnel, ctaBlock, crumbsBar, crumbsAuto, pic, esc, clamp, header, footer, beta, sticky, crumbsLd, head };

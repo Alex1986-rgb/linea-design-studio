@@ -1,13 +1,16 @@
 // LINEA · бриф-визард → brief.json + архив с файлами
 // Всё собирается в браузере клиента — бриф, план, фото и референсы одним ZIP-архивом; черновик хранится в браузере.
-// Где есть приёмник (Beget: <meta name="linea-api" content="api/">, её вставляет tools/site-rebase.js), архив уходит
-// одной кнопкой на api/brief.php → номер заказа → order.html. На GitHub Pages PHP нет, меты нет — остаётся прежний путь:
-// «Поделиться» (WhatsApp / Telegram на телефоне) или скачивание + WhatsApp / почта. Он же — запасной при ошибке сети.
+// Где есть приёмник (Beget: <meta name="linea-api" content="api/">, её вставляет tools/site-rebase.js) и соединение
+// защищено (https), архив сразу уходит на api/brief.php → номер заказа → order.html. На GitHub Pages PHP нет, меты нет;
+// на техническом адресе Beget нет https — персональные данные открытым каналом не шлём (второй круг критиков 27.10.2026).
+// Там остаётся прежний путь: «Поделиться» (WhatsApp / Telegram на телефоне) или скачивание + WhatsApp / почта.
+// Он же — запасной при ошибке сети. Исключения: ?test=1 (наши проверки, заказ тестовый) и запуск на маке (localhost).
 (function () {
   'use strict';
   const $ = id => document.getElementById(id);
-  const API = (document.querySelector('meta[name="linea-api"]') || {}).content || '';
   const TEST = new URLSearchParams(location.search).get('test') === '1';   // наши проверки: заказ помечается тестовым
+  const SECURE = location.protocol === 'https:' || /^(localhost|127\.0\.0\.1|\[::1\])$/.test(location.hostname);
+  const API = (SECURE || TEST) ? ((document.querySelector('meta[name="linea-api"]') || {}).content || '') : '';
   const MAX_MB = 100;
   const STEPS = ['Рассказ', 'Объект', 'План и фото', 'Что нравится', 'Вопросы', 'Контакты', 'Готово'];
   const LAST = STEPS.length - 1, FORM_LAST = LAST - 1;
@@ -539,7 +542,7 @@
       return true;
     }
     upBar.hidden = true;
-    const userFix = res.r && res.r.error && res.code >= 400 && res.code < 500 && res.code !== 404 && res.code !== 405;
+    const userFix = res.r && res.r.error && res.code >= 400 && res.code < 500 && ![403, 404, 405].includes(res.code);   // 403 — приём закрыт (нет https): архив
     if (userFix) { say(esc(res.r.error), true); return true; }      // исправимо клиентом (телефон, размер, частота) — архив не навязываем
     say('Через сайт отправить не получилось' + (res.code ? ' (сервер ответил ' + res.code + ')' : ' — нет связи с сервером')
       + '. Архив готов — отправьте его в WhatsApp на <a href="https://wa.me/79257338640" target="_blank" rel="noopener">+7 925 733-86-40</a> или на <a href="mailto:optteem@mail.ru">optteem@mail.ru</a>.', true);

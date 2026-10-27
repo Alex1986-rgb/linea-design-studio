@@ -112,6 +112,15 @@ push без ручного запуска отработал `success`. Стат
 - PHP — в `server/api/` (НЕ в `site/`: GitHub Pages опубликовал бы исходники). `site-rebase.js` для preview/domain копирует его
   в `.deploy/<site>/api/` и вставляет `<meta name="linea-api" content="api/">` в brief.html / review.html / order.html.
   Нет меты (GitHub Pages) или сервер не ответил — brief.js и review.js работают по-старому (архив/текст в WhatsApp, почта).
+- **ПДн — только по https** (второй круг критиков 27.10.2026): `linea_require_https()` в boot.php отказывает brief/review/pay по http
+  (кроме `test=1` и `php -S 127.0.0.1`), admin.php по http закрыт целиком (403 до выдачи куки), pay-notify — только https.
+  brief.js / review.js на http сами уходят на запасной путь (кроме `?test=1` и localhost). Боевой приём — на домене после SSL.
+- **Фраза «как уходит бриф» — только из `TERMS.intake`** (site-shell.js, пары «архивом» / «одной кнопкой»): генераторы и gen-home
+  берут вариант по адресу сборки, `site-rebase.js` меняет вариант при выкладке (`swapIntake`) и падает, если без приёмника по https
+  где-то осталось «одной кнопкой». Руками фразу про отправку брифа/правок в страницы не вписывать.
+- Архив первой версии (`portfolio/demo`, `portfolio/dom-120`): после перегенерации движком — `node tools/archive-old-demos.js`
+  (noindex, плашка «Архив», без обещаний «та же мебель, что на чертежах»); `touch-sitemap.js` выкидывает noindex-страницы из sitemap.
+- `deploy-beget.sh --prune` ничего не удаляет: лишнее переносится в `dizain-studiya-kvartir/public_html_backup/<дата>/` (вне веб-корня).
 - Путь: бриф → `api/brief.php` (номер LN-ГГММ-NNNN, токен) → `order.html?t=…` (`js/order.js` ← `api/order.php`) → оплата
   (`api/pay.php` + вебхук `api/pay-notify.php`, ЮKassa API v3) или счёт вручную → «оплачен» → работа. Правки листов — `api/review.php`.
 - Данные и конфиг — **вне веб-корня**: `~/dizain-studiya-kvartir/linea-private/` (config.php, linea.sqlite, orders/<номер>/brief.zip,

@@ -1,13 +1,16 @@
 // LINEA · правки к листам голосом: review.html?p=<слаг проекта>&s=<файл листа>
 // Клиент открывает лист, нажимает на место на чертеже — ставится метка, к ней замечание голосом или текстом.
-// Правки хранятся в браузере (localStorage) по проекту. Где есть приёмник (Beget: <meta name="linea-api">) — уходят на
-// api/review.php и клиент сразу видит «Правки приняты, № R-…»; иначе (GitHub Pages) или при ошибке сети — как раньше,
+// Правки хранятся в браузере (localStorage) по проекту. Где есть приёмник (Beget: <meta name="linea-api">) и https — уходят на
+// api/review.php и клиент сразу видит «Правки приняты, № R-…»; иначе (GitHub Pages, адрес без https) или при ошибке сети — как раньше,
 // одним сообщением / файлом через «Поделиться», WhatsApp или почту. Токен заказа из ссылки (&t=…) связывает правки с заказом.
 (function () {
   'use strict';
   const $ = id => document.getElementById(id);
-  const API = (document.querySelector('meta[name="linea-api"]') || {}).content || '';
-  const q = new URLSearchParams(location.search), slug = (q.get('p') || '').replace(/[^a-z0-9-]/gi, '');
+  const q0 = new URLSearchParams(location.search);
+  // имя и телефон автора правок — только по https (кроме ?test=1 и localhost), как в brief.js
+  const SECURE = location.protocol === 'https:' || /^(localhost|127\.0\.0\.1|\[::1\])$/.test(location.hostname);
+  const API = (SECURE || q0.get('test') === '1') ? ((document.querySelector('meta[name="linea-api"]') || {}).content || '') : '';
+  const q = q0, slug = (q.get('p') || '').replace(/[^a-z0-9-]/gi, '');
   const KEY = 'linea_review_' + slug;
   const KEEP = ['t', 'test'].filter(k => q.get(k)).map(k => '&' + k + '=' + encodeURIComponent(q.get(k))).join('');
   let sheets = [], cur = 0, zoom = 1, notes = [], editing = null;
@@ -218,7 +221,7 @@
         $('sent').hidden = true;
         return;
       }
-      if (res.j && res.j.error && res.code >= 400 && res.code < 500 && res.code !== 404 && res.code !== 405) { ok.hidden = false; ok.style.color = '#e8a87c'; ok.textContent = res.j.error; return; }
+      if (res.j && res.j.error && res.code >= 400 && res.code < 500 && ![403, 404, 405].includes(res.code)) { ok.hidden = false; ok.style.color = '#e8a87c'; ok.textContent = res.j.error; return; }
       ok.hidden = false; ok.style.color = '#e8a87c';
       ok.textContent = 'Через сайт отправить не получилось — отправьте правки одним из способов ниже.';
     }

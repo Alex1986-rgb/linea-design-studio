@@ -12,6 +12,8 @@ require __DIR__ . '/lib/boot.php';
 require __DIR__ . '/lib/notify.php';
 
 if (($_SERVER['REQUEST_METHOD'] ?? '') !== 'POST') { header('Allow: POST'); linea_fail('Только POST', 405); }
+// бриф с ПДн — только по https; по http — только наши проверки (test=1, заказ тестовый)
+linea_require_https((string)($_POST['test'] ?? $_GET['test'] ?? '') === '1');
 $cfg = linea_cfg();
 $maxBytes = (int)$cfg['max_upload_mb'] * 1048576;
 
