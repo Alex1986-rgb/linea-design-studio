@@ -1,11 +1,15 @@
 // LINEA · правки к листам голосом: review.html?p=<слаг проекта>&s=<файл листа>
 // Клиент открывает лист, нажимает на место на чертеже — ставится метка, к ней замечание голосом или текстом.
-// Правки хранятся в браузере (localStorage) по проекту и уходят одним сообщением / файлом через «Поделиться».
+// Правки хранятся в браузере (localStorage) по проекту. Где есть приёмник (Beget: <meta name="linea-api">) — уходят на
+// api/review.php и клиент сразу видит «Правки приняты, № R-…»; иначе (GitHub Pages) или при ошибке сети — как раньше,
+// одним сообщением / файлом через «Поделиться», WhatsApp или почту. Токен заказа из ссылки (&t=…) связывает правки с заказом.
 (function () {
   'use strict';
   const $ = id => document.getElementById(id);
+  const API = (document.querySelector('meta[name="linea-api"]') || {}).content || '';
   const q = new URLSearchParams(location.search), slug = (q.get('p') || '').replace(/[^a-z0-9-]/gi, '');
   const KEY = 'linea_review_' + slug;
+  const KEEP = ['t', 'test'].filter(k => q.get(k)).map(k => '&' + k + '=' + encodeURIComponent(q.get(k))).join('');
   let sheets = [], cur = 0, zoom = 1, notes = [], editing = null;
   try { notes = JSON.parse(localStorage.getItem(KEY) || '[]'); } catch (e) { notes = []; }
   const save = () => { try { localStorage.setItem(KEY, JSON.stringify(notes)); } catch (e) {} paintCount(); };
@@ -64,7 +68,7 @@
     if ($('img').getAttribute('src') !== src) { $('loading').hidden = false; $('loadTxt').textContent = 'Загружаю лист…'; $('loading').classList.remove('err'); }
     $('img').src = src;
     $('raw').href = $('img').src;
-    history.replaceState(null, '', '?p=' + slug + '&s=' + encodeURIComponent(s.file));
+    history.replaceState(null, '', '?p=' + slug + '&s=' + encodeURIComponent(s.file) + KEEP);   // токен заказа и пометка теста не теряются при листании
     closeEditor();
     paintPins(); paintList();
   }
@@ -183,10 +187,41 @@
     });
     return out.join('\n');
   }
+  // телефон — чтобы правку незнакомого клиента сопоставить с заказом (только там, где правки уходят на сервер)
+  if (API && $('who')) {
+    $('who').closest('.field').insertAdjacentHTML('afterend', '<div class="field" style="margin:8px 0"><label for="whoPhone">Телефон</label><input type="tel" id="whoPhone" placeholder="чтобы мы могли уточнить"></div>'
+      + '<p class="hint" id="sentOk" role="status" aria-live="polite" hidden></p>');
+    try { $('whoPhone').value = localStorage.getItem('linea_review_phone') || ''; } catch (e) {}
+  }
+  function postNotes(who, phone) {
+    return fetch(API + 'review.php', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ project: slug, t: (q.get('t') || '').replace(/[^0-9a-f]/gi, ''), from: who, phone, test: q.get('test') === '1' ? 1 : 0,
+        notes: notes.filter(n => n.text).map(n => ({ file: n.file, n: n.n, text: n.text, x: n.x, y: n.y })) })
+    }).then(r => r.json().then(j => ({ code: r.status, j })).catch(() => ({ code: r.status, j: null }))).catch(() => ({ code: 0, j: null }));
+  }
   $('sendBtn').onclick = async () => {
     commitEditing(); paintList(); paintPins();
     const who = ($('who').value || '').trim();
     try { localStorage.setItem('linea_review_who', who); } catch (e) {}
+    if (API) {
+      const phone = ($('whoPhone') && $('whoPhone').value || '').trim();
+      try { localStorage.setItem('linea_review_phone', phone); } catch (e) {}
+      const btn = $('sendBtn'), old = btn.textContent;
+      btn.disabled = true; btn.textContent = 'Отправляю…';
+      const res = await postNotes(who, phone);
+      btn.disabled = false; btn.textContent = old;
+      const ok = $('sentOk');
+      if (res.code === 200 && res.j && res.j.ok) {
+        ok.hidden = false; ok.style.color = '';
+        ok.innerHTML = '✓ <b>Правки приняты, № ' + esc(res.j.number) + '.</b> Разберём в течение рабочего дня и пришлём перевыпущенный альбом или вопросы. Правки остаются в этом браузере — можно добавить ещё и отправить снова.';
+        $('sent').hidden = true;
+        return;
+      }
+      if (res.j && res.j.error && res.code >= 400 && res.code < 500 && res.code !== 404 && res.code !== 405) { ok.hidden = false; ok.style.color = '#e8a87c'; ok.textContent = res.j.error; return; }
+      ok.hidden = false; ok.style.color = '#e8a87c';
+      ok.textContent = 'Через сайт отправить не получилось — отправьте правки одним из способов ниже.';
+    }
     const body = summary(), text = (who ? 'От: ' + who + '\n' : '') + body, json = JSON.stringify({ project: slug, from: who, date: new Date().toISOString(), notes: notes.filter(n => n.text) }, null, 2);
     const file = new File([json], `LINEA-pravki-${slug}${who ? '-' + who.replace(/[^\wа-яё]+/gi, '-') : ''}.json`, { type: 'application/json' });
     $('sent').hidden = false;

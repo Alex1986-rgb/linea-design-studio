@@ -44,10 +44,16 @@ const noindex = site === 'preview' || process.argv.includes('--noindex');
 const httpsRedirect = /^https:/.test(base) && !process.argv.includes('--no-https-redirect');
 
 // 1. Копия: rsync сам решает, что изменилось; --delete убирает из копии то, что ушло из site/.
-const EXCL = ['.DS_Store', '.nojekyll', 'README-nojekyll.txt', '_dev-*.html', '.htaccess', '.linea-deploy'];
+// Служебное выпусков (_release.html, _rules.txt, _card.json, _renders.json) читают только генераторы при сборке — наружу не отдаём.
+// /api/ — приёмник брифа и заказов из server/api (PHP только на Beget; в site/ его нет, чтобы GitHub Pages не публиковал исходники).
+const EXCL = ['.DS_Store', '.nojekyll', 'README-nojekyll.txt', '_dev-*.html', '.htaccess', '.linea-deploy',
+  '_release.html', '_rules.txt', '_card.json', '_renders.json', '/api/'];
+const API_SRC = path.join(ROOT, 'server', 'api');
+const withApi = !inPlace && site !== 'pages' && fs.existsSync(API_SRC) && !process.argv.includes('--no-api');
 if (!inPlace) {
   fs.mkdirSync(out, { recursive: true });
-  execFileSync('rsync', ['-a', '--delete', ...EXCL.flatMap(e => ['--exclude', e]), SRC + '/', out + '/'], { stdio: 'inherit' });
+  execFileSync('rsync', ['-a', '--delete', '--delete-excluded', ...EXCL.flatMap(e => ['--exclude', e]), SRC + '/', out + '/'], { stdio: 'inherit' });
+  if (withApi) execFileSync('rsync', ['-a', '--delete', '--exclude', '.DS_Store', API_SRC + '/', path.join(out, 'api') + '/'], { stdio: 'inherit' });
 }
 
 // 2. Адрес: все известные площадки → целевая. Длинные первыми, чтобы не задеть префикс другой.
@@ -70,6 +76,20 @@ let files = 0, hits = 0;
     files++; hits += n;
   }
 })(out);
+
+// 2б. Приёмник: страницам с отправкой говорим, где api (brief.js / review.js / order.js без меты работают по-старому — WhatsApp/почта)
+const API_PAGES = ['brief.html', 'review.html', 'order.html'];
+let apiPages = 0;
+if (withApi) for (const f of API_PAGES) {
+  const p = path.join(out, f);
+  if (!fs.existsSync(p)) continue;
+  const s = fs.readFileSync(p, 'utf8');
+  if (s.includes('name="linea-api"')) continue;
+  const st = fs.statSync(p);
+  fs.writeFileSync(p, s.replace('</head>', '<meta name="linea-api" content="api/">\n</head>'));
+  fs.utimesSync(p, st.atime, st.mtime);
+  apiPages++;
+}
 
 // 3. robots.txt
 const robotsPath = path.join(out, 'robots.txt');
@@ -95,6 +115,11 @@ const ht = [
   'AddType application/json .json',
   'AddType image/webp .webp',
   '',
+  '# служебное выкладки и выпусков — не отдавать (данных заказов здесь нет: они в ../linea-private)',
+  '<FilesMatch "^(\\.linea-deploy|_release\\.html|_rules\\.txt|_card\\.json|_renders\\.json)$">',
+  '  <IfModule mod_authz_core.c>\n    Require all denied\n  </IfModule>',
+  '</FilesMatch>',
+  '',
   '<IfModule mod_rewrite.c>',
   '  RewriteEngine On',
   // Pages отдавал /index.html и /; одинаковые страницы под двумя адресами Apache тоже отдаст, это норма — canonical решает
@@ -118,6 +143,7 @@ const ht = [
   '  ExpiresByType image/webp "access plus 30 days"',
   '  ExpiresByType image/svg+xml "access plus 7 days"',
   '  ExpiresByType application/pdf "access plus 7 days"',
+  '  ExpiresByType application/json "access plus 1 hours"',
   '</IfModule>',
   noindex ? '\n<IfModule mod_headers.c>\n  Header set X-Robots-Tag "noindex, nofollow"\n</IfModule>' : '',
   '',
@@ -133,5 +159,6 @@ const left = [];
     else if (TEXT.test(e.name) && from.some(b => fs.readFileSync(p, 'utf8').includes(b))) left.push(path.relative(out, p));
   }
 })(out);
-console.log(`site-rebase: ${site} → ${base}\n  копия: ${out}\n  адрес заменён в ${files} файлах (${hits} вхождений), robots ${noindex ? 'закрыт' : 'открыт'}, .htaccess${httpsRedirect ? ' с 301 на https' : ''}`);
+console.log(`site-rebase: ${site} → ${base}\n  копия: ${out}\n  адрес заменён в ${files} файлах (${hits} вхождений), robots ${noindex ? 'закрыт' : 'открыт'}, .htaccess${httpsRedirect ? ' с 301 на https' : ''}`
+  + (withApi ? `\n  приёмник: api/ из server/api, мета linea-api на ${apiPages} стр.` : ''));
 if (left.length) { console.error(`  ✗ старый адрес остался в ${left.length} файлах: ${left.slice(0, 5).join(', ')}`); process.exit(1); }

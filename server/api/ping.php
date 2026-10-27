@@ -1,0 +1,14 @@
+<?php
+/** GET api/ping.php — прозвон выкладки: PHP жив, папка данных доступна на запись, конфиг на месте. Без секретов. */
+declare(strict_types=1);
+require __DIR__ . '/lib/boot.php';
+$p = linea_private();
+linea_json([
+    'ok' => true,
+    'php' => PHP_VERSION,
+    'private' => is_dir($p) && is_writable($p),
+    'config' => is_file($p . '/config.php'),
+    'mode' => linea_cfg()['mode'],
+    'sqlite' => extension_loaded('pdo_sqlite'),
+    'zip' => class_exists('ZipArchive'),
+]);

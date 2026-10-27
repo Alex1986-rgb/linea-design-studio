@@ -17,7 +17,9 @@
 #      не больше BATCH_MB мегабайт / BATCH_N файлов, пауза BATCH_PAUSE с между партиями. Каждая партия —
 #      rsync --files-from; если rsync оборвался (на Beget это бывает, см. память konsulcar-deploy-base64) —
 #      повтор, потом tar | ssh той же партией. PDF альбомов по 20–30 МБ идут отдельными партиями.
-#   4. Сверка: каждый файл выпуска есть на сервере с тем же размером. Потом прозвон адресов.
+#   4. Сверка: каждый файл выпуска есть на сервере с тем же размером. Потом прозвон адресов (и api/ping.php).
+#   Приёмник брифа (server/api → public_html/api) кладёт данные в ~/dizain-studiya-kvartir/linea-private — ВНЕ DOCROOT:
+#   ни заливка, ни --prune туда не заходят; config.php там правится руками (образец — server/config.example.php).
 #
 # Переменные: LINEA_SSH_HOST (beget-en0), LINEA_DOCROOT (dizain-studiya-kvartir/public_html),
 #             BATCH_MB=40 BATCH_N=300 BATCH_PAUSE=3, BEGET_BIND=en0.
@@ -194,6 +196,18 @@ for u in / /index.html /brief.html /review.html "/review.html?p=gost-kv3k" /port
     *) bad "$u — $code"; FAIL=1 ;;
   esac
 done
+# Приёмник брифа и заказов (server/api → api/): PHP жив, папка данных linea-private рядом с public_html доступна, конфиг на месте
+if [ -d "$OUT/api" ] || [ "$ONLY_CHECK" = 1 ]; then
+  PING=$(ccurl -s -m 25 "$BASE/api/ping.php" 2>/dev/null)
+  case "$PING" in
+    *'"ok":true'*'"private":true'*'"config":true'*) ok "api/ping.php — $PING" ;;
+    *) bad "api/ping.php — ${PING:-нет ответа} (PHP 8.2+ у сайта? папка ~/dizain-studiya-kvartir/linea-private и config.php?)"; FAIL=1 ;;
+  esac
+  for u in /api/lib/boot.php /api/.htaccess; do
+    c=$(ccurl -s -o /dev/null -w '%{http_code}' -m 25 "$BASE$u" 2>/dev/null)
+    case "$c" in 403|404) ok "$u закрыт ($c)" ;; *) bad "$u отдаётся ($c)"; FAIL=1 ;; esac
+  done
+fi
 code=$(ccurl -s -o /dev/null -w '%{http_code}' -m 25 "$BASE/takoy-stranicy-net/" 2>/dev/null || echo 000)
 [ "$code" = 404 ] && ok "несуществующий адрес → 404" || { bad "несуществующий адрес → $code (ждали 404)"; FAIL=1; }
 loc=$(ccurl -s -o /dev/null -w '%{http_code} %{redirect_url}' -m 25 "$BASE/catalog" 2>/dev/null)

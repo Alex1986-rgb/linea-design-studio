@@ -106,6 +106,22 @@ push без ручного запуска отработал `success`. Стат
 - API Beget — `python3 -I tools/beget-api.py <метод> ['<json>']` (пароль не печатается). Чужие сайты аккаунта не трогать.
 - Подробно и что осталось — `docs/reports/2026-10-27-pereezd-beget.md`.
 
+### Приём брифа, заказы и оплата (Beget, с 27.10.2026)
+- PHP — в `server/api/` (НЕ в `site/`: GitHub Pages опубликовал бы исходники). `site-rebase.js` для preview/domain копирует его
+  в `.deploy/<site>/api/` и вставляет `<meta name="linea-api" content="api/">` в brief.html / review.html / order.html.
+  Нет меты (GitHub Pages) или сервер не ответил — brief.js и review.js работают по-старому (архив/текст в WhatsApp, почта).
+- Путь: бриф → `api/brief.php` (номер LN-ГГММ-NNNN, токен) → `order.html?t=…` (`js/order.js` ← `api/order.php`) → оплата
+  (`api/pay.php` + вебхук `api/pay-notify.php`, ЮKassa API v3) или счёт вручную → «оплачен» → работа. Правки листов — `api/review.php`.
+- Данные и конфиг — **вне веб-корня**: `~/dizain-studiya-kvartir/linea-private/` (config.php, linea.sqlite, orders/<номер>/brief.zip,
+  reviews/, журналы). Путь задаётся в одном месте — `linea_private()` в `server/api/lib/boot.php`. Образец — `server/config.example.php`:
+  режим `mode` (manual | yookassa), ключи магазина ЮKassa LINEA, цены (копейки, null = «уточняется»), уведомления — всё там.
+  Ключи SeoMarket (`~/.claude/secrets/payment.env`) для LINEA не использовать.
+- Закрытая страница заказов — `<сайт>/api/admin.php`, пароль — `~/.claude/secrets/linea-admin.env`. В конвейер (clients/<slug>) —
+  только заказы со статусом «оплачен».
+- Страница заказа собирается `node tools/gen-order-page.js` (каркас site-shell.js, noindex, не в sitemap).
+- Проверки — только с `?test=1` (заказ test=1, писем нет); тестовые заказы удалять кнопкой в admin.php. Подробно —
+  `docs/reports/2026-10-27-priem-brifa-oplata.md`.
+
 ## Канон чертежей
 Правила самих чертежей — `docs/cad-canon.md` (нормативная база СПДС/ЕСКД с пунктами, анатомия листа, чек-листы по каждому типу листа, нормируемые зазоры). Регламент работы — навык `cad-drawings`. Роли: агент `draftsman` (правит движок), `cad-normcontrol` (нормоконтроль), `cad-acceptance` (приёмка перед выдачей).
 

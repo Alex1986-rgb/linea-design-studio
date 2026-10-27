@@ -1,9 +1,14 @@
 // LINEA · бриф-визард → brief.json + архив с файлами
-// Сайт статический: приёма на сервере нет. Всё собирается в браузере клиента — бриф, план, фото и референсы уходят
-// одним ZIP-архивом через «Поделиться» (WhatsApp / Telegram на телефоне) или скачиванием; черновик хранится в браузере.
+// Всё собирается в браузере клиента — бриф, план, фото и референсы одним ZIP-архивом; черновик хранится в браузере.
+// Где есть приёмник (Beget: <meta name="linea-api" content="api/">, её вставляет tools/site-rebase.js), архив уходит
+// одной кнопкой на api/brief.php → номер заказа → order.html. На GitHub Pages PHP нет, меты нет — остаётся прежний путь:
+// «Поделиться» (WhatsApp / Telegram на телефоне) или скачивание + WhatsApp / почта. Он же — запасной при ошибке сети.
 (function () {
   'use strict';
   const $ = id => document.getElementById(id);
+  const API = (document.querySelector('meta[name="linea-api"]') || {}).content || '';
+  const TEST = new URLSearchParams(location.search).get('test') === '1';   // наши проверки: заказ помечается тестовым
+  const MAX_MB = 100;
   const STEPS = ['Рассказ', 'Объект', 'План и фото', 'Что нравится', 'Вопросы', 'Контакты', 'Готово'];
   const LAST = STEPS.length - 1, FORM_LAST = LAST - 1;
   const STYLES = [
@@ -301,7 +306,7 @@
     }));
     const st = STYLES.find(s => s.key === selStyle);
     return {
-      meta: { created: new Date().toISOString().slice(0, 10), source: 'site-brief-wizard', version: 2, test: true },
+      meta: Object.assign({ created: new Date().toISOString().slice(0, 10), source: 'site-brief-wizard', version: 2 }, TEST ? { test: true } : {}),
       client: { name: val('cName'), phone: val('cPhone'), email: val('cEmail'), contact: val('cWay') },
       object: {
         type: val('objType'), address: val('objAddr'),
@@ -463,26 +468,104 @@
     const who = safe((b.client.name || 'klient').trim().replace(/\s+/g, '-'));
     return new File([zip(list)], `LINEA-brif-${who}-${b.meta.created}.zip`, { type: 'application/zip' });
   }
-  // На компьютере «Поделиться» нет — архив просто скачается, и человек думает,
-  // что бриф уже ушёл. Говорим об этом крупно до нажатия.
-  if (!(navigator.canShare && navigator.share) && $('sendMust')) {
+  // ── прежний путь: «Поделиться» на телефоне / скачать на компьютере. На GitHub Pages — основной, на Beget — запасной.
+  // На компьютере «Поделиться» нет — архив просто скачается, и человек думает, что бриф уже ушёл. Говорим об этом крупно до нажатия.
+  if (!API && !(navigator.canShare && navigator.share) && $('sendMust')) {
     $('sendMust').innerHTML = 'На компьютере архив <b>скачается в «Загрузки»</b> и сам к нам не уйдёт. После сборки <b>отправьте файл в WhatsApp</b> на <a href="https://wa.me/79257338640" target="_blank" rel="noopener">+7 925 733-86-40</a> или <b>на почту</b> <a href="mailto:optteem@mail.ru">optteem@mail.ru</a>.';
   }
   const AFTER_ZIP = $('afterZip').innerHTML;          // после «Отменено» абзац переписан — возвращаем исходный с #zipInfo
+  const sizeText = n => n < 1048576 ? Math.max(1, Math.round(n / 1024)) + ' КБ' : (n / 1048576).toFixed(1) + ' МБ';
+  async function shareOrSave(f) {
+    if (navigator.canShare && navigator.canShare({ files: [f] })) {
+      try { await navigator.share({ files: [f], title: 'Бриф LINEA', text: 'Бриф на дизайн-проект: ' + (lastBrief && lastBrief.client.name || '') }); }
+      catch (e) { if (e.name === 'AbortError') { $('afterZip').hidden = false; $('afterZip').innerHTML = 'Отправка отменена. Нажмите кнопку ещё раз — или <button type="button" class="linklike" id="zipDl">скачайте архив</button> и пришлите его в WhatsApp на +7 925 733-86-40.'; $('zipDl').onclick = () => saveBlob(f, f.name); return; } saveBlob(f, f.name); }
+    } else saveBlob(f, f.name);
+    $('afterZip').innerHTML = AFTER_ZIP;
+    $('afterZip').hidden = false;
+    $('zipInfo').textContent = f.name + ' · ' + sizeText(f.size);
+  }
+
+  // ── приёмник на сервере (Beget): одна кнопка → номер заказа → страница заказа
+  let upBar = null, upState = null;
+  if (API) {
+    $('sendZip').textContent = 'Отправить бриф в студию';
+    $('sendMust').innerHTML = 'Нажмите кнопку — бриф, план и фото уйдут к нам одним архивом, и сразу откроется <b>страница заказа с номером</b>.';
+    const ok = document.querySelector('.result .okmsg');
+    if (ok) ok.innerHTML = 'Работа над проектом начинается <b>после оплаты</b>. Цену назовём по брифу (на странице заказа будет сумма и как оплатить), '
+      + 'первый вариант квартиры — до 48 часов, дома — до 72 часов от оплаты и получения плана с размерами. Если плана нет — договоримся об обмере.';
+    $('sendZip').closest('.cta-row').insertAdjacentHTML('afterend',
+      '<div id="upBar" hidden style="height:6px;background:rgba(201,164,95,.18);border-radius:3px;overflow:hidden;margin:10px 0 4px"><i style="display:block;height:100%;width:0;background:#C9A45F;transition:width .2s"></i></div>'
+      + '<p class="hint" id="upState" role="status" aria-live="polite" hidden></p>');
+    upBar = $('upBar'); upState = $('upState');
+    // поле-ловушка для ботов: людям не видно, с клавиатуры недоступно
+    const panel = document.querySelector('.panel[data-step="5"]') || document.body;
+    panel.insertAdjacentHTML('beforeend', '<div aria-hidden="true" style="position:absolute;left:-10000px;width:1px;height:1px;overflow:hidden"><label>Сайт <input type="text" id="hpWebsite" tabindex="-1" autocomplete="off"></label></div>');
+  }
+  const say = (html, bad) => { if (!upState) return; upState.hidden = false; upState.style.color = bad ? '#e8a87c' : ''; upState.innerHTML = html; };
+  function upload(f, b) {
+    return new Promise(resolve => {
+      const fd = new FormData();
+      fd.append('brief', f, f.name);
+      fd.append('json', JSON.stringify(b));
+      fd.append('website', ($('hpWebsite') || {}).value || '');
+      if (TEST) fd.append('test', '1');
+      const x = new XMLHttpRequest();
+      x.open('POST', API + 'brief.php');
+      x.timeout = 20 * 60 * 1000;                      // с телефона 50–100 МБ — это минуты
+      x.upload.onprogress = e => { if (!e.lengthComputable) return; const p = Math.round(e.loaded / e.total * 100); upBar.firstChild.style.width = p + '%'; say('Отправляю: ' + p + ' % из ' + sizeText(e.total) + '. Не закрывайте страницу.'); };
+      x.onload = () => { let r = null; try { r = JSON.parse(x.responseText); } catch (e) {} resolve({ code: x.status, r }); };
+      x.onerror = x.ontimeout = x.onabort = () => resolve({ code: 0, r: null });
+      x.send(fd);
+    });
+  }
+  async function sendToStudio(f) {
+    const b = lastBrief || collect();
+    upBar.hidden = false; upBar.firstChild.style.width = '0';
+    let res = await upload(f, b);
+    if (res.code === 0 || res.code === 502 || res.code === 503 || res.code === 504) {   // обрыв связи — один повтор
+      say('Связь прервалась — пробую ещё раз…');
+      await new Promise(r => setTimeout(r, 3000));
+      res = await upload(f, b);
+    }
+    if (res.code === 200 && res.r && res.r.ok) {
+      upBar.firstChild.style.width = '100%';
+      say('✓ Бриф принят, заказ <b>№ ' + esc(res.r.number) + '</b>. Открываю страницу заказа…');
+      try { localStorage.removeItem(KEY); localStorage.setItem('linea_last_order', res.r.orderUrl); } catch (e) {}
+      setTimeout(() => { location.href = res.r.orderUrl; }, 900);
+      return true;
+    }
+    upBar.hidden = true;
+    const userFix = res.r && res.r.error && res.code >= 400 && res.code < 500 && res.code !== 404 && res.code !== 405;
+    if (userFix) { say(esc(res.r.error), true); return true; }      // исправимо клиентом (телефон, размер, частота) — архив не навязываем
+    say('Через сайт отправить не получилось' + (res.code ? ' (сервер ответил ' + res.code + ')' : ' — нет связи с сервером')
+      + '. Архив готов — отправьте его в WhatsApp на <a href="https://wa.me/79257338640" target="_blank" rel="noopener">+7 925 733-86-40</a> или на <a href="mailto:optteem@mail.ru">optteem@mail.ru</a>.', true);
+    return false;
+  }
+
   $('sendZip').onclick = async () => {
     const btn = $('sendZip'), old = btn.textContent;
     btn.disabled = true; btn.textContent = 'Собираю архив…';
     try {
       const f = await makeArchive();
-      if (navigator.canShare && navigator.canShare({ files: [f] })) {
-        try { await navigator.share({ files: [f], title: 'Бриф LINEA', text: 'Бриф на дизайн-проект: ' + (lastBrief && lastBrief.client.name || '') }); }
-        catch (e) { if (e.name === 'AbortError') { $('afterZip').hidden = false; $('afterZip').innerHTML = 'Отправка отменена. Нажмите кнопку ещё раз — или <button type="button" class="linklike" id="zipDl">скачайте архив</button> и пришлите его в WhatsApp на +7 925 733-86-40.'; $('zipDl').onclick = () => saveBlob(f, f.name); return; } saveBlob(f, f.name); }
-      } else saveBlob(f, f.name);
-      $('afterZip').innerHTML = AFTER_ZIP;
-      $('afterZip').hidden = false;
-      $('zipInfo').textContent = f.name + ' · ' + (f.size < 1048576 ? Math.max(1, Math.round(f.size / 1024)) + ' КБ' : (f.size / 1048576).toFixed(1) + ' МБ');
+      if (f.size > MAX_MB * 1048576) {
+        const msg = 'Архив ' + sizeText(f.size) + ' — больше ' + MAX_MB + ' МБ. Уберите часть фото на шаге «План и фото» или пришлите их отдельно в WhatsApp.';
+        if (API) say(msg, true); else alert(msg);
+        return;
+      }
+      if (API) {
+        btn.textContent = 'Отправляю…';
+        if (await sendToStudio(f)) return;
+      }
+      await shareOrSave(f);
     } finally { btn.disabled = false; btn.textContent = old; }
   };
+  // HEIC (фото с iPhone) браузер не ужимает — уходит как есть; предупреждаем заранее
+  const heicNote = () => {
+    const n = files.plans.concat(files.photos).filter(f => /\.(heic|heif)$/i.test(f.name) || /heic|heif/i.test(f.type)).length;
+    if (n && upState !== null) say('Фото в формате HEIC (' + n + ') отправим как есть — если какое-то не откроется, попросим прислать JPG.');
+    else if (n && $('afterZip')) { $('afterZip').hidden = false; $('afterZip').textContent = 'Фото в формате HEIC (' + n + ') уйдут как есть, без сжатия — архив будет тяжелее.'; }
+  };
+  $('next').addEventListener('click', () => { if (step === LAST) heicNote(); });
 
   renderSteps();
 })();
