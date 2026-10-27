@@ -11,16 +11,24 @@
  "rooms": 9,
  "total": 92,
  "blockers": 0,
+ "issues": 218,
+ "openQ": {
+  "n": 4,
+  "no": "06"
+ },
+ "preReview": "22.10.2026",
  "hero": {
   "src": "assets/portfolio/gost-modern4k-hero.jpg",
-  "alt": "Квартира с кабинетом · современный модерн — вид сверху 3D",
+  "alt": "Квартира с кабинетом · современный модерн — спальня, визуализация",
   "w": 1600,
   "h": 1066,
   "kind": "render",
-  "name": "3d-top",
+  "state": "signed",
+  "name": "room-bedroom-wB",
   "webp": "assets/portfolio/gost-modern4k-hero.webp"
  },
- "visuals": 24,
+ "visuals": 13,
+ "visualsPrelim": 10,
  "studioSize": "14 МБ",
  "pdfSize": "20 МБ"
 }

@@ -11,16 +11,21 @@
  "rooms": 13,
  "total": 124,
  "blockers": 0,
+ "issues": 65,
+ "openQ": {
+  "n": 23,
+  "no": "06"
+ },
+ "preReview": "22.10.2026",
  "hero": {
-  "src": "assets/portfolio/gost-proekt2-hero.jpg",
-  "alt": "Квартира с эркерами, 13 помещений — вид сверху 3D",
-  "w": 1600,
-  "h": 1066,
-  "kind": "cover-render",
-  "name": "3d-top",
-  "webp": "assets/portfolio/gost-proekt2-hero.webp"
+  "src": "portfolio/gost-proekt2/sheets/24-interior-designer-furniture.svg",
+  "alt": "Квартира с эркерами, 13 помещений — план расстановки мебели",
+  "w": 1587,
+  "h": 1123,
+  "kind": "sheet"
  },
  "visuals": 0,
+ "visualsPrelim": 0,
  "studioSize": "15 МБ",
  "pdfSize": "29 МБ"
 }

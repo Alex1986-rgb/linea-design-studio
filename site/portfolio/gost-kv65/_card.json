@@ -11,16 +11,21 @@
  "rooms": 9,
  "total": 79,
  "blockers": 1,
+ "issues": 133,
+ "openQ": {
+  "n": 4,
+  "no": "05"
+ },
+ "preReview": "22.10.2026",
  "hero": {
-  "src": "assets/portfolio/gost-kv65-hero.jpg",
-  "alt": "Квартира 65 м² после реконструкции — вид сверху 3D",
-  "w": 1600,
-  "h": 1066,
-  "kind": "cover-render",
-  "name": "3d-top",
-  "webp": "assets/portfolio/gost-kv65-hero.webp"
+  "src": "portfolio/gost-kv65/sheets/15-interior-designer-furniture.svg",
+  "alt": "Квартира 65 м² после реконструкции — план расстановки мебели",
+  "w": 1587,
+  "h": 1123,
+  "kind": "sheet"
  },
  "visuals": 0,
+ "visualsPrelim": 0,
  "studioSize": "10 МБ",
  "pdfSize": "15 МБ"
 }

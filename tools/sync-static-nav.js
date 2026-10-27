@@ -17,13 +17,15 @@ const SHELL = require('./site-shell.js');
 
 const SITE = path.join(__dirname, '..', 'site');
 const CHECK = process.argv.includes('--check');
+// --only=brief.html — синхронизировать один файл (главную правит отдельный шаг)
+const ONLY = (process.argv.find(a => a.startsWith('--only=')) || '').slice(7);
 
 // у главной в подвале дополнительно ссылка на первый демо-альбом старого движка;
 // подписана честно — это не нынешний формат выпуска
 const EXTRA = { 'index.html': ' · <a href="portfolio/demo/presentation.html">Первая версия (старый формат)</a>' };
 
 let drift = 0;
-for (const file of ['index.html', 'brief.html']) {
+for (const file of ['index.html', 'brief.html'].filter(f => !ONLY || f === ONLY)) {
   const p = path.join(SITE, file);
   if (!fs.existsSync(p)) continue;
   const src = fs.readFileSync(p, 'utf8');

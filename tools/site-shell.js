@@ -92,7 +92,42 @@ ${MENU.map(x => `    <a href="${x.key === active ? './' : u + x.href}">${x.title
 </div>`;
 }
 
-const beta = u => `<div class="beta">Открытый тест: дизайн-проект бесплатно, без предоплаты · <a href="${u}brief.html">заполнить бриф</a></div>`;
+// ── Условия работы: ЕДИНСТВЕННЫЙ источник для текстов сайта ───────────────────────────────────────────
+// Решение 27.10.2026: «открытый бесплатный тест» закончен — проект начинается после оплаты (ЮKassa или счёт).
+// Цены задаёт Александр. Пока в PRICES стоит null, сайт пишет «стоимость называем после брифа, до начала работы»
+// и не показывает ни «0 ₽», ни выдуманных сумм; schema.org Offer без цены не выводится. Те же цены (в копейках) —
+// в linea-private/config.php на сервере (server/config.example.php → prices): меняются в двух местах одновременно.
+// ROUNDS — сколько кругов правок входит в цену; null — «число кругов — в договоре до оплаты» (решение Александра).
+// Реквизиты исполнителя — задаёт Александр (статус: ИП или плательщик НПД, ИНН). null — на сайте честная пометка «будут указаны».
+const REQUISITES = null;   // пример: { status: 'плательщик налога на профессиональный доход (самозанятый)', inn: '000000000000' }
+const PRICES = { kvartira: null, dom: null };       // рубли за проект; null — «уточняется»
+const ROUNDS = null;
+const rub = n => String(Math.round(n)).replace(/\B(?=(\d{3})+(?!\d))/g, '\u00a0') + '\u00a0₽';
+const TERMS = {
+  prices: PRICES,
+  rounds: ROUNDS,
+  requisites: REQUISITES,
+  reqLine: REQUISITES ? `${REQUISITES.status}, ИНН ${REQUISITES.inn}` : 'статус (ИП или самозанятый) и ИНН будут указаны до приёма первой оплаты',
+  // цена одной строкой: для квартиры/дома или общая
+  price(kind) {
+    const v = kind ? PRICES[kind] : null;
+    if (v) return rub(v);
+    return 'стоимость называем после брифа — до начала работы';
+  },
+  hasPrices: Object.values(PRICES).some(Boolean),
+  start: 'Проект начинается после оплаты',
+  how: 'Вы присылаете бриф — мы называем цену и срок, вы оплачиваете, после оплаты начинаем работу',
+  term: 'первый вариант квартиры — до 48 часов, дома — до 72 часов от оплаты и получения плана с размерами',
+  roundsText: ROUNDS ? `${ROUNDS} ${ROUNDS === 1 ? 'круг' : ROUNDS < 5 ? 'круга' : 'кругов'} правок входят в цену` : 'сколько кругов правок входит в цену — фиксируем в договоре до оплаты',
+  // что такое пометка «ПРЕДВАРИТЕЛЬНО» — одной фразой (снимается сама, когда закрыт реестр вопросов: gost-draft engine/paper.js → releaseState)
+  prelim: 'Комплект выпускается с пометкой «ПРЕДВАРИТЕЛЬНО», пока по объекту открыты вопросы к вам (лист «Открытые вопросы» в начале альбома) и не сделан контрольный обмер. По такому комплекту не строят: после ваших ответов и обмера перевыпускаем его без пометки.',
+  // что не входит в услугу — один список для цены, оферты и каталога
+  notIncluded: ['выезд и обмер на объекте (работаем удалённо; задание на контрольный обмер — в альбоме)',
+    'согласование перепланировки в жилинспекции и расчёт несущих конструкций — это работа организаций с допуском',
+    'строительные работы, закупка материалов и авторский надзор на объекте'],
+};
+
+const beta = u => `<div class="beta">Работа — после оплаты, цену называем до старта · <a href="${u}brief.html">заполнить бриф</a></div>`;
 
 const sticky = u => `<div class="sticky-cta">
   <a class="btn" href="${u}brief.html">Заполнить бриф</a>
@@ -104,14 +139,16 @@ const FOOTER_EXTRA = [
   { title: 'Условия', href: 'price/' },
   { title: 'Процесс', href: 'process/' }, { title: 'FAQ', href: 'faq/' },
   { title: 'О студии', href: 'about/' }, { title: 'Контакты', href: 'contacts/' },
-  { title: 'Чек-лист приёмки', href: 'checklist/' }, { title: 'Карта сайта', href: 'sitemap/' }, { title: 'Обработка данных', href: 'policy/' },
+  { title: 'Чек-лист приёмки', href: 'checklist/' }, { title: 'Карта сайта', href: 'sitemap/' },
+  { title: 'Оплата', href: 'oplata/' }, { title: 'Договор-оферта', href: 'oferta/' },
+  { title: 'Обработка данных', href: 'policy/' }, { title: 'Согласие на обработку данных', href: 'soglasie/' },
 ];
 // Воронка сайта: три состояния посетителя. Полоса стоит перед подвалом на
 // каждой странице и всегда показывает, где человек сейчас и что дальше.
 const FUNNEL = [
   { key: 'look', title: 'Посмотреть', text: 'альбомы целиком, лист за листом', href: 'portfolio-hub/', on: ['portfolio', 'cases', 'stories', 'reviews', 'style'] },
   { key: 'check', title: 'Сравнить', text: 'состав, сроки и условия с рынком', href: 'compare/', on: ['compare', 'catalog', 'journal'] },
-  { key: 'start', title: 'Начать', text: 'бриф — около 10 минут, дальше проект делаем мы', href: 'brief.html', on: [] },
+  { key: 'start', title: 'Начать', text: 'бриф — около 10 минут, цену называем до начала работы', href: 'brief.html', on: [] },
 ];
 function funnel(u, active) {
   const cur = FUNNEL.findIndex(f => f.on.includes(active));
@@ -131,15 +168,15 @@ ${FUNNEL.map((f, i) => `    <a class="fstep${i === i0 ? ' on' : ''}${i < i0 ? ' 
 // пути человек находится. «Посмотреть» зовёт сравнить, «Сравнить» — вернуться
 // к альбомам или начать; финал везде один — бриф.
 // Срок везде один (решение студии): квартира — до 48 часов, дом — до 72 часов
-// от получения брифа с планом; opts.object = 'flat' | 'house' уточняет срок
+// от оплаты и получения плана с размерами; opts.object = 'flat' | 'house' уточняет срок
 // на странице конкретного альбома.
 function ctaBlock(u, active, opts = {}) {
   const step = FUNNEL.find(f => f.on.includes(active));
-  const term = opts.object === 'house' ? 'Первый вариант проекта дома — до 72 часов от получения брифа с планом'
-    : opts.object === 'flat' ? 'Первый вариант проекта квартиры — до 48 часов от получения брифа с планом'
-    : 'Первый вариант проекта — до 48 часов от получения брифа с планом (дом — до 72)';
+  const term = opts.object === 'house' ? 'Первый вариант проекта дома — до 72 часов от оплаты и получения плана с размерами'
+    : opts.object === 'flat' ? 'Первый вариант проекта квартиры — до 48 часов от оплаты и получения плана с размерами'
+    : 'Первый вариант проекта — до 48 часов от оплаты и получения плана с размерами (дом — до 72)';
   let kicker = 'Дальше', h = 'Свой проект — с того же места',
-    sub = `Бриф — около 10 минут, начать можно с рассказа голосом: размеры, фото, пожелания. ${term}; предоплаты нет, альбом остаётся у вас в любом случае.`,
+    sub = `Бриф — около 10 минут, начать можно с рассказа голосом: размеры, фото, пожелания. По брифу называем цену; работа начинается после оплаты. ${term}.`,
     second = `<a class="btn ghost" href="${u}portfolio-hub/">Посмотреть альбомы</a>`;
   if (step && step.key === 'look') {
     kicker = 'Понравилось?';
@@ -149,7 +186,7 @@ function ctaBlock(u, active, opts = {}) {
   } else if (step && step.key === 'check') {
     kicker = 'Всё сходится?';
     h = 'Тогда дальше — бриф, около 10 минут';
-    sub = 'Размеры, фото, пожелания по стилю и бюджету. На время открытого тестирования проект делается бесплатно, предоплаты нет, альбом остаётся у вас в любом случае.';
+    sub = 'Размеры, фото, пожелания по стилю и бюджету. По брифу называем цену и срок — до начала работы; проект начинается после оплаты.';
     second = `<a class="btn ghost" href="${u}portfolio-hub/">Ещё раз взглянуть на альбомы</a>`;
   }
   return `<section class="blk cta-blk">
@@ -180,7 +217,7 @@ function footer(u, active) {
   <div class="wrap cols">
     <div>
       <div class="logo">LINE<i>A</i></div>
-      <p>Премиальный дизайн-проект интерьера,<br>собранный автоматизированным конвейером<br>под контролем дизайнера.</p>
+      <p>Дизайн-проект квартиры или дома по вашему плану:<br>чертежи, визуализации и смета в двух альбомах.<br>Программа чертит, автор проверяет решения.</p>
       <p>${AUTHOR.role} <b>${AUTHOR.name}</b><br><a href="tel:${AUTHOR.tel}">${AUTHOR.phone}</a> · <a href="mailto:${AUTHOR.email}">${AUTHOR.email}</a></p>
     </div>
     <div>
@@ -260,4 +297,4 @@ ${ogImageTags(ogImage || OG_DEFAULT)}
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,500;0,600;1,500&family=Inter:wght@400;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="${u}css/main.css?${CSSV}">${extra || ''}`;
 
-module.exports = { AUTHOR, BASE, SITE, SITE_BASES, SITE_DOMAIN_RU, CSSV, SECTIONS, FOOTER_EXTRA, FUNNEL, funnel, ctaBlock, crumbsBar, crumbsAuto, pic, esc, clamp, header, footer, beta, sticky, crumbsLd, head };
+module.exports = { TERMS, AUTHOR, BASE, SITE, SITE_BASES, SITE_DOMAIN_RU, CSSV, SECTIONS, FOOTER_EXTRA, FUNNEL, funnel, ctaBlock, crumbsBar, crumbsAuto, pic, esc, clamp, header, footer, beta, sticky, crumbsLd, head };

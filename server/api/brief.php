@@ -31,6 +31,12 @@ $email = linea_str($client['email'] ?? '', 120);
 if ($phone === '' && $email === '') { linea_fail('Оставьте телефон или e-mail — иначе мы не сможем прислать проект'); }
 if ($email !== '' && !filter_var($email, FILTER_VALIDATE_EMAIL)) { linea_fail('Проверьте e-mail — в нём ошибка'); }
 if ($phone !== '' && strlen(preg_replace('/\D/', '', $phone) ?? '') < 10) { linea_fail('Проверьте телефон — в нём меньше 10 цифр'); }
+// Согласие на обработку ПДн — отдельной неотмеченной галочкой в брифе (152-ФЗ, ст. 9; текст — soglasie/). Без него бриф не принимаем.
+$consent = is_array($client['consent'] ?? null) ? $client['consent'] : [];
+if (($consent['personalData'] ?? false) !== true) { linea_fail('Отметьте согласие на обработку персональных данных — без него бриф отправить нельзя'); }
+$consentText = 'Согласие на обработку персональных данных, редакция ' . linea_str((string)($consent['edition'] ?? '?'), 20)
+    . ' (soglasie/), отмечено в брифе ' . linea_str((string)($consent['at'] ?? ''), 30)
+    . '; показ в портфолио: ' . (($consent['portfolio'] ?? false) === true ? 'да' : 'нет');
 
 $test = (string)($_POST['test'] ?? '') === '1' || !empty($brief['meta']['test']);
 
@@ -79,7 +85,7 @@ try {
     $db->prepare('INSERT INTO orders(number, token, status, kind, created_at, updated_at, ip, consent_at, consent_text, name, phone, email, contact,
             object_type, area, files_bytes, files_count, amount_kop, test) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)')
         ->execute([$number, $token, 'awaiting_payment', $kind, $now, $now, linea_ip(), $now,
-            'Отправляя бриф, вы соглашаетесь на обработку данных для подготовки проекта (brief.html, policy/)',
+            $consentText,
             linea_str($client['name'] ?? '', 80), $phone, $email, linea_str($client['contact'] ?? '', 60),
             linea_str($o['type'] ?? '', 30), $area, (int)$f['size'], $count, $amount, $test ? 1 : 0]);
     $id = (int)$db->lastInsertId();

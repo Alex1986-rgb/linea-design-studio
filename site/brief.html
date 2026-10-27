@@ -4,10 +4,10 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Бриф на дизайн-проект — LINEA | можно голосом</title>
-<meta name="description" content="Бесплатно на время теста: бриф на дизайн-проект квартиры или дома — около 10 минут, можно голосом. Квартира — до 48 часов от брифа с планом, дом — до 72.">
+<meta name="description" content="Бриф на дизайн-проект квартиры или дома — около 10 минут, можно голосом. По брифу называем цену; работа начинается после оплаты, квартира — до 48 часов, дом — до 72.">
 <meta property="og:type" content="website">
 <meta property="og:title" content="Бриф на дизайн-проект LINEA">
-<meta property="og:description" content="Около 10 минут, можно начать с рассказа голосом: размеры, фото, стиль. Квартира — до 48 часов от брифа с планом, дом — до 72: альбом рабочей документации. Предоплаты нет.">
+<meta property="og:description" content="Около 10 минут, можно начать с рассказа голосом: размеры, фото, стиль. Цену называем по брифу, до начала работы; квартира — до 48 часов от оплаты и плана, дом — до 72.">
 <meta property="og:image" content="https://alex1986-rgb.github.io/linea-design-studio/assets/og-home.jpg">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
@@ -87,7 +87,7 @@ details.example{margin:12px 0;color:var(--mut)} details.example summary{cursor:p
 </style>
 </head>
 <body>
-<div class="beta">Открытый тест: дизайн-проект бесплатно, без предоплаты · <a href="#wiz">заполнить бриф</a></div>
+<div class="beta">Работа — после оплаты, цену называем до старта · <a href="#wiz">заполнить бриф</a></div>
 
 <header class="site">
   <div class="nav">
@@ -125,8 +125,8 @@ details.example{margin:12px 0;color:var(--mut)} details.example summary{cursor:p
   <div class="wrap">
     <div class="kicker">Бриф · проще всего — голосом</div>
     <h1 style="font-size:clamp(28px,4vw,44px)">Просто расскажите о своём доме — <br>студия сделает проект</h1>
-    <p class="hint" style="max-width:720px">Открытое тестирование: проект делается <b>бесплатно</b>. Нажмите микрофон и говорите, как другу.
-      Всё сохраняется в этом браузере — можно закрыть и вернуться.</p>
+    <p class="hint" style="max-width:720px">По брифу мы назовём <b>цену и срок</b> — до начала работы; проект начинается после оплаты. Нажмите микрофон и говорите, как другу.
+      Черновик сохраняется только в этом браузере — можно закрыть и вернуться.</p>
     <p class="hint draft-note" id="draftNote" hidden>Черновик сохраняется автоматически.</p>
     <nav class="steps" id="steps" aria-label="Шаги брифа"></nav>
     <p class="sr-only" id="stepLive" aria-live="polite"></p>
@@ -243,7 +243,7 @@ details.example{margin:12px 0;color:var(--mut)} details.example summary{cursor:p
         <option value="business" selected>Бизнес — качественные бренды</option>
         <option value="premium">Премиум — без компромиссов</option>
       </select>
-      <p class="hint" style="margin:8px 0 0">Влияет только на подбор материалов и цифры в смете. Сам проект на время теста бесплатный.</p></div>
+      <p class="hint" style="margin:8px 0 0">Влияет только на подбор материалов и цифры в смете ремонта, а не на стоимость проекта.</p></div>
     <div class="field"><label for="qNotes">Что ещё нам важно знать?</label><textarea id="qNotes" class="dict" placeholder="привычки, сценарии, особые пожелания…"></textarea></div>
   </div>
 
@@ -258,7 +258,11 @@ details.example{margin:12px 0;color:var(--mut)} details.example summary{cursor:p
       <div class="field"><label for="cWay">Как удобнее связаться</label><select id="cWay"><option>WhatsApp</option><option>Telegram</option><option>звонок</option><option>почта</option></select></div>
     </div>
     <p class="hint" id="needContact" hidden style="color:#e8a87c"><b>Оставьте телефон или e-mail</b> — иначе мы не сможем прислать проект.</p>
-    <p class="hint">Отправляя бриф, вы соглашаетесь на обработку данных для подготовки проекта — <a href="policy/">подробнее</a>.</p>
+    <label class="consent" style="display:flex;gap:10px;align-items:flex-start;margin:14px 0 6px;cursor:pointer"><input type="checkbox" id="cConsent" style="margin-top:3px;width:auto;flex:none">
+      <span>Даю согласие на обработку персональных данных на условиях <a href="soglasie/" target="_blank" rel="noopener">согласия</a> и <a href="policy/" target="_blank" rel="noopener">политики</a> <b>— обязательно</b></span></label>
+    <label class="consent" style="display:flex;gap:10px;align-items:flex-start;margin:6px 0;cursor:pointer"><input type="checkbox" id="cPortfolio" style="margin-top:3px;width:auto;flex:none">
+      <span>Можно показать проект в портфолио LINEA — без имени, контактов и адреса <span class="hint">(по желанию)</span></span></label>
+    <p class="hint" id="needConsent" hidden style="color:#e8a87c"><b>Отметьте согласие на обработку данных</b> — без него бриф отправить нельзя.</p>
   </div>
 
   <!-- 7. Готово -->
@@ -267,14 +271,14 @@ details.example{margin:12px 0;color:var(--mut)} details.example summary{cursor:p
     <p class="send-must" id="sendMust">После сборки <b>отправьте файл в WhatsApp</b> на <a href="https://wa.me/79257338640" target="_blank" rel="noopener">+7 925 733-86-40</a>
       или <b>на почту</b> <a href="mailto:optteem@mail.ru">optteem@mail.ru</a> — сам по себе бриф к нам не уходит.</p>
     <div class="cta-row send-row">
-      <button class="btn" id="sendZip" type="button">Отправить бриф с файлами</button>
+      <button class="btn" id="sendZip" type="button">Собрать архив брифа</button>
     </div>
     <div class="okmsg">Кнопка соберёт архив — бриф, план и фото в одном файле. На телефоне откроется
       «Поделиться»: выберите WhatsApp или Telegram и отправьте на <b>+7 925 733-86-40</b>. На компьютере архив скачается — пришлите его
       в мессенджер или на <b>optteem@mail.ru</b>. Получение подтвердим в течение дня; первый вариант проекта квартиры — до 48 часов
-      от получения брифа с планом, дома — до 72.</div>
+      от оплаты и получения плана с размерами, дома — до 72; цену назовём до начала работы.</div>
     <p class="hint" id="afterZip" hidden role="status">✓ Архив готов: <b id="zipInfo"></b>. Если окно «Поделиться» не открылось — файл в загрузках, пришлите его в
-      WhatsApp на +7 925 733-86-40 или письмом на optteem@mail.ru. Мы подтвердим получение в течение дня. <a href="thanks/">Что дальше →</a></p>
+      WhatsApp на +7 925 733-86-40 или письмом на optteem@mail.ru — сам он к нам не уйдёт. Мы подтвердим получение в течение дня. <a href="thanks/">Что дальше →</a></p>
     <div class="summary" id="summary"></div>
     <p class="hint">Другие способы: <a id="waSend" href="#" target="_blank" rel="noopener">текст брифа в WhatsApp</a> ·
       <a id="mailto" href="#">письмом</a> · <button class="linklike" id="copyBrief" type="button">скопировать бриф</button> ·
@@ -289,9 +293,9 @@ details.example{margin:12px 0;color:var(--mut)} details.example summary{cursor:p
 </div>
 
 <a class="to-top" href="#" aria-label="Наверх">↑</a>
-<footer class="site"><div class="wrap cols"><div><div class="logo">LINE<i>A</i></div><p>дизайнер-архитектор <b>Кырлан Александр</b><br><a href="tel:+79257338640">+7 925 733-86-40</a> · <a href="mailto:optteem@mail.ru">optteem@mail.ru</a></p></div><div><p><a href="brief.html">Бриф</a> · <a href="portfolio-hub/">Портфолио</a> · <a href="catalog/">Каталог</a> · <a href="gost/">Документация</a> · <a href="cases/">Кейсы</a> · <a href="compare/">Сравнение</a> · <a href="style/">Стили</a> · <a href="journal/">Журнал</a> · <a href="stories/">Истории</a> · <a href="reviews/">Отзывы</a> · <a href="price/">Условия</a> · <a href="process/">Процесс</a> · <a href="faq/">FAQ</a> · <a href="about/">О студии</a> · <a href="contacts/">Контакты</a> · <a href="checklist/">Чек-лист приёмки</a> · <a href="sitemap/">Карта сайта</a> · <a href="policy/">Обработка данных</a></p><p>© LINEA studio, 2026</p></div></div></footer>
+<footer class="site"><div class="wrap cols"><div><div class="logo">LINE<i>A</i></div><p>дизайнер-архитектор <b>Кырлан Александр</b><br><a href="tel:+79257338640">+7 925 733-86-40</a> · <a href="mailto:optteem@mail.ru">optteem@mail.ru</a></p></div><div><p><a href="brief.html">Бриф</a> · <a href="portfolio-hub/">Портфолио</a> · <a href="catalog/">Каталог</a> · <a href="gost/">Документация</a> · <a href="cases/">Кейсы</a> · <a href="compare/">Сравнение</a> · <a href="style/">Стили</a> · <a href="journal/">Журнал</a> · <a href="stories/">Истории</a> · <a href="reviews/">Отзывы</a> · <a href="price/">Условия</a> · <a href="process/">Процесс</a> · <a href="faq/">FAQ</a> · <a href="about/">О студии</a> · <a href="contacts/">Контакты</a> · <a href="checklist/">Чек-лист приёмки</a> · <a href="sitemap/">Карта сайта</a> · <a href="oplata/">Оплата</a> · <a href="oferta/">Договор-оферта</a> · <a href="policy/">Обработка данных</a> · <a href="soglasie/">Согласие на обработку данных</a></p><p>© LINEA studio, 2026</p></div></div></footer>
 
-<script src="js/brief.js?v=40"></script>
+<script src="js/brief.js?v=41"></script>
 <script>
 (function () {
   var b = document.querySelector('.burger'), m = document.querySelector('.mnav');

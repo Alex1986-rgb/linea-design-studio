@@ -16,17 +16,19 @@ const OPEN = require('./gost-open-issues.js');
 
 const SITE = path.join(__dirname, '..', 'site');
 
-// Порядок — как показываем на сайте. img — только файлы, лежащие в git (assets/refs, assets/portfolio).
+// Порядок — как показываем на сайте. Картинка карточки — заглавный кадр проекта из _card.json (его выбирает gen-gost-pages.js:
+// только кадр, сверенный с планом, иначе лист плана мебели); img ниже — запасной, если карточки нет.
+// {A} в short — общая площадь по экспликации с титула, округлённо (заявленная заказчиком в названиях не пишется).
 const PROJECTS = [
   { slug: 'gost-dom331', short: 'Дом с мансардой и гаражом', style: 'загородный дом, шале и эко', house: true, img: 'assets/refs/dom-331-living-wD.jpg' },
   { slug: 'gost-retro103', short: 'Две квартиры в одну, ретро', style: 'середина века и ар-деко', img: 'assets/refs/retro-103-living-wA.jpg' },
-  { slug: 'gost-lineademo', short: 'Квартира 56 м², джапанди', style: 'джапанди', img: 'assets/portfolio/lineademo-living.jpg' },
+  { slug: 'gost-lineademo', short: 'Квартира {A} м², джапанди', style: 'джапанди', img: 'assets/portfolio/lineademo-living.jpg' },
   { slug: 'gost-dom120', short: 'Дом в два этажа', style: 'средиземноморье и сканди', house: true, img: 'assets/portfolio/dom120-top.jpg' },
   { slug: 'gost-modern4k', short: 'Квартира с кабинетом, модерн', style: 'модерн 2026', img: 'assets/refs/modern-4k-living-wA.jpg' },
   { slug: 'gost-proekt2', short: 'Квартира с эркерами', style: 'светлый современный', img: 'assets/refs/proekt-2-living1-wA.jpg' },
   { slug: 'gost-kv3k', short: 'Трёхкомнатная квартира', style: 'современный', img: 'assets/refs/kv-3k-living-wB.jpg' },
-  { slug: 'gost-kv65', short: 'Квартира 65 м²', style: 'скандинавский', img: 'assets/refs/kv-65-living.jpg' },
-  { slug: 'gost-kv58', short: 'Квартира 58 м²', style: 'скандинавский минимализм', img: 'assets/refs/kv-58-living-wB.jpg' },
+  { slug: 'gost-kv65', short: 'Квартира {A} м²', style: 'скандинавский', img: 'assets/refs/kv-65-living.jpg' },
+  { slug: 'gost-kv58', short: 'Квартира {A} м²', style: 'скандинавский минимализм', img: 'assets/refs/kv-58-living-wB.jpg' },
 ];
 
 // Владелец листа — по второй части имени файла «NN-<специалист>-…»
@@ -53,9 +55,13 @@ function facts(p) {
   const pas = OPEN.facts(SITE, p.slug, rel).facts;
   const title = (readText(path.join(dir, '_release.html')).match(/<title>([^<]+)<\/title>/) || [])[1] || p.short;
   const roles = [...new Set(sheets.map(s => roleOf(s.file)).filter(Boolean))];
+  const card = readJSON(path.join(dir, '_card.json'));
+  const hero = card && card.hero;
   return {
     ...p,
-    name: title.trim(),
+    short: p.short.replace('{A}', String(Math.round(+pas.area.replace(/[^\d,]/g, '').replace(',', '.')))),
+    hero: hero ? { src: hero.src, kind: hero.kind, w: hero.w, h: hero.h, alt: hero.alt } : null,
+    name: (card && card.name) || title.trim(),   // название — как на странице проекта (площадь по экспликации), а не из служебной листалки
     sheets: sheets.length,
     list: sheets,
     area: pas.area.replace(/\s*м²$/, ''),     // «270,67» — общая площадь по экспликации с титула
@@ -153,8 +159,11 @@ function plate(u, slug, key, cap) {
 const img = (u, src, alt, w, h) => `<img src="${u}${src}" alt="${escA(alt)}" width="${w || 720}" height="${h || 480}" loading="lazy" decoding="async">`;
 // карточка альбома для сеток «реальные проекты»
 function tile(u, f, lead) {
+  const h = f.hero;
+  const pic = h ? `<img src="${u}${h.src}" alt="${escA(h.alt)}" width="${h.w}" height="${h.h}" loading="lazy" decoding="async"${h.kind === 'sheet' ? ' style="object-fit:contain;background:#f4f1ea"' : ''}>`
+    : img(u, f.img, f.short + ' — визуализация', /portfolio\//.test(f.img) ? 1200 : 720, /portfolio\//.test(f.img) ? 800 : 480);
   return `<a class="tile" href="${u}${f.url}">
-        ${img(u, f.img, f.name + ' — визуализация', /portfolio\//.test(f.img) ? 1200 : 720, /portfolio\//.test(f.img) ? 800 : 480)}
+        ${pic}
         <div class="tile-body">
           <span class="tag">${escA(f.house ? 'Дом' : 'Квартира')} · ${escA(f.style)}</span>
           <b>${escA(f.short)}</b>

@@ -47,8 +47,10 @@
   }
   $('next').onclick = () => {
     if (step === FORM_LAST && !val('cPhone').trim() && !val('cEmail').trim()) { $('needContact').hidden = false; $('cPhone').focus(); return; }   // без способа связи бриф бесполезен
+    if (step === FORM_LAST && !$('cConsent').checked) { $('needConsent').hidden = false; $('cConsent').focus(); return; }   // согласие на ПДн — отдельной галочкой, не по умолчанию
     if (step === 0) autoFill(); if (step === FORM_LAST) buildResult(); step = Math.min(LAST, step + 1); renderSteps(); save(); };
   $('prev').onclick = () => { step = Math.max(0, step - 1); renderSteps(); };
+  $('cConsent').addEventListener('change', () => { if ($('cConsent').checked) $('needConsent').hidden = true; });
 
   // ── дом: этажи, лестница, участок
   const isHouse = () => $('objType').value === 'дом';
@@ -307,7 +309,9 @@
     const st = STYLES.find(s => s.key === selStyle);
     return {
       meta: Object.assign({ created: new Date().toISOString().slice(0, 10), source: 'site-brief-wizard', version: 2 }, TEST ? { test: true } : {}),
-      client: { name: val('cName'), phone: val('cPhone'), email: val('cEmail'), contact: val('cWay') },
+      client: { name: val('cName'), phone: val('cPhone'), email: val('cEmail'), contact: val('cWay'),
+        // редакция согласия — та же дата, что на soglasie/ (tools/gen-more-pages.js → LEGAL_ED)
+        consent: { personalData: $('cConsent').checked, portfolio: $('cPortfolio').checked, edition: '27.10.2026', at: new Date().toISOString() } },
       object: {
         type: val('objType'), address: val('objAddr'),
         area: +val('objArea') || null, ceilingHeight: +val('objH') || null,
