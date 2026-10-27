@@ -21,6 +21,9 @@ header("Content-Security-Policy: default-src 'self'; style-src 'unsafe-inline'; 
 $cfg = linea_cfg();
 $https = ($_SERVER['HTTPS'] ?? '') === 'on' || ($_SERVER['HTTP_X_FORWARDED_PROTO'] ?? '') === 'https';
 linea_mkdir(linea_private() . '/sessions');
+// На Beget по умолчанию свой обработчик сессий (save_handler=beget, путь tcp://127.0.0.1:6380): с путём-папкой он молча
+// ничего не сохраняет, и вход по паролю зацикливается. Сессии — файлами в linea-private/sessions (вне веб-корня).
+ini_set('session.save_handler', 'files');
 session_save_path(linea_private() . '/sessions');
 session_name('linea_adm');
 session_set_cookie_params(['lifetime' => 0, 'path' => dirname((string)($_SERVER['SCRIPT_NAME'] ?? '/api/admin.php')) . '/', 'httponly' => true, 'samesite' => 'Strict', 'secure' => $https]);
