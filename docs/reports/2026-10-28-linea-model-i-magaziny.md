@@ -27,3 +27,29 @@
 
 ## Файлы
 docs/plans/2026-10-28-linea-model-i-magaziny.md, docs/reports/2026-10-28-linea-model-i-magaziny.md
+
+## Пилот «LINEA CAD» на Pascal Editor (28.10.2026, тот же день)
+
+Выбор основы — 3 оценщика (Pascal / Bonsai+IfcOpenShell+FreeCAD / That Open+Sweet Home 3D) сошлись:
+**Pascal Editor (MIT)** — редактор; **IfcOpenShell** — IFC-ядро для ArchiCAD/Revit; **Blender** — только серверный рендер;
+Sweet Home 3D отпал (нет IFC, GPL-web), That Open — просмотрщик без авторинга. ArchiCAD код не клонируется
+(закрытый, Graphisoft ушёл из РФ) — делаем функциональный «ArchiCAD под студию»: слои стен, параметрические двери
+с проёмом/полотном, зоны, 2D+3D, IFC в обе стороны.
+
+Сделано:
+- Pascal склонирован на SmartApe `C:\pascal\editor` (коммит ae186c3), свой Node 24.22.1 `C:\tools\node-pascal`
+  (системный 24.21 для GOST-DRAFT не тронут), Bun 1.4.4 baseline `C:\tools\bun` (процессор без AVX2).
+- Запуск `C:\bat\pascal-up.cmd` (WMI, переживает SSH), порт 3002 закрыт снаружи правилом `Pascal-3002-block`.
+  Смотреть: `ssh -L 3002:127.0.0.1:3002 smartape-win` → **http://localhost:3002** (не 127.0.0.1 — dev-режим Next не отдаёт ему скрипты).
+- Конвертер `gost-draft/tools/to-pascal.cjs`: `node tools/to-pascal.cjs <project.json> [out.json] --post=http://127.0.0.1:3002`.
+- modern-4k загружен: 19 стен (наружные 300 мм со сдвигом наружу, стыки сомкнуты), 9 дверей (проём и полотно раздельно),
+  9 окон, 9 помещений, 38 предметов; 6 предметов без подходящей модели каталога пропущены.
+  Снимки: `img/2026-10-28-pascal-modern4k-2d.jpg`, `img/2026-10-28-pascal-modern4k-3d.jpg`.
+
+Дальше (по порядку):
+1. Единицы в метрах (сейчас интерфейс показывает футы).
+2. Электрика и сантехника: точки как предметы на стене с метаданными (в Pascal их нет).
+3. Свой каталог: GLB + артикул/цена/ссылка в metadata; масштаб моделей под габарит изделия.
+4. Обратный путь Pascal → project.json (правки дизайнера в редакторе → листы GOST-DRAFT).
+5. Выгрузка IFC и проверка в ArchiCAD/Revit (у Андрея).
+6. Автозапуск на сервере при перезагрузке и сборка в продакшн-режиме вместо dev.
