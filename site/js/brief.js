@@ -55,6 +55,17 @@
   $('prev').onclick = () => { step = Math.max(0, step - 1); renderSteps(); };
   $('cConsent').addEventListener('change', () => { if ($('cConsent').checked) $('needConsent').hidden = true; });
 
+  // ── пакет и ориентировочная сумма (ставки — как в tools/site-shell.js → TERMS; сервер считает по своему config.php)
+  const PACKS = { proekt: [2000, 80000], vizual: [3000, 120000] };
+  const rubF = n => Math.round(n).toLocaleString('ru-RU').replace(/\u202f|\s/g, '\u00a0') + '\u00a0₽';
+  function packSum() {
+    const el = $('packSum'); if (!el || !$('objPack')) return;
+    const a = +$('objArea').value, p = PACKS[$('objPack').value] || PACKS.proekt;
+    el.textContent = a > 0 ? 'Около ' + rubF(Math.max(p[1], p[0] * a)) + (a < 40 ? ' — действует минимальный заказ' : ' (ставка × площадь)') + '. Точную сумму подтвердим до оплаты.' : 'Укажите площадь — посчитаем. Минимальный заказ — как за 40 м².';
+  }
+  ['objArea', 'objPack'].forEach(id => { const e = $(id); if (e) { e.addEventListener('input', packSum); e.addEventListener('change', packSum); } });
+  packSum();
+
   // ── дом: этажи, лестница, участок
   const isHouse = () => $('objType').value === 'дом';
   function houseUI() {
@@ -311,7 +322,7 @@
     }));
     const st = STYLES.find(s => s.key === selStyle);
     return {
-      meta: Object.assign({ created: new Date().toISOString().slice(0, 10), source: 'site-brief-wizard', version: 2 }, TEST ? { test: true } : {}),
+      meta: Object.assign({ created: new Date().toISOString().slice(0, 10), source: 'site-brief-wizard', version: 2, package: val('objPack') || 'proekt' }, TEST ? { test: true } : {}),
       client: { name: val('cName'), phone: val('cPhone'), email: val('cEmail'), contact: val('cWay'),
         // редакция согласия — та же дата, что на soglasie/ (tools/gen-more-pages.js → LEGAL_ED)
         consent: { personalData: $('cConsent').checked, portfolio: $('cPortfolio').checked, edition: '27.10.2026', at: new Date().toISOString() } },
@@ -342,7 +353,7 @@
 
   // ── черновик в браузере (файлы браузер не хранит — их надо выбрать заново)
   const KEY = 'linea_brief_draft';
-  const FIELDS = ['objType', 'objArea', 'objH', 'objAddr', 'objFloors', 'objStairs', 'objPlot', 'objState', 'story', 'stColors', 'stAvoid', 'stRefs',
+  const FIELDS = ['objType', 'objPack', 'objArea', 'objH', 'objAddr', 'objFloors', 'objStairs', 'objPlot', 'objState', 'story', 'stColors', 'stAvoid', 'stRefs',
     'qWho', 'qPets', 'qWfh', 'qStorage', 'qKitchen', 'qSport', 'qDislikes', 'qWhen', 'qBudget', 'qNotes', 'cName', 'cPhone', 'cEmail', 'cWay'];
   let saveT = 0;
   function save() {
@@ -498,7 +509,7 @@
     $('sendZip').textContent = 'Отправить бриф в студию';
     $('sendMust').innerHTML = 'Нажмите кнопку — бриф, план и фото уйдут к нам одним архивом, и сразу откроется <b>страница заказа с номером</b>.';
     const ok = document.querySelector('.result .okmsg');
-    if (ok) ok.innerHTML = 'Работа над проектом начинается <b>после оплаты</b>. Цену назовём по брифу (на странице заказа будет сумма и как оплатить), '
+    if (ok) ok.innerHTML = 'Работа над проектом начинается <b>после оплаты</b>. Сумма — ставка за м² × площадь, не меньше минимального заказа (на странице заказа будет сумма и как оплатить), '
       + 'первый вариант квартиры — до 48 часов, дома — до 72 часов от оплаты и получения плана с размерами. Если плана нет — договоримся об обмере.';
     $('sendZip').closest('.cta-row').insertAdjacentHTML('afterend',
       '<div id="upBar" hidden style="height:6px;background:rgba(201,164,95,.18);border-radius:3px;overflow:hidden;margin:10px 0 4px"><i style="display:block;height:100%;width:0;background:#C9A45F;transition:width .2s"></i></div>'

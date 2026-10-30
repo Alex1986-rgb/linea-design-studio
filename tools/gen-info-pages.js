@@ -77,7 +77,7 @@ w('about/index.html', page({
   body: `<section class="proof"><div class="wrap">
   <div><b>1 человек</b><span>ведёт проект от брифа до выдачи</span></div>
   <div><b>до 48 часов</b><span>первый вариант проекта квартиры от оплаты и плана, дома — до 72</span></div>
-  <div><b>после оплаты</b><span>начинается работа; цену называем по брифу</span></div>
+  <div><b>после оплаты</b><span>начинается работа; цена за м² фиксирована</span></div>
   <div><b>${plural(TOTAL_SHEETS, 'лист', 'листа', 'листов')}</b><span>в ${ALB.length} альбомах, открытых целиком</span></div>
 </div></section>
 
@@ -170,7 +170,7 @@ w('contacts/index.html', page({
   desc: D(`Контакты LINEA: ${AUTHOR.name}, телефон ${AUTHOR.phone}, почта ${AUTHOR.email}. ${TERMS.intake.contactsDesc}`, 'contacts'),
   h1: 'Контакты',
   crumb: 'Контакты',
-  lead: 'Быстрее всего — бриф: около 10 минут, начать можно с рассказа голосом. По брифу называем цену и срок, работа начинается после оплаты. Если удобнее сначала поговорить — звоните или пишите напрямую автору проектов.',
+  lead: 'Быстрее всего — бриф: около 10 минут, начать можно с рассказа голосом. Сумму считаем по вашей площади до оплаты, работа начинается после оплаты. Если удобнее сначала поговорить — звоните или пишите напрямую автору проектов.',
   jsonld: [
     crumbsLd([['LINEA', BASE + '/'], ['Контакты', BASE + '/contacts/']]),
     { '@context': 'https://schema.org', '@type': 'ContactPage', mainEntity: { '@type': 'Person', name: AUTHOR.name, jobTitle: AUTHOR.role, telephone: AUTHOR.tel, email: AUTHOR.email } }
@@ -183,7 +183,7 @@ w('contacts/index.html', page({
       <tr><th>Канал</th><th>Куда</th><th>Когда отвечаем</th></tr>
       <tr><td>Телефон</td><td><a href="tel:${AUTHOR.tel}">${AUTHOR.phone}</a></td><td>ежедневно, 10:00–21:00 МСК</td></tr>
       <tr><td>Почта</td><td><a href="mailto:${AUTHOR.email}">${AUTHOR.email}</a></td><td>в течение дня, с вложениями любого объёма</td></tr>
-      <tr><td>Бриф</td><td><a href="../brief.html">заполняется на сайте, можно голосом</a>; ${TERMS.intake.contactsRow}</td><td>цену называем в течение рабочего дня; первый вариант — квартира до 48 часов, дом до 72 от оплаты и плана</td></tr>
+      <tr><td>Бриф</td><td><a href="../brief.html">заполняется на сайте, можно голосом</a>; ${TERMS.intake.contactsRow}</td><td>сумму по вашей площади называем в течение рабочего дня; первый вариант — квартира до 48 часов, дом до 72 от оплаты и плана</td></tr>
       <tr><td>Правки</td><td>голосом прямо на листах альбома</td><td>кнопка «Правка к этому листу» — на каждой странице PDF</td></tr>
     </table>
   </div>
@@ -212,7 +212,7 @@ w('contacts/index.html', page({
       <div class="pas-col good">
         <h3>Оплата</h3>
         <ul>
-          <li>${TERMS.hasPrices ? 'Цены — на странице <a href="../price/">«Стоимость»</a>' : 'Стоимость называем по брифу — до начала работы'}</li>
+          <li>${TERMS.line} — подробно на странице <a href="../price/">«Стоимость»</a></li>
           <li>Проект начинается после оплаты: онлайн через ЮKassa или по счёту — <a href="../oplata/">как платить</a></li>
           <li>Отказ и возврат — по <a href="../oferta/">договору-оферте</a></li>
         </ul>

@@ -589,7 +589,7 @@ ${ribbon}${voice}${check}${honesty}
       <h2>Такой же альбом на ваш объект</h2>
       <div class="stats">
         <div><b>~10 мин</b><span>бриф — можно рассказать голосом</span></div>
-        <div><b>${SHELL.TERMS.prices[a.house ? 'dom' : 'kvartira'] ? SHELL.TERMS.price(a.house ? 'dom' : 'kvartira') : 'по брифу'}</b><span>${SHELL.TERMS.prices[a.house ? 'dom' : 'kvartira'] ? 'стоимость проекта' : 'стоимость называем до начала работы'}</span></div>
+        <div><b>от ${SHELL.TERMS.rate('proekt')}</b><span>минимальный заказ ${SHELL.TERMS.minSum('proekt')}</span></div>
         <div><b>до ${a.house ? 72 : 48} ч</b><span>первый вариант ${a.house ? 'проекта дома' : 'проекта квартиры'} — от оплаты и получения плана с размерами</span></div>
       </div>
       <p class="g-note">${SHELL.TERMS.start}: <a href="../../oplata/">как платить</a>, условия — в <a href="../../oferta/">договоре-оферте</a>.
@@ -648,11 +648,8 @@ ${blocks}
       name: a.house ? 'Дизайн-проект дома' : 'Дизайн-проект квартиры', serviceType: 'Дизайн-проект интерьера с рабочей документацией',
       provider: { '@type': 'Organization', name: 'LINEA', url: `${BASE}/` },
       areaServed: 'RU',
-      // Offer — только когда цена задана (site-shell.js → TERMS.prices); «0 ₽» в сниппете был бы неправдой
-      ...(SHELL.TERMS.prices[a.house ? 'dom' : 'kvartira'] ? { offers: {
-        '@type': 'Offer', price: String(SHELL.TERMS.prices[a.house ? 'dom' : 'kvartira']), priceCurrency: 'RUB', url: `${BASE}/brief.html`,
-        description: `Проект начинается после оплаты; первый вариант ${a.house ? 'проекта дома — до 72 часов' : 'проекта квартиры — до 48 часов'} от оплаты и получения плана с размерами`,
-      } } : {}),
+      // Offer: цена «от» = минимальный заказ, ставка за м² — в priceSpecification (site-shell.js → TERMS.offers)
+      offers: SHELL.TERMS.offers(a.house ? 'Дизайн-проект дома' : 'Дизайн-проект квартиры', `${BASE}/brief.html`),
     }],
   });
 }

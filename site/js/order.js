@@ -23,7 +23,7 @@
     $('ordH').innerHTML = 'Заказ № ' + esc(o.number) + (o.test ? '<span class="ord-test">тест</span>' : '');
     document.title = 'Заказ ' + o.number + ' — LINEA';
     steps(o.status);
-    const days = o.kind === 'dom' ? 72 : 48;
+    const days = /^dom/.test(o.kind) ? 72 : 48;
     let h = '';
     if (o.status === 'awaiting_payment' || o.status === 'new') {
       h += '<h2>Бриф получен. Проект начнётся после оплаты</h2>';

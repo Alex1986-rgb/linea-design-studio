@@ -53,6 +53,8 @@ function linea_cfg(): array
 const LINEA_KINDS = [
     'kvartira'   => 'Дизайн-проект квартиры',
     'dom'        => 'Дизайн-проект дома',
+    'kvartira_viz' => 'Дизайн-проект квартиры + визуализации',
+    'dom_viz'      => 'Дизайн-проект дома + визуализации',
     'rd'         => 'Рабочая документация',
     'planirovka' => 'Планировочное решение',
     'vizual'     => 'Визуализации',
@@ -233,12 +235,14 @@ function linea_str($v, int $max = 200): string
     return mb_substr($s, 0, $max, 'UTF-8');
 }
 
-/** Вид заказа по брифу: дом → dom, остальное → kvartira (точнее — Александр в закрытой странице). */
+/** Вид заказа по брифу: дом → dom, остальное → kvartira; пакет vizual → суффикс _viz (точнее — Александр в закрытой странице). */
 function linea_kind_from_brief(array $b): string
 {
     $k = (string)($b['meta']['service'] ?? '');
     if (isset(LINEA_KINDS[$k])) { return $k; }
-    return (string)($b['object']['type'] ?? '') === 'дом' ? 'dom' : 'kvartira';
+    $base = (string)($b['object']['type'] ?? '') === 'дом' ? 'dom' : 'kvartira';
+    // пакет из брифа: «Проект + визуализации» → суффикс _viz (цена по своей ставке)
+    return (string)($b['meta']['package'] ?? '') === 'vizual' ? $base . '_viz' : $base;
 }
 
 /** Публичное состояние заказа — без телефона, почты, адреса и IP. */

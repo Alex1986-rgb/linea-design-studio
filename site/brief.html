@@ -4,10 +4,10 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Бриф на дизайн-проект — LINEA | можно голосом</title>
-<meta name="description" content="Бриф на дизайн-проект квартиры или дома — около 10 минут, можно голосом. По брифу называем цену; работа начинается после оплаты, квартира — до 48 часов, дом — до 72.">
+<meta name="description" content="Бриф на дизайн-проект квартиры или дома — около 10 минут, можно голосом. От 2 000 ₽/м²; работа начинается после оплаты, квартира — до 48 часов, дом — до 72.">
 <meta property="og:type" content="website">
 <meta property="og:title" content="Бриф на дизайн-проект LINEA">
-<meta property="og:description" content="Около 10 минут, можно начать с рассказа голосом: размеры, фото, стиль. Цену называем по брифу, до начала работы; квартира — до 48 часов от оплаты и плана, дом — до 72.">
+<meta property="og:description" content="Около 10 минут, можно начать с рассказа голосом: размеры, фото, стиль. От 2 000 ₽/м², сумму знаете до оплаты; квартира — до 48 часов от оплаты и плана, дом — до 72.">
 <meta property="og:image" content="https://alex1986-rgb.github.io/linea-design-studio/assets/og-home.jpg">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
@@ -125,7 +125,7 @@ details.example{margin:12px 0;color:var(--mut)} details.example summary{cursor:p
   <div class="wrap">
     <div class="kicker">Бриф · проще всего — голосом</div>
     <h1 style="font-size:clamp(28px,4vw,44px)">Просто расскажите о своём доме — <br>студия сделает проект</h1>
-    <p class="hint" style="max-width:720px">По брифу мы назовём <b>цену и срок</b> — до начала работы; проект начинается после оплаты. Нажмите микрофон и говорите, как другу.
+    <p class="hint" style="max-width:720px">Сумму посчитаем по вашей площади — <b>от 2 000 ₽/м²</b>, она будет известна до оплаты; проект начинается после оплаты. Нажмите микрофон и говорите, как другу.
       Черновик сохраняется только в этом браузере — можно закрыть и вернуться.</p>
     <p class="hint draft-note" id="draftNote" hidden>Черновик сохраняется автоматически.</p>
     <nav class="steps" id="steps" aria-label="Шаги брифа"></nav>
@@ -167,6 +167,11 @@ details.example{margin:12px 0;color:var(--mut)} details.example summary{cursor:p
       <div class="field"><label for="objFloors">Этажей</label><select id="objFloors"><option>1</option><option selected>2</option><option>3</option><option value="1.5">1 + мансарда</option><option value="2.5">2 + мансарда</option></select></div>
       <div class="field"><label for="objStairs">Лестница</label><select id="objStairs"><option>на усмотрение студии</option><option>прямая одномаршевая</option><option>Г-образная с площадкой</option><option>П-образная</option><option>винтовая</option><option>уже есть, оставить</option></select></div>
       <div class="field"><label for="objPlot">Участок, соток</label><input type="text" id="objPlot" placeholder="12"></div>
+    </div>
+    <div class="row2">
+      <div class="field"><label for="objPack">Пакет</label>
+        <select id="objPack"><option value="proekt">Проект — 2 000 ₽/м²</option><option value="vizual">Проект + визуализации — 3 000 ₽/м²</option></select></div>
+      <div class="field"><label>Ориентировочная сумма</label><p class="hint" id="packSum" style="margin:10px 0 0">Укажите площадь — посчитаем. Минимальный заказ — как за 40 м².</p></div>
     </div>
     <div class="row2">
       <div class="field"><label for="objAddr">Адрес / ЖК / посёлок</label><input type="text" id="objAddr" placeholder="ЖК «Северный парк», Москва"></div>
@@ -276,7 +281,7 @@ details.example{margin:12px 0;color:var(--mut)} details.example summary{cursor:p
     <div class="okmsg">Кнопка соберёт архив — бриф, план и фото в одном файле. На телефоне откроется
       «Поделиться»: выберите WhatsApp или Telegram и отправьте на <b>+7 925 733-86-40</b>. На компьютере архив скачается — пришлите его
       в мессенджер или на <b>optteem@mail.ru</b>. Получение подтвердим в течение дня; первый вариант проекта квартиры — до 48 часов
-      от оплаты и получения плана с размерами, дома — до 72; цену назовём до начала работы.</div>
+      от оплаты и получения плана с размерами, дома — до 72; сумму по площади назовём до начала работы.</div>
     <p class="hint" id="afterZip" hidden role="status">✓ Архив готов: <b id="zipInfo"></b>. Если окно «Поделиться» не открылось — файл в загрузках, пришлите его в
       WhatsApp на +7 925 733-86-40 или письмом на optteem@mail.ru — сам он к нам не уйдёт. Мы подтвердим получение в течение дня. <a href="thanks/">Что дальше →</a></p>
     <div class="summary" id="summary"></div>

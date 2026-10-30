@@ -94,37 +94,65 @@ ${MENU.map(x => `    <a href="${x.key === active ? './' : u + x.href}">${x.title
 
 // ── Условия работы: ЕДИНСТВЕННЫЙ источник для текстов сайта ───────────────────────────────────────────
 // Решение 27.10.2026: «открытый бесплатный тест» закончен — проект начинается после оплаты (ЮKassa или счёт).
-// Цены задаёт Александр. Пока в PRICES стоит null, сайт пишет «стоимость называем после брифа, до начала работы»
-// и не показывает ни «0 ₽», ни выдуманных сумм; schema.org Offer без цены не выводится. Те же цены (в копейках) —
-// в linea-private/config.php на сервере (server/config.example.php → prices): меняются в двух местах одновременно.
+// Цены утвердил Александр 28.10.2026: ставка за м² по двум пакетам + минимальный заказ «как за 40 м²».
+// Модель ниже — единственный источник: тексты, расчёт, schema.org Offer, калькулятор (price/), квиз (catalog/).
+// Те же ставки (в копейках) — в linea-private/config.php на сервере (server/config.example.php → prices): менять оба.
 // ROUNDS — сколько кругов правок входит в цену; null — «число кругов — в договоре до оплаты» (решение Александра).
 // Реквизиты исполнителя — задаёт Александр (статус: ИП или плательщик НПД, ИНН). null — на сайте честная пометка «будут указаны».
 const REQUISITES = null;   // пример: { status: 'плательщик налога на профессиональный доход (самозанятый)', inn: '000000000000' }
-const PRICES = { kvartira: null, dom: null };       // рубли за проект; null — «уточняется»
 const ROUNDS = null;
 const rub = n => String(Math.round(n)).replace(/\B(?=(\d{3})+(?!\d))/g, '\u00a0') + '\u00a0₽';
+// Пакеты: ставка ₽/м², минимальный заказ считается как за MIN_AREA м² (дом — те же ставки за м² интерьера)
+const MIN_AREA = 40;
+const PACKS = [
+  { key: 'proekt', name: 'Проект', rate: 2000 },
+  { key: 'vizual', name: 'Проект + визуализации', rate: 3000 },
+].map(p => ({ ...p, min: p.rate * MIN_AREA }));
+const PACK = Object.fromEntries(PACKS.map(p => [p.key, p]));
+// Выборка рынка — docs/research/2026-10-28-ceny-rynka.md (открытые прайсы студий, снято 28.10.2026)
+const MARKET = { date: '28.10.2026', city: 'Москва', full: '4\u00a0500–5\u00a0000', fullN: 11, techMed: '1\u00a0575', techSheets: '6–25' };
 const TERMS = {
-  prices: PRICES,
+  packs: PACKS, pack: PACK, minArea: MIN_AREA, market: MARKET,
   rounds: ROUNDS,
   requisites: REQUISITES,
   reqLine: REQUISITES ? `${REQUISITES.status}, ИНН ${REQUISITES.inn}` : 'статус (ИП или самозанятый) и ИНН будут указаны до приёма первой оплаты',
-  // цена одной строкой: для квартиры/дома или общая
+  rub,
+  // сумма заказа: ставка × площадь, но не меньше минимума (рубли)
+  sum: (key, area) => Math.max(PACK[key].min, Math.round(PACK[key].rate * area)),
+  rate: key => rub(PACK[key].rate) + '/м²',            // «2 000 ₽/м²»
+  minSum: key => rub(PACK[key].min),                    // «80 000 ₽»
+  hasPrices: true,
+  // цена одной строкой для услуги: kvartira / dom → «от 2 000 ₽/м², минимальный заказ 80 000 ₽»
   price(kind) {
-    const v = kind ? PRICES[kind] : null;
-    if (v) return rub(v);
-    return 'стоимость называем после брифа — до начала работы';
+    const p = PACKS[0];
+    return `от ${rub(p.rate)}/м², минимальный заказ ${rub(p.min)}`;
   },
-  hasPrices: Object.values(PRICES).some(Boolean),
+  // обе ставки одной фразой
+  line: `Проект — ${rub(PACKS[0].rate)}/м², проект с визуализациями — ${rub(PACKS[1].rate)}/м²; минимальный заказ — как за ${MIN_AREA} м²: ${rub(PACKS[0].min)} и ${rub(PACKS[1].min)}`,
+  // schema.org Offer: цена «от» = минимальный заказ, ставка — в UnitPriceSpecification (unitText м²)
+  offers(name, url) {
+    return PACKS.map(p => ({
+      '@type': 'Offer', name: `${name}: пакет «${p.name}»`, url,
+      price: String(p.min), priceCurrency: 'RUB',
+      priceSpecification: { '@type': 'UnitPriceSpecification', price: String(p.rate), priceCurrency: 'RUB', unitCode: 'MTK', unitText: 'м²',
+        referenceQuantity: { '@type': 'QuantitativeValue', value: 1, unitCode: 'MTK', unitText: 'м²' } },
+      eligibleQuantity: { '@type': 'QuantitativeValue', minValue: MIN_AREA, unitCode: 'MTK', unitText: 'м²' },
+      description: `Ставка ${rub(p.rate)} за м²; минимальный заказ — как за ${MIN_AREA} м², ${rub(p.min)}`,
+    }));
+  },
   start: 'Проект начинается после оплаты',
-  how: 'Вы присылаете бриф — мы называем цену и срок, вы оплачиваете, после оплаты начинаем работу',
+  how: 'Вы присылаете бриф — мы называем сумму по вашей площади и срок, вы оплачиваете, после оплаты начинаем работу',
   term: 'первый вариант квартиры — до 48 часов, дома — до 72 часов от оплаты и получения плана с размерами',
   roundsText: ROUNDS ? `${ROUNDS} ${ROUNDS === 1 ? 'круг' : ROUNDS < 5 ? 'круга' : 'кругов'} правок входят в цену` : 'сколько кругов правок входит в цену — фиксируем в договоре до оплаты',
   // что такое пометка «ПРЕДВАРИТЕЛЬНО» — одной фразой (снимается сама, когда закрыт реестр вопросов: gost-draft engine/paper.js → releaseState)
   prelim: 'Комплект выпускается с пометкой «ПРЕДВАРИТЕЛЬНО», пока по объекту открыты вопросы к вам (лист «Открытые вопросы» в начале альбома) и не сделан контрольный обмер. По такому комплекту не строят: после ваших ответов и обмера перевыпускаем его без пометки.',
   // что не входит в услугу — один список для цены, оферты и каталога
   notIncluded: ['выезд и обмер на объекте (работаем удалённо; задание на контрольный обмер — в альбоме)',
-    'согласование перепланировки в жилинспекции и расчёт несущих конструкций — это работа организаций с допуском',
-    'строительные работы, закупка материалов и авторский надзор на объекте'],
+    'проект перепланировки для жилинспекции и расчёт несущих конструкций — это работа организаций с допуском',
+    'авторский надзор и строительные работы на объекте',
+    'комплектация: закупка материалов, мебели и техники'],
+  // дом и ландшафт
+  onRequest: 'Дом: интерьер считаем по тем же ставкам за м². Кровля и конструктив — по запросу. Ландшафт участка — по запросу, скоро.',
 };
 
 // ── Как уходит бриф: ЕДИНСТВЕННЫЙ источник фразы (второй круг критиков 27.10.2026) ────────────────────
@@ -172,7 +200,7 @@ function swapIntake(text, online) {
 TERMS.intake = Object.fromEntries(Object.entries(INTAKE).map(([k, v]) => [k, v[INTAKE_ONLINE ? 1 : 0]]));
 TERMS.intakeOnline = INTAKE_ONLINE;
 
-const beta = u => `<div class="beta">Работа — после оплаты, цену называем до старта · <a href="${u}brief.html">заполнить бриф</a></div>`;
+const beta = u => `<div class="beta">От ${rub(PACKS[0].rate)}/м² · цена за м² фиксирована · работа после оплаты · <a href="${u}price/">условия</a> · <a href="${u}brief.html">заполнить бриф</a></div>`;
 
 const sticky = u => `<div class="sticky-cta">
   <a class="btn" href="${u}brief.html">Заполнить бриф</a>
@@ -193,7 +221,7 @@ const FOOTER_EXTRA = [
 const FUNNEL = [
   { key: 'look', title: 'Посмотреть', text: 'альбомы целиком, лист за листом', href: 'portfolio-hub/', on: ['portfolio', 'cases', 'stories', 'reviews', 'style'] },
   { key: 'check', title: 'Сравнить', text: 'состав, сроки и условия с рынком', href: 'compare/', on: ['compare', 'catalog', 'journal'] },
-  { key: 'start', title: 'Начать', text: 'бриф — около 10 минут, цену называем до начала работы', href: 'brief.html', on: [] },
+  { key: 'start', title: 'Начать', text: `бриф — около 10 минут, от ${rub(PACKS[0].rate)}/м², сумму знаете до оплаты`, href: 'brief.html', on: [] },
 ];
 function funnel(u, active) {
   const cur = FUNNEL.findIndex(f => f.on.includes(active));
@@ -221,7 +249,7 @@ function ctaBlock(u, active, opts = {}) {
     : opts.object === 'flat' ? 'Первый вариант проекта квартиры — до 48 часов от оплаты и получения плана с размерами'
     : 'Первый вариант проекта — до 48 часов от оплаты и получения плана с размерами (дом — до 72)';
   let kicker = 'Дальше', h = 'Свой проект — с того же места',
-    sub = `Бриф — около 10 минут, начать можно с рассказа голосом: размеры, фото, пожелания. По брифу называем цену; работа начинается после оплаты. ${term}.`,
+    sub = `Бриф — около 10 минут, начать можно с рассказа голосом: размеры, фото, пожелания. От ${rub(PACKS[0].rate)}/м², минимальный заказ ${rub(PACKS[0].min)}; работа начинается после оплаты. ${term}.`,
     second = `<a class="btn ghost" href="${u}portfolio-hub/">Посмотреть альбомы</a>`;
   if (step && step.key === 'look') {
     kicker = 'Понравилось?';
@@ -231,7 +259,7 @@ function ctaBlock(u, active, opts = {}) {
   } else if (step && step.key === 'check') {
     kicker = 'Всё сходится?';
     h = 'Тогда дальше — бриф, около 10 минут';
-    sub = 'Размеры, фото, пожелания по стилю и бюджету. По брифу называем цену и срок — до начала работы; проект начинается после оплаты.';
+    sub = 'Размеры, фото, пожелания по стилю и бюджету. Сумму по вашей площади называем до начала работы; проект начинается после оплаты.';
     second = `<a class="btn ghost" href="${u}portfolio-hub/">Ещё раз взглянуть на альбомы</a>`;
   }
   return `<section class="blk cta-blk">
