@@ -77,10 +77,12 @@ $amount = linea_price($kind, $area);
 $token = bin2hex(random_bytes(16));
 $now = linea_now();
 
-$db->exec('BEGIN IMMEDIATE');
+// номер заказа — следующий за последним; блокировка от параллельного брифа: SQLite — BEGIN IMMEDIATE, MySQL — FOR UPDATE
+$mysql = $db->getAttribute(PDO::ATTR_DRIVER_NAME) === 'mysql';
+if ($mysql) { $db->beginTransaction(); } else { $db->exec('BEGIN IMMEDIATE'); }
 try {
     $pref = 'LN-' . date('ym') . '-';
-    $q = $db->prepare('SELECT number FROM orders WHERE number LIKE ? ORDER BY number DESC LIMIT 1');
+    $q = $db->prepare('SELECT number FROM orders WHERE number LIKE ? ORDER BY number DESC LIMIT 1' . ($mysql ? ' FOR UPDATE' : ''));
     $q->execute([$pref . '%']);
     $last = (string)($q->fetchColumn() ?: '');
     $number = $pref . str_pad((string)((int)substr($last, -4) + 1), 4, '0', STR_PAD_LEFT);
@@ -100,9 +102,9 @@ try {
     chmod($dir . '/brief.zip', 0600);
     file_put_contents($dir . '/brief.json', json_encode($brief, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT));
     chmod($dir . '/brief.json', 0600);
-    $db->exec('COMMIT');
+    if ($mysql) { $db->commit(); } else { $db->exec('COMMIT'); }
 } catch (Throwable $e) {
-    $db->exec('ROLLBACK');
+    if ($mysql) { if ($db->inTransaction()) { $db->rollBack(); } } else { $db->exec('ROLLBACK'); }
     if (isset($dir) && is_dir($dir)) { @unlink($dir . '/brief.zip'); @unlink($dir . '/brief.json'); @rmdir($dir); }
     linea_log('error.log', 'brief: ' . $e->getMessage());
     linea_fail('Не получилось сохранить бриф — попробуйте ещё раз или пришлите архив в WhatsApp', 500);

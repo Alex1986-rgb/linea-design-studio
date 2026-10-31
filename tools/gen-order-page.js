@@ -19,8 +19,11 @@ const html = `<!DOCTYPE html>
 ${SHELL.head(u, { title, desc: 'Статус заказа дизайн-проекта LINEA: бриф получен, оплата, работа, выдача альбома.', canonical: `${SHELL.BASE}/order.html` })}
 <meta name="robots" content="noindex, nofollow">
 <meta name="referrer" content="no-referrer">
+<link rel="stylesheet" href="css/brigady.css?v=2">
 <style>
 .ord{max-width:760px}
+#ordRemont{max-width:none}
+@media (min-width:1100px){.ord:has(#ordRemont:not([hidden])){max-width:1080px}}
 .ord-steps{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin:22px 0 26px;padding:0;list-style:none;counter-reset:s}
 .ord-steps li{border-top:3px solid var(--line);padding-top:8px;font-size:13.5px;color:var(--mut);counter-increment:s}
 .ord-steps li::before{content:counter(s) ". "}
@@ -50,6 +53,7 @@ ${SHELL.header(u, null)}
     </ol>
     <div class="ord-card" id="ordMain" aria-live="polite"><p>Загружаю заказ…</p></div>
     <div class="ord-card" id="ordInfo" hidden></div>
+    <div class="ord-card" id="ordRemont" hidden aria-live="polite"></div>
     <p class="hint">Сохраните эту страницу в закладки — по ссылке всегда виден статус. Вопросы — в WhatsApp
       <a href="https://wa.me/79257338640" target="_blank" rel="noopener">+7 925 733-86-40</a> или на <a href="mailto:optteem@mail.ru">optteem@mail.ru</a>, укажите номер заказа.</p>
   </div>
@@ -57,6 +61,7 @@ ${SHELL.header(u, null)}
 
 ${SHELL.footer(u, null)}
 <script src="js/order.js?v=1"></script>
+<script src="js/remont.js?v=1"></script>
 </body>
 </html>
 `;
