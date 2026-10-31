@@ -61,7 +61,7 @@ function acc_login(string $role, string $email, string $password)
 {
     $a = acc_by_email($role, $email);
     $bad = 'Неверная почта или пароль';
-    if (!$a) { password_verify($password, password_hash('linea-timing', PASSWORD_DEFAULT));   // время ответа как у настоящей проверки usleep(300000); return $bad; }
+    if (!$a) { password_verify($password, password_hash('linea-timing', PASSWORD_DEFAULT)); usleep(300000); return $bad; }   // время ответа как у настоящей проверки
     if ((int)$a['lock_until'] > time()) { return 'Слишком много неудачных попыток — подождите 15 минут'; }
     if ($a['status'] !== 'active') { return 'Вход закрыт'; }
     if (!password_verify($password, (string)$a['pass_hash'])) {

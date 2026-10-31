@@ -68,7 +68,7 @@ $now = linea_now();
 /** Этап своего объекта. */
 function stage_own(int $sid, int $bid): array
 {
-    $s = brig_one('SELECT s.*, j.brigade_id, j.status jstatus, j.order_id, j.id jid, r.object_title, r.test rtest FROM br_stages s JOIN br_jobs j ON j.id = s.job_id JOIN br_requests r ON r.id = j.request_id WHERE s.id = ?', [$sid]);
+    $s = brig_one('SELECT s.*, j.brigade_id, j.status jstatus, r.order_id, j.id jid, r.object_title, r.test rtest FROM br_stages s JOIN br_jobs j ON j.id = s.job_id JOIN br_requests r ON r.id = j.request_id WHERE s.id = ?', [$sid]);
     if (!$s || (int)$s['brigade_id'] !== $bid) { linea_fail('Это не ваш объект', 403); }
     return $s;
 }

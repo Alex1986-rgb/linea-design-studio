@@ -18,6 +18,13 @@ require_once __DIR__ . '/db.php';
 require_once __DIR__ . '/accounts.php';
 require_once __DIR__ . '/brig-notify.php';
 
+// Сбой базы или кода — JSON-ответ без подробностей (подробности — в журнал linea-private/error.log, без ПДн из запроса)
+set_exception_handler(function (Throwable $e) {
+    linea_log('error.log', 'brig: ' . get_class($e) . ' ' . $e->getMessage() . ' @' . basename($e->getFile()) . ':' . $e->getLine());
+    if (!headers_sent()) { http_response_code(500); header('Content-Type: application/json; charset=utf-8'); }
+    echo json_encode(['ok' => false, 'error' => 'Сбой на сервере — попробуйте ещё раз через минуту'], JSON_UNESCAPED_UNICODE);
+});
+
 const BRIG_COMMISSION = 0.07;          // решение 31.10.2026: 7 % со сметы бригады, после выбора и подписания договора подряда
 const BRIG_DOCS = [                    // редакции документов, которые принимает бригада (как редакция согласия у брифа)
     'pd' => ['title' => 'Согласие на обработку персональных данных', 'href' => 'soglasie/', 'ed' => '31.10.2026'],

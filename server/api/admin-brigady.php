@@ -92,12 +92,12 @@ if (($_GET['csv'] ?? '') === 'money') {
     header('Content-Disposition: attachment; filename="linea-komissiya-' . date('Y-m-d') . '.csv"');
     $out = fopen('php://output', 'w');
     fwrite($out, "\xEF\xBB\xBF");
-    fputcsv($out, ['Объект', 'Заказ', 'Бригада', 'ИНН', 'Сумма сметы, ₽', 'Комиссия 7 %, ₽', 'Начислена', 'Счёт', 'Выставлен', 'Оплачен', 'Тест'], ';');
+    fputcsv($out, ['Объект', 'Заказ', 'Бригада', 'ИНН', 'Сумма сметы, ₽', 'Комиссия 7 %, ₽', 'Начислена', 'Счёт', 'Выставлен', 'Оплачен', 'Тест'], ';', '"', '');
     foreach (brig_all('SELECT j.id, j.commission_kop, j.commission_at, r.object_title, r.test, o2.number onum, b.name, b.inn, ofr.total_kop, i.number inum, i.issued_at, i.paid_at
             FROM br_jobs j JOIN br_requests r ON r.id = j.request_id JOIN orders o2 ON o2.id = r.order_id JOIN br_brigades b ON b.id = j.brigade_id JOIN br_offers ofr ON ofr.id = j.offer_id
             LEFT JOIN br_invoices i ON i.job_id = j.id ORDER BY j.id', []) as $x) {
         fputcsv($out, [$x['object_title'], $x['onum'], $x['name'], $x['inn'], number_format((int)$x['total_kop'] / 100, 2, ',', ''), $x['commission_kop'] !== null ? number_format((int)$x['commission_kop'] / 100, 2, ',', '') : '',
-            $x['commission_at'], $x['inum'], $x['issued_at'], $x['paid_at'], $x['test'] ? 'да' : ''], ';');
+            $x['commission_at'], $x['inum'], $x['issued_at'], $x['paid_at'], $x['test'] ? 'да' : ''], ';', '"', '');
     }
     brig_audit($WHO, 'csv-export', 'money');
     exit;
