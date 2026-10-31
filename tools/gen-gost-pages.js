@@ -514,7 +514,7 @@ function albumPage(a, r, honesty) {
         <li>${SHELL.TERMS.intake.reviewStep}</li>
       </ol>
       <div class="cta-row"><a class="btn" href="${rvAll}" rel="nofollow">🎤 Попробовать на этом альбоме</a>
-        <a class="btn ghost" href="../../brief.html">Свой проект — бриф голосом</a></div>
+        <a class="btn ghost" href="../../brief.html">Свой проект — заполнить бриф</a></div>
       <p class="hint" style="margin-top:14px">Если голосовой ввод в браузере не работает — нажмите микрофон на клавиатуре телефона.</p>
     </div>
   </section>\n`;
@@ -588,7 +588,7 @@ ${ribbon}${voice}${check}${honesty}
       <div class="kicker">Условия</div>
       <h2>Такой же альбом на ваш объект</h2>
       <div class="stats">
-        <div><b>~10 мин</b><span>бриф — можно рассказать голосом</span></div>
+        <div><b>~5 мин</b><span>бриф: план, картинки, пара слов</span></div>
         <div><b>от ${SHELL.TERMS.rate('proekt')}</b><span>минимальный заказ ${SHELL.TERMS.minSum('proekt')}</span></div>
         <div><b>до ${a.house ? 72 : 48} ч</b><span>первый вариант ${a.house ? 'проекта дома' : 'проекта квартиры'} — от оплаты и получения плана с размерами</span></div>
       </div>

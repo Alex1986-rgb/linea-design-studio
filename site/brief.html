@@ -3,11 +3,11 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Бриф на дизайн-проект — LINEA | можно голосом</title>
-<meta name="description" content="Бриф на дизайн-проект квартиры или дома — около 10 минут, можно голосом. От 2 000 ₽/м²; работа начинается после оплаты, квартира — до 48 часов, дом — до 72.">
+<title>Бриф на дизайн-проект — LINEA | план, картинки, пара слов</title>
+<meta name="description" content="Бриф на дизайн-проект квартиры или дома — три шага, около 5 минут: план, картинки, которые нравятся, и рассказ своими словами. От 2 000 ₽/м², сумму знаете до оплаты.">
 <meta property="og:type" content="website">
 <meta property="og:title" content="Бриф на дизайн-проект LINEA">
-<meta property="og:description" content="Около 10 минут, можно начать с рассказа голосом: размеры, фото, стиль. От 2 000 ₽/м², сумму знаете до оплаты; квартира — до 48 часов от оплаты и плана, дом — до 72.">
+<meta property="og:description" content="Три шага, около 5 минут: план, картинки, которые нравятся, и пара слов — можно голосом. От 2 000 ₽/м², сумму знаете до оплаты; квартира — до 48 часов от оплаты и плана, дом — до 72.">
 <meta property="og:image" content="https://xn-----6kccjicviedfr1b2cbishm8w.xn--p1ai/assets/og-home.jpg">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
@@ -22,68 +22,128 @@
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,500;0,600;1,500&family=Inter:wght@400;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="css/main.css?v=34">
 <style>
-.dict-wrap{position:relative}
-.dict-wrap textarea,.dict-wrap input{padding-right:48px;width:100%;box-sizing:border-box}
-.mic{position:absolute;right:6px;top:6px;width:36px;height:36px;border-radius:50%;border:1px solid var(--line);background:var(--panel);cursor:pointer;font-size:17px;line-height:1}
-.mic.rec{background:#7a1f1f;border-color:#c44;animation:micp 1.2s infinite}
-@keyframes micp{50%{box-shadow:0 0 0 7px rgba(204,68,68,.25)}}
-textarea.big{min-height:220px;font-size:17px}
-.ref-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:12px}
-.ref{margin:0;position:relative;border:2px solid transparent;border-radius:4px;overflow:hidden;background:var(--panel)}
-.ref img{display:block;width:100%;aspect-ratio:3/2;object-fit:cover}
-.ref figcaption{font-size:12px;color:var(--mut);padding:6px 8px 8px}
-.ref-btns{position:absolute;top:8px;right:8px;display:flex;gap:6px}
-.ref-btns button{width:44px;height:44px;border-radius:50%;border:none;background:#0F0E0Ccc;color:#EDE7DC;font-size:15px;cursor:pointer}
-.ref[data-v="like"]{border-color:var(--gold)} .ref[data-v="like"] .like{background:var(--gold);color:#14120E}
-.ref[data-v="dislike"]{opacity:.45} .ref[data-v="dislike"] .dislike{background:#7a1f1f}
-.chip{display:inline-block;margin:4px 6px 0 0;padding:3px 8px;border:1px solid var(--line);border-radius:12px;font-size:13px}
-.chip button{background:none;border:none;color:var(--mut);cursor:pointer}
-@media(min-width:761px){.room-row{grid-template-columns:1.4fr 1.2fr .7fr .7fr auto auto}}
-.room-row .r-level{max-width:90px}
-.draft-note{color:var(--gold2)}
-.voice{text-align:center;padding:10px 0 18px}
-.bigmic{width:132px;height:132px;border-radius:50%;border:2px solid var(--gold);background:radial-gradient(circle at 35% 30%,#2a241b,#14120E);font-size:52px;cursor:pointer;transition:.2s}
-.bigmic:hover{transform:scale(1.04)}
-.bigmic.rec{background:radial-gradient(circle at 35% 30%,#a33,#5c1515);border-color:#e66;animation:micp 1.2s infinite}
-.voice-state{margin-top:12px;font-size:18px;color:var(--ink)}
-.topics{display:flex;flex-wrap:wrap;gap:8px;margin:6px 0 14px;align-items:center}
-.topics-title{color:var(--mut);font-size:14px;margin-right:4px}
-.topic{padding:5px 11px;border:1px solid var(--line);border-radius:14px;font-size:13px;color:var(--mut)}
-.topic.ok{border-color:var(--gold);color:var(--gold2)}
-details.example{margin:12px 0;color:var(--mut)} details.example summary{cursor:pointer;color:var(--gold)}
-.ref-filter{display:flex;flex-wrap:wrap;gap:8px;margin:4px 0 14px}
-.ref-filter button{padding:6px 12px;border-radius:14px;border:1px solid var(--line);background:none;color:var(--mut);cursor:pointer;font-size:13px}
-.ref-filter button.on{border-color:var(--gold);color:var(--ink);background:#2a241b}
-.ref-examples{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:10px;margin:8px 0 14px}
-.ref-examples div{border:1px solid var(--line);border-radius:6px;padding:12px}
-.ref-examples small{display:block;color:var(--mut);margin-top:4px}
-.steps em{display:none;font-style:normal}
-.steps .progress{display:none}
-@media(max-width:760px){
-  .steps span:not(.on){display:none} .steps em{display:inline} .steps span.on::before{content:'Шаг '}
-  .steps .progress{display:block;width:100%;height:4px;background:var(--line);border-radius:2px;margin-top:10px}
-  .steps .progress b{display:block;height:100%;background:var(--gold);border-radius:2px}
-  .hero .hint{font-size:14px} .bigmic{width:116px;height:116px;font-size:46px}
-}
-.big-drop{padding:34px 20px;font-size:18px;line-height:1.5}
+/* бриф 31.10.2026: три шага + отправка, каждый — на один экран телефона */
+.bh{padding:34px 0 8px}
+.bh h1{font-size:clamp(26px,4vw,40px);margin:6px 0 8px}
+.bh .lead{color:var(--mut);max-width:680px;margin:0}
+.prog{margin:18px 0 0;max-width:760px}
+.prog-t{display:flex;justify-content:space-between;gap:12px;font-size:14px;color:var(--mut)}
+.prog-t b{color:var(--ink);font-weight:600}
+.prog-bar{height:6px;background:var(--line);border-radius:3px;margin-top:8px;overflow:hidden}
+.prog-bar i{display:block;height:100%;background:var(--gold);border-radius:3px;transition:width .25s}
+#wiz,.bh .wrap{max-width:760px}
+#wiz{padding-bottom:40px}
+#wiz .panel{padding:28px 32px;margin-bottom:16px}
+#wiz .panel h2{margin:0 0 6px}
+#wiz .panel p.hint{margin:0 0 16px}
+#wiz [hidden]{display:none!important}
 .sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
-.drop:focus-visible,.ref-btns button:focus-visible,.ref-filter button:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
-.mic-err{margin:6px 0 0;color:#e8a87c}
-.send-h{font-size:22px;margin:0 0 4px}
-.send-row{margin:0 0 16px}
-.send-must{margin:10px 0 18px;padding:14px 18px;border:1px solid var(--gold);border-radius:4px;background:#C29A5B14;color:var(--ink);font-size:17px;line-height:1.5}
-.send-must b{color:var(--gold2)}
+/* тип объекта — две большие кнопки */
+.seg{display:flex;gap:8px;margin:0 0 14px;border:0;padding:0}
+.seg label{flex:1;position:relative}
+.seg input{position:absolute;opacity:0;inset:0;margin:0}
+.seg span{display:flex;align-items:center;justify-content:center;min-height:48px;border:1px solid var(--line);border-radius:6px;color:var(--mut);cursor:pointer;font-size:16px}
+.seg input:checked+span{border-color:var(--gold);color:var(--ink);background:#2a241b}
+.seg input:focus-visible+span{outline:2px solid var(--gold);outline-offset:2px}
+/* большая кнопка загрузки: <label> к скрытому input — открывается и без JS */
+.up{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;min-height:120px;padding:18px;border:2px dashed #5a4f3c;border-radius:8px;
+  text-align:center;cursor:pointer;color:var(--ink);font-size:18px;background:#c29a5b0a;transition:.15s}
+.up:hover,.up.over{border-color:var(--gold);background:#c29a5b18}
+.up small{color:var(--mut);font-size:14px}
+.up .ico{font-size:30px;line-height:1}
+.up-wrap:focus-within .up{outline:2px solid var(--gold);outline-offset:2px}
+.up-wrap input[type=file]{position:absolute;width:1px;height:1px;opacity:0;overflow:hidden}
+.up.sm{min-height:64px;flex-direction:row;gap:10px;font-size:16px}
+.cam{display:none;margin-top:8px}
+@media(hover:none) and (pointer:coarse){.cam{display:flex}}
+.cam label{display:flex;align-items:center;justify-content:center;gap:8px;min-height:48px;border:1px solid var(--line);border-radius:6px;width:100%;cursor:pointer;font-size:16px}
+.thumbs{display:flex;flex-wrap:wrap;gap:8px;margin:12px 0 0;padding:0;list-style:none}
+.thumbs li{position:relative;width:76px;height:76px;border:1px solid var(--line);border-radius:6px;overflow:hidden;background:var(--bg2);font-size:11px;color:var(--mut);
+  display:flex;align-items:center;justify-content:center;text-align:center;padding:4px;box-sizing:border-box;word-break:break-all}
+.thumbs img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.thumbs button{position:absolute;top:2px;right:2px;width:44px;height:44px;border:0;background:none;padding:0;cursor:pointer;display:flex;align-items:flex-start;justify-content:flex-end}
+.thumbs button i{display:block;width:24px;height:24px;border-radius:50%;background:#0F0E0Cdd;color:#EDE7DC;font-style:normal;font-size:13px;line-height:24px;text-align:center;margin:2px}
+.f-row{display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap;margin-top:16px}
+.f-row .field{margin:0;flex:1;min-width:140px}
+#wiz input[type=text],#wiz input[type=tel],#wiz input[type=email],#wiz input[type=number],#wiz input[inputmode],#wiz select,#wiz textarea{min-height:48px;font-size:16px;box-sizing:border-box;width:100%}
+.err{color:#e8a87c;font-size:14px;margin:8px 0 0}
+.err:empty{display:none}
+[aria-invalid=true]{border-color:#e8a87c!important}
+details.more{margin-top:14px;border-top:1px solid var(--line);padding-top:10px}
+details.more>summary{cursor:pointer;color:var(--gold);min-height:44px;display:flex;align-items:center;font-size:15px}
+details.more ol{margin:6px 0 10px;padding-left:20px;color:var(--mut);font-size:14px;line-height:1.55}
+.chk{display:flex;gap:12px;align-items:flex-start;cursor:pointer;min-height:44px;padding:6px 0;font-size:15px;line-height:1.45}
+.chk input{width:22px;height:22px;margin:1px 0 0;flex:none;accent-color:var(--gold)}
+/* галерея: нажатие = нравится */
+.gal{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin:12px 0 0}
+.gal button{position:relative;padding:0;border:2px solid transparent;border-radius:6px;overflow:hidden;background:var(--bg2);cursor:pointer;aspect-ratio:1/1;min-height:44px}
+.gal img{display:block;width:100%;height:100%;object-fit:cover}
+.gal button[aria-pressed=true]{border-color:var(--gold)}
+.gal button[aria-pressed=true]::after{content:'♥';position:absolute;top:6px;right:6px;width:26px;height:26px;border-radius:50%;background:var(--gold);color:#14120E;font-size:15px;line-height:26px;text-align:center}
+.gal button:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
+.gal-meta{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-top:10px;font-size:14px;color:var(--mut)}
+.gal-meta b{color:var(--gold2)}
+.or{display:flex;align-items:center;gap:10px;color:var(--mut);font-size:13px;margin:16px 0 0;text-transform:uppercase;letter-spacing:1px}
+.or::before,.or::after{content:'';flex:1;border-top:1px solid var(--line)}
+/* рассказ */
+.story-wrap textarea{min-height:190px;font-size:17px;line-height:1.5;resize:vertical}
+.mic-row{display:flex;gap:10px;align-items:center;margin:10px 0 0;flex-wrap:wrap}
+.mic{display:inline-flex;align-items:center;gap:8px;min-height:48px;padding:0 18px;border-radius:24px;border:1px solid var(--gold);background:#2a241b;color:var(--ink);cursor:pointer;font-size:16px}
+.mic.rec{background:#7a1f1f;border-color:#e66;animation:micp 1.2s infinite}
+@keyframes micp{50%{box-shadow:0 0 0 7px rgba(204,68,68,.25)}}
+.mic-state{font-size:14px;color:var(--mut)}
+.chips{display:flex;flex-wrap:wrap;gap:8px;margin:12px 0 0;padding:0;border:0}
+.chips legend{font-size:14px;color:var(--mut);margin-bottom:6px;padding:0}
+.chips button{min-height:44px;padding:0 14px;border-radius:22px;border:1px solid var(--line);background:none;color:var(--ink);cursor:pointer;font-size:15px}
+.chips button.ok{border-color:var(--gold);color:var(--gold2)}
+.chips button:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
+.room-row{display:grid;grid-template-columns:1.4fr .8fr .8fr 48px;gap:6px;margin-bottom:6px;align-items:center}
+.room-row .x{width:48px;height:48px;border:1px solid var(--line);border-radius:6px;background:none;color:var(--mut);cursor:pointer}
+.room-row select.r-level{grid-column:1/-1}
+/* цена и что дальше */
+.price{border:1px solid var(--gold);border-radius:8px;padding:14px 16px;background:#c29a5b10;margin:0 0 16px}
+.price fieldset{border:0;padding:0;margin:0;display:grid;gap:8px}
+.price legend{font-size:14px;color:var(--mut);margin-bottom:8px;padding:0}
+.pk-h{font-size:14px;color:var(--mut)}
+.pk{display:flex;gap:12px;align-items:center;min-height:44px;font-size:15px}
+.pk b{margin-left:auto;color:var(--gold2);white-space:nowrap;font-size:17px}
+.price p{margin:8px 0 0;font-size:13px;color:var(--mut)}
+.next3{margin:16px 0 0;padding:14px 16px 14px 36px;border:1px solid var(--line);border-radius:8px;color:var(--mut);font-size:14px;line-height:1.55}
+.next3 h3{margin:0 0 6px -20px;font-size:15px;color:var(--ink);font-family:var(--sans);font-weight:600}
+.next3 li{margin:4px 0}
+.send{width:100%;min-height:54px;font-size:16px;margin-top:16px}
+.wiz-nav{position:sticky;bottom:0;z-index:5;background:linear-gradient(transparent,var(--bg) 30%);padding:14px 0 12px;display:flex;gap:10px}
+.wiz-nav .btn{margin:0;min-height:50px;font-size:15px}
+.wiz-nav #next{flex:1}
+.wiz-nav.last{position:static;background:none}
+#galMore{min-height:44px;padding:0 4px}
+.wiz-nav #prev{flex:0 0 auto;min-width:56px}
+.skip{font-size:14px;color:var(--mut);margin:10px 0 0}
+.draft-note{font-size:13px;color:var(--gold2);margin:10px 0 0}
+.okmsg{font-size:15px;line-height:1.55}
+.result .summary{font-size:14px}
 @media(max-width:600px){
-  #wiz .panel{padding:24px 16px}
-  .ref-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
-  .ref figcaption{font-size:11px;padding:5px 6px 4px;line-height:1.3}
-  .ref-btns{position:static;padding:0 6px 6px;justify-content:space-between}
-  .ref-btns button{flex:1;height:44px;border-radius:6px;background:#1c1914}
-  .ref-filter button{padding:9px 12px}
-  .send-row .btn{width:100%;justify-content:center}
-  .result .okmsg{padding:16px 16px;font-size:15px}
+  .bh{padding:14px 0 0}
+  .bh .kicker{display:none}
+  .bh h1{font-size:23px;line-height:1.25;margin:0 0 6px}
+  .bh .lead{font-size:14px;line-height:1.45}
+  .bh .lead{display:none}
+  .stepped .bh h1{display:none}
+  .prog{margin-top:10px}
+  #wiz .panel{padding:18px 16px}
+  #wiz .panel h2{font-size:22px}
+  .up{min-height:88px;padding:12px}
+  .up .ico{font-size:24px}
+  .seg{margin-bottom:10px}
+  .seg span{min-height:44px}
+  .f-row{margin-top:10px}
+  .wiz-nav .btn{padding:13px 14px}
+  .srow{flex-direction:column;gap:2px}
+  #wiz .panel[data-step="3"] .field{margin-bottom:12px}
+  #wiz .field label{margin-bottom:5px}
+  .price{padding:10px 14px;margin-bottom:12px}
+  .price p{margin-top:4px}
 }
-
 </style>
 </head>
 <body>
@@ -121,186 +181,153 @@ details.example{margin:12px 0;color:var(--mut)} details.example summary{cursor:p
   </div>
 </div>
 
-<section class="hero" style="padding:60px 0 24px">
+<section class="bh">
   <div class="wrap">
-    <div class="kicker">Бриф · проще всего — голосом</div>
-    <h1 style="font-size:clamp(28px,4vw,44px)">Просто расскажите о своём доме — <br>студия сделает проект</h1>
-    <p class="hint" style="max-width:720px">Сумму посчитаем по вашей площади — <b>от 2 000 ₽/м²</b>, она будет известна до оплаты; проект начинается после оплаты. Нажмите микрофон и говорите, как другу.
-      Черновик сохраняется только в этом браузере — можно закрыть и вернуться.</p>
-    <p class="hint draft-note" id="draftNote" hidden>Черновик сохраняется автоматически.</p>
-    <nav class="steps" id="steps" aria-label="Шаги брифа"></nav>
+    <div class="kicker">Бриф на дизайн-проект</div>
+    <h1>План, картинки и пара слов — всё</h1>
+    <p class="lead" id="lead"><!-- terms:brief-lead -->Бриф — три шага, около 5 минут: план, картинки, которые нравятся, и рассказ своими словами (можно голосом). От 2 000 ₽/м²; сумму знаете до оплаты.<!-- /terms:brief-lead --></p>
+    <div class="prog" id="prog" hidden>
+      <div class="prog-t"><b id="progStep">Шаг 1 из 3</b><span id="progName">План квартиры</span></div>
+      <div class="prog-bar" aria-hidden="true"><i id="progBar" style="width:33%"></i></div>
+    </div>
     <p class="sr-only" id="stepLive" aria-live="polite"></p>
   </div>
 </section>
 
-<div class="wrap" style="padding-bottom:90px" id="wiz">
+<form class="wrap" id="wiz" novalidate onsubmit="return false">
 
-  <!-- 1. Рассказ голосом -->
-  <div class="panel" data-step="0">
-    <div class="voice">
-      <button class="bigmic" id="bigMic" type="button" aria-label="Рассказать голосом" aria-pressed="false" aria-describedby="voiceState">🎤</button>
-      <div class="voice-state" id="voiceState" role="status">Нажмите и говорите</div>
-      <p class="hint" id="micHint" hidden><b>В этом браузере голосовой ввод не работает.</b> На телефоне нажмите 🎤 на клавиатуре и
-        говорите в поле ниже; на компьютере откройте страницу в Chrome, Edge или Яндекс Браузере.</p>
+  <!-- 1. План -->
+  <section class="panel" data-step="0" aria-labelledby="h1s">
+    <h2 id="h1s">План квартиры</h2>
+    <fieldset class="seg" id="objKind">
+      <legend class="sr-only">Что проектируем</legend>
+      <label><input type="radio" name="objType" value="квартира" checked><span>Квартира</span></label>
+      <label><input type="radio" name="objType" value="дом"><span>Дом</span></label>
+    </fieldset>
+    <div class="up-wrap">
+      <label class="up" id="dropPlan" for="filePlan"><span class="ico" aria-hidden="true">📎</span><b id="planBtnT">Загрузить план</b><small>фото, скан или PDF</small></label>
+      <input type="file" id="filePlan" multiple accept="image/*,.heic,.heif,.pdf,.dwg,.dxf" aria-describedby="planHint planErr">
     </div>
-    <div class="topics" id="topics" aria-label="О чём рассказать"></div>
-    <textarea id="story" class="big" rows="8" aria-label="Ваш рассказ о доме и о себе" placeholder="Здесь появится ваш рассказ. Можно и написать — как удобнее."></textarea>
-    <p class="hint" id="autoFill" hidden></p>
-    <details class="example"><summary>Пример рассказа</summary>
-      <p>«Квартира 78 метров, три комнаты, новостройка без отделки. Живём втроём: я, муж и дочка 5 лет, ещё кот. Вечером все на кухне —
-      хочется большой стол и остров. Муж работает из дома, нужен тихий угол. Вещей много: нужна гардеробная. Любим тёплое дерево,
-      зелёный и лён, не любим глянец и холодный белый свет. Ремонт хотим начать весной, бюджет средний.»</p></details>
-    <p class="hint">Не хочется говорить? Просто нажмите «Далее» — заполните коротко по шагам.</p>
-  </div>
+    <div class="cam up-wrap"><label for="camPlan"><span aria-hidden="true">📷</span> Сфотографировать план</label>
+      <input type="file" id="camPlan" accept="image/*" capture="environment"></div>
+    <p class="hint" id="planHint" style="margin:10px 0 0">План застройщика, БТИ или листок от руки — лишь бы читались размеры.</p>
+    <ul class="thumbs" id="planList" aria-label="Загруженный план"></ul>
+    <p class="err" id="planErr" role="alert"></p>
+    <div class="f-row">
+      <div class="field"><label for="objArea">Площадь, м² <span style="text-transform:none;letter-spacing:0">— если знаете</span></label>
+        <input type="text" id="objArea" inputmode="decimal" autocomplete="off" placeholder="например, 62" aria-describedby="areaErr"></div>
+    </div>
+    <p class="err" id="areaErr" role="alert"></p>
+    <details class="more" id="noPlanBox">
+      <summary>Нет плана?</summary>
+      <label class="chk"><input type="checkbox" id="needSurvey"><span><b>Плана нет — снимите размеры сами.</b> Договоримся об обмере; срок пойдёт, когда размеры будут у нас.</span></label>
+      <p class="hint" style="margin:8px 0 4px"><b>Или измерьте рулеткой</b> — и сфотографируйте листок:</p>
+      <ol>
+        <li>Нарисуйте от руки контур квартиры и комнаты, как видите их сверху.</li>
+        <li>Каждую стену — по полу, от угла до угла, в сантиметрах.</li>
+        <li>Окна и двери: ширина и где начинаются от ближайшего угла.</li>
+        <li>Высоту потолка — в одном месте. Отметьте стояки и батареи.</li>
+      </ol>
+    </details>
+  </section>
 
-  <!-- 2. Объект -->
-  <div class="panel" data-step="1" hidden>
-    <h2>Объект</h2>
-    <p class="hint">Что смогли — уже заполнили из рассказа. Проверьте и дополните. Не знаете — оставьте пустым.</p>
-    <div class="row3">
-      <div class="field"><label for="objType">Тип объекта</label>
-        <select id="objType"><option>квартира</option><option>дом</option><option>апартаменты</option><option>студия</option></select></div>
-      <div class="field"><label for="objArea">Площадь, м²</label><input type="number" id="objArea" placeholder="54" min="10" step="0.1"></div>
-      <div class="field"><label for="objH">Высота потолков, м</label><input type="number" id="objH" placeholder="2.7" step="0.05"></div>
+  <!-- 2. Что нравится -->
+  <section class="panel" data-step="1" hidden aria-labelledby="h2s">
+    <h2 id="h2s">Что нравится</h2>
+    <p class="hint">Загрузите свои картинки — или отметьте 6–9 кадров ниже. Стиль называть не нужно.</p>
+    <div class="up-wrap">
+      <label class="up sm" for="fileRefs"><span class="ico" aria-hidden="true">🖼</span><span><b>Загрузить свои картинки</b><br><small>скриншоты Pinterest, фото из отеля, вещь, цвет</small></span></label>
+      <input type="file" id="fileRefs" multiple accept="image/*,.heic,.heif">
     </div>
-    <div class="row3 house-only" hidden>
-      <div class="field"><label for="objFloors">Этажей</label><select id="objFloors"><option>1</option><option selected>2</option><option>3</option><option value="1.5">1 + мансарда</option><option value="2.5">2 + мансарда</option></select></div>
-      <div class="field"><label for="objStairs">Лестница</label><select id="objStairs"><option>на усмотрение студии</option><option>прямая одномаршевая</option><option>Г-образная с площадкой</option><option>П-образная</option><option>винтовая</option><option>уже есть, оставить</option></select></div>
-      <div class="field"><label for="objPlot">Участок, соток</label><input type="text" id="objPlot" placeholder="12"></div>
+    <ul class="thumbs" id="refList" aria-label="Ваши картинки"></ul>
+    <div class="or">или отметьте кадры</div>
+    <div class="gal" id="gal" role="group" aria-label="Кадры из проектов студии: нажмите на понравившиеся"><p class="hint">Загружаю кадры…</p></div>
+    <div class="gal-meta"><span id="galCount" aria-live="polite">Отмечено: 0</span><button type="button" class="linklike" id="galMore" hidden>Показать ещё</button></div>
+  </section>
+
+  <!-- 3. Словами -->
+  <section class="panel" data-step="2" hidden aria-labelledby="h3s">
+    <h2 id="h3s">Расскажите словами</h2>
+    <div class="story-wrap">
+      <label for="story" class="sr-only">Ваш рассказ: кто живёт, что мешает, что нужно</label>
+      <textarea id="story" rows="7" aria-describedby="storyHint" placeholder="Как другу: кто живёт, что мешает сейчас, что обязательно должно быть. Можно надиктовать."></textarea>
+    </div>
+    <div class="mic-row">
+      <button type="button" class="mic" id="mic" aria-pressed="false" aria-describedby="micState"><span aria-hidden="true">🎤</span> <span id="micT">Надиктовать</span></button>
+      <span class="mic-state" id="micState" role="status"></span>
+    </div>
+    <fieldset class="chips" id="chips">
+      <legend id="storyHint">Нажмите — добавим заготовку в текст:</legend>
+    </fieldset>
+    <details class="more" id="more">
+      <summary>Добавить подробности (необязательно)</summary>
+      <p class="hint" style="margin:6px 0 10px">Всё это снимем с плана и уточним сами. Заполните, только если хочется.</p>
+      <div class="field"><label>Помещения и размеры, м</label>
+        <div id="rooms"></div>
+        <button class="btn sm ghost" id="addRoom" type="button" style="display:inline-block;margin-top:4px;min-height:44px">+ помещение</button></div>
+      <div class="row2">
+        <div class="field"><label for="objH">Высота потолков, м</label><input type="text" inputmode="decimal" id="objH" placeholder="2,7"></div>
+        <div class="field"><label for="objState">Состояние</label><select id="objState"><option value="">—</option><option>новостройка, без отделки</option><option>новостройка, white box</option><option>вторичка, нужен ремонт</option><option>дом строится</option><option>дом построен, без отделки</option><option>жилое, частичная переделка</option></select></div>
+        <div class="field"><label for="objAddr">Адрес / ЖК / посёлок</label><input type="text" id="objAddr" autocomplete="street-address"></div>
+        <div class="field"><label for="stKey">Стиль, если уже знаете</label><select id="stKey"></select></div>
+        <div class="field"><label for="qBudget">Класс материалов в смете</label><select id="qBudget"><option value="">на усмотрение студии</option><option value="econom">эконом — надёжно, без переплат</option><option value="business">бизнес — качественные бренды</option><option value="premium">премиум — без компромиссов</option></select></div>
+        <div class="field"><label for="stRefs">Ссылки (Pinterest, сайты)</label><input type="text" id="stRefs" inputmode="url" placeholder="https://pin.it/…"></div>
+      </div>
+    </details>
+  </section>
+
+  <!-- 4. Контакты и отправка -->
+  <section class="panel" data-step="3" hidden aria-labelledby="h4s">
+    <h2 id="h4s">Куда прислать проект</h2>
+    <div class="price" id="price">
+      <div class="pk-h" id="priceLead">Сумма по площади</div>
+      <div class="pk"><span id="pk0n">Проект с визуализациями</span><b id="pk0">—</b></div>
+      <p id="priceNote"></p>
     </div>
     <div class="row2">
-      <div class="field"><label for="objPack">Пакет</label>
-        <select id="objPack"><option value="proekt">Проект — 2 000 ₽/м²</option><option value="vizual">Проект + визуализации — 3 000 ₽/м²</option></select></div>
-      <div class="field"><label>Ориентировочная сумма</label><p class="hint" id="packSum" style="margin:10px 0 0">Укажите площадь — посчитаем. Минимальный заказ — как за 40 м².</p></div>
+      <div class="field"><label for="cName">Как к вам обращаться</label><input type="text" id="cName" autocomplete="name"></div>
+      <div class="field"><label for="cPhone">Телефон</label><input type="tel" id="cPhone" autocomplete="tel" inputmode="tel" placeholder="+7 900 000-00-00" aria-describedby="contactErr"></div>
+      <div class="field"><label for="cEmail">E-mail <span style="text-transform:none;letter-spacing:0">— можно вместо телефона</span></label><input type="email" id="cEmail" autocomplete="email" placeholder="you@mail.ru" aria-describedby="contactErr"></div>
     </div>
-    <div class="row2">
-      <div class="field"><label for="objAddr">Адрес / ЖК / посёлок</label><input type="text" id="objAddr" placeholder="ЖК «Северный парк», Москва"></div>
-      <div class="field"><label for="objState">Состояние</label><select id="objState"><option>новостройка, без отделки</option><option>новостройка, white box</option><option>вторичка, нужен ремонт</option><option>дом строится</option><option>дом построен, без отделки</option><option>жилое, частичная переделка</option></select></div>
-    </div>
-    <div style="height:18px"></div>
-    <h2 style="font-size:20px">Помещения</h2>
-    <p class="hint">Размеры в метрах — если знаете. <b>Можно оставить пустым — снимем с плана</b>, который вы приложите на следующем шаге. <span class="house-only" hidden>Для дома укажите этаж.</span></p>
-    <div id="rooms"></div>
-    <button class="btn sm ghost" id="addRoom" type="button">+ Добавить помещение</button>
-  </div>
+    <p class="err" id="contactErr" role="alert"></p>
+    <label class="chk"><input type="checkbox" id="cConsent" aria-describedby="consentErr"><span>Даю согласие на обработку персональных данных на условиях <a href="soglasie/" target="_blank" rel="noopener">согласия</a> и <a href="policy/" target="_blank" rel="noopener">политики</a> <b>— обязательно</b></span></label>
+    <p class="err" id="consentErr" role="alert"></p>
+    <label class="chk"><input type="checkbox" id="cPortfolio"><span>Можно показать проект в портфолио LINEA — без имени, контактов и адреса <span class="hint">(по желанию)</span></span></label>
+    <div class="next3" id="next3"><!-- terms:brief-next --><h3>Что будет дальше</h3><ol><li>Называем сумму по вашей площади и срок — до начала работы</li><li>Вы оплачиваете — после оплаты начинаем работу</li><li>Первый вариант квартиры — до 48 часов, дома — до 72 часов от оплаты и получения плана с размерами</li></ol><p>Бриф уходит в студию одной кнопкой — сразу открывается страница заказа с номером.</p><!-- /terms:brief-next --></div>
+    <button class="btn send" id="send" type="button">Собрать бриф</button>
+    <div id="upBar" hidden style="height:6px;background:rgba(201,164,95,.18);border-radius:3px;overflow:hidden;margin:12px 0 4px"><i style="display:block;height:100%;width:0;background:#C9A45F;transition:width .2s"></i></div>
+    <p class="hint" id="upState" role="status" aria-live="polite" hidden></p>
+    <div aria-hidden="true" style="position:absolute;left:-10000px;width:1px;height:1px;overflow:hidden"><label>Сайт <input type="text" id="hpWebsite" tabindex="-1" autocomplete="off"></label></div>
+  </section>
 
-  <!-- 3. План и фото -->
-  <div class="panel" data-step="2" hidden>
-    <h2>План и фото</h2>
-    <p class="hint">Подойдёт всё: план от застройщика или БТИ, проект дома, фото стен на телефон, листок с обмерами от руки.</p>
-    <div class="drop big-drop" id="drop" role="button" tabindex="0" aria-label="Добавить план или фото: выбрать файлы">📎<br><b>Добавить план или фото</b><br><small>нажмите или перетащите · JPG, PNG, PDF, DWG</small></div>
-    <input type="file" id="files" multiple hidden accept=".jpg,.jpeg,.png,.webp,.pdf,.dwg,.heic,image/*">
-    <div class="filelist" id="filelist" aria-live="polite"></div>
-    <p class="hint">Нет плана? Пропустите шаг — подскажем, как снять размеры рулеткой; срок пойдёт, когда размеры будут у нас.</p>
-  </div>
-
-  <!-- 4. Стиль и референсы -->
-  <div class="panel" data-step="3" hidden>
-    <h2>Что вам нравится?</h2>
-    <p class="hint">Листайте и отмечайте: <b>♥</b> — откликается, <b>✕</b> — точно не ваше. Не думайте долго — важна первая реакция.
-      Это интерьеры из проектов студии. <b id="refCount"></b></p>
-    <div class="ref-filter" id="refFilter"></div>
-    <div class="ref-grid" id="refGallery"><p class="hint">Загружаю галерею…</p></div>
-    <div style="height:26px"></div>
-    <h2 style="font-size:20px">Свои примеры — самое ценное</h2>
-    <p class="hint">Референс — любая картинка, где вам «хорошо»: не обязательно целая комната. Что можно прислать:</p>
-    <div class="ref-examples">
-      <div><b>📌 Скриншот из Pinterest или Instagram</b><small>сохранили когда-то «на будущее» — отлично подходит</small></div>
-      <div><b>🏨 Фото у друзей, в отеле, кафе</b><small>где понравилось, как сделано — даже не очень резкое</small></div>
-      <div><b>🛋 Отдельная вещь</b><small>диван, лампа, плитка, ручка двери — то, вокруг чего хочется строить</small></div>
-      <div><b>🎨 Цвет или фактура</b><small>картина, ткань, природа — настроение важнее комнаты</small></div>
-    </div>
-    <div class="drop" id="dropRefs" role="button" tabindex="0" aria-label="Добавить фото понравившихся интерьеров: выбрать файлы">🖼 Добавить фото понравившихся интерьеров</div>
-    <input type="file" id="filesRefs" multiple hidden accept="image/*,.heic">
-    <div class="filelist" id="reflist" aria-live="polite"></div>
-    <div style="height:18px"></div>
-    <h2 style="font-size:20px">Стиль <small style="font-weight:400;color:var(--mut)">— если уже знаете</small></h2>
-    <div class="style-grid" id="styles"></div>
-    <div class="row2" style="margin-top:14px">
-      <div class="field"><label for="stRefs">Ссылки (Pinterest, сайты, доски)</label><input type="text" id="stRefs" placeholder="https://pin.it/..., https://..."></div>
-      <div class="field"><label for="stColors">Любимые цвета и материалы</label><input type="text" id="stColors" class="dict" placeholder="тёплое дерево, зелёный, латунь, лён"></div>
-    </div>
-    <div class="field"><label for="stAvoid">Цвета и материалы, которые НЕ хочется видеть</label><input type="text" id="stAvoid" class="dict" placeholder="серый бетон, глянец, холодный белый"></div>
-  </div>
-
-  <!-- 5. Наводящие вопросы -->
-  <div class="panel" data-step="4" hidden>
-    <h2>Наводящие вопросы</h2>
-    <p class="hint">Эти ответы влияют на планировку, хранение, свет и материалы сильнее, чем кажется. Можно голосом.</p>
-    <div class="row2">
-      <div class="field"><label for="qWho">Кто будет жить?</label><input type="text" id="qWho" class="dict" placeholder="пара с ребёнком 6 лет и бабушка">
-        <p class="hint" id="whoHint" hidden style="margin:6px 0 0">Вы рассказали об этом выше — уточните здесь коротко: кто и сколько лет детям.</p></div>
-      <div class="field"><label for="qPets">Домашние животные</label><input type="text" id="qPets" class="dict" placeholder="кот / собака / нет"></div>
-      <div class="field"><label for="qWfh">Работаете из дома?</label>
-        <select id="qWfh"><option>нет</option><option>да, нужен отдельный кабинет</option><option>да, хватит рабочего места</option><option>иногда, хватит уголка</option></select></div>
-      <div class="field"><label for="qStorage">Сколько нужно хранения?</label>
-        <select id="qStorage"><option>стандартно</option><option>много: гардеробная + кладовая</option><option>минимум, живём налегке</option></select></div>
-      <div class="field"><label for="qKitchen">Кухня</label>
-        <select id="qKitchen"><option>готовим каждый день, нужна большая рабочая зона</option><option>готовим иногда</option><option>остров обязательно</option><option>верхние шкафы до потолка</option><option>без верхних шкафов, открытые полки</option></select></div>
-      <div class="field"><label for="qSport">Спорт и хобби дома</label><input type="text" id="qSport" class="dict" placeholder="беговая дорожка, йога, мастерская, музыка"></div>
-      <div class="field"><label for="qDislikes">Что точно НЕ нравится?</label><input type="text" id="qDislikes" class="dict" placeholder="ковролин, тёмные коридоры, открытые полки"></div>
-      <div class="field"><label for="qWhen">Когда планируете ремонт?</label>
-        <select id="qWhen"><option>в ближайшие 3 месяца</option><option>в течение 6 месяцев</option><option>в течение года</option><option>пока изучаю</option></select></div>
-    </div>
-    <div class="field"><label for="qBudget">Класс материалов в смете</label>
-      <select id="qBudget">
-        <option value="econom">Эконом — надёжно и без переплат</option>
-        <option value="business" selected>Бизнес — качественные бренды</option>
-        <option value="premium">Премиум — без компромиссов</option>
-      </select>
-      <p class="hint" style="margin:8px 0 0">Влияет только на подбор материалов и цифры в смете ремонта, а не на стоимость проекта.</p></div>
-    <div class="field"><label for="qNotes">Что ещё нам важно знать?</label><textarea id="qNotes" class="dict" placeholder="привычки, сценарии, особые пожелания…"></textarea></div>
-  </div>
-
-  <!-- 6. Контакты -->
-  <div class="panel" data-step="5" hidden>
-    <h2>Контакты</h2>
-    <p class="hint">Куда прислать готовый проект и уточняющие вопросы.</p>
-    <div class="row2">
-      <div class="field"><label for="cName">Имя</label><input type="text" id="cName" placeholder="Александр"></div>
-      <div class="field"><label for="cPhone">Телефон</label><input type="tel" id="cPhone" placeholder="+7 900 000-00-00"></div>
-      <div class="field"><label for="cEmail">E-mail</label><input type="email" id="cEmail" placeholder="you@mail.ru"></div>
-      <div class="field"><label for="cWay">Как удобнее связаться</label><select id="cWay"><option>WhatsApp</option><option>Telegram</option><option>звонок</option><option>почта</option></select></div>
-    </div>
-    <p class="hint" id="needContact" hidden style="color:#e8a87c"><b>Оставьте телефон или e-mail</b> — иначе мы не сможем прислать проект.</p>
-    <label class="consent" style="display:flex;gap:10px;align-items:flex-start;margin:14px 0 6px;cursor:pointer"><input type="checkbox" id="cConsent" style="margin-top:3px;width:auto;flex:none">
-      <span>Даю согласие на обработку персональных данных на условиях <a href="soglasie/" target="_blank" rel="noopener">согласия</a> и <a href="policy/" target="_blank" rel="noopener">политики</a> <b>— обязательно</b></span></label>
-    <label class="consent" style="display:flex;gap:10px;align-items:flex-start;margin:6px 0;cursor:pointer"><input type="checkbox" id="cPortfolio" style="margin-top:3px;width:auto;flex:none">
-      <span>Можно показать проект в портфолио LINEA — без имени, контактов и адреса <span class="hint">(по желанию)</span></span></label>
-    <p class="hint" id="needConsent" hidden style="color:#e8a87c"><b>Отметьте согласие на обработку данных</b> — без него бриф отправить нельзя.</p>
-  </div>
-
-  <!-- 7. Готово -->
-  <div class="panel result" data-step="6" hidden>
-    <h2 class="send-h">Бриф собран. Как отправить</h2>
-    <p class="send-must" id="sendMust">После сборки <b>отправьте файл в WhatsApp</b> на <a href="https://wa.me/79257338640" target="_blank" rel="noopener">+7 925 733-86-40</a>
-      или <b>на почту</b> <a href="mailto:optteem@mail.ru">optteem@mail.ru</a> — сам по себе бриф к нам не уходит.</p>
-    <div class="cta-row send-row">
-      <button class="btn" id="sendZip" type="button">Собрать архив брифа</button>
-    </div>
-    <div class="okmsg">Кнопка соберёт архив — бриф, план и фото в одном файле. На телефоне откроется
-      «Поделиться»: выберите WhatsApp или Telegram и отправьте на <b>+7 925 733-86-40</b>. На компьютере архив скачается — пришлите его
-      в мессенджер или на <b>optteem@mail.ru</b>. Получение подтвердим в течение дня; первый вариант проекта квартиры — до 48 часов
-      от оплаты и получения плана с размерами, дома — до 72; сумму по площади назовём до начала работы.</div>
+  <!-- 5. Готово (без приёмника на сервере: архив отправляет сам клиент) -->
+  <section class="panel result" data-step="4" hidden aria-labelledby="h5s">
+    <h2 id="h5s">Бриф собран — отправьте его нам</h2>
+    <p class="okmsg" id="sendMust">Нажмите кнопку — откроется «Поделиться»: выберите WhatsApp или Telegram и отправьте на <b>+7 925 733-86-40</b>.
+      На компьютере архив скачается — пришлите его в <a href="https://wa.me/79257338640" target="_blank" rel="noopener">WhatsApp</a> или на <a href="mailto:optteem@mail.ru">optteem@mail.ru</a>: сам он к нам не уйдёт.</p>
+    <button class="btn send" id="sendZip" type="button">Отправить архив брифа</button>
     <p class="hint" id="afterZip" hidden role="status">✓ Архив готов: <b id="zipInfo"></b>. Если окно «Поделиться» не открылось — файл в загрузках, пришлите его в
-      WhatsApp на +7 925 733-86-40 или письмом на optteem@mail.ru — сам он к нам не уйдёт. Мы подтвердим получение в течение дня. <a href="thanks/">Что дальше →</a></p>
+      WhatsApp на +7 925 733-86-40 или на optteem@mail.ru. Получение подтвердим в течение дня. <a href="thanks/">Что дальше →</a></p>
     <div class="summary" id="summary"></div>
-    <p class="hint">Другие способы: <a id="waSend" href="#" target="_blank" rel="noopener">текст брифа в WhatsApp</a> ·
-      <a id="mailto" href="#">письмом</a> · <button class="linklike" id="copyBrief" type="button">скопировать бриф</button> ·
-      <button class="linklike" id="dl" type="button">скачать brief.json</button> · <a href="portfolio-hub/">примеры проектов</a></p>
-    <details class="raw"><summary>Показать технические данные брифа</summary><pre id="json"></pre></details>
-  </div>
+    <p class="hint">Другие способы: <a id="waSend" href="https://wa.me/79257338640" target="_blank" rel="noopener">текст брифа в WhatsApp</a> ·
+      <a id="mailto" href="mailto:optteem@mail.ru">письмом</a> · <button class="linklike" id="copyBrief" type="button">скопировать бриф</button> ·
+      <button class="linklike" id="dl" type="button">скачать brief.json</button></p>
+  </section>
 
-  <div class="wiz-nav">
-    <button class="btn ghost" id="prev" type="button" style="visibility:hidden">← Назад</button>
-    <button class="btn" id="next" type="button">Далее →</button>
+  <div class="wiz-nav" id="nav" hidden>
+    <button class="btn ghost" id="prev" type="button" aria-label="Назад">←</button>
+    <button class="btn" id="next" type="button">Дальше →</button>
   </div>
-</div>
+  <p class="skip" id="skipNote"></p>
+  <p class="draft-note" id="draftNote" hidden></p>
+  <noscript><p class="hint">Для отправки брифа нужен JavaScript. Без него пришлите план, картинки и пару слов о себе в WhatsApp на +7 925 733-86-40 или на optteem@mail.ru.</p></noscript>
+</form>
 
 <a class="to-top" href="#" aria-label="Наверх">↑</a>
 <footer class="site"><div class="wrap cols"><div><div class="logo">LINE<i>A</i></div><p>дизайнер-архитектор <b>Кырлан Александр</b><br><a href="tel:+79257338640">+7 925 733-86-40</a> · <a href="mailto:optteem@mail.ru">optteem@mail.ru</a></p></div><div><p><a href="brief.html">Бриф</a> · <a href="portfolio-hub/">Портфолио</a> · <a href="catalog/">Каталог</a> · <a href="gost/">Документация</a> · <a href="cases/">Кейсы</a> · <a href="compare/">Сравнение</a> · <a href="style/">Стили</a> · <a href="journal/">Журнал</a> · <a href="stories/">Истории</a> · <a href="reviews/">Отзывы</a> · <a href="price/">Условия</a> · <a href="process/">Процесс</a> · <a href="faq/">FAQ</a> · <a href="about/">О студии</a> · <a href="contacts/">Контакты</a> · <a href="checklist/">Чек-лист приёмки</a> · <a href="sitemap/">Карта сайта</a> · <a href="oplata/">Оплата</a> · <a href="oferta/">Договор-оферта</a> · <a href="policy/">Обработка данных</a> · <a href="soglasie/">Согласие на обработку данных</a></p><p>© LINEA studio, 2026</p></div></div></footer>
 
-<script src="js/brief.js?v=42"></script>
+<script type="application/json" id="briefTerms">{"packs":[{"key":"proekt","name":"Проект с визуализациями","rate":2000,"min":80000}],"minArea":40}</script>
+<script src="js/brief.js?v=50"></script>
 <script>
 (function () {
   var b = document.querySelector('.burger'), m = document.querySelector('.mnav');

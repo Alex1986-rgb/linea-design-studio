@@ -170,7 +170,7 @@ w('contacts/index.html', page({
   desc: D(`Контакты LINEA: ${AUTHOR.name}, телефон ${AUTHOR.phone}, почта ${AUTHOR.email}. ${TERMS.intake.contactsDesc}`, 'contacts'),
   h1: 'Контакты',
   crumb: 'Контакты',
-  lead: 'Быстрее всего — бриф: около 10 минут, начать можно с рассказа голосом. Сумму считаем по вашей площади до оплаты, работа начинается после оплаты. Если удобнее сначала поговорить — звоните или пишите напрямую автору проектов.',
+  lead: 'Быстрее всего — бриф: ' + TERMS.brief.what + ', ' + TERMS.brief.time + '. Сумму считаем по вашей площади до оплаты, работа начинается после оплаты. Если удобнее сначала поговорить — звоните или пишите напрямую автору проектов.',
   jsonld: [
     crumbsLd([['LINEA', BASE + '/'], ['Контакты', BASE + '/contacts/']]),
     { '@context': 'https://schema.org', '@type': 'ContactPage', mainEntity: { '@type': 'Person', name: AUTHOR.name, jobTitle: AUTHOR.role, telephone: AUTHOR.tel, email: AUTHOR.email } }

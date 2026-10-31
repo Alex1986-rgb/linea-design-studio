@@ -53,6 +53,18 @@ for (const file of ['index.html', 'brief.html'].filter(f => !ONLY || f === ONLY)
     out = out.replace(/<div>©\s*LINEA studio, 2026<\/div>/, `<div>${line}<p>© LINEA studio, 2026</p></div>`);
   }
 
+  // бриф: строка-описание, «что будет дальше» и ставки — из TERMS (tools/site-shell.js), руками в brief.html не правятся
+  if (file === 'brief.html') {
+    const T = SHELL.TERMS, rub = T.rub;
+    const region = (name, html) => { out = out.replace(new RegExp(`<!-- terms:${name} -->[\\s\\S]*?<!-- /terms:${name} -->`), `<!-- terms:${name} -->${html}<!-- /terms:${name} -->`); };
+    region('brief-lead', `${T.brief.line}. От ${rub(T.packs[0].rate)}/м²; сумму знаете до оплаты.`);
+    region('brief-next', `<h3>Что будет дальше</h3><ol>${T.brief.next.map(x => `<li>${x}</li>`).join('')}</ol><p>${T.intake.brief}.</p>`);
+    const json = JSON.stringify({ packs: T.packs.map(p => ({ key: p.key, name: p.name, rate: p.rate, min: p.min })), minArea: T.minArea });
+    const tag = `<script type="application/json" id="briefTerms">${json}</script>`;
+    if (/<script type="application\/json" id="briefTerms">[\s\S]*?<\/script>/.test(out)) out = out.replace(/<script type="application\/json" id="briefTerms">[\s\S]*?<\/script>/, tag);
+    else out = out.replace(/<script src="js\/brief\.js/, `${tag}\n<script src="js/brief.js`);
+  }
+
   if (out !== src) {
     drift++;
     if (CHECK) console.log(`✖ ${file}: шапка или подвал разошлись с site-shell.js`);
