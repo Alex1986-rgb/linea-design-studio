@@ -11,4 +11,7 @@ linea_json([
     'mode' => linea_cfg()['mode'],
     'sqlite' => extension_loaded('pdo_sqlite'),
     'zip' => class_exists('ZipArchive'),
+    // какие признаки https видит PHP за nginx Beget — чтобы linea_https() доверял только неподделываемому
+    'tls' => ['https' => $_SERVER['HTTPS'] ?? null, 'port' => $_SERVER['SERVER_PORT'] ?? null,
+              'scheme' => $_SERVER['REQUEST_SCHEME'] ?? null, 'xfp' => $_SERVER['HTTP_X_FORWARDED_PROTO'] ?? null],
 ]);
