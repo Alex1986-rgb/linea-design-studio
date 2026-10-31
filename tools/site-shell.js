@@ -32,7 +32,7 @@ const SITE_BASES = {
   domain: 'https://xn-----6kccjicviedfr1b2cbishm8w.xn--p1ai',
 };
 const SITE_DOMAIN_RU = 'дизайн-студия-квартир.рф';   // для текста, который читает человек
-const SITE_DEFAULT = 'pages';
+const SITE_DEFAULT = 'domain';
 const SITE = process.env.LINEA_SITE || SITE_DEFAULT;
 if (!process.env.LINEA_BASE && !SITE_BASES[SITE]) throw new Error(`LINEA_SITE=${SITE}: нет такого адреса (${Object.keys(SITE_BASES).join('|')})`);
 const BASE = String(process.env.LINEA_BASE || SITE_BASES[SITE]).replace(/\/+$/, '');
