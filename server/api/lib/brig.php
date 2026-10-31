@@ -75,7 +75,7 @@ const BRIG_REVIEW_HIDE = [
     'court' => 'Решение суда или предписание госоргана',
 ];
 const BRIG_SHEET_STATUS = [
-    'new' => 'Принят', 'work' => 'В работе', 'ready' => 'Готов', 'question' => 'Нужен уточняющий вопрос', 'rejected' => 'Отклонён',
+    'new' => 'Принят', 'work' => 'В работе', 'ready' => 'Готов', 'question' => 'Нужен уточняющий вопрос', 'rejected' => 'Отклонён', 'failed' => 'Не собрался — разбираемся',
 ];
 
 function brig_cfg(string $k, $def = null)

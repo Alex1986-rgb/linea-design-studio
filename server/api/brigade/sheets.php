@@ -5,7 +5,7 @@
  *   POST ?a=create (multipart, CSRF): j, text, room?, wall?, lang?, audio? (webm/ogg/m4a/mp3 до 10 МБ)
  *   POST ?a=answer (JSON, CSRF): {s, answer} — ответ на уточняющий вопрос (запрос возвращается в очередь)
  * Очередь — таблица br_sheet_reqs + зеркало заданий в linea-private/sheet-requests/<id>.json; листы делает воркер GOST-DRAFT
- * на SmartApe через api/sheets-worker.php (протокол — docs/brigady/sheet-request-api.md). Без ПДн клиента в задании.
+ * на SmartApe через api/brigade/sheet-request.php (протокол — docs/brigady/sheet-request-api.md). Без ПДн клиента в задании.
  * Лимиты: 10 запросов на объект в сутки, 30 на бригаду в сутки, 5 открытых на объект одновременно.
  */
 declare(strict_types=1);
@@ -39,10 +39,11 @@ if ($a === 'create') {
     if ((int)db_val('SELECT COUNT(*) FROM br_sheet_reqs WHERE job_id = ? AND created_at > ?', [(int)$j['id'], $day]) >= 10
         || (int)db_val('SELECT COUNT(*) FROM br_sheet_reqs WHERE brigade_id = ? AND created_at > ?', [$bid, $day]) >= 30) { linea_fail('Лимит: 10 запросов листов на объект и 30 на бригаду в сутки', 429); }
     if ((int)db_val("SELECT COUNT(*) FROM br_sheet_reqs WHERE job_id = ? AND status IN ('new','work','question')", [(int)$j['id']]) >= 5) { linea_fail('По объекту уже 5 открытых запросов — дождитесь готовых листов', 429); }
-    $text = linea_str($_POST['text'] ?? '', 3000);
+    $text = linea_str($_POST['text'] ?? '', 900);   // воркер принимает текст до 1000 знаков (с ответом на вопрос)
     $hasAudio = isset($_FILES['audio']) && ($_FILES['audio']['error'] ?? UPLOAD_ERR_NO_FILE) === UPLOAD_ERR_OK;
-    if ($text === '' && !$hasAudio) { linea_fail('Напишите или надиктуйте, какой лист нужен'); }
-    $id = db_insert('br_sheet_reqs', ['job_id' => (int)$j['id'], 'brigade_id' => $bid, 'status' => 'new', 'text' => $text !== '' ? $text : '(голосом, см. запись)',
+    // голос на сервере листов пока не расшифровывается (нет whisper): текст обязателен; запись — приложение к тексту
+    if ($text === '') { linea_fail($hasAudio ? 'Голосовую запись без текста сервер листов пока не расшифровывает. Нажмите «Надиктовать» — речь сразу станет текстом, — или напишите, что нужно' : 'Напишите или надиктуйте, какой лист нужен'); }
+    $id = db_insert('br_sheet_reqs', ['job_id' => (int)$j['id'], 'brigade_id' => $bid, 'status' => 'new', 'text' => $text,
         'room' => linea_str($_POST['room'] ?? '', 60), 'wall' => preg_match('/^[A-DА-Г]?$/u', (string)($_POST['wall'] ?? '')) ? (string)($_POST['wall'] ?? '') : '',
         'lang' => preg_match('/^[a-z]{2}$/', (string)($_POST['lang'] ?? 'ru')) ? (string)$_POST['lang'] : 'ru', 'created_at' => $now, 'updated_at' => $now]);
     if ($hasAudio) {
@@ -58,7 +59,7 @@ if ($a === 'answer') {
     $s = brig_one('SELECT * FROM br_sheet_reqs WHERE id = ? AND brigade_id = ?', [(int)($in['s'] ?? 0), $bid]);
     if (!$s) { linea_fail('Это не ваш запрос', 403); }
     if ($s['status'] !== 'question') { linea_fail('Вопроса по запросу нет'); }
-    $ans = linea_str($in['answer'] ?? '', 2000);
+    $ans = linea_str($in['answer'] ?? '', 300);
     if ($ans === '') { linea_fail('Пустой ответ'); }
     db_update('br_sheet_reqs', ['answer' => $ans, 'status' => 'new', 'updated_at' => $now], 'id = ?', [(int)$s['id']]);
     sheets_mirror((int)$s['id']);

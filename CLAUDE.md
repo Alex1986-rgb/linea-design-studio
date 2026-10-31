@@ -138,8 +138,8 @@ push без ручного запуска отработал `success`. Стат
   из `tools/brigady-pack.mjs`), предложения сравниваются по строкам, выбор → контакты → договор подряда напрямую (`api/remont-dogovor.php`),
   этапы с фото и приёмкой по чек-листам, отзыв. Комиссия 7 % — после подписания договора обеими сторонами. Оплата ремонта — вне сайта.
 - Код: `server/api/lib/{db,migrations,accounts,brig,brig-notify,sheets}.php`, `api/brigade/*.php` (кабинет), `api/remont.php` (клиент),
-  `api/admin-brigady.php` (тот же вход, что admin.php), `api/katalog.php` (/brigady/ из базы, rewrite в site-rebase), `api/sheets-worker.php`
-  (очередь «лист по запросу», протокол — `docs/brigady/sheet-request-api.md`). Страницы — `node tools/gen-brigady-pages.js`.
+  `api/admin-brigady.php` (тот же вход, что admin.php), `api/katalog.php` (/brigady/ из базы, rewrite в site-rebase), `api/brigade/sheet-request.php`
+  (очередь «лист по запросу» в формате воркера GOST-DRAFT, протокол — `docs/brigady/sheet-request-api.md`). Страницы — `node tools/gen-brigady-pages.js`.
 - База — только через `lib/db.php` (без SQLite-специфики; схема — только `lib/migrations.php`, новая правка = новая версия). config `'db'` —
   MySQL Beget, нет — SQLite. Перенос: `php server/tools/migrate-sqlite-to-mysql.php --private=… [--apply]` (сухой прогон по умолчанию).
 - Демо-бригады: `php server/tools/seed-demo.php --private=… [--purge]` — без значков проверки, рейтинга и отзывов, noindex, вне подбора.

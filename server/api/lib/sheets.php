@@ -10,17 +10,25 @@ if (realpath((string)($_SERVER['SCRIPT_FILENAME'] ?? '')) === __FILE__) { http_r
 
 function sheets_dir(): string { $d = linea_private() . '/sheet-requests'; linea_mkdir($d); return $d; }
 
-/** Задание в формате протокола (v1). */
+/**
+ * Задание в формате протокола движка (gost-draft-sheetreq/docs/kb/sheet-request-api.md):
+ * {id, project_slug, text, room, wall, lang, brigade_id, issue, audio_url} + наши поля для контекста (order, object, answer, history).
+ */
 function sheets_task(array $s): array
 {
     $r = brig_one('SELECT r.id rid, r.pack, r.object_title, o.number FROM br_jobs j JOIN br_requests r ON r.id = j.request_id JOIN orders o ON o.id = r.order_id WHERE j.id = ?', [(int)$s['job_id']]);
     $pack = json_decode((string)($r['pack'] ?? ''), true) ?: [];
+    $text = (string)$s['text'];
+    if ((string)$s['answer'] !== '') { $text .= "\nОтвет бригады на вопрос: " . $s['answer']; }
     return [
-        'v' => 1, 'id' => (int)$s['id'], 'status' => $s['status'], 'order' => (string)($r['number'] ?? ''), 'objectSlug' => (string)($pack['slug'] ?? ''),
-        'object' => (string)($r['object_title'] ?? ''), 'text' => (string)$s['text'], 'room' => (string)$s['room'], 'wall' => (string)$s['wall'], 'lang' => (string)$s['lang'],
-        'audio' => $s['audio_file'] ? ['id' => (int)$s['audio_file'], 'url' => 'sheets-worker.php?a=audio&id=' . (int)$s['id']] : null,
-        'question' => (string)$s['question'], 'answer' => (string)$s['answer'], 'createdAt' => $s['created_at'],
-        'history' => array_map(fn($h) => ['id' => (int)$h['id'], 'text' => $h['text'], 'status' => $h['status']],
+        // ограничения checkJob() воркера: текст ≤ 1000 знаков, помещение ≤ 40 знаков из букв/цифр/пробела/точки/дефиса
+        'id' => (string)$s['id'], 'project_slug' => (string)($pack['slug'] ?? ''), 'text' => mb_substr($text, 0, 1000),
+        'room' => ($room = mb_substr(trim(preg_replace('/[^\w .\-]/u', ' ', (string)$s['room']) ?? ''), 0, 40)) !== '' ? $room : null, 'wall' => (string)$s['wall'] !== '' ? (string)$s['wall'] : null,
+        'lang' => (string)$s['lang'], 'brigade_id' => 'Б-' . (int)$s['brigade_id'], 'issue' => null,
+        'audio_url' => $s['audio_file'] ? linea_base() . '/api/brigade/sheet-request.php?action=audio&id=' . (int)$s['id'] : null,
+        // дополнительно (воркер может не читать): номер заказа, объект, история запросов по объекту
+        'order' => (string)($r['number'] ?? ''), 'object' => (string)($r['object_title'] ?? ''), 'status' => $s['status'], 'created_at' => $s['created_at'],
+        'history' => array_map(fn($h) => ['id' => (string)$h['id'], 'text' => $h['text'], 'status' => $h['status']],
             brig_all('SELECT id, text, status FROM br_sheet_reqs WHERE job_id = ? AND id <> ? ORDER BY id DESC LIMIT 10', [(int)$s['job_id'], (int)$s['id']])),
     ];
 }

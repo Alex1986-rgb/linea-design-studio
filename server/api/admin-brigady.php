@@ -418,7 +418,7 @@ switch ($view) {
             $rows .= '<tr><td>' . (int)$s['id'] . '</td><td>' . $h($s['object_title']) . '<div class="mut">' . $h($s['name']) . '</div></td><td>' . nl2br($h($s['text'])) . ($s['room'] ? '<div class="mut">' . $h($s['room'] . ($s['wall'] ? ', стена ' . $s['wall'] : '')) . '</div>' : '') . '</td><td>' . $st($s['status'], BRIG_SHEET_STATUS) . '</td>'
                 . '<td>' . ($s['result_file'] ? '<a href="' . $self . '?file=' . (int)$s['result_file'] . '">PDF</a>' : '') . ($s['audio_file'] ? ' <a href="' . $self . '?file=' . (int)$s['audio_file'] . '">запись</a>' : '') . '</td><td class="mut">' . $h($s['created_at']) . '</td></tr>';
         }
-        apage('Листы по запросу', $top . '<p class="mut">Очередь для воркера GOST-DRAFT (api/sheets-worker.php, токен — sheet_worker_token в config.php' . ((string)brig_cfg('sheet_worker_token', '') === '' ? ', <b>сейчас пуст — воркер выключен</b>' : '') . '). Протокол — docs/brigady/sheet-request-api.md.</p>'
+        apage('Листы по запросу', $top . '<p class="mut">Очередь для воркера GOST-DRAFT (api/brigade/sheet-request.php, Authorization: Bearer — sheet_worker_token в config.php' . ((string)brig_cfg('sheet_worker_token', '') === '' ? ', <b>сейчас пуст — воркер выключен</b>' : '') . '). Протокол — docs/brigady/sheet-request-api.md.</p>'
             . '<div class="scroll"><table><tr><th>№</th><th>Объект</th><th>Запрос</th><th>Статус</th><th>Файлы</th><th>Создан</th></tr>' . ($rows ?: '<tr><td colspan="6">Запросов нет.</td></tr>') . '</table></div>');
     case 'audit':
         $rows = '';

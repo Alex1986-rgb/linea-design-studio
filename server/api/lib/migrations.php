@@ -126,7 +126,7 @@ return [
         "CREATE TABLE IF NOT EXISTS br_sheet_reqs (
             id {ID}, job_id {INT} NOT NULL, brigade_id {INT} NOT NULL, status {SHORT} NOT NULL DEFAULT 'new',
             text {TEXT} NOT NULL, room {KEY}, wall {KEY}, lang {KEY} NOT NULL DEFAULT 'ru',
-            audio_file {INT}, result_file {INT}, question {TEXT}, answer {TEXT}, worker_note {TEXT},
+            audio_file {INT}, result_file {INT}, question {TEXT}, answer {TEXT}, worker_note {TEXT}, worker_meta {TEXT},
             created_at {KEY} NOT NULL, updated_at {KEY} NOT NULL, claimed_at {KEY}, ready_at {KEY},
             FOREIGN KEY (job_id) REFERENCES br_jobs(id) ON DELETE CASCADE)
             {ENGINE}",

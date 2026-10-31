@@ -261,8 +261,9 @@
     return `<p class="bx-mut">Не хватает узла, развёртки или размера — опишите, что нужно. Лист выпускает движок проекта; статус: принят → в работе → готов (или уточняющий вопрос).</p>
       ${can ? `<form id="fSheet"><div class="bx-grid"><label class="bx-f">Помещение (необязательно)<select name="room"><option value="">—</option>${(sh.rooms || []).map(r => `<option>${esc(r)}</option>`).join('')}</select></label>
       <label class="bx-f">Стена (необязательно)<select name="wall"><option value="">—</option><option>A</option><option>B</option><option>C</option><option>D</option></select></label>
-      <label class="bx-f w2">Какой лист нужен<textarea name="text" placeholder="Например: развёртка стены B кухни с выводами под технику и высотами розеток"></textarea></label></div>
-      <div class="bx-row">${speech ? '<button type="button" class="btn ghost sm bx-mic" id="bxDict">🎙 Надиктовать</button>' : ''}${rec ? '<button type="button" class="btn ghost sm bx-mic" id="bxRec">● Записать голос</button><span class="bx-mut" id="bxRecSt"></span>' : ''}<button class="btn sm">Нужен лист</button></div><p class="bx-err"></p></form>` : ''}
+      <label class="bx-f w2">Какой лист нужен<textarea name="text" maxlength="900" placeholder="Например: развёртка стены B кухни с выводами под технику и высотами розеток"></textarea></label></div>
+      <p class="bx-mut">${speech ? '🎙 «Надиктовать» сразу превращает речь в текст — проверьте его перед отправкой. ' : 'Этот браузер не умеет диктовку в текст — напишите запрос (на телефоне помогает микрофон клавиатуры). '}Запись голоса прикладывается только вместе с текстом: сервер листов записи пока не расшифровывает.</p>
+      <div class="bx-row">${speech ? '<button type="button" class="btn ghost sm bx-mic" id="bxDict">🎙 Надиктовать</button>' : ''}${rec ? '<button type="button" class="btn ghost sm bx-mic" id="bxRec">● Приложить запись</button><span class="bx-mut" id="bxRecSt"></span>' : ''}<button class="btn sm">Нужен лист</button></div><p class="bx-err"></p></form>` : ''}
       <ul class="bx-list" style="margin-top:12px">${list || '<li class="bx-mut">Запросов листов пока не было.</li>'}</ul>`;
   }
   function bindSheets(J, jid) {
@@ -288,7 +289,7 @@
           const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
           mr = new MediaRecorder(stream); chunks = [];
           mr.ondataavailable = e => chunks.push(e.data);
-          mr.onstop = () => { stream.getTracks().forEach(t => t.stop()); audio = new Blob(chunks, { type: mr.mimeType || 'audio/webm' }); rb.classList.remove('rec'); rb.textContent = '● Перезаписать'; f.querySelector('#bxRecSt').textContent = 'запись ' + Math.round(audio.size / 1024) + ' КБ готова'; };
+          mr.onstop = () => { stream.getTracks().forEach(t => t.stop()); audio = new Blob(chunks, { type: mr.mimeType || 'audio/webm' }); rb.classList.remove('rec'); rb.textContent = '● Перезаписать запись'; f.querySelector('#bxRecSt').textContent = 'запись ' + Math.round(audio.size / 1024) + ' КБ готова'; };
           mr.start(); rb.classList.add('rec'); rb.textContent = '■ Остановить';
           setTimeout(() => { if (mr.state === 'recording') mr.stop(); }, 120000);
         } catch { f.querySelector('#bxRecSt').textContent = 'микрофон недоступен — напишите текстом'; }
@@ -296,6 +297,7 @@
     }
     f.onsubmit = async ev => {
       ev.preventDefault();
+      if (!f.querySelector('[name=text]').value.trim()) { const e = f.querySelector('.bx-err'); e.className = 'bx-err'; e.textContent = audio ? 'Запись без текста сервер пока не расшифровывает — нажмите «Надиктовать» или напишите, какой лист нужен' : 'Напишите или надиктуйте, какой лист нужен'; return; }
       const fd = new FormData(f); fd.append('j', jid); fd.append('lang', 'ru');
       if (audio) fd.append('audio', audio, 'zapis.' + (/mp4/.test(audio.type) ? 'm4a' : /ogg/.test(audio.type) ? 'ogg' : 'webm'));
       const r = await api('sheets.php?a=create', { form: fd });

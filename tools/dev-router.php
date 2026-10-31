@@ -20,8 +20,8 @@ if (preg_match('#^/brigady/?$#', $path)) { $run('katalog.php'); }
 if ($path === '/brigady/sitemap.xml') { $_GET['sitemap'] = '1'; $run('katalog.php'); }
 if (preg_match('#^/brigady/([a-z0-9-]+)/?$#', $path, $m)) { $_GET['slug'] = $m[1]; $run('katalog.php'); }
 if (preg_match('#^/api/((?:brigade/)?[a-z-]+\.php)$#', $path, $m)) {
-    $ok = preg_match('#^(brief|order|pay|pay-notify|ping|prices|review|admin|survey|admin-brigady|remont|remont-dogovor|katalog|sheets-worker)\.php$#', $m[1])
-        || preg_match('#^brigade/(auth|profile|file|feed|offer|jobs|finance|sheets)\.php$#', $m[1]);
+    $ok = preg_match('#^(brief|order|pay|pay-notify|ping|prices|review|admin|survey|admin-brigady|remont|remont-dogovor|katalog)\.php$#', $m[1])
+        || preg_match('#^brigade/(auth|profile|file|feed|offer|jobs|finance|sheets|sheet-request)\.php$#', $m[1]);
     if (!$ok || !is_file($root . '/server/api/' . $m[1])) { http_response_code(403); exit('403'); }
     $run($m[1]);
 }
