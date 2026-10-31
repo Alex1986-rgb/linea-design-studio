@@ -22,12 +22,21 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,500;0,600;1,500&family=Inter:wght@400;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="../../css/main.css?v=34">
-<link rel="stylesheet" href="../../css/brigady.css?v=1">
+<link rel="stylesheet" href="../../css/brigady.css?v=2">
 <meta name="robots" content="noindex, nofollow">
 <style>.g-steps{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:18px;margin:0;padding:0;list-style:none;counter-reset:st}
 .g-steps li{border:1px solid var(--line);border-radius:4px;padding:20px 22px;background:var(--panel);counter-increment:st}
 .g-steps li::before{content:counter(st,decimal-leading-zero);display:block;color:var(--gold);font-family:var(--serif);font-size:22px;margin-bottom:8px}
 .g-steps h3{margin:0 0 8px;font-size:18px}.g-steps p{margin:0;color:var(--mut);font-size:14px;line-height:1.55}
+.r-scheme{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin:0 0 8px;padding:0;list-style:none;counter-reset:rs}
+.r-scheme li{position:relative;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:16px 16px 14px;counter-increment:rs}
+.r-scheme li::before{content:counter(rs);display:inline-grid;place-items:center;width:28px;height:28px;border-radius:50%;border:1px solid var(--gold);color:var(--gold);font-family:var(--serif);margin-bottom:8px}
+.r-scheme li:not(:last-child)::after{content:'→';position:absolute;right:-12px;top:50%;transform:translateY(-50%);color:var(--gold);font-size:16px}
+.r-scheme b{display:block;font-size:16px;margin-bottom:4px}.r-scheme span{color:var(--mut);font-size:13.5px;line-height:1.5}
+.r-two{display:grid;grid-template-columns:1.1fr .9fr;gap:24px;align-items:start}
+.r-sheet{margin:0}.r-sheet img{width:100%;height:auto;border-radius:8px;border:1px solid var(--line);background:#fff;display:block}
+.r-sheet figcaption{color:var(--mut);font-size:13px;margin-top:8px;line-height:1.5}
+@media (max-width:860px){.r-scheme{grid-template-columns:1fr 1fr}.r-scheme li::after{display:none}.r-two{grid-template-columns:1fr}}
 .doc h2{font-family:var(--serif);font-weight:500;font-size:22px;margin:28px 0 10px}.doc p,.doc li{color:var(--mut);line-height:1.65}.doc li{margin:0 0 6px}</style>
 </head>
 <body>
@@ -80,7 +89,9 @@
   <h2>6. Профиль и каталог</h2><p>В публичной карточке — название, логотип, специализации, районы, опыт, состав, гарантия, ориентир цены, портфолио, отметки проверки, число объектов по проектам LINEA, рейтинг и отзывы. Телефон и почта не публикуются. Имя бригадира — только с его согласия (галочка в анкете).</p>
   <h2>7. Отзывы и их модерация</h2><p>Отзыв оставляет только клиент завершённого через сервис объекта, один раз. Студия не правит текст и скрывает отзыв только по одному из оснований: персональные данные третьих лиц; оскорбления и нецензурная лексика; текст не относится к работам по объекту; реклама или ссылки на сторонние ресурсы; решение суда или предписание госоргана. Причина фиксируется в журнале.</p>
   <h2>8. Споры</h2><p>Спор открывает клиент или бригада на странице объекта; студия ведёт переписку, сверяет работы с проектом и предлагает решение. Решение не лишает стороны права обратиться в суд.</p>
-  <h2>9. Приостановка и блокировка</h2><p>Основания: передача данных клиента третьим лицам или обход сервиса; неоплата счёта более 30 дней; подтверждённые грубые нарушения проекта и норм; недостоверные сведения в анкете. Причина сообщается бригаде; приостановка снимается после устранения причины.</p>
+  <h2>9. Приостановка и блокировка</h2><p>Основания: передача данных клиента третьим лицам или обход сервиса; неоплата счёта более 30 дней; подтверждённые грубые нарушения проекта и норм; недостоверные сведения в анкете; утрата статуса (НПД, ИП, ООО). Причина сообщается бригаде; приостановка снимается после устранения причины. Решение можно обжаловать письмом на optteem@mail.ru в течение 30 дней — ответ в течение 10 рабочих дней.</p>
+  <h2>10. Рейтинг и порядок показа</h2><p>Рейтинг — среднее оценок из видимых отзывов (1–5), считается автоматически, вручную не меняется. В подборе к запросу бригады упорядочены по доле работ запроса, которые они выполняют, затем по рейтингу и числу сданных объектов; район — обязательное условие. В каталоге — по рейтингу и числу сданных объектов. Платного продвижения нет.</p>
+  <h2>11. Кто может быть бригадой</h2><p>Только исполнитель со статусом: плательщик НПД, ИП или ООО. Исполнитель отвечает за привлечённых им лиц; самозанятый не вправе нанимать работников по трудовым договорам — это его ответственность.</p>
 </div></section>
 
 <section class="funnel" aria-label="Что дальше">

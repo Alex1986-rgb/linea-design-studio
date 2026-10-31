@@ -33,7 +33,7 @@ function k_out(string $title, string $desc, string $canon, string $body, array $
 if (isset($_GET['sitemap'])) {
     header('Content-Type: application/xml; charset=utf-8');
     echo '<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"><url><loc>' . $h($base . '/brigady/') . '</loc></url>';
-    foreach (brig_all("SELECT slug, updated_at FROM br_brigades WHERE status = 'active' AND test = 0 ORDER BY id") as $b) {
+    foreach (brig_all("SELECT slug, updated_at FROM br_brigades WHERE status = 'active' AND test = 0 AND demo = 0 ORDER BY id") as $b) {
         echo '<url><loc>' . $h($base . '/brigady/' . $b['slug'] . '/') . '</loc><lastmod>' . $h(substr((string)$b['updated_at'], 0, 10)) . '</lastmod></url>';
     }
     echo '</urlset>';
@@ -42,75 +42,92 @@ if (isset($_GET['sitemap'])) {
 
 $img = fn(int $id, string $alt, string $cls = '') => '<img src="' . $API . 'brigade/file.php?f=' . $id . '" alt="' . $h($alt) . '" loading="lazy" decoding="async"' . ($cls ? ' class="' . $cls . '"' : '') . '>';
 $stars = fn(?float $v) => $v === null ? '' : '<span class="k-stars" aria-label="Рейтинг ' . $v . ' из 5">' . str_repeat('★', (int)round($v)) . str_repeat('☆', 5 - (int)round($v)) . '</span>';
-$badges = function (array $c) use ($h) {
-    $out = [];
-    if ($c['innChecked']) { $out[] = 'ИНН проверен ' . date('d.m.Y', strtotime($c['innChecked'])); }
-    $out[] = $c['legal'];
-    if ($c['callPassed']) { $out[] = 'Видеозвонок пройден'; }
-    $out[] = 'Работает по договору подряда';
-    $out[] = 'По проектам LINEA: ' . $c['jobsDone'] . ' ' . ($c['jobsDone'] % 10 === 1 && $c['jobsDone'] % 100 !== 11 ? 'объект' : (in_array($c['jobsDone'] % 10, [2, 3, 4], true) && !in_array($c['jobsDone'] % 100, [12, 13, 14], true) ? 'объекта' : 'объектов'));
-    return '<ul class="k-badges">' . implode('', array_map(fn($b) => '<li>' . $h($b) . '</li>', $out)) . '</ul>';
-};
-$invite = fn(array $c) => '<div class="k-invite" data-slug="' . $h($c['slug']) . '" hidden><button class="btn" type="button">Пригласить в мой запрос</button><span class="hint" role="status"></span></div>';
+$plural = fn(int $n, string $a, string $b, string $c) => $n . ' ' . ($n % 10 === 1 && $n % 100 !== 11 ? $a : (in_array($n % 10, [2, 3, 4], true) && !in_array($n % 100, [12, 13, 14], true) ? $b : $c));
+$ava = fn(array $c, string $cls) => $c['logo'] ? $img($c['logo'], 'Логотип: ' . $c['name'], $cls) : '<span class="' . $cls . '" aria-hidden="true">'
+    . $h(mb_strtoupper(implode('', array_map(fn($w) => mb_substr($w, 0, 1), array_slice(preg_split('/[\s:—-]+/u', $c['name'], -1, PREG_SPLIT_NO_EMPTY), 0, 2))))) . '</span>';
+$CAP = 'иллюстрация из проекта LINEA';
+$DEMO_NOTE = 'Пример карточки — бригады подключаются, это образец. Фото — иллюстрации из проекта LINEA, а не снимки выполненных объектов.';
+$NONE = '<span class="k-no">у примера нет</span>';
+$invite = fn(array $c, string $cls = 'btn') => $c['demo']
+    ? '<a class="' . $cls . '" href="/remont/">Как пригласить бригаду</a>'
+    : '<span class="k-invite" data-slug="' . $h($c['slug']) . '"><a class="' . $cls . '" href="/remont/" data-inv>Пригласить</a><span class="hint" role="status"></span></span>';
+$allPhotos = fn(array $c) => array_merge(...array_map(fn($p) => array_merge($p['after'], $p['before']), $c['portfolio'] ?: [['after' => [], 'before' => []]]));
+$HOW = '<ol class="k-how"><li><b>Проект</b>Альбом с ведомостями и сметой</li><li><b>Предложения</b>2–5 бригад считают по позициям</li><li><b>Выбор</b>Сравнение в одной таблице, договор</li><li><b>Этапы</b>Листы по запросу, фото, приёмка</li></ol>';
+$JOIN = '<div class="k-join"><div><h2>Вы бригада?</h2><p>Заказы с готовым альбомом и сметой по позициям, листы по запросу голосом. 7 % — только с договора, который клиент подписал.</p></div><a class="btn" href="/brigadam/">Подключиться</a></div>';
 
 $slug = (string)($_GET['slug'] ?? '');
 if ($slug !== '') {
-    $b = preg_match('/^[a-z0-9-]{3,60}$/', $slug) ? brig_one("SELECT * FROM br_brigades WHERE slug = ? AND status = 'active'", [$slug]) : null;
+    $b = preg_match('/^[a-z0-9-]{3,70}$/', $slug) ? brig_one("SELECT * FROM br_brigades WHERE slug = ? AND status = 'active'", [$slug]) : null;
     if (!$b) {
         k_out('Бригада не найдена — LINEA', 'Бригада не найдена или сейчас не принимает заказы.', $base . '/brigady/', '<section class="blk hero-page"><div class="wrap"><h1>Бригада не найдена</h1><p>Бригада не найдена или сейчас не принимает заказы. <a href="/brigady/">Все бригады</a></p></div></section>', [], true, 404);
     }
     $c = brig_public_card($b, $API);
-    $rev = brig_reviews_public((int)$b['id']);
+    $demo = $c['demo'];
+    $rev = $demo ? [] : brig_reviews_public((int)$b['id']);
     $canon = $base . '/brigady/' . $b['slug'] . '/';
+    $photos = $allPhotos($c);
     $port = '';
     foreach ($c['portfolio'] as $p) {
-        $port .= '<article class="k-obj"><h3>' . $h($p['title']) . '</h3><p class="mut">' . $h(implode(' · ', array_filter([$p['district'], $p['area'] ? $p['area'] . ' м²' : '', $p['year'] ? (string)$p['year'] : '']))) . '</p>'
-            . ($p['works'] ? '<p>' . nl2br($h($p['works'])) . '</p>' : '')
-            . '<div class="k-ba"><div><div class="k-lbl">До</div><div class="k-ph">' . implode('', array_map(fn($i) => $img($i, 'До ремонта: ' . $p['title']), $p['before'])) . '</div></div>'
-            . '<div><div class="k-lbl">После</div><div class="k-ph">' . implode('', array_map(fn($i) => $img($i, 'После ремонта: ' . $p['title']), $p['after'])) . '</div></div></div></article>';
+        $fig = fn(array $ids, string $lbl) => implode('', array_map(fn($i) => '<figure>' . $img($i, $p['title'] . ($lbl ? ' — ' . $lbl : '')) . '<figcaption>' . $h($demo ? $CAP : $lbl) . '</figcaption></figure>', $ids));
+        $port .= '<article class="k-obj"><h3>' . $h($p['title']) . '</h3><p>' . $h(implode(' · ', array_filter([$p['district'], $p['area'] ? $p['area'] . ' м²' : '', $p['year'] ? (string)$p['year'] : '']))) . ($p['works'] ? ($p['district'] || $p['area'] || $p['year'] ? '<br>' : '') . nl2br($h($p['works'])) : '') . '</p>'
+            . '<div class="k-gal">' . $fig($p['before'], 'до') . $fig($p['after'], $demo ? '' : 'после') . '</div></article>';
     }
-    $revs = $rev ? implode('', array_map(fn($r) => '<blockquote class="k-rev">' . $stars((float)$r['rating']) . '<p>' . nl2br($h($r['text'] ?: 'Без текста')) . '</p><footer class="mut">Клиент LINEA · ' . $h($r['object']) . ' · ' . $h(date('d.m.Y', strtotime($r['at']))) . '</footer></blockquote>', $rev))
-        : '<p class="mut">Отзывов пока нет. Отзыв здесь может оставить только клиент LINEA после приёмки объекта этой бригадой.</p>';
-    $facts = [
-        ['Специализации', implode(', ', $c['specs'])], ['Районы', implode(', ', $c['districts'])],
-        ['Опыт', $c['experience'] !== null ? $c['experience'] . ' лет' : '—'], ['Размер бригады', $c['teamSize'] !== null ? $c['teamSize'] . ' чел.' : '—'],
-        ['Гарантия на работы', $c['warrantyMonths'] ? $c['warrantyMonths'] . ' мес.' : '—'], ['Ориентир цены', $c['priceFrom'] ? 'от ' . number_format($c['priceFrom'], 0, ',', ' ') . ' ₽/м² (работы)' : '—'],
-        ['Среднее время ответа на запрос', $c['responseHours'] !== null ? ($c['responseHours'] < 1 ? 'меньше часа' : round($c['responseHours']) . ' ч') : 'данных пока нет'],
+    $resp = $c['responseHours'];
+    $stats = [[(string)($c['teamSize'] ?? '—'), 'мастеров в бригаде'], [$c['experience'] !== null ? $plural($c['experience'], 'год', 'года', 'лет') : '—', 'опыт'],
+        [$c['warrantyMonths'] ? $c['warrantyMonths'] . ' мес.' : '—', 'гарантия на работы'],
+        [$resp === null ? '—' : ($resp < 1 ? '< 1 ч' : ($resp < 36 ? round($resp) . ' ч' : $plural((int)round($resp / 24), 'день', 'дня', 'дней'))), 'ответ на запрос' . ($resp === null ? ($demo ? ' — у примера нет' : ' — данных пока нет') : '')]];
+    $official = [
+        ['Статус', $h($c['legal']) . ' · работает по договору подряда с клиентом' . ($demo ? '' : '; реквизиты исполнителя клиент видит до выбора')],
+        ['ИНН проверен', $demo ? '<span class="k-no">у примера нет — у настоящей бригады: «статус подтверждён ФНС, дата»</span>' : ($c['innChecked'] ? 'да, ' . $h(date('d.m.Y', strtotime($c['innChecked']))) : '<span class="k-no">нет</span>')],
+        ['Видеозвонок с LINEA', $demo ? '<span class="k-no">у примера нет — у настоящей: дата проверки</span>' : ($c['callPassed'] ? 'пройден' : '<span class="k-no">нет</span>')],
+        ['По проектам LINEA', $demo ? $NONE : $plural($c['jobsDone'], 'объект сдан', 'объекта сдано', 'объектов сдано')],
+        ['Как работает', 'Смета по позициям альбома LINEA, этапы с фотоотчётом, приёмка по чек-листу'],
+        ['Отзывы', $demo ? '<span class="k-no">только от клиентов LINEA после приёмки работ</span>' : ($c['rating']['n'] ? $stars($c['rating']['avg']) . ' ' . $c['rating']['avg'] . ' · ' . $plural($c['rating']['n'], 'отзыв', 'отзыва', 'отзывов') : '<span class="k-no">пока нет — только от клиентов LINEA после приёмки работ</span>')],
     ];
-    if ($c['contactName']) { array_unshift($facts, ['Бригадир', $c['contactName']]); }
+    if ($c['contactName']) { array_unshift($official, ['Бригадир', $h($c['contactName'])]); }
+    $revs = $rev ? '<h2>Отзывы клиентов LINEA</h2>' . implode('', array_map(fn($r) => '<blockquote class="k-rev">' . $stars((float)$r['rating']) . '<p>' . nl2br($h($r['text'] ?: 'Без текста')) . '</p><footer class="mut">Клиент LINEA · ' . $h($r['object']) . ' · ' . $h(date('d.m.Y', strtotime($r['at']))) . '</footer></blockquote>', $rev)) : '';
     $body = '<nav class="crumbs" aria-label="Хлебные крошки"><div class="wrap"><a href="/">Главная</a><a href="/remont/">Ремонт по проекту</a><a href="/brigady/">Бригады</a><span>' . $h($c['name']) . '</span></div></nav>'
-        . '<section class="blk hero-page"><div class="wrap k-card">'
-        . '<div class="k-head">' . ($c['logo'] ? $img($c['logo'], 'Логотип: ' . $c['name'], 'k-logo') : '<div class="k-logo k-mono">' . $h(mb_strtoupper(mb_substr($c['name'], 0, 1))) . '</div>')
-        . '<div><div class="kicker">Бригада · Москва и МО</div><h1>' . $h($c['name']) . '</h1><p>' . ($c['rating']['n'] ? $stars($c['rating']['avg']) . ' ' . $c['rating']['avg'] . ' · ' . $c['rating']['n'] . ' ' . ($c['rating']['n'] === 1 ? 'отзыв' : 'отзыва(ов)') : '<span class="mut">Отзывов пока нет</span>') . '</p></div></div>'
-        . $badges($c)
+        . '<section class="blk k-page"><div class="wrap k-narrow">' . ($demo ? '<p class="k-demo">' . $h($DEMO_NOTE) . '</p>' : '')
+        . '<article class="k-card">'
+        . ($photos ? '<div class="k-hero">' . $img($photos[0], 'Объект: ' . $c['name']) . ($demo ? '<span class="k-cap">' . $h($CAP) . '</span>' : '') . '</div>' : '')
+        . '<div class="k-head">' . $ava($c, 'k-ava') . '<div><h1>' . $h($c['name']) . '</h1><p class="k-sub">' . $h(implode(', ', $c['districts'])) . ' · работает по проектам LINEA</p></div></div>'
+        . '<ul class="k-chips">' . implode('', array_map(fn($x) => '<li>' . $h($x) . '</li>', $c['specs'])) . '</ul>'
+        . '<dl class="k-stats">' . implode('', array_map(fn($x) => '<div><dt>' . $h($x[0]) . '</dt><dd>' . $h($x[1]) . '</dd></div>', $stats)) . '</dl>'
         . ($c['about'] ? '<p class="k-about">' . nl2br($h($c['about'])) . '</p>' : '')
-        . '<dl class="k-facts">' . implode('', array_map(fn($f) => '<dt>' . $h($f[0]) . '</dt><dd>' . $h($f[1]) . '</dd>', $facts)) . '</dl>'
-        . '<div class="k-cta"><p><b>Связь — через сайт.</b> Телефон бригады открывается, когда вы выбираете её предложение по своему проекту. Есть проект LINEA — пригласите бригаду в запрос на странице заказа; проекта нет — <a href="/brief.html">начните с брифа</a>.</p>' . $invite($c) . '</div>'
-        . '</div></section>'
-        . '<section class="blk"><div class="wrap"><h2>Объекты бригады</h2>' . ($port ?: '<p class="mut">Портфолио пока пусто.</p>') . '</div></section>'
-        . '<section class="blk"><div class="wrap"><h2>Отзывы клиентов LINEA</h2>' . $revs . '</div></section>'
-        . '<script src="/js/katalog.js?v=1" defer></script>';
-    $ld = ['@context' => 'https://schema.org', '@type' => 'HomeAndConstructionBusiness', 'name' => $c['name'], 'url' => $canon,
-        'description' => mb_substr($c['about'] ?: ('Ремонтная бригада: ' . implode(', ', $c['specs'])), 0, 300), 'areaServed' => [['@type' => 'City', 'name' => 'Москва'], ['@type' => 'AdministrativeArea', 'name' => 'Московская область']],
-        'knowsAbout' => $c['specs']];
-    if ($c['logo']) { $ld['image'] = $base . $API . 'brigade/file.php?f=' . $c['logo']; }
-    if ($c['rating']['n'] > 0) {
-        $ld['aggregateRating'] = ['@type' => 'AggregateRating', 'ratingValue' => $c['rating']['avg'], 'reviewCount' => $c['rating']['n'], 'bestRating' => 5, 'worstRating' => 1];
-        $ld['review'] = array_map(fn($r) => ['@type' => 'Review', 'reviewRating' => ['@type' => 'Rating', 'ratingValue' => $r['rating'], 'bestRating' => 5], 'author' => ['@type' => 'Person', 'name' => 'Клиент LINEA'], 'datePublished' => $r['at'], 'reviewBody' => $r['text']], array_slice($rev, 0, 10));
+        . '<h2>Портфолио</h2>' . ($port ?: '<p class="k-about">Портфолио пока пусто.</p>')
+        . '<h2>Официальные данные</h2><table class="k-off">' . implode('', array_map(fn($x) => '<tr><td>' . $h($x[0]) . '</td><td>' . $x[1] . '</td></tr>', $official)) . '</table>'
+        . $revs
+        . '<p class="k-note">Телефон бригады не публикуем: связь — через страницу вашего заказа. Есть проект LINEA — пригласите бригаду в запрос; проекта нет — <a href="/brief.html">начните с брифа</a>.</p>'
+        . '<div class="k-btns">' . $invite($c) . '<a class="btn ghost" href="/brigady/">Все бригады</a></div>'
+        . '</article></div></section><script src="/js/katalog.js?v=2" defer></script>';
+    $ld = [];
+    if (!$demo) {   // у примера — без schema.org (тестовые бригады всё равно noindex)
+        $l = ['@context' => 'https://schema.org', '@type' => 'HomeAndConstructionBusiness', 'name' => $c['name'], 'url' => $canon,
+            'description' => mb_substr($c['about'] ?: ('Ремонтная бригада: ' . implode(', ', $c['specs'])), 0, 300), 'areaServed' => [['@type' => 'City', 'name' => 'Москва'], ['@type' => 'AdministrativeArea', 'name' => 'Московская область']],
+            'knowsAbout' => $c['specs']];
+        if ($c['logo']) { $l['image'] = $base . $API . 'brigade/file.php?f=' . $c['logo']; }
+        if ($c['rating']['n'] > 0) {   // AggregateRating — только при реальных отзывах
+            $l['aggregateRating'] = ['@type' => 'AggregateRating', 'ratingValue' => $c['rating']['avg'], 'reviewCount' => $c['rating']['n'], 'bestRating' => 5, 'worstRating' => 1];
+            $l['review'] = array_map(fn($r) => ['@type' => 'Review', 'reviewRating' => ['@type' => 'Rating', 'ratingValue' => $r['rating'], 'bestRating' => 5], 'author' => ['@type' => 'Person', 'name' => 'Клиент LINEA'], 'datePublished' => $r['at'], 'reviewBody' => $r['text']], array_slice($rev, 0, 10));
+        }
+        $ld = [$l, ['@context' => 'https://schema.org', '@type' => 'BreadcrumbList', 'itemListElement' => [
+            ['@type' => 'ListItem', 'position' => 1, 'name' => 'LINEA', 'item' => $base . '/'], ['@type' => 'ListItem', 'position' => 2, 'name' => 'Бригады', 'item' => $base . '/brigady/'],
+            ['@type' => 'ListItem', 'position' => 3, 'name' => $c['name'], 'item' => $canon]]]];
     }
-    $crumbs = ['@context' => 'https://schema.org', '@type' => 'BreadcrumbList', 'itemListElement' => [
-        ['@type' => 'ListItem', 'position' => 1, 'name' => 'LINEA', 'item' => $base . '/'], ['@type' => 'ListItem', 'position' => 2, 'name' => 'Бригады', 'item' => $base . '/brigady/'],
-        ['@type' => 'ListItem', 'position' => 3, 'name' => $c['name'], 'item' => $canon]]];
-    k_out($c['name'] . ' — бригада по ремонту квартир, Москва и МО | LINEA', 'Бригада ' . $c['name'] . ': ' . implode(', ', $c['specs']) . '. Проверена LINEA: ИНН, видеозвонок, работа по договору подряда. Портфолио «до/после» и отзывы клиентов.', $canon, $body, [$ld, $crumbs], (bool)$b['test']);
+    k_out($c['name'] . ($demo ? ' — пример карточки' : ' — бригада по ремонту квартир, Москва и МО') . ' | LINEA', ($demo ? 'Пример карточки бригады «Ремонт по проекту». ' : 'Бригада ' . $c['name'] . ': ') . implode(', ', $c['specs']) . '. Работа по договору подряда, этапы с фото, приёмка по чек-листу.', $canon, $body, $ld, $demo || (bool)$b['test']);
 }
 
-// ── список с фильтрами (GET-форма: работает без JS, адреса фильтров не индексируются)
+// ── список с фильтрами (GET-форма: работает без JS; адреса с фильтрами — noindex)
 $fs = isset(BRIG_SPECS[$_GET['spec'] ?? '']) ? (string)$_GET['spec'] : '';
 $fd = isset(BRIG_DISTRICTS[$_GET['district'] ?? '']) ? (string)$_GET['district'] : '';
 $fr = in_array((string)($_GET['rating'] ?? ''), ['3', '4', '4.5'], true) ? (float)$_GET['rating'] : 0.0;
 $fb = max(0, (int)($_GET['budget'] ?? 0));
+$test = isset($_GET['test']) && linea_local() ? 1 : 0;
+$rows = brig_all("SELECT * FROM br_brigades WHERE status = 'active' AND demo = 0 AND test = ? ORDER BY admitted_at", [$test]);
+$demoMode = !$rows;            // настоящих бригад нет — показываем образцы с плашкой
+if ($demoMode) { $rows = brig_all("SELECT * FROM br_brigades WHERE status = 'active' AND demo = 1 ORDER BY id"); }
 $cards = [];
-foreach (brig_all("SELECT * FROM br_brigades WHERE status = 'active' AND test = ? ORDER BY admitted_at", [isset($_GET['test']) && linea_local() ? 1 : 0]) as $b) {
+foreach ($rows as $b) {
     $specs = json_decode($b['specs'], true) ?: []; $dist = json_decode($b['districts'], true) ?: [];
     if ($fs && !in_array($fs, $specs, true)) { continue; }
     if ($fd && !in_array($fd, $dist, true)) { continue; }
@@ -119,27 +136,40 @@ foreach (brig_all("SELECT * FROM br_brigades WHERE status = 'active' AND test = 
     if ($fr && ($c['rating']['avg'] === null || $c['rating']['avg'] < $fr)) { continue; }
     $cards[] = $c;
 }
-usort($cards, fn($a, $b) => [($b['rating']['avg'] ?? 0), $b['jobsDone']] <=> [($a['rating']['avg'] ?? 0), $a['jobsDone']]);
+if (!$demoMode) { usort($cards, fn($a, $b) => [($b['rating']['avg'] ?? 0), $b['jobsDone']] <=> [($a['rating']['avg'] ?? 0), $a['jobsDone']]); }
 $opt = fn(array $m, string $cur, string $all) => '<option value="">' . $all . '</option>' . implode('', array_map(fn($k, $t) => '<option value="' . $h($k) . '"' . ($k === $cur ? ' selected' : '') . '>' . $h($t) . '</option>', array_keys($m), $m));
-$filters = '<form class="k-filter" method="get" action="/brigady/"><label>Работы<select name="spec">' . $opt(BRIG_SPECS, $fs, 'Любые') . '</select></label>'
+$filters = '<form class="k-filter" method="get" action="/brigady/"><label>Работы<select name="spec">' . $opt(BRIG_SPECS, $fs, 'Все работы') . '</select></label>'
     . '<label>Район<select name="district">' . $opt(BRIG_DISTRICTS, $fd, 'Москва и МО') . '</select></label>'
     . '<label>Рейтинг<select name="rating">' . $opt(['3' => 'от 3', '4' => 'от 4', '4.5' => 'от 4,5'], $fr ? (string)$fr : '', 'Любой') . '</select></label>'
     . '<label>Бюджет работ, ₽/м²<select name="budget">' . $opt(['5000' => 'до 5 000', '8000' => 'до 8 000', '12000' => 'до 12 000', '20000' => 'до 20 000'], $fb ? (string)$fb : '', 'Любой') . '</select></label>'
     . '<button class="btn sm" type="submit">Показать</button></form>';
 $list = '';
 foreach ($cards as $c) {
-    $cover = null;
-    foreach ($c['portfolio'] as $p) { if ($p['after']) { $cover = $p['after'][0]; break; } }
-    $list .= '<a class="k-item" href="/brigady/' . $h($c['slug']) . '/">' . ($cover ? $img($cover, 'Объект бригады ' . $c['name'], 'k-cover') : '<div class="k-cover k-mono">' . $h(mb_substr($c['name'], 0, 1)) . '</div>')
-        . '<div class="k-body"><h3>' . $h($c['name']) . '</h3><p>' . ($c['rating']['n'] ? $stars($c['rating']['avg']) . ' ' . $c['rating']['avg'] . ' (' . $c['rating']['n'] . ')' : '<span class="mut">Отзывов пока нет</span>') . '</p>'
-        . '<p class="mut">' . $h(implode(', ', array_slice($c['specs'], 0, 5))) . '</p><p class="mut">' . $h($c['legal']) . ($c['innChecked'] ? ' · ИНН проверен' : '') . ' · гарантия ' . (int)$c['warrantyMonths'] . ' мес.'
-        . ($c['priceFrom'] ? ' · от ' . number_format($c['priceFrom'], 0, ',', ' ') . ' ₽/м²' : '') . ' · по проектам LINEA: ' . $c['jobsDone'] . '</p></div></a>';
+    $ph = array_slice($allPhotos($c), 0, 3);
+    $url = '/brigady/' . $h($c['slug']) . '/';
+    $nObj = count($c['portfolio']);
+    $meta = $h($c['legal']) . ' · портфолио: ' . $plural($nObj, 'объект', 'объекта', 'объектов')
+        . ($c['demo'] ? ' · отзывы и отметки проверки — только у настоящих бригад'
+            : ($c['innChecked'] ? ' · ИНН проверен' : '') . ($c['callPassed'] ? ' · видеозвонок' : '') . ' · по проектам LINEA: ' . $c['jobsDone']
+            . ($c['responseHours'] !== null ? ' · ответ: ' . ($c['responseHours'] < 1 ? '< 1 ч' : round($c['responseHours']) . ' ч') : '')
+            . ($c['priceFrom'] ? ' · от ' . number_format($c['priceFrom'], 0, ',', ' ') . ' ₽/м²' : ''));
+    $list .= '<article class="k-item">'
+        . '<a class="k-ph" href="' . $url . '" tabindex="-1" aria-hidden="true">' . ($ph ? implode('', array_map(fn($i) => $img($i, ''), $ph)) : '<span class="k-mono">' . $h(mb_substr($c['name'], 0, 1)) . '</span>')
+        . ($c['demo'] ? '<span class="k-cap">иллюстрации LINEA</span><em class="k-tag">образец</em>' : '') . '</a>'
+        . '<div class="k-body"><div class="k-hd">' . $ava($c, 'k-ava sm') . '<div><h3><a href="' . $url . '">' . $h($c['name']) . '</a></h3><div class="k-z">' . $h(implode(', ', $c['districts'])) . '</div></div></div>'
+        . ($c['rating']['n'] ? '<p class="k-r">' . $stars($c['rating']['avg']) . ' ' . $c['rating']['avg'] . ' · ' . $plural($c['rating']['n'], 'отзыв', 'отзыва', 'отзывов') . '</p>' : '')
+        . '<ul class="k-chips sm">' . implode('', array_map(fn($x) => '<li>' . $h($x) . '</li>', array_slice($c['specs'], 0, 6))) . '</ul>'
+        . '<dl class="k-kv"><div><dt>' . $h((string)($c['teamSize'] ?? '—')) . '</dt><dd>мастеров</dd></div><div><dt>' . ($c['experience'] !== null ? $h($plural($c['experience'], 'год', 'года', 'лет')) : '—') . '</dt><dd>опыт</dd></div><div><dt>' . ($c['warrantyMonths'] ? $c['warrantyMonths'] . ' мес.' : '—') . '</dt><dd>гарантия</dd></div></dl>'
+        . '<p class="k-meta">' . $meta . '</p>'
+        . '<div class="k-btns"><a class="btn ghost sm" href="' . $url . '">Карточка</a>' . $invite($c, 'btn sm') . '</div></div></article>';
 }
 $filtered = $fs || $fd || $fr || $fb;
 $body = '<nav class="crumbs" aria-label="Хлебные крошки"><div class="wrap"><a href="/">Главная</a><a href="/remont/">Ремонт по проекту</a><span>Бригады</span></div></nav>'
-    . '<section class="blk hero-page"><div class="wrap"><div class="kicker">Ремонт по проекту</div><h1>Бригады, проверенные LINEA</h1>'
-    . '<p class="lead-page">Каждая бригада прошла проверку: ИНН по базе ФНС и видеозвонок с бригадиром; работает по договору подряда напрямую с вами. Рейтинг и отзывы — только от клиентов, чьи объекты бригада сдала по проекту LINEA.</p>'
-    . $filters . '<div class="k-grid">' . ($list ?: '<p class="mut">' . ($filtered ? 'По этим условиям бригад нет — ослабьте фильтр.' : 'Каталог наполняется: бригады проходят проверку. Есть проект LINEA — подбор бригады доступен на странице заказа.') . '</p>') . '</div>'
-    . '<p class="hint">Вы бригада? <a href="/brigadam/">Условия и регистрация</a></p></div></section><script src="/js/katalog.js?v=1" defer></script>';
-k_out('Бригады для ремонта по дизайн-проекту — Москва и МО | LINEA', 'Каталог ремонтных бригад, проверенных LINEA: ИНН, видеозвонок, договор подряда, портфолио «до/после», отзывы только реальных клиентов.', $base . '/brigady/', $body,
-    [['@context' => 'https://schema.org', '@type' => 'ItemList', 'itemListElement' => array_map(fn($c, $i) => ['@type' => 'ListItem', 'position' => $i + 1, 'url' => $base . '/brigady/' . $c['slug'] . '/', 'name' => $c['name']], $cards, array_keys($cards))]], $filtered);
+    . '<section class="blk k-page"><div class="wrap">' . ($demoMode ? '<p class="k-demo">Пример страницы — бригады подключаются. Карточки ниже — образцы; фото — иллюстрации из проекта LINEA, не снимки выполненных объектов.</p>' : '')
+    . '<div class="kicker">Ремонт по проекту</div><h1 class="k-h1">Бригады для ремонта по вашему проекту</h1>'
+    . '<p class="lead-page">Выбор необязателен: проект ваш, ремонтировать можно с кем угодно. Если удобнее с нами — бригады отвечают сметой по позициям вашего альбома, а на каждом этапе получают нужные листы. Каждая настоящая бригада проходит проверку ИНН по базе ФНС и видеозвонок; отзывы — только от клиентов, чьи объекты она сдала.</p>'
+    . $HOW . $filters . '<div class="k-grid">' . ($list ?: '<p class="mut">По этим условиям бригад нет — ослабьте фильтр.</p>') . '</div>'
+    . $JOIN . '</div></section><script src="/js/katalog.js?v=2" defer></script>';
+k_out('Бригады для ремонта по дизайн-проекту — Москва и МО | LINEA', 'Каталог ремонтных бригад LINEA: проверка ИНН и видеозвонок, договор подряда напрямую, портфолио, отзывы только реальных клиентов. Москва и МО.', $base . '/brigady/', $body,
+    $demoMode || $test ? [] : [['@context' => 'https://schema.org', '@type' => 'ItemList', 'itemListElement' => array_map(fn($c, $i) => ['@type' => 'ListItem', 'position' => $i + 1, 'url' => $base . '/brigady/' . $c['slug'] . '/', 'name' => $c['name']], $cards, array_keys($cards))]],
+    $filtered || $demoMode || (bool)$test);

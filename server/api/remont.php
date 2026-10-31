@@ -100,7 +100,7 @@ switch ($a) {
         break;
     case 'invite':
         if (!$r || in_array($r['status'], ['chosen', 'cancelled'], true)) { linea_fail('Сначала нажмите «Подобрать бригаду» — приглашение добавится в ваш запрос'); }
-        $b = brig_one("SELECT * FROM br_brigades WHERE slug = ? AND status = 'active'", [(string)($in['slug'] ?? '')]);
+        $b = brig_one("SELECT * FROM br_brigades WHERE slug = ? AND status = 'active' AND demo = 0", [(string)($in['slug'] ?? '')]);
         if (!$b) { linea_fail('Бригада не найдена или сейчас не принимает запросы', 404); }
         if ((int)db_val("SELECT COUNT(*) FROM br_invites WHERE request_id = ? AND source = 'client'", [(int)$r['id']]) >= 5) { linea_fail('Можно пригласить до 5 бригад'); }
         if (brig_one('SELECT 1 FROM br_invites WHERE request_id = ? AND brigade_id = ?', [(int)$r['id'], (int)$b['id']])) { linea_fail('Эта бригада уже в вашем запросе'); }

@@ -471,12 +471,12 @@ function brig_public_card(array $b, string $api = ''): array
     foreach (brig_all('SELECT * FROM br_portfolio WHERE brigade_id = ? ORDER BY id', [(int)$b['id']]) as $p) {
         $files = brig_all("SELECT id, kind FROM br_files WHERE owner_kind = 'portfolio' AND owner_id = ? ORDER BY id", [(int)$p['id']]);
         $port[] = ['title' => $p['title'], 'district' => BRIG_DISTRICTS[$p['district']] ?? '', 'area' => $p['area'] !== null ? (float)$p['area'] : null,
-            'year' => $p['year'] !== null ? (int)$p['year'] : null, 'works' => (string)$p['works'],
+            'year' => $p['year'] !== null ? (int)$p['year'] : null, 'works' => (string)$p['works'], 'demo' => !empty($p['demo']),
             'before' => array_values(array_map(fn($f) => (int)$f['id'], array_filter($files, fn($f) => $f['kind'] === 'before'))),
             'after' => array_values(array_map(fn($f) => (int)$f['id'], array_filter($files, fn($f) => $f['kind'] === 'after')))];
     }
     return [
-        'id' => (int)$b['id'], 'slug' => $b['slug'], 'name' => $b['name'], 'contactName' => $b['public_name'] ? $b['contact_name'] : null,
+        'id' => (int)$b['id'], 'slug' => $b['slug'], 'demo' => !empty($b['demo']), 'name' => $b['name'], 'contactName' => $b['public_name'] ? $b['contact_name'] : null,
         'legal' => BRIG_LEGAL[$b['legal']] ?? $b['legal'], 'innChecked' => $b['inn_checked_at'] ? substr((string)$b['inn_checked_at'], 0, 10) : null,
         'callPassed' => (bool)$b['call_at'], 'specs' => array_map(fn($k) => BRIG_SPECS[$k] ?? $k, json_decode($b['specs'], true) ?: []),
         'districts' => array_map(fn($k) => BRIG_DISTRICTS[$k] ?? $k, json_decode($b['districts'], true) ?: []),

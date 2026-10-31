@@ -68,7 +68,7 @@ function candidates(array $r): array
 {
     $works = json_decode($r['works'], true) ?: [];
     $out = [];
-    foreach (brig_all("SELECT * FROM br_brigades WHERE status = 'active' AND test = ?", [(int)$r['test']]) as $b) {
+    foreach (brig_all("SELECT * FROM br_brigades WHERE status = 'active' AND demo = 0 AND test = ?", [(int)$r['test']]) as $b) {
         $specs = json_decode($b['specs'], true) ?: []; $dist = json_decode($b['districts'], true) ?: [];
         $cover = $works ? count(array_intersect($works, $specs)) / count($works) : 0;
         if (!in_array($r['district'], $dist, true) || $cover <= 0) { continue; }
@@ -176,7 +176,7 @@ if (($_SERVER['REQUEST_METHOD'] ?? '') === 'POST') {
             $ids = array_map('intval', (array)($_POST['bid'] ?? []));
             $n = 0;
             foreach ($ids as $bid) {
-                $b = brig_one("SELECT * FROM br_brigades WHERE id = ? AND status = 'active' AND test = ?", [$bid, (int)$r['test']]);
+                $b = brig_one("SELECT * FROM br_brigades WHERE id = ? AND status = 'active' AND demo = 0 AND test = ?", [$bid, (int)$r['test']]);
                 if (!$b) { continue; }
                 $inv = brig_one('SELECT * FROM br_invites WHERE request_id = ? AND brigade_id = ?', [$id, $bid]);
                 if ($inv && $inv['sent_at']) { continue; }

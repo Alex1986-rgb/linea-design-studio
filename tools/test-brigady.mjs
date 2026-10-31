@@ -315,6 +315,30 @@ try {
   ok(!cardB.text.includes('AggregateRating'), 'без отзывов — без AggregateRating');
   ok((await anon.req('GET', `/brigady/${B[2].slug}/`, { raw: true })).code === 404, 'бригада без допуска — 404');
 
+  step('14б. Демо-бригады: сид, плашка, noindex, без schema.org и значков; в подбор и приглашения не попадают; --purge');
+  const seed = (...a) => execFileSync('php', [path.join(ROOT, 'server/tools/seed-demo.php'), `--private=${PRIV}`, ...a], { env: { ...process.env, LINEA_PRIVATE: PRIV } }).toString();
+  ok(/новых демо-бригад 3/.test(seed()), 'сид: 3 демо-бригады');
+  ok(/новых демо-бригад 0/.test(seed()), 'повторный сид ничего не задваивает');
+  const kd = await anon.req('GET', '/brigady/', { raw: true });
+  const demoSlug = (kd.text.match(/href="\/brigady\/(primer-[a-z0-9-]+)\/"/) || [])[1];
+  ok(kd.text.includes('Пример страницы') && kd.text.includes('Вы бригада?') && !!demoSlug, 'каталог без настоящих бригад: образцы с плашкой и «Вы бригада?»');
+  ok(!kd.text.includes('application/ld+json') && /noindex/.test(kd.text), 'каталог-образец: noindex, без schema.org');
+  const dc = await anon.req('GET', `/brigady/${demoSlug}/`, { raw: true });
+  ok(dc.code === 200 && dc.text.includes('Пример карточки') && dc.text.includes('иллюстрация из проекта LINEA') && /noindex/.test(dc.text) && !dc.text.includes('ld+json'), 'демо-карточка: плашка, подписи иллюстраций, noindex, без schema.org');
+  ok(dc.text.includes('у примера нет') && !/ИНН проверен<\/td><td>да/.test(dc.text) && !dc.text.includes('k-stars'), 'у демо нет отметок проверки, рейтинга и отзывов');
+  ok(!(await anon.req('GET', '/brigady/sitemap.xml', { raw: true })).text.includes('primer-'), 'демо нет в sitemap');
+  const T2 = (await client.req('POST', '/api/brief.php?test=1', { form: { test: 1, json: JSON.stringify(BRIEF), brief: { file: path.join(FX, 'brief.zip'), type: 'application/zip' } } })).j.token;
+  const NUM2 = (await client.req('GET', `/api/order.php?t=${T2}`)).j.order.number;
+  const p2 = await admin.req('GET', `/api/admin.php?o=${NUM2}`, { raw: true });
+  await admin.req('POST', '/api/admin.php', { form: { csrf: adminCsrf(p2.text), act: 'amount', number: NUM2, rub: 100000, kind: 'kvartira', who: 'тест' }, raw: true });
+  await admin.req('POST', '/api/admin.php', { form: { csrf: adminCsrf(p2.text), act: 'paid', number: NUM2, who: 'тест' }, raw: true });
+  const c2 = actor('client2'); c2.csrf = (await c2.req('GET', `/api/remont.php?t=${T2}`)).j.csrf;
+  await c2.req('POST', `/api/remont.php?t=${T2}&a=request`, { json: { district: 'cao', consent: true } });
+  ok((await c2.req('POST', `/api/remont.php?t=${T2}&a=invite`, { json: { slug: demoSlug } })).code === 404, 'демо-бригаду нельзя пригласить в запрос');
+  ok((await anon.req('POST', '/api/brigade/auth.php?a=login', { json: { email: 'demo-otdelka@linea.invalid', password: 'x' } })).code === 401, 'в демо-аккаунт войти нельзя');
+  ok(/Демо удалено \(файлов: 1\d\)/.test(seed('--purge')), 'сид --purge удаляет демо с файлами');
+  ok(!(await anon.req('GET', '/brigady/', { raw: true })).text.includes('primer-'), 'после --purge образцов нет');
+
   step('15. Восстановление пароля, выход');
   const fg = await anon.req('POST', '/api/brigade/auth.php?a=forgot', { json: { email: 'brig1@example.test' } });
   const tok = (fg.j?.devLink || '').split('#reset=')[1];

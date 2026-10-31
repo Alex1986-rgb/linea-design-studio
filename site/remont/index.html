@@ -22,11 +22,20 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,500;0,600;1,500&family=Inter:wght@400;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="../css/main.css?v=34">
-<link rel="stylesheet" href="../css/brigady.css?v=1">
+<link rel="stylesheet" href="../css/brigady.css?v=2">
 <style>.g-steps{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:18px;margin:0;padding:0;list-style:none;counter-reset:st}
 .g-steps li{border:1px solid var(--line);border-radius:4px;padding:20px 22px;background:var(--panel);counter-increment:st}
 .g-steps li::before{content:counter(st,decimal-leading-zero);display:block;color:var(--gold);font-family:var(--serif);font-size:22px;margin-bottom:8px}
 .g-steps h3{margin:0 0 8px;font-size:18px}.g-steps p{margin:0;color:var(--mut);font-size:14px;line-height:1.55}
+.r-scheme{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin:0 0 8px;padding:0;list-style:none;counter-reset:rs}
+.r-scheme li{position:relative;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:16px 16px 14px;counter-increment:rs}
+.r-scheme li::before{content:counter(rs);display:inline-grid;place-items:center;width:28px;height:28px;border-radius:50%;border:1px solid var(--gold);color:var(--gold);font-family:var(--serif);margin-bottom:8px}
+.r-scheme li:not(:last-child)::after{content:'→';position:absolute;right:-12px;top:50%;transform:translateY(-50%);color:var(--gold);font-size:16px}
+.r-scheme b{display:block;font-size:16px;margin-bottom:4px}.r-scheme span{color:var(--mut);font-size:13.5px;line-height:1.5}
+.r-two{display:grid;grid-template-columns:1.1fr .9fr;gap:24px;align-items:start}
+.r-sheet{margin:0}.r-sheet img{width:100%;height:auto;border-radius:8px;border:1px solid var(--line);background:#fff;display:block}
+.r-sheet figcaption{color:var(--mut);font-size:13px;margin-top:8px;line-height:1.5}
+@media (max-width:860px){.r-scheme{grid-template-columns:1fr 1fr}.r-scheme li::after{display:none}.r-two{grid-template-columns:1fr}}
 .doc h2{font-family:var(--serif);font-weight:500;font-size:22px;margin:28px 0 10px}.doc p,.doc li{color:var(--mut);line-height:1.65}.doc li{margin:0 0 6px}</style><script type="application/ld+json">{"@context":"https://schema.org","@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"LINEA","item":"https://xn-----6kccjicviedfr1b2cbishm8w.xn--p1ai/"},{"@type":"ListItem","position":2,"name":"Ремонт по проекту","item":"https://xn-----6kccjicviedfr1b2cbishm8w.xn--p1ai/remont/"}]}</script>
 </head>
 <body>
@@ -71,21 +80,38 @@
 </section>
 
 <section class="blk"><div class="wrap">
+  <ol class="r-scheme" aria-label="Как идёт ремонт по проекту">
+  <li><b>Проект</b><span>альбом, ведомости, смета с объёмами</span></li>
+  <li><b>Выбор бригады</b><span>2–5 предложений по позициям сметы, договор подряда напрямую</span></li>
+  <li><b>Этапы с листами</b><span>фото этапов; не хватает узла — бригада просит лист голосом</span></li>
+  <li><b>Приёмка</b><span>чек-лист по СП 71/73 и ПУЭ, замечания, акт</span></li>
+</ol>
+</div></section>
+<section class="blk"><div class="wrap">
   <h2>Как это работает</h2>
   <ol class="g-steps"><li><h3>Проект</h3><p>Заказываете дизайн-проект: чертежи, ведомости и смета с объёмами по вашей квартире.</p></li><li><h3>«Подобрать бригаду»</h3><p>На странице заказа выбираете район и даёте согласие передать бригадам проект без имени, адреса и телефона.</p></li><li><h3>Предложения</h3><p>Проверенные бригады района отвечают в срок: цена по каждой позиции сметы, чьи материалы, график этапов, гарантия. Можно пригласить бригаду из <a href="../brigady/">каталога</a>.</p></li><li><h3>Выбор и договор</h3><p>Сравниваете 2–5 предложений в одной таблице и выбираете. Только тогда бригада видит ваши контакты. Договор подряда — напрямую с бригадой, шаблон с приложениями готовим мы.</p></li><li><h3>Этапы и приёмка</h3><p>Бригада выкладывает фото каждого этапа, вы принимаете по чек-листу или возвращаете с замечаниями. Скрытые работы — с актами до закрытия.</p></li></ol>
 </div></section>
+<section class="blk"><div class="wrap r-two">
+  <div><h2>Сравнение — по строкам вашей сметы</h2><div class="r-ex"><p class="k-demo">Пример на условных ценах — так клиент видит сравнение. Позиции и объёмы — из сметы проекта LINEA (квартира 64 м²), бригады — образцы.</p>
+<div class="bx-tbl-wrap"><table class="bx-tbl"><thead><tr><th>Позиция сметы</th><th class="r">Объём</th><th class="r">Бригада-пример А</th><th class="r">Бригада-пример Б</th></tr></thead><tbody>
+<tr><td>Демонтаж отделки стен до основания</td><td class="r">174,9 м²</td><td class="r">54 219 ₽</td><td class="r best">50 721 ₽</td></tr><tr><td>Штукатурка стен по маякам, до 10 мм</td><td class="r">174,9 м²</td><td class="r best">97 944 ₽</td><td class="r">103 191 ₽</td></tr><tr><td>Прокладка кабеля ВВГнг(А)-LS по группам щита</td><td class="r">548 м</td><td class="r best">35 620 ₽</td><td class="r">38 360 ₽</td></tr><tr><td>Гидроизоляция обмазочная, 2 слоя</td><td class="r">11 м²</td><td class="r">5 280 ₽</td><td class="r"><span class="bx-mut">не делает</span></td></tr><tr><td>Облицовка стен керамогранитом 600×1200</td><td class="r">16,9 м²</td><td class="r">43 940 ₽</td><td class="r best">41 405 ₽</td></tr><tr><td>Шпаклёвка стен под окраску, Q3</td><td class="r">153,4 м²</td><td class="r">119 652 ₽</td><td class="r best">110 448 ₽</td></tr>
+</tbody><tfoot><tr><td>Итого по этим позициям</td><td></td><td class="r">356 655 ₽</td><td class="r">344 125 ₽</td></tr></tfoot></table></div>
+<p class="hint">Зелёным — меньшая цена по строке. «Не делает» видно сразу: такую работу вы поручите другому исполнителю, а не узнаете о ней в середине ремонта.</p></div></div>
+  <div><h2>Лист — когда он нужен на объекте</h2><figure class="r-sheet"><a href="../assets/brigady-demo/list-po-zaprosu-rozetki-1200.jpg" target="_blank" rel="noopener"><img src="../assets/brigady-demo/list-po-zaprosu-rozetki-1200.jpg" alt="Лист по запросу бригады: привязки электроточек и выводов ВК, стена Г кухни-гостиной" width="1200" height="848" loading="lazy"></a>
+<figcaption>Пример листа по запросу: бригада на объекте попросила «привязки розеток и выводов над столешницей, стена Г кухни» — лист выпустил движок проекта по модели квартиры (проект LINEA prompt-kv54; пометка «ПРЕДВАРИТЕЛЬНО» — пока по объекту открыты вопросы).</figcaption></figure></div>
+</div></section>
 <section class="blk"><div class="wrap" style="max-width:860px">
-  <h2>Что мы гарантируем и чего не делаем</h2>
+  <h2>Как устроено и кто за что отвечает</h2>
   <ul class="doc" style="padding-left:18px">
-    <li><b>Бригады проверены.</b> ИНН — по базе ФНС (самозанятый, ИП или ООО), видеозвонок с бригадиром, портфолио «до/после» не меньше трёх объектов. Сканы паспортов не собираем и не храним.</li>
+    <li><b>Что проверяем у бригады.</b> ИНН — по базе ФНС (самозанятый, ИП или ООО), видеозвонок с бригадиром, портфолио «до/после» не меньше трёх объектов. Сканы паспортов не собираем и не храним.</li>
     <li><b>Одна смета для всех.</b> Бригады оценивают те же позиции и объёмы из вашего проекта — разница в цене видна по строкам, а «забытые» работы — отмечены как «не делаем».</li>
     <li><b>Ваши данные — после выбора.</b> До выбора бригады видят только район, площадь и проект без персональных данных.</li>
     <li><b>Чертежи по ходу работ.</b> Бригада может попросить лист к узлу или стене прямо на объекте — лист выпускает тот же движок, что и проект.</li>
     <li><b>Отзывы — только настоящие.</b> Оставить отзыв может только клиент, чей объект бригада сдала через сервис. Скрываем отзывы лишь по правилам площадки и с причиной.</li>
-    <li><b>Мы не подрядчик.</b> Договор подряда — между вами и бригадой; деньги за ремонт идут бригаде напрямую, по этапам. За качество работ отвечает бригада по договору и закону; мы помогаем сверять работу с проектом и разбирать споры.</li>
+    <li><b>LINEA не исполнитель работ.</b> Договор подряда — между вами и бригадой; деньги за ремонт идут бригаде напрямую, по этапам. За качество, сроки и безопасность работ отвечает бригада по договору и закону. Мы не ведём технадзор и не принимаем этапы за вас: даём чек-листы, помогаем сверить работу с проектом и разобрать спор.</li>
     <li><b>Для вас подбор бесплатный.</b> Бригада платит студии агентское вознаграждение 7 % от своей сметы, когда вы её выбрали и подписали договор. Это вознаграждение бригада закладывает в свою цену, как и любые расходы на поиск заказов.</li>
   </ul>
-  <p class="hint">Подробно — <a href="usloviya/">условия сервиса для клиентов</a> (редакция от 31.10.2026, проект).</p>
+  <p class="hint">Подробно — <a href="usloviya/">условия сервиса для клиентов</a> (редакция от 31.10.2026, проект). Реквизиты выбранной бригады (наименование или ФИО, статус, ИНН) вы видите до выбора — в таблице сравнения.</p>
   <div class="cta-row" style="margin-top:22px"><a class="btn" href="../brief.html">Заказать проект</a> <a class="btn ghost" href="../brigady/">Бригады</a></div>
 </div></section>
 

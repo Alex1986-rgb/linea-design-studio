@@ -22,12 +22,21 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,500;0,600;1,500&family=Inter:wght@400;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="../../css/main.css?v=34">
-<link rel="stylesheet" href="../../css/brigady.css?v=1">
+<link rel="stylesheet" href="../../css/brigady.css?v=2">
 <meta name="robots" content="noindex, nofollow">
 <style>.g-steps{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:18px;margin:0;padding:0;list-style:none;counter-reset:st}
 .g-steps li{border:1px solid var(--line);border-radius:4px;padding:20px 22px;background:var(--panel);counter-increment:st}
 .g-steps li::before{content:counter(st,decimal-leading-zero);display:block;color:var(--gold);font-family:var(--serif);font-size:22px;margin-bottom:8px}
 .g-steps h3{margin:0 0 8px;font-size:18px}.g-steps p{margin:0;color:var(--mut);font-size:14px;line-height:1.55}
+.r-scheme{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin:0 0 8px;padding:0;list-style:none;counter-reset:rs}
+.r-scheme li{position:relative;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:16px 16px 14px;counter-increment:rs}
+.r-scheme li::before{content:counter(rs);display:inline-grid;place-items:center;width:28px;height:28px;border-radius:50%;border:1px solid var(--gold);color:var(--gold);font-family:var(--serif);margin-bottom:8px}
+.r-scheme li:not(:last-child)::after{content:'→';position:absolute;right:-12px;top:50%;transform:translateY(-50%);color:var(--gold);font-size:16px}
+.r-scheme b{display:block;font-size:16px;margin-bottom:4px}.r-scheme span{color:var(--mut);font-size:13.5px;line-height:1.5}
+.r-two{display:grid;grid-template-columns:1.1fr .9fr;gap:24px;align-items:start}
+.r-sheet{margin:0}.r-sheet img{width:100%;height:auto;border-radius:8px;border:1px solid var(--line);background:#fff;display:block}
+.r-sheet figcaption{color:var(--mut);font-size:13px;margin-top:8px;line-height:1.5}
+@media (max-width:860px){.r-scheme{grid-template-columns:1fr 1fr}.r-scheme li::after{display:none}.r-two{grid-template-columns:1fr}}
 .doc h2{font-family:var(--serif);font-weight:500;font-size:22px;margin:28px 0 10px}.doc p,.doc li{color:var(--mut);line-height:1.65}.doc li{margin:0 0 6px}</style>
 </head>
 <body>
@@ -74,8 +83,8 @@
 <section class="blk"><div class="wrap doc" style="max-width:860px"><p class="bx-note"><b>Редакция от 31.10.2026, проект.</b> Условия сервиса «Ремонт по проекту» для заказчиков дизайн-проекта. До проверки юристом и указания реквизитов студии документ публичной офертой не является; действующей считается редакция, принятая в кабинете (дата и редакция фиксируются при регистрации).</p>
   <h2>1. Что это</h2><p>Сервис доступен заказчику оплаченного дизайн-проекта LINEA на странице заказа. Студия передаёт обезличенный проект бригадам, допущенным на площадку, собирает их предложения и ведёт этапы ремонта на странице заказа. Подбор бесплатен для заказчика и необязателен.</p>
   <h2>2. Какие данные передаём</h2><p>До выбора бригады — только район, площадь, состав работ, позиции сметы с объёмами, ведомости и листы альбома без имени, адреса, телефона и почты заказчика (основание — отдельное согласие при нажатии «Подобрать бригаду»). После выбора — имя, телефон, почта и адрес объекта выбранной бригаде (основание — отдельное согласие при выборе). Остальным бригадам контакты не передаются.</p>
-  <h2>3. Договор подряда</h2><p>Договор заключается напрямую между заказчиком и бригадой. Студия предоставляет шаблон с приложениями (проект, смета по позициям бригады, график этапов, порядок приёмки), но стороной договора не является, денег за ремонт не принимает и за работы бригады не отвечает. Ответственность бригады — по договору, ГК РФ и Закону «О защите прав потребителей».</p>
-  <h2>4. Этапы и приёмка</h2><p>Бригада отмечает этап готовым и прикладывает фото; заказчик принимает этап по чек-листу или возвращает с замечаниями. Скрытые работы закрываются после акта освидетельствования (СП 71.13330.2017, п. 4.6). Отметки на сайте — запись хода работ, а не замена актов и подписей по договору.</p>
+  <h2>3. Договор подряда</h2><p>Договор заключается напрямую между заказчиком и бригадой. Студия предоставляет образец договора с приложениями (проект, смета по позициям бригады, график этапов, порядок приёмки) — стороны вправе его менять. Студия не является исполнителем работ и стороной договора, денег за ремонт не принимает; ответственность за качество, сроки и безопасность работ несёт подрядчик. До выбора заказчик видит сведения о бригаде: наименование или ФИО, статус (самозанятый, ИП, ООО), ИНН и что проверено студией. Ответственность бригады — по договору, ГК РФ и Закону «О защите прав потребителей».</p>
+  <h2>4. Этапы и приёмка</h2><p>Студия не ведёт технадзор и не принимает этапы за заказчика. Бригада отмечает этап готовым и прикладывает фото; заказчик принимает этап по чек-листу или возвращает с замечаниями. Скрытые работы закрываются после акта освидетельствования (СП 71.13330.2017, п. 4.6). Отметки на сайте — запись хода работ, а не замена актов и подписей по договору.</p>
   <h2>5. Отзывы</h2><p>Отзыв оставляет только заказчик завершённого объекта, один раз. Студия не правит текст отзыва и скрывает его только по основаниям раздела 7 <a href="../../brigadam/pravila/">правил площадки</a>, с указанием причины.</p>
   <h2>6. Споры</h2><p>Спор открывается на странице заказа; студия ведёт переписку, сверяет работы с проектом и предлагает решение, обязательное для сторон только по их согласию. Права заказчика как потребителя этим не ограничиваются.</p>
   <h2>7. Вознаграждение студии</h2><p>Студия получает от бригады агентское вознаграждение 7 % от суммы её сметы по выбранному предложению — после выбора и подписания договора подряда. С заказчика за подбор плата не берётся.</p>
