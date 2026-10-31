@@ -1,0 +1,124 @@
+{
+  "format": "linea-survey/1",
+  "meta": {
+    "object": "Квартира 2-комн., пример обмера",
+    "address": "г. Москва, ул. Примерная, д. 1, кв. 1 (пример)",
+    "order": "",
+    "example": true
+  },
+  "survey": {
+    "by": "Кырлан А.С.",
+    "date": "31.10.2026",
+    "started": "10:05",
+    "finished": "11:25",
+    "tool": "лазерная рулетка Bosch GLM 50-27 C, рулетка 5 м, уровень 2 м, манометр 0–10 бар",
+    "orientation": "стена A — верх эскиза (окна гостиной и спальни), вход в квартиру — стена C прихожей",
+    "note": "пример для проверки конвертера: размеры условные"
+  },
+  "object": {
+    "type": "квартира",
+    "floor": 7,
+    "floors": 17,
+    "areaDocs": null,
+    "house": { "kind": "panel", "series": "", "year": null, "source": "words", "note": "со слов заказчика; проект дома не передан" },
+    "water": { "staticPressureBar": 3.8, "measuredAt": "r4", "how": "манометр на кран смесителя ванны, вода не разбиралась", "inletRoom": "r4", "meters": true },
+    "power": { "room": "r3", "at": { "C": 0, "D": 250 }, "h": 1700, "inputBreaker": { "amps": 25, "curve": "C", "poles": 1 }, "rcdInput": false, "modules": 12, "used": 8, "allowedPowerKw": null, "tu": false, "photo": "31" },
+    "lowCurrent": { "room": "r3", "note": "оптика провайдера заведена в прихожую над дверью" }
+  },
+  "rooms": [
+    {
+      "id": "r1", "name": "Гостиная", "type": "living",
+      "place": { "x": 0, "y": 0 },
+      "walls": {
+        "A": { "bottom": 3480, "top": 3478, "t": 300, "side": "outside", "material": "бетон", "how": "проект" , "photo": "1" },
+        "B": { "bottom": 4980, "top": 4982, "t": 120, "side": "room", "material": "бетон", "how": "простукивание", "photo": "2" },
+        "C": { "bottom": 3482, "top": 3480, "t": 120, "side": "room", "material": "пазогребень", "how": "простукивание", "photo": "3" },
+        "D": { "bottom": 4978, "top": 4980, "t": 180, "side": "flat", "material": "бетон", "how": "простукивание", "photo": "4" }
+      },
+      "diagonals": [6074, 6077],
+      "heights": [2642, 2645, 2639],
+      "openings": [
+        { "kind": "window", "wall": "A", "offset": 1040, "width": 1400, "height": 1500, "sill": 850, "reveal": 160, "quarter": 50, "wallT": 300, "photo": "5" }
+      ],
+      "radiators": [ { "wall": "A", "offset": 1140, "width": 1200, "height": 500, "depth": 100, "floorGap": 100, "wallGap": 50, "sections": 12, "kind": "чугунный МС-140", "connect": "side", "airVent": true, "thermoHead": false, "photo": "5" } ],
+      "photos": ["1", "2", "3", "4", "5"]
+    },
+    {
+      "id": "r2", "name": "Спальня", "type": "bedroom",
+      "place": { "from": "r1", "side": "B", "shift": 0 },
+      "walls": {
+        "A": { "bottom": 3480, "top": 3479, "t": 300, "side": "outside", "material": "бетон", "how": "проект", "photo": "6" },
+        "B": { "bottom": 4980, "top": 4980, "t": 180, "side": "flat", "material": "бетон", "how": "простукивание", "photo": "7" },
+        "C": { "bottom": 3480, "top": 3481, "t": 120, "side": "room", "material": "пазогребень", "how": "простукивание", "photo": "8" },
+        "D": { "bottom": 4980, "top": 4982, "t": 120, "side": "room", "material": "бетон", "how": "простукивание", "photo": "9" }
+      },
+      "diagonals": [6075, 6076],
+      "heights": [2640, 2644, 2641],
+      "openings": [
+        { "kind": "window", "wall": "A", "offset": 1040, "width": 1400, "height": 1500, "sill": 850, "reveal": 160, "quarter": 50, "wallT": 300, "photo": "10" }
+      ],
+      "radiators": [ { "wall": "A", "offset": 1140, "width": 1200, "height": 500, "depth": 100, "floorGap": 100, "wallGap": 50, "sections": 12, "kind": "чугунный МС-140", "connect": "side", "airVent": true, "thermoHead": false, "photo": "5" } ],
+      "photos": ["6", "7", "8", "9", "10"]
+    },
+    {
+      "id": "r3", "name": "Прихожая", "type": "hall",
+      "place": { "from": "r1", "side": "C", "shift": 1600 },
+      "walls": {
+        "A": { "bottom": 2980, "top": 2978, "t": 120, "side": "room", "material": "пазогребень", "how": "простукивание", "photo": "11" },
+        "B": { "bottom": 3280, "top": 3280, "t": 120, "side": "room", "material": "пазогребень", "how": "простукивание", "photo": "12" },
+        "C": { "bottom": 2980, "top": 2981, "t": 180, "side": "stair", "material": "бетон", "how": "простукивание", "photo": "13" },
+        "D": { "bottom": 3280, "top": 3279, "t": 120, "side": "room", "material": "пазогребень", "how": "простукивание", "photo": "14" }
+      },
+      "diagonals": [4431, 4433],
+      "heights": [2638, 2640, 2641],
+      "openings": [
+        { "kind": "door", "wall": "C", "offset": 1000, "width": 960, "height": 2070, "wallT": 180, "entry": true, "swing": "start", "photo": "15" },
+        { "kind": "door", "wall": "A", "offset": 600, "width": 800, "height": 2050, "wallT": 120, "photo": "16" },
+        { "kind": "door", "wall": "A", "offset": 2100, "width": 800, "height": 2050, "wallT": 120, "photo": "17" },
+        { "kind": "door", "wall": "D", "offset": 1600, "width": 700, "height": 2050, "wallT": 120, "photo": "18" },
+        { "kind": "door", "wall": "B", "offset": 1500, "width": 800, "height": 2050, "wallT": 120, "photo": "19" }
+      ],
+      "photos": ["11", "12", "13", "14", "15", "16", "17", "18", "19", "31"]
+    },
+    {
+      "id": "r4", "name": "Санузел", "type": "bathroom",
+      "place": { "from": "r3", "side": "D", "shift": 0 },
+      "floorStep": -20,
+      "walls": {
+        "A": { "bottom": 1480, "top": 1478, "t": 120, "side": "room", "material": "пазогребень", "how": "простукивание", "photo": "20" },
+        "B": { "bottom": 3280, "top": 3281, "t": 120, "side": "room", "material": "пазогребень", "how": "простукивание", "photo": "21" },
+        "C": { "bottom": 1480, "top": 1480, "t": 180, "side": "flat", "material": "бетон", "how": "простукивание", "photo": "22" },
+        "D": { "bottom": 3280, "top": 3280, "t": 180, "side": "flat", "material": "бетон", "how": "простукивание", "photo": "23" }
+      },
+      "diagonals": [3598, 3600],
+      "heights": [2618, 2620, 2622],
+      "openings": [],
+      "risers": [
+        { "kind": "sewer", "d": 110, "at": { "A": 160, "D": 200 }, "material": "чугун", "photo": "24" },
+        { "kind": "cold", "d": 32, "at": { "A": 120, "D": 380 }, "valve": true, "meter": true, "meterH": 600, "material": "сталь", "photo": "25" },
+        { "kind": "hot", "d": 32, "at": { "A": 120, "D": 480 }, "valve": true, "meter": true, "meterH": 600, "material": "сталь", "photo": "25" }
+      ],
+      "vents": [ { "wall": "D", "offset": 2900, "w": 150, "l": 150, "h": 2400, "box": false, "draft": "есть", "photo": "26" } ],
+      "photos": ["20", "21", "22", "23", "24", "25", "26"]
+    },
+    {
+      "id": "r5", "name": "Кухня", "type": "kitchen",
+      "place": { "from": "r3", "side": "B", "shift": 0 },
+      "walls": {
+        "A": { "bottom": 2380, "top": 2380, "t": 120, "side": "room", "material": "пазогребень", "how": "простукивание", "photo": "27" },
+        "B": { "bottom": 3280, "top": 3278, "t": 180, "side": "flat", "material": "бетон", "how": "простукивание", "photo": "28" },
+        "C": { "bottom": 2380, "top": 2379, "t": 300, "side": "outside", "material": "бетон", "how": "проект", "photo": "29" },
+        "D": { "bottom": 3280, "top": 3280, "t": 120, "side": "room", "material": "пазогребень", "how": "простукивание", "photo": "30" }
+      },
+      "diagonals": [4052, 4053],
+      "heights": [2641, 2643, 2640],
+      "openings": [
+        { "kind": "window", "wall": "C", "offset": 590, "width": 1200, "height": 1450, "sill": 900, "reveal": 160, "quarter": 50, "wallT": 300, "photo": "32" }
+      ],
+      "radiators": [ { "wall": "C", "offset": 690, "width": 1000, "height": 500, "depth": 100, "floorGap": 100, "wallGap": 50, "sections": 10, "kind": "чугунный МС-140", "connect": "side", "airVent": true, "thermoHead": false, "photo": "32" } ],
+      "vents": [ { "wall": "B", "offset": 300, "w": 150, "l": 150, "h": 2400, "box": false, "draft": "есть", "photo": "33" } ],
+      "stove": "electric",
+      "photos": ["27", "28", "29", "30", "32", "33"]
+    }
+  ]
+}

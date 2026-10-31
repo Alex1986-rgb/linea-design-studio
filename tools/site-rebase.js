@@ -97,7 +97,8 @@ let intakeFiles = 0, intakeHits = 0;
 })(out);
 
 // 2б. Приёмник: страницам с отправкой говорим, где api (brief.js / review.js / order.js без меты работают по-старому — WhatsApp/почта)
-const API_PAGES = ['brief.html', 'review.html', 'order.html'];
+// obmer/ — форма обмера (служебная, noindex): страница в подпапке, поэтому путь к api на уровень выше
+const API_PAGES = ['brief.html', 'review.html', 'order.html', 'obmer/index.html'];
 let apiPages = 0;
 if (withApi) for (const f of API_PAGES) {
   const p = path.join(out, f);
@@ -105,7 +106,8 @@ if (withApi) for (const f of API_PAGES) {
   const s = fs.readFileSync(p, 'utf8');
   if (s.includes('name="linea-api"')) continue;
   const st = fs.statSync(p);
-  fs.writeFileSync(p, s.replace('</head>', '<meta name="linea-api" content="api/">\n</head>'));
+  const prefix = '../'.repeat(f.split('/').length - 1);
+  fs.writeFileSync(p, s.replace('</head>', `<meta name="linea-api" content="${prefix}api/">\n</head>`));
   fs.utimesSync(p, st.atime, st.mtime);
   apiPages++;
 }

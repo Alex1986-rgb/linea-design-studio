@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<title>Замерный лист — LINEA</title>
+<!-- Источник печатного замерного листа A4 (docs/obmer/zamernyj-list.pdf), пересборка:
+     "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome" --headless=new --no-pdf-header-footer \
+       --print-to-pdf=docs/obmer/zamernyj-list.pdf file://$PWD/docs/obmer/zamernyj-list.html
+     Поля листа совпадают с формой site/obmer/ и форматом linea-survey/1 (docs/obmer/format.md). -->
+<style>
+@page { size: A4; margin: 9mm 9mm 9mm 12mm; }
+* { box-sizing: border-box; }
+html { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+body { margin: 0; font: 8.6pt/1.25 "Helvetica Neue", Arial, sans-serif; color: #111; }
+.page { width: 189mm; height: 278mm; position: relative; page-break-after: always; overflow: hidden; }
+.page:last-child { page-break-after: auto; }
+h1 { font-size: 13pt; margin: 0 0 1.5mm; }
+h2 { font-size: 9.5pt; margin: 2.2mm 0 1mm; text-transform: uppercase; letter-spacing: .03em; }
+.top { display: flex; justify-content: space-between; align-items: baseline; border-bottom: .5mm solid #111; padding-bottom: 1mm; margin-bottom: 1.5mm; }
+.top small { font-size: 7.2pt; color: #444; max-width: 62%; text-align: right; }
+.top h1 { white-space: nowrap; }
+table { border-collapse: collapse; width: 100%; }
+td, th { border: .2mm solid #555; padding: .4mm 1mm; height: 5.6mm; vertical-align: middle; }
+th { font-weight: 600; font-size: 7.4pt; background: #eee; text-align: center; line-height: 1.1; }
+td.l { width: 33mm; font-size: 7.6pt; color: #333; background: #f6f6f6; }
+.kv td { height: 6mm; }
+.grid { border: .3mm solid #333; background-image: linear-gradient(to bottom, #c4c4c4 0, #c4c4c4 1px, transparent 1px), linear-gradient(to right, #c4c4c4 0, #c4c4c4 1px, transparent 1px);
+  background-size: 5mm 5mm; position: relative; }
+.grid .ori { position: absolute; left: 50%; top: 1mm; transform: translateX(-50%); font-weight: 700; font-size: 8pt; background: #fff; padding: 0 1.5mm; }
+.grid .ori.c { top: auto; bottom: 1mm; } .grid .ori.b { left: auto; right: 1mm; top: 50%; transform: none; } .grid .ori.d { left: 1mm; top: 50%; transform: none; }
+.two { display: grid; grid-template-columns: 1fr 1fr; gap: 3mm; }
+.hint { font-size: 7.2pt; color: #333; margin: .6mm 0; }
+.ck { display: inline-block; width: 3mm; height: 3mm; border: .25mm solid #222; vertical-align: -.4mm; margin-right: 1mm; }
+ul.cl { list-style: none; padding: 0; margin: 0; columns: 2; column-gap: 6mm; }
+ul.cl li { margin: 0 0 1.4mm; break-inside: avoid; padding-left: 4.5mm; text-indent: -4.5mm; }
+.foot { position: absolute; bottom: 0; left: 0; right: 0; font-size: 6.8pt; color: #555; border-top: .2mm solid #999; padding-top: .8mm; display: flex; justify-content: space-between; }
+.w { width: 11mm; }
+</style>
+</head>
+<body>
+
+<!-- ───────────── Лист 1: объект, узлы, эскиз квартиры ───────────── -->
+<section class="page">
+  <div class="top"><h1>Замерный лист · квартира</h1><small>LINEA · все размеры в мм · стены A верх / B право / C низ / D лево — одной ориентацией на всю квартиру</small></div>
+  <div class="two">
+    <table class="kv">
+      <tr><td class="l">Адрес</td><td></td></tr>
+      <tr><td class="l">Заказ / объект</td><td></td></tr>
+      <tr><td class="l">Кто мерил (Ф. И. О.)</td><td></td></tr>
+      <tr><td class="l">Дата · начало–конец</td><td>&nbsp;&nbsp;.&nbsp;&nbsp;&nbsp;.20&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;:&nbsp;&nbsp;&nbsp;&nbsp;–&nbsp;&nbsp;&nbsp;&nbsp;:</td></tr>
+      <tr><td class="l">Инструмент</td><td></td></tr>
+      <tr><td class="l">Этаж / этажей в доме</td><td>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;/</td></tr>
+      <tr><td class="l">Площадь по документам</td><td style="text-align:right">м²</td></tr>
+    </table>
+    <table class="kv">
+      <tr><td class="l">Тип дома</td><td><span class="ck"></span>панель <span class="ck"></span>кирпич <span class="ck"></span>монолит <span class="ck"></span>блок</td></tr>
+      <tr><td class="l">Серия · год</td><td></td></tr>
+      <tr><td class="l">Откуда известно</td><td><span class="ck"></span>проект/БТИ <span class="ck"></span>со слов <span class="ck"></span>по виду</td></tr>
+      <tr><td class="l">Давление ХВС (манометр)</td><td style="text-align:right">бар · где:&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</td></tr>
+      <tr><td class="l">Ввод воды, счётчики</td><td>пом. №&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; <span class="ck"></span>счётчики · фото №</td></tr>
+      <tr><td class="l">Электрощит: где · низ</td><td>пом. №&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; от ст.&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; от ст.&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; h</td></tr>
+      <tr><td class="l">Вводной автомат · модули</td><td>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;А, хар.&nbsp;&nbsp;&nbsp;&nbsp; · мест&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; занято&nbsp;&nbsp;&nbsp;&nbsp; <span class="ck"></span>УЗО на вводе</td></tr>
+      <tr><td class="l">ТУ на мощность</td><td><span class="ck"></span>есть:&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;кВт&nbsp;&nbsp;&nbsp;<span class="ck"></span>нет (не пишем мощность)</td></tr>
+    </table>
+  </div>
+  <h2>Эскиз квартиры (клетка 5 мм) · номера помещений по обходу от входа по часовой стрелке</h2>
+  <div class="grid" style="height:178mm"><span class="ori">A ↑ верх</span><span class="ori b">B →</span><span class="ori c">C ↓</span><span class="ori d">← D</span></div>
+  <p class="hint">На эскизе: номер помещения, вход в квартиру, окна, стояки (К1, В1, Т3), вентканалы (ВК), щит (Щ), радиаторы (Р), балки и короба пунктиром. Помещение рядом с уже снятым: «за стеной __ помещения №__, сдвиг __ мм».</p>
+  <div class="foot"><span>Лист 1 · объект и узлы</span><span>Подпись замерщика ____________________</span></div>
+</section>
+
+<!-- ───────────── Лист помещения (печатать по числу помещений) ───────────── -->
+<section class="page">
+  <div class="top"><h1>Помещение № ____ · ________________________</h1><small>тип: прихожая · коридор · комната · кухня · санузел · ванная · кладовая · балкон / лоджия</small></div>
+  <table class="kv" style="margin-bottom:1.5mm"><tr><td class="l">Положение на плане</td><td>за стеной <b>A B C D</b> помещения № ____, сдвиг вдоль этой стены ______ мм (от её левого / верхнего угла) · первое помещение — начало плана</td></tr></table>
+  <h2>Стены (в чистоте, от угла до угла)</h2>
+  <table>
+    <tr><th class="w">Стена</th><th>по низу</th><th>по верху</th><th>толщина</th><th>за стеной<br><span style="font-weight:400">пом. / улица / соседи / МОП</span></th><th>материал<br><span style="font-weight:400">бетон / кирпич / блок / ПГП / ГКЛ</span></th><th>как понял<br><span style="font-weight:400">стук / проём / проект</span></th><th>фото №</th></tr>
+    <tr><th>A</th><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr>
+    <tr><th>B</th><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr>
+    <tr><th>C</th><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr>
+    <tr><th>D</th><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr>
+  </table>
+  <table style="margin-top:1.5mm"><tr><th>Диагональ 1</th><th>Диагональ 2</th><th>Высота: центр</th><th>у окна</th><th>у двери</th><th>Перепад пола (ниже — «−»)</th></tr><tr><td></td><td></td><td></td><td></td><td></td><td></td></tr></table>
+  <p class="hint">Проверка на месте: A ≈ C и B ≈ D (до 10 мм); диагонали между собой до 5 мм; √(ширина² + длина²) ≈ средней диагонали (до 1 %). Не сошлось — перемерить сейчас.</p>
+  <h2>Проёмы (отступ — от левого угла для A, C и от верхнего для B, D до края проёма)</h2>
+  <table>
+    <tr><th>Тип<br><span style="font-weight:400">окно / дверь / проём / балк.</span></th><th class="w">Стена</th><th>от угла</th><th>ширина</th><th>высота</th><th>подоконник</th><th>откос</th><th>четверть</th><th>толщ. стены</th><th>петли / вход</th><th>фото №</th></tr>
+    <tr><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr>
+    <tr><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr>
+    <tr><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr>
+    <tr><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr>
+  </table>
+  <h2>Стояки (до оси от двух стен) · вентканалы · радиаторы</h2>
+  <table>
+    <tr><th>Стояк<br><span style="font-weight:400">К1 / В1 / Т3 / отоп. / газ</span></th><th>Ø</th><th>от ст. B/D</th><th>от ст. A/C</th><th>материал</th><th>кран</th><th>счётчик, h от пола</th><th>фото №</th></tr>
+    <tr><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr>
+    <tr><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr>
+    <tr><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr>
+  </table>
+  <table style="margin-top:1.5mm">
+    <tr><th>Вентканал: стена</th><th>до центра от угла</th><th>высота центра</th><th>отверстие ш × глуб.</th><th>короб?</th><th>тяга</th><th>фото №</th></tr>
+    <tr><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr>
+  </table>
+  <table style="margin-top:1.5mm">
+    <tr><th>Радиатор: стена</th><th>от угла</th><th>ширина</th><th>высота</th><th>глубина</th><th>от пола</th><th>от стены</th><th>секций, тип</th><th>подкл. бок/низ</th><th>Маевский / термоголовка</th><th>фото</th></tr>
+    <tr><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr>
+    <tr><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr>
+  </table>
+  <div class="two" style="margin-top:2mm;grid-template-columns:1.2fr 1fr">
+    <div><h2 style="margin-top:0">Эскиз помещения</h2><div class="grid" style="height:56mm"><span class="ori">A ↑</span><span class="ori b">B</span><span class="ori c">C</span><span class="ori d">D</span></div></div>
+    <div><h2 style="margin-top:0">Фото № · особенности</h2>
+      <table><tr><td style="height:9mm">Фото: стены</td></tr><tr><td style="height:9mm">Фото: узлы</td></tr><tr><td style="height:36mm;vertical-align:top">Балки, ниши, короба, трещины, сырость, плита (эл. / газ):</td></tr></table></div>
+  </div>
+  <div class="foot"><span>Лист помещения · печатать по числу помещений</span><span>Проверено на месте <span class="ck"></span></span></div>
+</section>
+
+<!-- ───────────── Лист помещения, второй экземпляр (двусторонняя печать) ───────────── -->
+<section class="page">
+  <div class="top"><h1>Помещение № ____ · ________________________</h1><small>тип: прихожая · коридор · комната · кухня · санузел · ванная · кладовая · балкон / лоджия</small></div>
+  <table class="kv" style="margin-bottom:1.5mm"><tr><td class="l">Положение на плане</td><td>за стеной <b>A B C D</b> помещения № ____, сдвиг вдоль этой стены ______ мм (от её левого / верхнего угла)</td></tr></table>
+  <h2>Стены (в чистоте, от угла до угла)</h2>
+  <table>
+    <tr><th class="w">Стена</th><th>по низу</th><th>по верху</th><th>толщина</th><th>за стеной<br><span style="font-weight:400">пом. / улица / соседи / МОП</span></th><th>материал<br><span style="font-weight:400">бетон / кирпич / блок / ПГП / ГКЛ</span></th><th>как понял<br><span style="font-weight:400">стук / проём / проект</span></th><th>фото №</th></tr>
+    <tr><th>A</th><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr>
+    <tr><th>B</th><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr>
+    <tr><th>C</th><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr>
+    <tr><th>D</th><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr>
+  </table>
+  <table style="margin-top:1.5mm"><tr><th>Диагональ 1</th><th>Диагональ 2</th><th>Высота: центр</th><th>у окна</th><th>у двери</th><th>Перепад пола (ниже — «−»)</th></tr><tr><td></td><td></td><td></td><td></td><td></td><td></td></tr></table>
+  <h2>Проёмы</h2>
+  <table>
+    <tr><th>Тип</th><th class="w">Стена</th><th>от угла</th><th>ширина</th><th>высота</th><th>подоконник</th><th>откос</th><th>четверть</th><th>толщ. стены</th><th>петли / вход</th><th>фото №</th></tr>
+    <tr><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr>
+    <tr><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr>
+    <tr><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr>
+    <tr><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr>
+  </table>
+  <h2>Стояки · вентканалы · радиаторы</h2>
+  <table>
+    <tr><th>Стояк</th><th>Ø</th><th>от ст. B/D</th><th>от ст. A/C</th><th>материал</th><th>кран</th><th>счётчик, h от пола</th><th>фото №</th></tr>
+    <tr><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr>
+    <tr><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr>
+    <tr><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr>
+  </table>
+  <table style="margin-top:1.5mm">
+    <tr><th>Вентканал: стена</th><th>до центра от угла</th><th>высота центра</th><th>отверстие ш × глуб.</th><th>короб?</th><th>тяга</th><th>фото №</th></tr>
+    <tr><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr>
+  </table>
+  <table style="margin-top:1.5mm">
+    <tr><th>Радиатор: стена</th><th>от угла</th><th>ширина</th><th>высота</th><th>глубина</th><th>от пола</th><th>от стены</th><th>секций, тип</th><th>подкл. бок/низ</th><th>Маевский / термоголовка</th><th>фото</th></tr>
+    <tr><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr>
+    <tr><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr>
+  </table>
+  <div class="two" style="margin-top:2mm;grid-template-columns:1.2fr 1fr">
+    <div><h2 style="margin-top:0">Эскиз помещения</h2><div class="grid" style="height:62mm"><span class="ori">A ↑</span><span class="ori b">B</span><span class="ori c">C</span><span class="ori d">D</span></div></div>
+    <div><h2 style="margin-top:0">Фото № · особенности</h2>
+      <table><tr><td style="height:9mm">Фото: стены</td></tr><tr><td style="height:9mm">Фото: узлы</td></tr><tr><td style="height:42mm;vertical-align:top">Балки, ниши, короба, трещины, сырость, плита (эл. / газ):</td></tr></table></div>
+  </div>
+  <div class="foot"><span>Лист помещения · печатать по числу помещений</span><span>Проверено на месте <span class="ck"></span></span></div>
+</section>
+
+<!-- ───────────── Последний лист: «ничего не забыл» ───────────── -->
+<section class="page">
+  <div class="top"><h1>Перед уходом с объекта: ничего не забыл</h1><small>отметить каждый пункт; «нет» — записать причину</small></div>
+  <ul class="cl">
+    <li><span class="ck"></span>Каждое помещение: 4 стены по низу и по верху</li>
+    <li><span class="ck"></span>Каждое помещение: 2 диагонали, сходятся со сторонами (≤ 1 %)</li>
+    <li><span class="ck"></span>Высота потолка в 3 точках в каждом помещении</li>
+    <li><span class="ck"></span>Сумма участков стены = общей длине стены (цепочки замкнуты)</li>
+    <li><span class="ck"></span>Толщина каждой стены — в проёме или по торцу</li>
+    <li><span class="ck"></span>Каждое окно: ширина, высота, подоконник от пола, откос, четверть</li>
+    <li><span class="ck"></span>Каждая дверь: проём в чистоте ширина × высота (не полотно!), петли, порог</li>
+    <li><span class="ck"></span>Входная дверь: проём, толщина стены, сторона открывания</li>
+    <li><span class="ck"></span>Стояки: вид, Ø, ось от двух стен, материал, краны, ревизия</li>
+    <li><span class="ck"></span>Счётчики воды и краны: высота от пола, доступ</li>
+    <li><span class="ck"></span>Давление воды манометром (бар), где мерили</li>
+    <li><span class="ck"></span>Вентканалы: стена, привязка, высота, размер решётки, тяга (лист бумаги)</li>
+    <li><span class="ck"></span>Радиаторы: место, габарит, от пола и от стены, подключение, краны</li>
+    <li><span class="ck"></span>Электрощит: место, высота, вводной автомат, свободные модули; ТУ — есть / нет</li>
+    <li><span class="ck"></span>Слаботочка: ввод интернета, домофон, ТВ — где</li>
+    <li><span class="ck"></span>Газ (если есть): трубы, кран, счётчик, плита, котёл — привязки и фото</li>
+    <li><span class="ck"></span>Материал стен: простукивание, видно в проёме, по проекту — отмечено «как понял»</li>
+    <li><span class="ck"></span>Балки, колонны, ниши, короба, уступы, перепады пола — размеры и привязки</li>
+    <li><span class="ck"></span>Балкон / лоджия: размеры, высота ограждения, порог балконной двери</li>
+    <li><span class="ck"></span>Фото: каждая стена целиком + каждый узел крупно, номера вписаны</li>
+    <li><span class="ck"></span>Документы: план БТИ / проект дома / ТУ — сфотографированы или «нет»</li>
+    <li><span class="ck"></span>Эскиз: все помещения пронумерованы, привязаны «за стеной __, сдвиг __»</li>
+    <li><span class="ck"></span>Форма на телефоне: красных пунктов нет, файл скачан / отправлен</li>
+    <li><span class="ck"></span>Время окончания и подпись на листе 1</li>
+  </ul>
+  <h2>Типовые ошибки (проверить себя)</h2>
+  <ul class="cl" style="font-size:7.8pt">
+    <li>— Размер двери записан по полотну, а нужен проём в стене в чистоте.</li>
+    <li>— Отступ проёма от другого угла (A, C — от левого, B, D — от верхнего).</li>
+    <li>— Стены разных помещений названы по-разному: A — всегда верх общего эскиза.</li>
+    <li>— Мерили по плинтусу или мебели, а не по стене; дальномер упёрся в выступ.</li>
+    <li>— Одна диагональ «на глаз» или по сторонам — диагонали меряются прибором.</li>
+    <li>— Номинал вводного автомата записан как разрешённая мощность.</li>
+    <li>— Материал «бетон» записан без простукивания и без документа.</li>
+    <li>— Высота меряется до натяжного / подвесного потолка без отметки, что это не плита.</li>
+  </ul>
+  <h2>Замечания по объекту</h2>
+  <div class="grid" style="height:92mm"></div>
+  <div class="foot"><span>LINEA · замерный лист · протокол — docs/obmer/protokol.md · форма — /obmer/</span><span>Замерщик ______________ Заказчик ______________</span></div>
+</section>
+</body>
+</html>

@@ -38,7 +38,7 @@ function linea_cfg(): array
         'prices' => [],                // вид заказа → null («уточняется») | копейки | ['per_m2' => коп, 'min' => коп]
         'notify_enabled' => false, 'notify_to' => '', 'mail_from' => '',
         'admin_hash' => '',
-        'max_upload_mb' => 100, 'briefs_per_hour' => 5, 'reviews_per_hour' => 20,
+        'max_upload_mb' => 100, 'briefs_per_hour' => 5, 'reviews_per_hour' => 20, 'surveys_per_hour' => 20,
         'base' => '',                  // адрес сайта без «/» (для ссылок в письмах и return_url); пусто — из запроса
     ];
     $f = linea_private() . '/config.php';
