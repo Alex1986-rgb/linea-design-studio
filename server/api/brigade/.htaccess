@@ -1,0 +1,12 @@
+# api/brigade/ — только PHP-обработчики кабинета бригады; шаблон tpl/ и прочее закрыты (правило «всё закрыто» — в ../.htaccess)
+Options -Indexes
+<IfModule mod_authz_core.c>
+  <FilesMatch "^(auth|profile|file|feed|offer|jobs|finance|sheets)\.php$">
+    Require all granted
+  </FilesMatch>
+</IfModule>
+<IfModule !mod_authz_core.c>
+  <FilesMatch "^(auth|profile|file|feed|offer|jobs|finance|sheets)\.php$">
+    Allow from all
+  </FilesMatch>
+</IfModule>

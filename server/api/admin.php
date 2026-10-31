@@ -160,7 +160,7 @@ if (!empty($_SESSION['msg'])) { $msg = (string)$_SESSION['msg']; unset($_SESSION
 $form = fn(string $act, string $num, string $inner, string $btn, string $cls = '') =>
     '<form method="post" class="inl"><input type="hidden" name="csrf" value="' . $csrf . '"><input type="hidden" name="act" value="' . $act . '">'
     . '<input type="hidden" name="number" value="' . $h($num) . '">' . $inner . '<button' . ($cls ? ' class="' . $cls . '"' : '') . '>' . $btn . '</button></form>';
-$top = '<div class="top"><h1>LINEA · заказы</h1><div><a href="' . $self . '">Заказы</a> · <a href="' . $self . '?view=reviews">Правки</a> · режим оплаты: <b>'
+$top = '<div class="top"><h1>LINEA · заказы</h1><div><a href="' . $self . '">Заказы</a> · <a href="' . $self . '?view=reviews">Правки</a> · <a href="admin-brigady.php">Ремонт и бригады</a> · режим оплаты: <b>'
     . $h($cfg['mode']) . '</b> <form method="post" class="inl"><input type="hidden" name="csrf" value="' . $csrf . '"><input type="hidden" name="act" value="logout"><button class="lt">Выйти</button></form></div></div>'
     . ($msg ? '<p class="msg">' . $h($msg) . '</p>' : '');
 

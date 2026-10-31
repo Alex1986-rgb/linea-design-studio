@@ -98,7 +98,8 @@ let intakeFiles = 0, intakeHits = 0;
 
 // 2б. Приёмник: страницам с отправкой говорим, где api (brief.js / review.js / order.js без меты работают по-старому — WhatsApp/почта)
 // obmer/ — форма обмера (служебная, noindex): страница в подпапке, поэтому путь к api на уровень выше
-const API_PAGES = ['brief.html', 'review.html', 'order.html', 'obmer/index.html'];
+// brigada/ — кабинет бригады; brigady/ (статическая заглушка для GitHub Pages) на Beget перекрывается rewrite на api/katalog.php
+const API_PAGES = ['brief.html', 'review.html', 'order.html', 'obmer/index.html', 'brigada/index.html'];
 let apiPages = 0;
 if (withApi) for (const f of API_PAGES) {
   const p = path.join(out, f);
@@ -123,6 +124,7 @@ if (noindex) {
   if (sub === '/') robots = robots.replace(/^(\s*(?:Dis)?allow:\s*)\/linea-design-studio\//gmi, '$1/')
     .replace(/^#.*github\.io.*$/gmi, '# csv-выгрузки смет — не для индекса');
 }
+if (withApi && !noindex && !robots.includes('/brigady/sitemap.xml')) robots = robots.trimEnd() + `\nSitemap: ${base}/brigady/sitemap.xml\n`;   // карточки бригад — из базы
 fs.writeFileSync(robotsPath, robots);
 
 // 4. .htaccess
@@ -145,6 +147,8 @@ const ht = [
   '  RewriteEngine On',
   // Pages отдавал /index.html и /; одинаковые страницы под двумя адресами Apache тоже отдаст, это норма — canonical решает
   httpsRedirect ? '  RewriteCond %{HTTPS} off\n  RewriteCond %{HTTP:X-Forwarded-Proto} !https\n  RewriteRule ^ https://%{HTTP_HOST}%{REQUEST_URI} [R=301,L]' : '  # без SSL — редиректа на https нет',
+  // каталог бригад «Ремонт по проекту» — рендер из базы (api/katalog.php), не статика: выкладка не затирает
+  withApi ? '  RewriteRule ^brigady/?$ api/katalog.php [L,QSA]\n  RewriteRule ^brigady/sitemap\\.xml$ api/katalog.php?sitemap=1 [L]\n  RewriteRule ^brigady/([a-z0-9-]+)/?$ api/katalog.php?slug=$1 [L,QSA]' : '',
   '  RewriteCond %{HTTP_HOST} ^www\\.(.+)$ [NC]',
   `  RewriteRule ^ ${httpsRedirect ? 'https' : 'http'}://%1%{REQUEST_URI} [R=301,L]`,
   // папка без слеша → со слешем; схему пишем сами: за nginx Apache считает соединение http (урок gorina.site)

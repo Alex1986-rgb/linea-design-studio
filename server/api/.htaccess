@@ -4,14 +4,14 @@ Options -Indexes
   <FilesMatch ".">
     Require all denied
   </FilesMatch>
-  <FilesMatch "^(brief|order|pay|pay-notify|ping|prices|review|admin)\.php$">
+  <FilesMatch "^(brief|order|pay|pay-notify|ping|prices|review|admin|survey|admin-brigady|remont|remont-dogovor|katalog|sheets-worker)\.php$">
     Require all granted
   </FilesMatch>
 </IfModule>
 <IfModule !mod_authz_core.c>
   Order deny,allow
   Deny from all
-  <FilesMatch "^(brief|order|pay|pay-notify|ping|prices|review|admin)\.php$">
+  <FilesMatch "^(brief|order|pay|pay-notify|ping|prices|review|admin|survey|admin-brigady|remont|remont-dogovor|katalog|sheets-worker)\.php$">
     Allow from all
   </FilesMatch>
 </IfModule>
