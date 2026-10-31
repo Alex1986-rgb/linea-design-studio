@@ -23,8 +23,11 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: actions/configure-pages@v5
+      # с 31.10.2026 сайт живёт на дизайн-студия-квартир.рф; Pages отдаёт только страницы-переходы на тот же путь домена
+      # (ссылки «Правка к этому листу» из выданных PDF сохраняют ?p=…&s=…) — docs/kb/pereezd-domena-vebmaster.md
+      - run: node tools/gen-pages-redirect.js --out=_pages-redirect
       - uses: actions/upload-pages-artifact@v3
         with:
-          path: site
+          path: _pages-redirect
       - id: deployment
         uses: actions/deploy-pages@v4

@@ -165,6 +165,9 @@ const ht = [
   '  ExpiresByType application/json "access plus 1 hours"',
   '</IfModule>',
   noindex ? '\n<IfModule mod_headers.c>\n  Header set X-Robots-Tag "noindex, nofollow"\n</IfModule>' : '',
+  // HSTS: браузер сам ходит только по https — бриф с ПДн не уйдёт по http даже при перехвате (подделку X-Forwarded-Proto
+  // Beget превращает в HTTPS=on, на сервере её не отличить — защищаем на стороне браузера)
+  httpsRedirect ? '\n<IfModule mod_headers.c>\n  Header always set Strict-Transport-Security "max-age=31536000"\n</IfModule>' : '',
   '',
 ].join('\n');
 if (!inPlace) fs.writeFileSync(path.join(out, '.htaccess'), ht);
