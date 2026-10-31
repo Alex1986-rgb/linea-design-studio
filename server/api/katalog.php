@@ -44,12 +44,13 @@ $img = fn(int $id, string $alt, string $cls = '') => '<img src="' . $API . 'brig
 $stars = fn(?float $v) => $v === null ? '' : '<span class="k-stars" aria-label="Рейтинг ' . $v . ' из 5">' . str_repeat('★', (int)round($v)) . str_repeat('☆', 5 - (int)round($v)) . '</span>';
 $plural = fn(int $n, string $a, string $b, string $c) => $n . ' ' . ($n % 10 === 1 && $n % 100 !== 11 ? $a : (in_array($n % 10, [2, 3, 4], true) && !in_array($n % 100, [12, 13, 14], true) ? $b : $c));
 $ava = fn(array $c, string $cls) => $c['logo'] ? $img($c['logo'], 'Логотип: ' . $c['name'], $cls) : '<span class="' . $cls . '" aria-hidden="true">'
-    . $h(mb_strtoupper(implode('', array_map(fn($w) => mb_substr($w, 0, 1), array_slice(preg_split('/[\s:—-]+/u', $c['name'], -1, PREG_SPLIT_NO_EMPTY), 0, 2))))) . '</span>';
+    . $h(mb_strtoupper(implode('', array_map(fn($w) => mb_substr(trim($w), 0, 1), array_slice(str_contains($c['name'], ':') ? explode(':', $c['name'], 2) : preg_split('/[\s—-]+/u', $c['name'], -1, PREG_SPLIT_NO_EMPTY), 0, 2))))) . '</span>';
 $CAP = 'иллюстрация из проекта LINEA';
+$dz = fn(array $d) => implode(', ', array_map(fn($x) => str_replace(['Москва · ', 'МО · '], ['', 'МО, '], $x), $d));
 $DEMO_NOTE = 'Пример карточки — бригады подключаются, это образец. Фото — иллюстрации из проекта LINEA, а не снимки выполненных объектов.';
 $NONE = '<span class="k-no">у примера нет</span>';
 $invite = fn(array $c, string $cls = 'btn') => $c['demo']
-    ? '<a class="' . $cls . '" href="/remont/">Как пригласить бригаду</a>'
+    ? '<a class="' . $cls . '" href="/remont/" title="Как пригласить бригаду в свой проект">Пригласить</a>'
     : '<span class="k-invite" data-slug="' . $h($c['slug']) . '"><a class="' . $cls . '" href="/remont/" data-inv>Пригласить</a><span class="hint" role="status"></span></span>';
 $allPhotos = fn(array $c) => array_merge(...array_map(fn($p) => array_merge($p['after'], $p['before']), $c['portfolio'] ?: [['after' => [], 'before' => []]]));
 $HOW = '<ol class="k-how"><li><b>Проект</b>Альбом с ведомостями и сметой</li><li><b>Предложения</b>2–5 бригад считают по позициям</li><li><b>Выбор</b>Сравнение в одной таблице, договор</li><li><b>Этапы</b>Листы по запросу, фото, приёмка</li></ol>';
@@ -90,7 +91,7 @@ if ($slug !== '') {
         . '<section class="blk k-page"><div class="wrap k-narrow">' . ($demo ? '<p class="k-demo">' . $h($DEMO_NOTE) . '</p>' : '')
         . '<article class="k-card">'
         . ($photos ? '<div class="k-hero">' . $img($photos[0], 'Объект: ' . $c['name']) . ($demo ? '<span class="k-cap">' . $h($CAP) . '</span>' : '') . '</div>' : '')
-        . '<div class="k-head">' . $ava($c, 'k-ava') . '<div><h1>' . $h($c['name']) . '</h1><p class="k-sub">' . $h(implode(', ', $c['districts'])) . ' · работает по проектам LINEA</p></div></div>'
+        . '<div class="k-head">' . $ava($c, 'k-ava') . '<div><h1>' . $h($c['name']) . '</h1><p class="k-sub">' . $h($dz($c['districts'])) . ' · работает по проектам LINEA</p></div></div>'
         . '<ul class="k-chips">' . implode('', array_map(fn($x) => '<li>' . $h($x) . '</li>', $c['specs'])) . '</ul>'
         . '<dl class="k-stats">' . implode('', array_map(fn($x) => '<div><dt>' . $h($x[0]) . '</dt><dd>' . $h($x[1]) . '</dd></div>', $stats)) . '</dl>'
         . ($c['about'] ? '<p class="k-about">' . nl2br($h($c['about'])) . '</p>' : '')
@@ -156,7 +157,7 @@ foreach ($cards as $c) {
     $list .= '<article class="k-item">'
         . '<a class="k-ph" href="' . $url . '" tabindex="-1" aria-hidden="true">' . ($ph ? implode('', array_map(fn($i) => $img($i, ''), $ph)) : '<span class="k-mono">' . $h(mb_substr($c['name'], 0, 1)) . '</span>')
         . ($c['demo'] ? '<span class="k-cap">иллюстрации LINEA</span><em class="k-tag">образец</em>' : '') . '</a>'
-        . '<div class="k-body"><div class="k-hd">' . $ava($c, 'k-ava sm') . '<div><h3><a href="' . $url . '">' . $h($c['name']) . '</a></h3><div class="k-z">' . $h(implode(', ', $c['districts'])) . '</div></div></div>'
+        . '<div class="k-body"><div class="k-hd">' . $ava($c, 'k-ava sm') . '<div><h3><a href="' . $url . '">' . $h($c['name']) . '</a></h3><div class="k-z">' . $h($dz($c['districts'])) . '</div></div></div>'
         . ($c['rating']['n'] ? '<p class="k-r">' . $stars($c['rating']['avg']) . ' ' . $c['rating']['avg'] . ' · ' . $plural($c['rating']['n'], 'отзыв', 'отзыва', 'отзывов') . '</p>' : '')
         . '<ul class="k-chips sm">' . implode('', array_map(fn($x) => '<li>' . $h($x) . '</li>', array_slice($c['specs'], 0, 6))) . '</ul>'
         . '<dl class="k-kv"><div><dt>' . $h((string)($c['teamSize'] ?? '—')) . '</dt><dd>мастеров</dd></div><div><dt>' . ($c['experience'] !== null ? $h($plural($c['experience'], 'год', 'года', 'лет')) : '—') . '</dt><dd>опыт</dd></div><div><dt>' . ($c['warrantyMonths'] ? $c['warrantyMonths'] . ' мес.' : '—') . '</dt><dd>гарантия</dd></div></dl>'

@@ -62,8 +62,6 @@ await login(DEV.brigades[0].email, DEV.brigades[0].password);
 await go(`${BASE}/brigada/`, 1280);
 await click('[data-t=feed]');
 await shot('lenta-1280', { y: await topOf('#bx'), maxH: 700 });
-await click('[data-r]', 1200);
-await shot('predlozhenie-1280', { y: await topOf('#fOffer'), maxH: 1500 });
 await go(`${BASE}/brigada/`, 375);
 await click('[data-t=feed]'); await click('[data-r]', 1200);
 await shot('predlozhenie-375', { y: await topOf('#fOffer'), maxH: 1600 });
@@ -79,11 +77,12 @@ await go(`${BASE}/api/admin.php`, 1280);
 await js(`const f=new FormData(); f.append('password', ${JSON.stringify(DEV.admin)}); await fetch('/api/admin.php',{method:'POST',body:f}); return 1`);
 await go(`${BASE}/api/admin-brigady.php?r=1`, 1280);
 await shot('admin-zapros-1280', { maxH: 1300 });
-await go(`${BASE}/api/admin-brigady.php`, 375);
-await shot('admin-brigady-375', { maxH: 1000 });
-// 8. каталог
-await go(`${BASE}/brigady/?test=1`, 1280);
-await shot('katalog-1280', { y: await topOf('.hero-page'), maxH: 1100 });
+// 7–8. каталог и карточка (без настоящих бригад — образцы из server/tools/seed-demo.php)
+await go(`${BASE}/brigady/`, 1280);
+await shot('katalog-1280', { y: await topOf('.k-page'), maxH: 1500 });
+const demo = await js(`const a=document.querySelector('a[href^="/brigady/primer-"]'); return a ? a.getAttribute('href') : '/brigady/'`);
+await go(BASE + demo, 375);
+await shot('kartochka-375', { y: await topOf('.k-page'), maxH: 2200 });
 
 ws.close(); ch.kill();
 try { fs.rmSync(prof, { recursive: true, force: true, maxRetries: 5, retryDelay: 300 }); } catch { }

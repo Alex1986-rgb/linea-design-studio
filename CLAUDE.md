@@ -133,6 +133,18 @@ push без ручного запуска отработал `success`. Стат
 - Проверки — только с `?test=1` (заказ test=1, писем нет); тестовые заказы удалять кнопкой в admin.php. Подробно —
   `docs/reports/2026-10-27-priem-brifa-oplata.md`.
 
+### «Ремонт по проекту» — бригады (с 31.10.2026, ветка brigady)
+- Клиент оплаченного проекта на `order.html` подбирает бригаду (необязательно): бригады получают ОБЕЗЛИЧЕННЫЙ пакет (позиции сметы
+  из `tools/brigady-pack.mjs`), предложения сравниваются по строкам, выбор → контакты → договор подряда напрямую (`api/remont-dogovor.php`),
+  этапы с фото и приёмкой по чек-листам, отзыв. Комиссия 7 % — после подписания договора обеими сторонами. Оплата ремонта — вне сайта.
+- Код: `server/api/lib/{db,migrations,accounts,brig,brig-notify,sheets}.php`, `api/brigade/*.php` (кабинет), `api/remont.php` (клиент),
+  `api/admin-brigady.php` (тот же вход, что admin.php), `api/katalog.php` (/brigady/ из базы, rewrite в site-rebase), `api/sheets-worker.php`
+  (очередь «лист по запросу», протокол — `docs/brigady/sheet-request-api.md`). Страницы — `node tools/gen-brigady-pages.js`.
+- База — только через `lib/db.php` (без SQLite-специфики; схема — только `lib/migrations.php`, новая правка = новая версия). config `'db'` —
+  MySQL Beget, нет — SQLite. Перенос: `php server/tools/migrate-sqlite-to-mysql.php --private=… [--apply]` (сухой прогон по умолчанию).
+- Демо-бригады: `php server/tools/seed-demo.php --private=… [--purge]` — без значков проверки, рейтинга и отзывов, noindex, вне подбора.
+- Проверка: `node tools/test-brigady.mjs --private=<scratch>` (+ `--mysql=<dsn>`), скриншоты — `tools/shots-brigady.mjs`. Отчёт — `docs/reports/2026-10-31-brigady.md`.
+
 ## Канон чертежей
 Правила самих чертежей — `docs/cad-canon.md` (нормативная база СПДС/ЕСКД с пунктами, анатомия листа, чек-листы по каждому типу листа, нормируемые зазоры). Регламент работы — навык `cad-drawings`. Роли: агент `draftsman` (правит движок), `cad-normcontrol` (нормоконтроль), `cad-acceptance` (приёмка перед выдачей).
 
