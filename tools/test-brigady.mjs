@@ -18,7 +18,9 @@ const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const arg = k => (process.argv.find(a => a.startsWith(`--${k}=`)) || '').split('=').slice(1).join('=');
 const PRIV = path.resolve(arg('private') || path.join(os.tmpdir(), 'linea-brigady-test'));
 const PORT = +(arg('port') || 8143);
-const KEEP = process.argv.includes('--keep');
+const UNTIL = arg('until');                       // --until=offers — остановиться после двух предложений (для скриншотов)
+const KEEP = process.argv.includes('--keep') || !!UNTIL;
+const STOP = new Error('stop');
 const BASE = `http://127.0.0.1:${PORT}`;
 const PACK = arg('pack') || path.join(PRIV, '..', 'brigady-pack', 'pack.json');
 
@@ -207,6 +209,11 @@ try {
   const hack = await B[0].req('POST', '/api/brigade/offer.php?a=save', { json: { r: rid + 1000, items: priceA } });
   ok(hack.code === 403, 'предложение по чужому запросу → 403');
 
+  if (UNTIL === 'offers') {
+    // данные для ручной проверки в браузере (только локальная тестовая папка): токен заказа, пароли тестовых аккаунтов
+    fs.writeFileSync(path.join(PRIV, '_dev.json'), JSON.stringify({ order: `${BASE}/order.html?t=${T}`, admin: ADMIN_PASS, brigades: [1, 2, 3].map(n => ({ email: `brig${n}@example.test`, password: `Pass${n}word77` })) }, null, 2));
+    throw STOP;
+  }
   step('9. Клиент: сравнение и выбор');
   rs = await client.req('GET', `/api/remont.php?t=${T}`);
   ok(rs.j?.offers?.length === 2, 'в сравнении 2 предложения');
@@ -321,7 +328,7 @@ try {
   ok(!logs.includes(tok) && !logs.includes(T) && !logs.includes('NewPass2026x'), 'в журналах нет токенов и паролей');
   const adm = await admin.req('GET', '/api/admin-brigady.php?view=audit&who=admin', { raw: true });
   ok((adm.text.match(/<tr><td class="mut">/g) || []).length >= 6, 'журнал действий администратора ведётся');
-} catch (e) { fail++; console.log('  ✗ исключение: ' + e.stack); }
+} catch (e) { if (e !== STOP) { fail++; console.log('  ✗ исключение: ' + e.stack); } }
 
 console.log(`\nИтог: ${pass} ✓, ${fail} ✗` + (srvErr.match(/PHP (Fatal|Warning|Notice|Deprecated)[^\n]*/g) || []).map(s => '\n  ' + s).join(''));
 if (KEEP) console.log(`Сервер оставлен: ${BASE}  (данные ${PRIV})`);

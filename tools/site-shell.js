@@ -51,6 +51,9 @@ const SECTIONS = [
   { key: 'journal', title: 'Журнал', href: 'journal/' },
   { key: 'stories', title: 'Истории', href: 'stories/', menu: false },
   { key: 'reviews', title: 'Отзывы', href: 'reviews/', menu: false },
+  // «Ремонт по проекту» (31.10.2026): клиентам — подбор проверенной бригады к готовому проекту; бригадам — условия и регистрация
+  { key: 'remont', title: 'Ремонт по проекту', href: 'remont/', menu: false },
+  { key: 'brigadam', title: 'Бригадам', href: 'brigadam/', menu: false },
 ];
 const MENU = SECTIONS.filter(s => s.menu !== false);
 
