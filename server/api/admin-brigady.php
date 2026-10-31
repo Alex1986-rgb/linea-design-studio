@@ -160,7 +160,7 @@ if (($_SERVER['REQUEST_METHOD'] ?? '') === 'POST') {
             break;
         case 'r_file_del':
             $f = brig_one("SELECT * FROM br_files WHERE id = ? AND owner_kind = 'pack'", [$id]);
-            if ($f) { @unlink(brig_dir() . '/files/' . $f['stored']); brig_exec('DELETE FROM br_files WHERE id = ?', [$id]); $back .= '?r=' . (int)$f['owner_id']; brig_audit($WHO, 'pack-file-del', 'request#' . $f['owner_id']); }
+            if ($f) { @unlink(brig_dir() . '/files/' . $f['stored_path']); brig_exec('DELETE FROM br_files WHERE id = ?', [$id]); $back .= '?r=' . (int)$f['owner_id']; brig_audit($WHO, 'pack-file-del', 'request#' . $f['owner_id']); }
             break;
         case 'r_send':
             $r = brig_one('SELECT * FROM br_requests WHERE id = ?', [$id]);

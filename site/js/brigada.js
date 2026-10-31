@@ -186,7 +186,7 @@
       <p>Файлы проекта: ${R.files.map(f => `<a href="${API}brigade/file.php?f=${f.id}" target="_blank" rel="noopener">${esc(f.title || 'файл')}</a> <span class="bx-mut">(${f.mime.includes('pdf') ? 'PDF' : 'xlsx'}, ${Math.round(f.bytes / 1024)} КБ)</span>`).join(' · ') || '—'}</p>
       <p class="bx-note">Контакты и адрес клиента откроются, если клиент выберет ваше предложение. Цена — за единицу; «объём» — цена за весь объём позиции.</p></div>
       <form class="bx-card" id="fOffer"><h2>Ваше предложение ${O ? st(O.status, { submitted: 'подано', withdrawn: 'отозвано', chosen: 'выбрано', rejected: 'не выбрано' }[O.status]) : ''}</h2>
-      <div class="bx-tbl-wrap"><table class="bx-tbl"><thead><tr><th>Позиция сметы</th><th>Ед.</th><th class="r">Кол-во</th><th>Цена, ₽</th><th></th></tr></thead><tbody>${rows}</tbody></table></div>
+      <div class="bx-tbl-wrap"><table class="bx-tbl bx-offer"><thead><tr><th>Позиция сметы</th><th>Ед.</th><th class="r">Кол-во</th><th>Цена, ₽</th><th></th></tr></thead><tbody>${rows}</tbody></table></div>
       <div class="bx-sum" id="bxTotal"></div>
       <div class="bx-grid"><label class="bx-f">Материалы<select name="materials"${ro ? ' disabled' : ''}>${opts(j.materials, O ? O.materials : '', 'Выберите')}</select></label>
       <label class="bx-f">Уточнение по материалам<input name="materialsNote" value="${esc(O ? O.materialsNote : '')}"${ro ? ' disabled' : ''}></label>

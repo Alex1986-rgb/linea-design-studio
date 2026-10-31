@@ -47,6 +47,20 @@ return [
     'reviews_per_hour' => 20,
     'surveys_per_hour' => 20, // обмеров в час с одного адреса (api/survey.php)
 
+    // База. null — SQLite linea-private/linea.sqlite (локальные проверки). Боевой (Beget, MySQL 5.7, с 31.10.2026):
+    // 'db' => ['dsn' => 'mysql:host=localhost;dbname=aleks2si_linea;charset=utf8mb4', 'user' => 'aleks2si_linea', 'pass' => '…'],
+    // Таблицы создаются сами (server/api/lib/migrations.php); перенос старых заказов — php server/tools/migrate-sqlite-to-mysql.php.
+    'db' => null,
+
+    // «Ремонт по проекту» (бригады). Письма бригадам и клиентам — выключены, пока не включите; тестовые записи не пишут никогда.
+    'brig_mail_enabled' => false,
+    'brig_requisites' => '',         // реквизиты для оплаты счетов на комиссию (показываются бригаде в «Финансах»)
+    'tg_enabled' => false, 'tg_token' => '', 'tg_chat' => '',   // Telegram-бот администратора — заготовка
+    // Воркер «лист по запросу» (GOST-DRAFT на SmartApe): длинный случайный токен, тот же — у воркера. Пусто — API выключен.
+    // Новый: php -r 'echo bin2hex(random_bytes(24)), "\n";'
+    'sheet_worker_token' => '',
+    'brig_reg_per_hour' => 5, 'brig_login_per_hour' => 20, 'brig_forgot_per_hour' => 5, 'brig_uploads_per_hour' => 120,
+
     // Адрес сайта без «/» на конце — для return_url оплаты и ссылок в письмах. Пусто — берётся из запроса.
     'base' => '',
 ];

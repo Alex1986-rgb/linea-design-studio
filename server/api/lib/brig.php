@@ -267,7 +267,7 @@ function brig_store_upload(array $f, array $allow, array $owner, string $by): in
     chmod(brig_dir() . '/files/' . $rel, 0600);
     brig_db();
     return db_insert('br_files', ['brigade_id' => (int)$owner['brigade_id'], 'owner_kind' => $owner['kind'], 'owner_id' => (int)$owner['id'],
-        'kind' => $owner['sub'] ?? 'file', 'stored' => $rel, 'mime' => $mime, 'bytes' => $size, 'w' => $w, 'h' => $h,
+        'kind' => $owner['sub'] ?? 'file', 'stored_path' => $rel, 'mime' => $mime, 'bytes' => $size, 'w' => $w, 'h' => $h,
         'title' => linea_str(pathinfo((string)($f['name'] ?? ''), PATHINFO_FILENAME), 80), 'created_at' => linea_now(), 'created_by' => $by]);
 }
 
@@ -332,8 +332,8 @@ function brig_file_allowed(array $f, array $ctx): bool
 /** Отдать файл (после проверки прав). */
 function brig_send_file(array $f): never
 {
-    $p = brig_dir() . '/files/' . $f['stored'];
-    if (!preg_match('#^\d{6}/[0-9a-f]{32}\.(jpg|pdf|xlsx|webm|ogg|m4a|mp3|wav)$#', (string)$f['stored']) || !is_file($p)) { http_response_code(404); exit; }
+    $p = brig_dir() . '/files/' . $f['stored_path'];
+    if (!preg_match('#^\d{6}/[0-9a-f]{32}\.(jpg|pdf|xlsx|webm|ogg|m4a|mp3|wav)$#', (string)$f['stored_path']) || !is_file($p)) { http_response_code(404); exit; }
     header('Content-Type: ' . $f['mime']);
     header('Content-Length: ' . filesize($p));
     header('X-Content-Type-Options: nosniff');

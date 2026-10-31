@@ -21,6 +21,8 @@ const PORT = +(arg('port') || 8143);
 const UNTIL = arg('until');                       // --until=offers — остановиться после двух предложений (для скриншотов)
 const KEEP = process.argv.includes('--keep') || !!UNTIL;
 const STOP = new Error('stop');
+// --mysql=<dsn> — та же проверка на MySQL/MariaDB (база должна быть пустой: тест удаляет её таблицы перед прогоном)
+const MYSQL = arg('mysql');
 const BASE = `http://127.0.0.1:${PORT}`;
 const PACK = arg('pack') || path.join(PRIV, '..', 'brigady-pack', 'pack.json');
 
@@ -34,7 +36,10 @@ fs.mkdirSync(PRIV, { recursive: true });
 const ADMIN_PASS = crypto.randomBytes(12).toString('hex');
 const WORKER = crypto.randomBytes(24).toString('hex');
 const hash = execFileSync('php', ['-r', 'echo password_hash($argv[1], PASSWORD_DEFAULT);', ADMIN_PASS]).toString();
-fs.writeFileSync(path.join(PRIV, 'config.php'), `<?php return ['mode' => 'manual', 'admin_hash' => '${hash}', 'notify_enabled' => false, 'brig_mail_enabled' => false, 'tg_enabled' => false, 'sheet_worker_token' => '${WORKER}', 'brig_reg_per_hour' => 50, 'briefs_per_hour' => 50];`);
+fs.writeFileSync(path.join(PRIV, 'config.php'), `<?php return ['mode' => 'manual', 'admin_hash' => '${hash}', 'notify_enabled' => false, 'brig_mail_enabled' => false, 'tg_enabled' => false, 'sheet_worker_token' => '${WORKER}', 'brig_reg_per_hour' => 50, 'briefs_per_hour' => 50${MYSQL ? `, 'db' => ['dsn' => '${MYSQL}', 'user' => '${arg('mysql-user') || process.env.USER}', 'pass' => '']` : ''}];`);
+if (MYSQL) {   // чистая база: снести таблицы прошлого прогона
+  execFileSync('php', ['-r', `$p = new PDO($argv[1], $argv[2], ''); $p->exec('SET FOREIGN_KEY_CHECKS=0'); foreach ($p->query('SHOW TABLES')->fetchAll(PDO::FETCH_COLUMN) as $t) { $p->exec("DROP TABLE \`$t\`"); }`, MYSQL, arg('mysql-user') || process.env.USER]);
+}
 
 // ── файлы для загрузок
 const FX = path.join(PRIV, '_fx'); fs.mkdirSync(FX);
@@ -59,8 +64,8 @@ execFileSync('zip', ['-qj', path.join(FX, 'brief.zip'), path.join(FX, 'brief.jso
 
 // ── сервер
 const srv = spawn('php', ['-S', `127.0.0.1:${PORT}`, '-t', path.join(ROOT, 'site'), path.join(ROOT, 'tools/dev-router.php')],
-  { env: { ...process.env, LINEA_PRIVATE: PRIV, LINEA_MAIL_DRY: '1' }, stdio: ['ignore', 'ignore', 'pipe'] });
-let srvErr = ''; srv.stderr.on('data', d => { srvErr += d; });
+  { env: { ...process.env, LINEA_PRIVATE: PRIV, LINEA_MAIL_DRY: '1' }, stdio: ['ignore', 'ignore', KEEP ? fs.openSync(path.join(PRIV, '_server.log'), 'a') : 'pipe'], detached: KEEP });
+let srvErr = ''; if (!KEEP) srv.stderr.on('data', d => { srvErr += d; }); else srv.unref();
 const stop = () => { if (!KEEP) srv.kill(); };
 process.on('exit', stop);
 for (let i = 0; i < 50; i++) { try { await fetch(BASE + '/api/ping.php'); break; } catch { await new Promise(r => setTimeout(r, 100)); } }

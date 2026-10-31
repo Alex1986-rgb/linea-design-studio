@@ -8,8 +8,8 @@
  *   · id новой строки — db_insert() (lastInsertId работает в обоих драйверах);
  *   · схема — только в migrations.php с номером версии; типы пишутся метками {ID} {KEY} {TEXT} {INT} {REAL} {BOOL},
  *     которые db_migrate() переводит под драйвер.
- * Подключение: config 'db_dsn' (+ 'db_user', 'db_pass') — например 'mysql:host=localhost;dbname=…;charset=utf8mb4';
- * пусто — прежняя linea-private/linea.sqlite (linea_db() в boot.php).
+ * Подключение: config 'db' => ['dsn' => 'mysql:host=localhost;dbname=…;charset=utf8mb4', 'user' => …, 'pass' => …] (MySQL 5.7 Beget);
+ * нет 'db' — прежняя linea-private/linea.sqlite (локальные проверки). linea_db() в boot.php отдаёт то же соединение.
  */
 declare(strict_types=1);
 
@@ -19,12 +19,26 @@ function db(): PDO
 {
     static $pdo = null;
     if ($pdo) { return $pdo; }
-    $dsn = (string)(linea_cfg()['db_dsn'] ?? '');
-    if ($dsn === '') { return $pdo = linea_db(); }
-    $pdo = new PDO($dsn, (string)(linea_cfg()['db_user'] ?? ''), (string)(linea_cfg()['db_pass'] ?? ''), [
+    $c = db_config();
+    if (!$c) { return $pdo = linea_db(); }
+    $pdo = new PDO($c['dsn'], (string)($c['user'] ?? ''), (string)($c['pass'] ?? ''), [
         PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION, PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC, PDO::ATTR_EMULATE_PREPARES => false,
     ]);
+    if (str_starts_with($c['dsn'], 'mysql:')) {
+        // MySQL 5.7 Beget: сервер по умолчанию utf8 (3 байта) — соединение и таблицы явно utf8mb4; даты пишем строками МСК (linea_now)
+        $pdo->exec("SET NAMES utf8mb4 COLLATE utf8mb4_unicode_ci");
+        $pdo->exec("SET SESSION sql_mode = 'STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION'");
+    }
     return $pdo;
+}
+
+/** Внешняя база из конфига: 'db' => ['dsn' => 'mysql:host=localhost;dbname=…;charset=utf8mb4', 'user' => …, 'pass' => …] (или старое 'db_dsn'). null — SQLite. */
+function db_config(): ?array
+{
+    $cfg = linea_cfg();
+    if (is_array($cfg['db'] ?? null) && (string)($cfg['db']['dsn'] ?? '') !== '') { return $cfg['db']; }
+    if ((string)($cfg['db_dsn'] ?? '') !== '') { return ['dsn' => $cfg['db_dsn'], 'user' => $cfg['db_user'] ?? '', 'pass' => $cfg['db_pass'] ?? '']; }
+    return null;
 }
 
 function db_driver(): string { return (string)db()->getAttribute(PDO::ATTR_DRIVER_NAME); }
@@ -95,9 +109,11 @@ function db_migrate(): void
     static $done = false;
     if ($done) { return; }
     $done = true;
+    // {KEY} ≤ 190 знаков (utf8mb4 × 4 = 760 байт < 767 — индекс строится и без innodb_large_prefix); {SHORT} — для составных индексов
+    $common = ['{KEY}' => 'VARCHAR(190)', '{SHORT}' => 'VARCHAR(32)', '{EMAIL}' => 'VARCHAR(150)', '{TEXT}' => 'TEXT', '{BOOL}' => 'SMALLINT'];
     $types = db_driver() === 'mysql'
-        ? ['{ID}' => 'BIGINT NOT NULL AUTO_INCREMENT PRIMARY KEY', '{KEY}' => 'VARCHAR(190)', '{TEXT}' => 'TEXT', '{INT}' => 'BIGINT', '{REAL}' => 'DOUBLE', '{BOOL}' => 'SMALLINT', '{ENGINE}' => ' ENGINE=InnoDB DEFAULT CHARSET=utf8mb4']
-        : ['{ID}' => 'INTEGER PRIMARY KEY AUTOINCREMENT', '{KEY}' => 'VARCHAR(190)', '{TEXT}' => 'TEXT', '{INT}' => 'INTEGER', '{REAL}' => 'REAL', '{BOOL}' => 'SMALLINT', '{ENGINE}' => ''];
+        ? $common + ['{ID}' => 'BIGINT NOT NULL AUTO_INCREMENT PRIMARY KEY', '{INT}' => 'BIGINT', '{REAL}' => 'DOUBLE', '{ENGINE}' => ' ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci']
+        : $common + ['{ID}' => 'INTEGER PRIMARY KEY AUTOINCREMENT', '{INT}' => 'INTEGER', '{REAL}' => 'REAL', '{ENGINE}' => ''];
     db()->exec('CREATE TABLE IF NOT EXISTS schema_version (name ' . $types['{KEY}'] . ' NOT NULL PRIMARY KEY, version ' . $types['{INT}'] . ' NOT NULL, applied_at ' . $types['{KEY}'] . ' NOT NULL)' . $types['{ENGINE}']);
     $have = (int)(db_val("SELECT version FROM schema_version WHERE name = 'linea'") ?? 0);
     $steps = require __DIR__ . '/migrations.php';
@@ -105,8 +121,10 @@ function db_migrate(): void
     foreach ($steps as $ver => $sqls) {
         if ($ver <= $have) { continue; }
         foreach ($sqls as $sql) { db()->exec(strtr($sql, $types)); }
-        if ($have === 0) { db_insert('schema_version', ['name' => 'linea', 'version' => $ver, 'applied_at' => linea_now()]); }
-        else { db_update('schema_version', ['version' => $ver, 'applied_at' => linea_now()], "name = 'linea'"); }
+        if ($have === 0) {
+            try { db_insert('schema_version', ['name' => 'linea', 'version' => $ver, 'applied_at' => linea_now()]); }
+            catch (PDOException $e) { db_update('schema_version', ['version' => $ver, 'applied_at' => linea_now()], "name = 'linea'"); }   // параллельный первый запрос
+        } else { db_update('schema_version', ['version' => $ver, 'applied_at' => linea_now()], "name = 'linea'"); }
         $have = $ver;
     }
 }

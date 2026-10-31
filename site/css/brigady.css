@@ -79,9 +79,18 @@
 .k-rev{border-left:3px solid var(--gold);margin:0 0 14px;padding:4px 0 4px 16px}
 .k-rev p{margin:6px 0}
 .mut{color:var(--mut)}
+.bx-tbl .bx-ph{flex-wrap:nowrap;gap:4px}.bx-tbl .bx-ph img{width:64px;height:48px}
 @media (max-width:760px){
   .bx-grid{grid-template-columns:1fr}
   .bx-card{padding:16px 14px}
+  /* форма предложения на телефоне: строка позиции — карточка (наименование, ед./кол-во, цена, «не делаем»), без горизонтальной прокрутки */
+  .bx-offer{min-width:0}.bx-offer thead{display:none}
+  .bx-offer tbody tr{display:grid;grid-template-columns:auto auto 1fr;gap:6px 12px;align-items:center;padding:10px 10px 8px;border-bottom:1px solid var(--line)}
+  .bx-offer tbody td{border:0;padding:0}
+  .bx-offer tbody td:first-child,.bx-offer tbody td:last-child{grid-column:1/-1}
+  .bx-offer tbody td:nth-child(2),.bx-offer tbody td:nth-child(3){color:var(--mut);font-size:13px}
+  .bx-offer tbody td:nth-child(4){justify-self:end}
+  .bx-offer tr.grp{display:block;padding:8px 10px}
   .k-filter{grid-template-columns:1fr 1fr}
   .k-ba{grid-template-columns:1fr}
   .k-head{align-items:flex-start}

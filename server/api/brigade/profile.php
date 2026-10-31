@@ -67,7 +67,7 @@ switch ($a) {
     case 'portfolio_del':
         $p = brig_one('SELECT id FROM br_portfolio WHERE id = ? AND brigade_id = ?', [(int)($in['id'] ?? 0), $bid]);
         if (!$p) { linea_fail('Это не ваш объект', 403); }
-        foreach (brig_all("SELECT stored FROM br_files WHERE owner_kind = 'portfolio' AND owner_id = ?", [(int)$p['id']]) as $f) { @unlink(brig_dir() . '/files/' . $f['stored']); }
+        foreach (brig_all("SELECT stored_path FROM br_files WHERE owner_kind = 'portfolio' AND owner_id = ?", [(int)$p['id']]) as $f) { @unlink(brig_dir() . '/files/' . $f['stored_path']); }
         brig_exec("DELETE FROM br_files WHERE owner_kind = 'portfolio' AND owner_id = ?", [(int)$p['id']]);
         brig_exec('DELETE FROM br_portfolio WHERE id = ?', [(int)$p['id']]);
         break;
@@ -82,7 +82,7 @@ switch ($a) {
     case 'photo_del':
         $f = brig_one("SELECT * FROM br_files WHERE id = ? AND brigade_id = ? AND owner_kind IN ('portfolio','logo')", [(int)($in['id'] ?? 0), $bid]);
         if (!$f) { linea_fail('Это не ваше фото', 403); }
-        @unlink(brig_dir() . '/files/' . $f['stored']);
+        @unlink(brig_dir() . '/files/' . $f['stored_path']);
         brig_exec('DELETE FROM br_files WHERE id = ?', [(int)$f['id']]);
         if ((int)$b['logo_file'] === (int)$f['id']) { db_update('br_brigades', ['logo_file' => null], 'id = ?', [$bid]); }
         break;

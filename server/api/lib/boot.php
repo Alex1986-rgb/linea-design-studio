@@ -40,6 +40,7 @@ function linea_cfg(): array
         'admin_hash' => '',
         'max_upload_mb' => 100, 'briefs_per_hour' => 5, 'reviews_per_hour' => 20, 'surveys_per_hour' => 20,
         'base' => '',                  // адрес сайта без «/» (для ссылок в письмах и return_url); пусто — из запроса
+        'db' => null,                  // MySQL: ['dsn' => 'mysql:host=localhost;dbname=…;charset=utf8mb4', 'user' => …, 'pass' => …]; null — SQLite
     ];
     $f = linea_private() . '/config.php';
     $user = is_file($f) ? (require $f) : [];
@@ -80,6 +81,13 @@ function linea_db(): PDO
 {
     static $db = null;
     if ($db) { return $db; }
+    // MySQL (config 'db'): то же соединение, что у слоя lib/db.php; схема — lib/migrations.php (orders, events и таблицы сервиса бригад)
+    if (is_array(linea_cfg()['db'] ?? null) && (string)(linea_cfg()['db']['dsn'] ?? '') !== '') {
+        require_once __DIR__ . '/db.php';
+        $db = db();
+        db_migrate();
+        return $db;
+    }
     linea_mkdir(linea_private());
     $db = new PDO('sqlite:' . linea_private() . '/linea.sqlite', null, null, [
         PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION, PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
