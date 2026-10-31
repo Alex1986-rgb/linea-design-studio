@@ -383,7 +383,7 @@ ${SHELL.crumbsAuto(`../`, 'style', null)}
       <div class="card"><h3>Смета пересчитывается</h3><p>Цены материалов зависят от тарифа: эконом, бизнес, премиум. Один и тот же стиль можно собрать в трёх бюджетах.</p></div>
     </div>
     <div class="cta-row" style="margin-top:28px">
-      <a class="btn" href="../brief.html">Заполнить бриф — около 10 минут</a>
+      <a class="btn" href="../brief.html">Заполнить бриф — ${SHELL.TERMS.brief.time}</a>
       <a class="btn ghost" href="../portfolio-hub/">Посмотреть альбомы</a>
     </div>
   </div>

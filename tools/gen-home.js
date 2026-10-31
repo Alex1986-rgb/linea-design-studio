@@ -211,7 +211,7 @@ function build() {
   /* --- цифры первого экрана --- */
   region('stats', `        <div class="stats">
           <div><b>48 / 72 ч</b><span>первый вариант: квартира / дом</span></div>
-          <div><b>~10 мин</b><span>бриф голосом</span></div>
+          <div><b>~5 мин</b><span>бриф: план, картинки, слова</span></div>
           <div><b>${minS}–${maxS}</b><span>листов A3 в альбомах на сайте</span></div>
           <div><b>от ${esc(TERMS.rate('proekt'))}</b><span>минимум ${esc(TERMS.minSum('proekt'))}, сумму знаете до оплаты</span></div>
         </div>`);
@@ -221,12 +221,12 @@ function build() {
   const PK = TERMS.pack, EXA = [40, 60, 80];
   region('utp', `    <div class="kicker">Цена и состав</div>
     <h2>От ${esc(TERMS.rate('proekt'))} — <em>полный альбом рабочих чертежей</em></h2>
-    <p class="sub">Чертит автоматика, проверяют правила по ГОСТ и автор — поэтому дешевле студии. Заказать может любой, онлайн: бриф голосом и план с размерами.</p>
+    <p class="sub">Чертит автоматика, проверяют правила по ГОСТ и автор — поэтому дешевле студии. Заказать может любой, онлайн: ${esc(TERMS.brief.what)}.</p>
     <div class="grid g2">
-      <div class="card feat"><span class="tag">ПАКЕТ</span><h3>${esc(PK.proekt.name)}</h3><b class="p">${esc(TERMS.rate('proekt'))}</b>
+      <div class="card feat"><span class="tag">ЦЕНА ОДНА</span><h3>${esc(PK.proekt.name)}</h3><b class="p">${esc(TERMS.rate('proekt'))}</b>
         <p>Минимальный заказ — как за ${TERMS.minArea} м²: ${esc(TERMS.minSum('proekt'))}. Полный рабочий альбом, смета, 3D-прогулка по квартире и ролик «как собирается квартира».</p></div>
-      <div class="card feat"><span class="tag">ПАКЕТ</span><h3>${esc(PK.vizual.name)}</h3><b class="p">${esc(TERMS.rate('vizual'))}</b>
-        <p>Минимальный заказ — ${esc(TERMS.minSum('vizual'))}. Всё то же и фотореалистичные визуализации каждого помещения, сверенные с планом.</p></div>
+      <div class="card feat"><span class="tag">ВХОДИТ В ЦЕНУ</span><h3>Визуализации</h3><b class="p">в той же ставке</b>
+        <p>Фотореалистичные визуализации помещений, сверенные с планом, — без доплаты и без выбора пакета.</p></div>
     </div>
     <ul class="h-list" style="margin-top:22px">
       <li><b>${fMin}–${fMax} ${plural(fMax, 'лист', 'листа', 'листов')} A3</b> в альбомах наших квартир — не ${TERMS.market.techSheets}, как в типичном техпроекте. Каждый альбом открыт целиком.</li>
@@ -234,7 +234,7 @@ function build() {
       <li><b>Цена за м² фиксирована.</b> Сумма = ставка × площадь, не меньше минимума; вы видите её до оплаты.</li>
       <li><b>Оформление проверяет программа:</b> штамп, масштаб, наложения, стыковка листов; результат проверки — на странице каждого проекта.</li>
     </ul>
-    <p class="sub" style="margin-top:18px"><b>Для сравнения.</b> Полный проект с визуализациями в ${esc(TERMS.market.city.replace('Москва', 'Москве'))} обычно стоит ${TERMS.market.full} ₽/м² (выборка открытых прайсов на ${TERMS.market.date}, ориентир). Пример: ${EXA.map(a => `${a} м² — ${esc(TERMS.rub(TERMS.sum('proekt', a)))} / ${esc(TERMS.rub(TERMS.sum('vizual', a)))}`).join('; ')}.</p>
+    <p class="sub" style="margin-top:18px"><b>Для сравнения.</b> Полный проект с визуализациями в ${esc(TERMS.market.city.replace('Москва', 'Москве'))} обычно стоит ${TERMS.market.full} ₽/м² (выборка открытых прайсов на ${TERMS.market.date}, ориентир). Пример: ${EXA.map(a => `${a} м² — ${esc(TERMS.rub(TERMS.sum('proekt', a)))}`).join('; ')}.</p>
     <div class="cta-row" style="margin-top:22px"><a class="btn" href="price/#primer">Рассчитать свою площадь</a><a class="btn ghost" href="price/">Что входит и что не входит</a></div>`);
   region('scene3', `            <p class="lead">Обмер, демонтаж, мебель, свет и щит, вода и канализация, отопление, потолки, плитка, встроенная мебель, лестницы, ведомости и смета. В альбомах на сайте — от ${minS} до ${maxS} листов A3.</p>`);
   region('cta-count', `          <a class="btn ghost" href="#portfolio">Смотреть ${nAlb} ${plural(nAlb, 'проект', 'проекта', 'проектов')}</a>`);
@@ -308,7 +308,7 @@ ${cards.join('\n')}
 ${JSON.stringify({ '@context': 'https://schema.org', '@type': 'ItemList', name: 'Проекты LINEA в новом формате', itemListElement: ALB.map((a, i) => ({ '@type': 'ListItem', position: i + 1, name: `${a.card.name.replace(' · ', ', ')} — ${a.total} ${plural(a.total, 'лист', 'листа', 'листов')}`, url: `${B}/portfolio/${a.slug}/` })) })}
 </script>`);
   const org = { '@context': 'https://schema.org', '@type': 'ProfessionalService', name: 'LINEA — студия дизайна интерьера', url: `${B}/`, image: `${B}/assets/og-home.jpg`,
-    description: `Дизайн-проект интерьера квартиры и дома: бриф голосом около 10 минут, альбом рабочей документации по ГОСТ с проверкой по правилам (планы, развёртки, электрика, сантехника, отделка, мебель, потолки, лестницы), визуализации — только сверенные с планом. ${TERMS.how}; ${TERMS.term}.`,
+    description: `Дизайн-проект интерьера квартиры и дома: ${TERMS.brief.short}, альбом рабочей документации по ГОСТ с проверкой по правилам (планы, развёртки, электрика, сантехника, отделка, мебель, потолки, лестницы), визуализации — только сверенные с планом. ${TERMS.how}; ${TERMS.term}.`,
     areaServed: 'RU', telephone: SHELL.AUTHOR.tel, email: SHELL.AUTHOR.email,
     founder: { '@type': 'Person', name: SHELL.AUTHOR.name, jobTitle: SHELL.AUTHOR.role, telephone: SHELL.AUTHOR.tel, email: SHELL.AUTHOR.email } };
   // Offer: цена «от» = минимальный заказ, ставка за м² — в UnitPriceSpecification (site-shell.js → TERMS.offers)
@@ -342,7 +342,7 @@ ${PLATES.map(p => {
     <div class="grid g3">
       <div class="card feat"><span class="tag">ПОРЯДОК</span><h3>Бриф → сумма → оплата → проект</h3><b class="p">от ${esc(TERMS.rate('proekt'))}</b>
         <ul><li>${TERMS.intake.brief}</li><li>Сумма — ставка × площадь, не меньше ${esc(TERMS.minSum('proekt'))}; срок — по брифу</li><li>Оплата — по счёту; онлайн через ЮKassa — кнопкой на странице заказа, когда подключим</li><li>До начала работы деньги возвращаем полностью</li></ul>
-        <a class="btn sm" href="brief.html">Рассказать о квартире или доме — 10 минут</a></div>
+        <a class="btn sm" href="brief.html">Заполнить бриф — ${esc(TERMS.brief.time)}</a></div>
       <div class="card"><h3>Что придёт и когда</h3>
         <ul><li>${esc(cap1(TERMS.term))}</li><li>Два PDF: альбом для заказчика и полный альбом для бригады</li><li>Комплект с пометкой «ПРЕДВАРИТЕЛЬНО» и листом вопросов к вам</li><li>Финал без пометки — после ваших ответов, контрольного обмера и правок; ${esc(TERMS.roundsText)}</li></ul></div>
       <div class="card"><h3>Что не входит</h3>
@@ -356,7 +356,7 @@ ${PLATES.map(p => {
     ['Это делает ИИ — значит, шаблон?', `Нет. Лист не берётся из библиотеки и не рисуется от руки: он строится из данных вашего объекта в миллиметрах — стены, проёмы, мебель, инженерные точки. Поменялась стена — пересобирается весь альбом и смета. На сайте ${numWord(nAlb)} проектов — ${numWord(nAlb)} разных планировок. Решения смотрит автор, ${SHELL.AUTHOR.name}.`],
     ['Примут ли такие чертежи строители?', `Альбом оформлен как рабочая документация по СПДС: штамп, масштаб, цепочки размеров, отметки, ведомости, узлы. Но по первому выпуску не строят. ${TERMS.prelim}`],
     ['Визуализации совпадают с чертежами?', `На сайт идут только кадры, сверенные с планом по чек-листу — мебель, двери, сантехника, свет — и подписанные дизайнером. Сейчас таких ${signedTotal}${signedAlbums.length ? ` в ${signedAlbums.length === 1 ? 'одном проекте' : `${signedAlbums.length} проектах`}` : ''}; у остальных альбомов кадры на перерисовке, на обложке — лист расстановки мебели. Если кадр и чертёж расходятся, верен чертёж.`],
-    ['Что нужно от меня?', 'Рассказать о квартире голосом — около 10 минут — и приложить план: от застройщика, БТИ, PDF или листок от руки. Фото помещений и отметки в галерее референсов помогут, но не обязательны. ' + TERMS.intake.brief + '.'],
+    ['Что нужно от меня?', TERMS.brief.line + '. План — от застройщика, БТИ, PDF или листок от руки; нет плана — договоримся об обмере. ' + TERMS.intake.brief + '.'],
     ['Как вносить правки?', `Откройте лист на сайте, поставьте метку прямо на чертеже и надиктуйте или напишите замечание. В PDF альбома на каждой странице есть кнопка «Правка к этому листу». Альбом пересобирается целиком — вместе со сметой; ${TERMS.roundsText}.`],
     ['Кому принадлежат права на проект?', 'Проект ваш, используйте как угодно. Студия может показывать его в портфолио только с вашего согласия — это отдельная галочка в брифе.'],
   ];

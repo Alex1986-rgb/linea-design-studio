@@ -1,367 +1,316 @@
-// LINEA · бриф-визард → brief.json + архив с файлами
-// Всё собирается в браузере клиента — бриф, план, фото и референсы одним ZIP-архивом; черновик хранится в браузере.
-// Где есть приёмник (Beget: <meta name="linea-api" content="api/">, её вставляет tools/site-rebase.js) и соединение
-// защищено (https), архив сразу уходит на api/brief.php → номер заказа → order.html. На GitHub Pages PHP нет, меты нет;
-// на техническом адресе Beget нет https — персональные данные открытым каналом не шлём (второй круг критиков 27.10.2026).
-// Там остаётся прежний путь: «Поделиться» (WhatsApp / Telegram на телефоне) или скачивание + WhatsApp / почта.
-// Он же — запасной при ошибке сети. Исключения: ?test=1 (наши проверки, заказ тестовый) и запуск на маке (localhost).
+// LINEA · бриф: три шага + отправка (решение Александра 31.10.2026 — «план, референсы, словами — и всё»)
+//   1. План квартиры — файл или камера, площадь (необязательно), «плана нет»
+//   2. Что нравится — свои картинки или ♥ на кадрах галереи (assets/refs/refs.json)
+//   3. Расскажите словами — одно поле, 🎤 (Web Speech API), чипы-заготовки; подробности (помещения, стиль…) — под «Добавить подробности»
+//   4. Контакты, согласие, цена по площади, что дальше → отправка
+// Формат заказа прежний: архив brief.json + brief.txt + plan/* + referensy/* (+ referensy-galereya.txt). brief.json читают
+// api/brief.php, tools/brief-intake.js и gost-draft tools/site-brief.js — поля collect() сохранены (rooms может быть пустым).
+// Где есть приёмник (<meta name="linea-api" content="api/">, её вставляет tools/site-rebase.js) и соединение защищено (https),
+// архив уходит на api/brief.php → номер заказа → order.html. Иначе (GitHub Pages, http) — «Поделиться» / скачать и отправить
+// самому в WhatsApp или на почту; этот путь — и запасной при ошибке сети. Исключения: ?test=1 (заказ тестовый) и localhost.
+// Ставки и «что дальше» — из tools/site-shell.js → TERMS (в brief.html их переносит tools/sync-static-nav.js).
 (function () {
   'use strict';
   const $ = id => document.getElementById(id);
-  const TEST = new URLSearchParams(location.search).get('test') === '1';   // наши проверки: заказ помечается тестовым
+  const qs = new URLSearchParams(location.search);
+  const TEST = qs.get('test') === '1';
   const SECURE = location.protocol === 'https:' || /^(localhost|127\.0\.0\.1|\[::1\])$/.test(location.hostname);
   const API = (SECURE || TEST) ? ((document.querySelector('meta[name="linea-api"]') || {}).content || '') : '';
   const MAX_MB = 100;
-  const STEPS = ['Рассказ', 'Объект', 'План и фото', 'Что нравится', 'Вопросы', 'Контакты', 'Готово'];
-  const LAST = STEPS.length - 1, FORM_LAST = LAST - 1;
-  const STYLES = [
-    { key: 'studio',  title: 'На усмотрение студии', note: 'подберём по вашим ответам', sw: ['#EDE7DC', '#C29A5B', '#8A8D80', '#3E3A34'] },
-    { key: 'japandi', title: 'Джапанди', note: 'тёплый минимализм, дерево', sw: ['#EDE7DC', '#C8A97A', '#8A8D80', '#A67B5B'] },
-    { key: 'scandi',  title: 'Скандинавский', note: 'светло, уютно, функционально', sw: ['#F2F0EA', '#D9BE93', '#9FB4A8', '#C96F4A'] },
-    { key: 'minimal', title: 'Минимализм', note: 'чистая геометрия, микроцемент', sw: ['#ECECE8', '#C9BBA6', '#A9A9A3', '#6E6E68'] },
-    { key: 'modern',  title: 'Современный', note: 'глубокие акценты, латунь, трек', sw: ['#E9E4DB', '#A97B4F', '#5B6B6D', '#C29A5B'] },
-    { key: 'neoclassic', title: 'Неоклассика', note: 'молдинги, симметрия, ёлка', sw: ['#E6E2D8', '#B98A5C', '#8C97A3', '#CBB287'] },
-    { key: 'loft',    title: 'Лофт', note: 'бетон, кирпич, металл', sw: ['#D8D3CA', '#9C6B54', '#8B5F3C', '#5E6B5B'] },
-    { key: 'retro',   title: 'Ретро, середина века', note: 'орех, латунь, бархат, ар-деко', sw: ['#E8DCC4', '#7A4E2D', '#1F5A4A', '#C9A04A'] },
-    { key: 'chalet',  title: 'Загородный, шале', note: 'дерево, камень, зелень, терракота', sw: ['#DECFB9', '#6A6C4A', '#254631', '#B0624A'] }
-  ];
-  const ROOM_TYPES = [
-    ['living-kitchen', 'Гостиная-кухня'], ['living', 'Гостиная'], ['kitchen', 'Кухня'], ['dining', 'Столовая'],
-    ['bedroom', 'Спальня'], ['kids', 'Детская'], ['cabinet', 'Кабинет'], ['wardrobe', 'Гардеробная'],
-    ['bathroom', 'Санузел'], ['hallway', 'Прихожая'], ['hall', 'Холл / коридор'], ['storage', 'Кладовая / котельная'],
-    ['gym', 'Спортзал'], ['garage', 'Гараж'], ['veranda', 'Веранда / терраса'], ['balcony', 'Балкон / лоджия']
-  ];
-  let step = 0, selStyle = 'studio';
-  const files = { plans: [], photos: [] };          // File — в архив; в черновике хранятся только имена
-  const refs = {};                                   // id галереи → 'like' | 'dislike'
+  const NAMES = ['План квартиры', 'Что нравится', 'Расскажите словами', 'Куда прислать проект'];
+  const SEND = 3, DONE = 4;
+  // ставки — из TERMS (sync-static-nav.js пишет <script id="briefTerms">); запасные значения — на случай старой копии страницы
+  let T = { packs: [{ key: 'proekt', name: 'Проект с визуализациями', rate: 2000, min: 80000 }], minArea: 40 };
+  try { const el = $('briefTerms'); if (el) T = JSON.parse(el.textContent); } catch (e) {}
+  // стили — только для «подробностей» и прихода со страницы стиля (brief.html?style=japandi); ключи читает site-brief.js
+  const STYLES = [['studio', 'на усмотрение студии'], ['japandi', 'Джапанди'], ['scandi', 'Скандинавский'], ['minimal', 'Минимализм'], ['modern', 'Современный'],
+    ['neoclassic', 'Неоклассика'], ['loft', 'Лофт'], ['retro', 'Ретро, середина века'], ['chalet', 'Загородный, шале']];
+  const ROOM_TYPES = [['living-kitchen', 'Гостиная-кухня'], ['living', 'Гостиная'], ['kitchen', 'Кухня'], ['dining', 'Столовая'], ['bedroom', 'Спальня'], ['kids', 'Детская'],
+    ['cabinet', 'Кабинет'], ['wardrobe', 'Гардеробная'], ['bathroom', 'Санузел'], ['hallway', 'Прихожая'], ['hall', 'Холл / коридор'], ['storage', 'Кладовая / котельная'],
+    ['gym', 'Спортзал'], ['garage', 'Гараж'], ['veranda', 'Веранда / терраса'], ['balcony', 'Балкон / лоджия']];
+  const esc = s => String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;');
+  const val = id => ($(id) ? $(id).value : '');
+  const num = s => { const n = parseFloat(String(s == null ? '' : s).replace(',', '.').replace(/[^\d.]/g, '')); return Number.isFinite(n) && n > 0 ? n : null; };
+  const kind = () => (document.querySelector('input[name="objType"]:checked') || {}).value || 'квартира';
+  const pack = () => T.packs[0].key;   // пакет один (31.10.2026): визуализации входят в цену
+
+  let step = 0, ready = false;
+  const files = { plans: [], photos: [] };   // File → в архив; в черновике только имена
+  const liked = new Set();                   // id кадров галереи
+  $('prog').hidden = false; $('nav').hidden = false;
 
   // ── шаги
-  const stepsEl = $('steps');
-  function renderSteps() {
-    stepsEl.innerHTML = STEPS.map((t, i) => `<span class="${i === step ? 'on' : i < step ? 'done' : ''}"${i === step ? ' aria-current="step"' : ''}>${i + 1}<em> из ${STEPS.length}</em> · ${t}</span>`).join('')
-      + `<i class="progress" aria-hidden="true"><b style="width:${Math.round((step / LAST) * 100)}%"></b></i>`;
-    $('stepLive').textContent = `Шаг ${step + 1} из ${STEPS.length}: ${STEPS[step]}`;   // объявление для экранного диктора
-    document.querySelectorAll('.panel').forEach(p => { p.hidden = +p.dataset.step !== step; });
-    $('prev').style.visibility = step === 0 ? 'hidden' : 'visible';
-    $('next').textContent = step === FORM_LAST ? 'Собрать бриф ✓' : 'Далее →';
-    $('next').style.display = step === LAST ? 'none' : '';
-    if (renderSteps.done) $('steps').scrollIntoView({ behavior: 'smooth', block: 'start' });   // к форме, не к заголовку страницы
-    renderSteps.done = true;
-  }
-  $('next').onclick = () => {
-    if (step === FORM_LAST && !val('cPhone').trim() && !val('cEmail').trim()) { $('needContact').hidden = false; $('cPhone').focus(); return; }   // без способа связи бриф бесполезен
-    if (step === FORM_LAST && !$('cConsent').checked) { $('needConsent').hidden = false; $('cConsent').focus(); return; }   // согласие на ПДн — отдельной галочкой, не по умолчанию
-    if (step === 0) autoFill(); if (step === FORM_LAST) buildResult(); step = Math.min(LAST, step + 1); renderSteps(); save(); };
-  $('prev').onclick = () => { step = Math.max(0, step - 1); renderSteps(); };
-  $('cConsent').addEventListener('change', () => { if ($('cConsent').checked) $('needConsent').hidden = true; });
-
-  // ── пакет и ориентировочная сумма (ставки — как в tools/site-shell.js → TERMS; сервер считает по своему config.php)
-  const PACKS = { proekt: [2000, 80000], vizual: [3000, 120000] };
-  const rubF = n => Math.round(n).toLocaleString('ru-RU').replace(/\u202f|\s/g, '\u00a0') + '\u00a0₽';
-  function packSum() {
-    const el = $('packSum'); if (!el || !$('objPack')) return;
-    const a = +$('objArea').value, p = PACKS[$('objPack').value] || PACKS.proekt;
-    el.textContent = a > 0 ? 'Около ' + rubF(Math.max(p[1], p[0] * a)) + (a < 40 ? ' — действует минимальный заказ' : ' (ставка × площадь)') + '. Точную сумму подтвердим до оплаты.' : 'Укажите площадь — посчитаем. Минимальный заказ — как за 40 м².';
-  }
-  ['objArea', 'objPack'].forEach(id => { const e = $(id); if (e) { e.addEventListener('input', packSum); e.addEventListener('change', packSum); } });
-  packSum();
-
-  // ── дом: этажи, лестница, участок
-  const isHouse = () => $('objType').value === 'дом';
-  function houseUI() {
-    document.querySelectorAll('.house-only').forEach(el => { el.hidden = !isHouse(); });
-    document.querySelectorAll('.r-level').forEach(el => { el.hidden = !isHouse(); });
-  }
-  $('objType').addEventListener('change', houseUI);
-
-  // ── помещения
-  const roomsEl = $('rooms');
-  function addRoom(name, type, w, l, level) {
-    const row = document.createElement('div');
-    row.className = 'room-row';
-    row.setAttribute('role', 'group');
-    row.innerHTML = `
-      <input type="text" class="r-name" placeholder="Название" aria-label="Название помещения" value="${(name || '').replace(/"/g, '&quot;')}">
-      <select class="r-type" aria-label="Тип помещения">${ROOM_TYPES.map(t => `<option value="${t[0]}"${t[0] === type ? ' selected' : ''}>${t[1]}</option>`).join('')}</select>
-      <input type="number" class="r-w" placeholder="шир., м" aria-label="Ширина, м — можно оставить пустым" step="0.1" min="1" value="${w || ''}">
-      <input type="number" class="r-l" placeholder="дл., м" aria-label="Длина, м — можно оставить пустым" step="0.1" min="1" value="${l || ''}">
-      <select class="r-level" title="Этаж" aria-label="Этаж"><option value="1">1 эт.</option><option value="2"${level == 2 ? ' selected' : ''}>2 эт.</option><option value="3"${level == 3 ? ' selected' : ''}>3 эт.</option><option value="0"${level == 0 ? ' selected' : ''}>цоколь</option></select>
-      <button class="x" type="button" title="Удалить" aria-label="Удалить помещение">✕</button>`;
-    const label = () => row.setAttribute('aria-label', 'Помещение: ' + (row.querySelector('.r-name').value || row.querySelector('.r-type').selectedOptions[0].textContent));
-    row.querySelector('.r-name').addEventListener('input', label);
-    row.querySelector('.x').onclick = () => { row.remove(); save(); };
-    row.querySelector('.r-type').onchange = e => {
-      const nameInp = row.querySelector('.r-name');
-      if (!nameInp.value) nameInp.value = e.target.selectedOptions[0].textContent;
-      label();
-    };
-    label();
-    roomsEl.appendChild(row);
-    houseUI();
-  }
-  $('addRoom').onclick = () => addRoom();
-
-  // ── файлы: план и фото квартиры; свои референсы
-  function fileZone(dropId, inputId, listId, bucket) {
-    $(dropId).onclick = () => $(inputId).click();
-    $(dropId).onkeydown = e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); $(inputId).click(); } };
-    $(dropId).ondragover = e => { e.preventDefault(); };
-    $(dropId).ondrop = e => { e.preventDefault(); take(e.dataTransfer.files); };
-    $(inputId).onchange = e => take(e.target.files);
-    function take(list) {
-      for (const f of list) files[bucket].push(f);
-      show();
-      save();
+  function show(n, focus) {
+    step = n;
+    document.querySelectorAll('#wiz .panel').forEach(p => { p.hidden = +p.dataset.step !== step; });
+    $('progStep').textContent = step < SEND ? `Шаг ${step + 1} из 3` : step === SEND ? 'Последний шаг' : 'Готово';
+    $('progName').textContent = NAMES[step] || 'Отправка';
+    $('progBar').style.width = Math.round(((step + 1) / 4) * 100) + '%';
+    $('stepLive').textContent = $('progStep').textContent + ': ' + $('progName').textContent;
+    $('nav').hidden = step === DONE;
+    $('nav').classList.toggle('last', step === SEND);
+    $('prev').hidden = step === 0;
+    document.body.classList.toggle('stepped', step > 0);
+    $('next').hidden = step >= SEND;
+    $('next').textContent = step === 2 ? 'К отправке →' : 'Дальше →';
+    $('skipNote').textContent = step === 1 ? 'Ничего не подходит — просто нажмите «Дальше».' : step === 2 ? 'Можно коротко: пара фраз уже помогает.' : '';
+    if (step === SEND) price();
+    if (focus) {
+      const h = document.querySelector(`.panel[data-step="${step}"] h2`);
+      if (h) { h.tabIndex = -1; h.focus({ preventScroll: true }); }
+      $('prog').scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
-    function show() {
-      $(listId).innerHTML = files[bucket].map((f, i) => `<span class="chip">${f.name.replace(/</g, '&lt;')} · ${Math.round(f.size / 1024)} КБ <button type="button" data-i="${i}" title="Убрать" aria-label="Убрать файл ${f.name.replace(/[<"]/g, '')}">✕</button></span>`).join('');
-      $(listId).querySelectorAll('button').forEach(b => { b.onclick = () => { files[bucket].splice(+b.dataset.i, 1); show(); save(); }; });
+    if (ready) save();
+  }
+  function setErr(id, msg, field) {
+    $(id).textContent = msg || '';
+    if (field) field.setAttribute('aria-invalid', msg ? 'true' : 'false');
+    if (msg && field) field.focus();
+    return !msg;
+  }
+  function check(n) {
+    if (n !== 0) return true;
+    const a = val('objArea').trim(), an = num(a);
+    if (a && (an === null || an < 10 || an > 3000)) return setErr('areaErr', 'Площадь — число от 10 до 3000 м², например 62. Не знаете — оставьте пустым.', $('objArea'));
+    setErr('areaErr', '', $('objArea'));
+    if (!files.plans.length && !$('needSurvey').checked) {
+      $('noPlanBox').open = true;
+      $('planErr').textContent = 'Добавьте план — или отметьте ниже «Плана нет», и размеры снимем мы.';
+      $('filePlan').focus();
+      return false;
+    }
+    $('planErr').textContent = '';
+    return true;
+  }
+  $('next').onclick = () => { if (check(step)) show(Math.min(SEND, step + 1), true); };
+  $('prev').onclick = () => show(Math.max(0, step - 1), true);
+  $('needSurvey').addEventListener('change', () => { if ($('needSurvey').checked) $('planErr').textContent = ''; });
+
+  // ── файлы: план (шаг 1) и свои картинки (шаг 2)
+  const isImg = f => /^image\/(jpeg|png|webp|gif)$/.test(f.type);
+  function fileZone(inputs, labelId, listId, bucket, title) {
+    const list = $(listId);
+    const take = fl => { for (const f of fl) if (f && f.size) files[bucket].push(f); paint(); save(); };
+    inputs.forEach(id => { $(id).addEventListener('change', e => { take(e.target.files); e.target.value = ''; }); });
+    const lab = labelId && $(labelId);
+    if (lab) {
+      ['dragenter', 'dragover'].forEach(t => lab.addEventListener(t, e => { e.preventDefault(); lab.classList.add('over'); }));
+      ['dragleave', 'drop'].forEach(t => lab.addEventListener(t, () => lab.classList.remove('over')));
+      lab.addEventListener('drop', e => { e.preventDefault(); take(e.dataTransfer.files); });
+    }
+    function paint() {
+      list.querySelectorAll('img').forEach(i => URL.revokeObjectURL(i.src));
+      list.innerHTML = files[bucket].map((f, i) => `<li>${isImg(f) ? `<img src="${URL.createObjectURL(f)}" alt="">` : esc(f.name.slice(0, 28))}`
+        + `<button type="button" data-i="${i}" aria-label="Убрать файл ${esc(f.name)}"><i aria-hidden="true">✕</i></button></li>`).join('');
+      list.querySelectorAll('button').forEach(b => { b.onclick = () => { files[bucket].splice(+b.dataset.i, 1); paint(); save(); }; });
+      if (bucket === 'plans') {
+        $('planBtnT').textContent = files.plans.length ? 'Добавить ещё страницу' : 'Загрузить план';
+        if (files.plans.length) $('planErr').textContent = '';
+      }
+      list.setAttribute('aria-label', title + ': ' + files[bucket].length);
     }
   }
-  fileZone('drop', 'files', 'filelist', 'plans');
-  fileZone('dropRefs', 'filesRefs', 'reflist', 'photos');
+  fileZone(['filePlan', 'camPlan'], 'dropPlan', 'planList', 'plans', 'Загружено страниц плана');
+  fileZone(['fileRefs'], null, 'refList', 'photos', 'Ваших картинок');
 
-  // ── стили (радиогруппа с клавиатурой)
-  const stylesEl = $('styles');
-  stylesEl.setAttribute('role', 'radiogroup');
-  stylesEl.setAttribute('aria-label', 'Стиль интерьера');
-  stylesEl.innerHTML = STYLES.map(s => `
-    <div class="style-card${s.key === 'studio' ? ' sel' : ''}" data-key="${s.key}"
-         role="radio" tabindex="${s.key === 'studio' ? '0' : '-1'}" aria-checked="${s.key === 'studio'}">
-      <div class="sw">${s.sw.map(c => `<i style="background:${c}"></i>`).join('')}</div>
-      <b>${s.title}</b><small>${s.note}</small>
-    </div>`).join('');
-  const pickStyle = card => {
-    selStyle = card.dataset.key;
-    stylesEl.querySelectorAll('.style-card').forEach(c => {
-      const on = c === card;
-      c.classList.toggle('sel', on);
-      c.setAttribute('aria-checked', String(on));
-      c.tabIndex = on ? 0 : -1;
-    });
-    save();
-  };
-  stylesEl.onclick = e => { const card = e.target.closest('.style-card'); if (card) pickStyle(card); };
-  stylesEl.onkeydown = e => {
-    const card = e.target.closest('.style-card'); if (!card) return;
-    const all = [...stylesEl.querySelectorAll('.style-card')], i = all.indexOf(card);
-    let next = null;
-    if (e.key === 'ArrowRight' || e.key === 'ArrowDown') next = all[(i + 1) % all.length];
-    if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') next = all[(i - 1 + all.length) % all.length];
-    if (e.key === ' ' || e.key === 'Enter') next = card;
-    if (!next) return;
-    e.preventDefault(); pickStyle(next); next.focus();
-  };
-  const cardOf = key => stylesEl.querySelector(`.style-card[data-key="${key}"]`);
-
-  // ── галерея референсов: визуализации проектов студии, «нравится / не нравится»
-  const gal = $('refGallery');
+  // ── галерея: нажатие = нравится. Сначала по одному кадру каждого стиля, остальные — «Показать ещё»
+  const gal = $('gal');
   let REFS = [];
-  fetch('assets/refs/refs.json?v=2').then(r => r.json()).then(list => {
-    REFS = list;
-    // фильтр — теми же стилями, что и карточки ниже (styleKey); кадры без пары в брифе — под своим названием
-    const groupOf = m => { const st = STYLES.find(s => s.key === m.styleKey); return st ? st.title : m.style; };
-    const order = g => { const i = STYLES.findIndex(s => s.title === g); return i < 0 ? 99 : i; };
-    const groups = [...new Set(list.map(groupOf))].sort((a, b) => order(a) - order(b));
-    $('refFilter').setAttribute('role', 'group');
-    $('refFilter').setAttribute('aria-label', 'Показать стиль');
-    $('refFilter').innerHTML = ['Все', ...groups].map((t, i) => `<button type="button" class="${i ? '' : 'on'}" aria-pressed="${!i}" data-s="${i ? esc(t) : ''}">${esc(t)}</button>`).join('');
-    $('refFilter').onclick = e => {
-      const b = e.target.closest('button'); if (!b) return;
-      $('refFilter').querySelectorAll('button').forEach(x => { x.classList.toggle('on', x === b); x.setAttribute('aria-pressed', String(x === b)); });
-      gal.querySelectorAll('.ref').forEach(f => { f.hidden = !!b.dataset.s && f.dataset.s !== b.dataset.s; });
-    };
-    gal.innerHTML = list.map(m => `
-      <figure class="ref" data-id="${esc(m.id)}" data-s="${esc(groupOf(m))}">
-        <img src="${esc(m.src)}" alt="${esc(m.style)}, ${esc(m.room)}" loading="lazy">
-        <figcaption>${esc(m.style)} · ${esc(m.room)}</figcaption>
-        <div class="ref-btns"><button type="button" class="like" aria-pressed="false" aria-label="Нравится: ${esc(m.style)}, ${esc(m.room)}">♥</button><button type="button" class="dislike" aria-pressed="false" aria-label="Не моё: ${esc(m.style)}, ${esc(m.room)}">✕</button></div>
-      </figure>`).join('');
-    paintRefs();
-  }).catch(() => { gal.innerHTML = '<p class="hint">Галерея не загрузилась — пришлите свои фото или ссылки ниже.</p>'; });
-  gal.onclick = e => {
-    const b = e.target.closest('button'); if (!b) return;
-    const id = b.closest('.ref').dataset.id, v = b.classList.contains('like') ? 'like' : 'dislike';
-    refs[id] = refs[id] === v ? undefined : v;
-    if (!refs[id]) delete refs[id];
-    paintRefs(); save();
-  };
-  function paintRefs() {
-    gal.querySelectorAll('.ref').forEach(f => {
-      const v = refs[f.dataset.id] || '';
-      f.dataset.v = v;
-      f.querySelector('.like').setAttribute('aria-pressed', String(v === 'like'));
-      f.querySelector('.dislike').setAttribute('aria-pressed', String(v === 'dislike'));
-    });
-    const n = Object.values(refs), l = n.filter(v => v === 'like').length, d = n.filter(v => v === 'dislike').length;
-    $('refCount').textContent = l || d ? `нравится: ${l} · не нравится: ${d}` : '';
+  function paintCount() {
+    const n = liked.size;
+    $('galCount').innerHTML = n ? `Отмечено: <b>${n}</b>${n < 6 ? ' — можно ещё' : ''}` : 'Отмечено: 0';
   }
+  fetch('assets/refs/refs.json?v=2').then(r => r.json()).then(list => {
+    const seen = new Set(), first = [], rest = [];
+    for (const m of list) { if (!seen.has(m.styleKey) && first.length < 9) { seen.add(m.styleKey); first.push(m); } else rest.push(m); }
+    REFS = first.concat(rest);
+    gal.innerHTML = REFS.map((m, i) => `<button type="button" data-id="${esc(m.id)}" aria-pressed="${liked.has(m.id)}" aria-label="${esc(m.style)}, ${esc(m.room)}"${i >= 9 ? ' hidden' : ''}>`
+      + `<img src="${esc(m.src)}" alt="" loading="lazy" decoding="async"></button>`).join('');
+    $('galMore').hidden = REFS.length <= 9;
+    paintCount();
+  }).catch(() => { gal.innerHTML = '<p class="hint">Кадры не загрузились — загрузите свои картинки выше.</p>'; });
+  gal.addEventListener('click', e => {
+    const b = e.target.closest('button'); if (!b) return;
+    const id = b.dataset.id, on = !liked.has(id);
+    if (on) liked.add(id); else liked.delete(id);
+    b.setAttribute('aria-pressed', String(on));
+    paintCount(); save();
+  });
+  $('galMore').onclick = () => {
+    const hid = [...gal.querySelectorAll('button[hidden]')];
+    hid.slice(0, 9).forEach(b => { b.hidden = false; });
+    if (hid.length <= 9) $('galMore').hidden = true;
+  };
 
-  // ── голосовой ввод: Web Speech API (Chrome, Edge, Яндекс Браузер, Safari 14.5+)
+  // ── рассказ: чипы-заготовки («Кто живёт: …» отдельной строкой)
+  const story = $('story');
+  const CHIPS = ['Кто живёт', 'Что мешает сейчас', 'Что точно нужно', 'Бюджет', 'Сроки'];
+  $('chips').insertAdjacentHTML('beforeend', CHIPS.map(c => `<button type="button" data-p="${c}">+ ${c}</button>`).join(''));
+  const lineRe = p => new RegExp('^[ \\t]*' + p + ':[ \\t]*(.*)$', 'im');
+  function paintChips() {
+    $('chips').querySelectorAll('button').forEach(b => {
+      const m = story.value.match(lineRe(b.dataset.p)), ok = !!(m && m[1].trim());
+      b.classList.toggle('ok', ok);
+      b.textContent = (ok ? '✓ ' : '+ ') + b.dataset.p;
+      b.setAttribute('aria-label', b.dataset.p + (ok ? ' — уже есть в тексте' : ' — добавить заготовку в текст'));
+    });
+  }
+  $('chips').addEventListener('click', e => {
+    const b = e.target.closest('button'); if (!b) return;
+    const p = b.dataset.p, m = story.value.match(lineRe(p));
+    if (m) { const end = story.value.indexOf(m[0]) + m[0].length; story.focus(); story.setSelectionRange(end, end); return; }
+    const v = story.value.replace(/\s+$/, '');
+    story.value = (v ? v + '\n' : '') + p + ': ';
+    story.focus(); story.setSelectionRange(story.value.length, story.value.length);
+    paintChips(); save();
+  });
+  story.addEventListener('input', paintChips);
+
+  // ── голос: Web Speech API (Chrome, Edge, Яндекс Браузер, Safari 14.5+). Нет API — подсказка про 🎤 на клавиатуре
   const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-  let rec = null, recField = null, recBtn = null;
-  function stopRec() { if (rec) { try { rec.stop(); } catch (e) {} } }
-  // dictate(поле, кнопка, onState): включает/выключает распознавание для поля; одновременно слушает одно поле
-  function dictate(field, b, onState) {
-    if (rec && recField === field) { stopRec(); return; }
-    stopRec();
-    const r = rec = new SR(); rec.lang = 'ru-RU'; rec.continuous = true; rec.interimResults = true;
-    recField = field; recBtn = b;
-    const base = field.value ? field.value.replace(/\s*$/, ' ') : '';
-    let finalText = '';
-    rec.onresult = ev => {
+  const REC_ERR = {
+    'not-allowed': 'Микрофон не разрешён: нажмите на замок в адресной строке и разрешите. Или 🎤 на клавиатуре телефона.',
+    'service-not-allowed': 'Микрофон не разрешён: нажмите на замок в адресной строке и разрешите. Или 🎤 на клавиатуре телефона.',
+    'no-speech': 'Не расслышали. Говорите ближе к микрофону и нажмите ещё раз.',
+    'audio-capture': 'Микрофон не найден — можно написать текстом.',
+    'network': 'Распознаванию речи нужен интернет — проверьте связь или напишите текстом.',
+    'language-not-supported': 'Браузер не распознаёт русскую речь — напишите текстом или откройте страницу в Chrome.',
+    other: 'Голосовой ввод не сработал — нажмите ещё раз или напишите текстом.'
+  };
+  let rec = null;
+  function micState(on, msg) {
+    $('mic').classList.toggle('rec', on);
+    $('mic').setAttribute('aria-pressed', String(on));
+    $('micT').textContent = on ? 'Остановить' : 'Надиктовать';
+    $('micState').textContent = msg || (on ? 'Слушаю… говорите' : '');
+  }
+  $('mic').onclick = () => {
+    if (!SR) { micState(false, 'Здесь голосовой ввод не работает: нажмите 🎤 на клавиатуре телефона или напишите текстом.'); story.focus(); return; }
+    if (rec) { try { rec.stop(); } catch (e) {} return; }
+    const r = rec = new SR(); r.lang = 'ru-RU'; r.continuous = true; r.interimResults = true;
+    const base = story.value ? story.value.replace(/\s*$/, ' ') : '';
+    let fin = '', err = '';
+    r.onresult = ev => {
       let interim = '';
       for (let i = ev.resultIndex; i < ev.results.length; i++) {
         const t = ev.results[i][0].transcript;
-        if (ev.results[i].isFinal) finalText += t.trim() + ' '; else interim += t;
+        if (ev.results[i].isFinal) fin += t.trim() + ' '; else interim += t;
       }
-      field.value = base + finalText + interim;
-      field.dispatchEvent(new Event('input', { bubbles: true }));
+      story.value = base + fin + interim;
+      paintChips();
     };
-    let err = '';
-    rec.onend = () => { field.value = field.value.trim(); if (rec === r) { rec = null; recField = null; } onState(false, err); save(); };   // старый сеанс не гасит уже начатый новый
-    rec.onerror = ev => {
-      if (ev.error === 'aborted') return;                // сами остановили — не ошибка
-      err = REC_ERR[ev.error] || REC_ERR.other;
-      if (ev.error === 'not-allowed' || ev.error === 'service-not-allowed') { $('micHint').hidden = false; $('micHint').innerHTML = '<b>Микрофон не разрешён.</b> Нажмите значок замка в адресной строке и разрешите микрофон — или нажмите 🎤 на клавиатуре телефона и говорите в поле.'; }
-    };
-    try { rec.start(); onState(true); } catch (e) { rec = null; recField = null; onState(false, REC_ERR.other); }
-  }
-  // понятные причины, почему не распознали (коды Web Speech API)
-  const REC_ERR = {
-    'not-allowed': 'Микрофон не разрешён — подсказка ниже',
-    'service-not-allowed': 'Микрофон не разрешён — подсказка ниже',
-    'no-speech': 'Не расслышали. Говорите ближе к микрофону и нажмите ещё раз',
-    'audio-capture': 'Микрофон не найден. Проверьте, что он подключён, — или напишите текстом',
-    'network': 'Распознаванию речи нужен интернет. Проверьте связь — или напишите текстом',
-    'language-not-supported': 'Этот браузер не распознаёт русскую речь. Напишите текстом или откройте страницу в Chrome',
-    other: 'Голосовой ввод не сработал. Нажмите ещё раз — или напишите текстом'
-  };
-  function micFor(field) {
-    const b = document.createElement('button');
-    b.type = 'button'; b.className = 'mic'; b.title = 'Надиктовать'; b.setAttribute('aria-label', 'Надиктовать голосом');
-    b.textContent = '🎤';
-    const note = document.createElement('p');
-    note.className = 'hint mic-err'; note.hidden = true; note.setAttribute('role', 'status');
-    b.onclick = () => {
-      if (!SR) { $('micHint').hidden = false; note.hidden = false; note.textContent = 'Голосовой ввод в этом браузере не работает — нажмите 🎤 на клавиатуре телефона или напишите текстом.'; field.focus(); return; }
-      note.hidden = true;
-      dictate(field, b, (on, err) => { b.classList.toggle('rec', on); if (!on && err) { note.hidden = false; note.textContent = err; } });
-    };
-    const wrap = document.createElement('div');
-    wrap.className = 'dict-wrap';
-    field.parentNode.insertBefore(wrap, field);
-    wrap.appendChild(field); wrap.appendChild(b);
-    wrap.after(note);
-  }
-  document.querySelectorAll('textarea.dict, input.dict').forEach(micFor);
-
-  // ── главный экран: рассказ голосом. Подсказки-темы загораются, когда о них сказано; из рассказа заполняется, что можно
-  const TOPICS = [
-    ['Кто живёт', /(живу|живём|живем|живут|муж|мужа|мужем|жена|жены|женой|дети|детей|детьми|детям|ребён[а-яё]*|ребен[а-яё]*|сын[а-яё]*|доч[а-яё]*|бабушк[а-яё]*|дедушк[а-яё]*|пара|парой|вдво[её]м|втро[её]м|вчетвером|впятером|семь[яиюёе][а-яё]*)/],
-    ['Площадь и комнаты', /(\d+\s*(кв|м²|м2|метр|квадрат)[а-яё]*|комнат[а-яё]*|тр[её]шк[а-яё]*|двушк[а-яё]*|однушк[а-яё]*|студи[яиюейа]|этаж[а-яё]*|спальн[а-яё]*)/],
-    ['Как проходит день', /(вечер[а-яё]*|утр(о|ом|а|ам)|утрам|выходн[а-яё]*|гост(и|ей|ям|ями|ях)|готов(им|ит|ить|лю|ят|ишь|ка|ку|ке)|смотр(им|ит|еть|ю|ят)|чита(ем|ю|ет|ть|ют)|игра(ем|ет|ют|ть|ю)|отдыха(ем|ть|ет|ют|ю)|отдых(а|ом|е)?)/],
-    ['Кухня', /(кухн[а-яё]*|остров[а-яё]*|готов(им|ит|ить|лю|ят|ишь|ка|ку|ке)|плит(а|у|ой|ы|е)|посуд[а-яё]*)/],
-    ['Хранение', /(хранен[а-яё]*|хранить|храним|шкаф[а-яё]*|гардероб[а-яё]*|кладов[а-яё]*|вещ(и|ей|ам|ами|ах|ь))/],
-    ['Работа, хобби, спорт', /(работ[а-яё]*|хобби|спорт[а-яё]*|тренаж[а-яё]*|музык[а-яё]*|рису(ю|ет|ем|ют|нк[а-яё]*)|мастерск[а-яё]*|йог(а|у|ой|и)|бег(аю|ать|ает|аем|ом|ов(ая|ую|ой))?)/],
-    ['Стиль и цвета', /(стил[а-яё]*|цвет[а-яё]*|дерев[а-яё]*|бел(ый|ая|ое|ые|ого|ой|ую|ым|ых|ыми|ом)|сер(ый|ая|ое|ые|ого|ой|ую|ым|ых|ыми|ом)|зел[её]н[а-яё]*|син(ий|яя|ее|ие|его|ей|юю|им|их|ими)|бежев[а-яё]*|светл[а-яё]*|т[её]пл(ый|ая|ое|ые|ого|ой|ую|ым|ых|ыми|о)|скандинав[а-яё]*|классик[а-яё]*|лофт[а-яё]*|минимал[а-яё]*|уют[а-яё]*|мрамор[а-яё]*|бетон[а-яё]*|латун[а-яё]*)/],
-    ['Что не нравится', /(не нрав[а-яё]*|ненавиж[а-яё]*|раздража[а-яё]*|терпеть не|не хочу|не хотим|не люблю|не любим|не надо)/],
-    ['Сроки и бюджет', /(бюджет[а-яё]*|деньг[а-яё]*|тысяч[а-яё]*|миллион[а-яё]*|срок[а-яё]*|месяц[а-яё]*|весн[а-яё]*|весной|лет(о|ом)|осен[а-яё]*|зим(а|ой|у|ы)|переезд[а-яё]*|въех[а-яё]*|ремонт[а-яё]*)/]
-  ];
-  // тема — целым словом: «бел» не в «колыбели», «сер» не в «серьёзно», «пара» не в «параметрах»
-  const wholeWord = re => new RegExp('(?:^|[^а-яёa-z])(?:' + re.source + ')(?![а-яёa-z])', 'i');
-  TOPICS.forEach(tp => { tp[1] = wholeWord(tp[1]); });
-  const story = $('story');
-  function paintTopics() {
-    const t = story.value;
-    $('topics').innerHTML = '<span class="topics-title">О чём рассказать:</span>' + TOPICS.map(([n, re]) => `<span class="topic${re.test(t) ? ' ok' : ''}">${re.test(t) ? '✓ ' : ''}${n}</span>`).join('');
-  }
-  story.addEventListener('input', paintTopics);
-  paintTopics();
-  function autoFill() {
-    const t = story.value, done = [];
-    const set = (id, v, label) => { const el = $(id); if (el && !el.value && v) { el.value = v; done.push(label + ': ' + v); } };
-    const area = t.match(/(\d{2,3}(?:[.,]\d)?)\s*(?:кв|квадрат|м²|м2|метр)/i);
-    if (area) set('objArea', area[1].replace(',', '.'), 'площадь');
-    const W = w => new RegExp('(^|[^а-яё])(' + w + ')([^а-яё]|$)', 'i');   // целое слово: «котором», «котельная» — не кот
-    // дом — только по явным признакам: «дом, в котором мы живём» в рассказе о квартире домом объект не делает
-    if (W('коттедж[а-яё]*|дач[аеуи]|таунхаус[а-яё]*|частн[а-яё]* дом[а-яё]*|загородн[а-яё]* дом[а-яё]*|[а-яё]*этажн[а-яё]* дом[а-яё]*|строим дом|построили дом|участ(ок|ке|ка)|мансард[а-яё]*').test(t)
-      && !/квартир/i.test(t) && $('objType').value === 'квартира') { $('objType').value = 'дом'; houseUI(); done.push('тип: дом'); }
-    const pets = [W('кот|кота|коты|котов|кошка|кошки|котик|кошек').test(t) && 'кот', W('собака|собаки|собак|пёс|пес|щенок').test(t) && 'собака'].filter(Boolean).join(', ');
-    set('qPets', pets, 'животные');
-    // «Кто живёт» — предложение целиком, если оно про состав семьи и короткое; иначе только подсказка на шаге вопросов
-    const sentences = t.split(/(?<=[.!?…])\s+|\n+/).map(x => x.trim()).filter(Boolean);
-    const whoS = sentences.find(x => W('живу|живём|живем|живут').test(x)
-      && W('я|муж[а-яё]*|жен[аоыу]й?|дет[а-яё]*|реб[её]н[а-яё]*|сын[а-яё]*|доч[а-яё]*|бабушк[а-яё]*|дедушк[а-яё]*|сем[ьей][а-яё]*|вдво[её]м|втро[её]м|вчетвером|впятером|одна|один|пар[аой]').test(x));
-    $('whoHint').hidden = true;
-    if (whoS && whoS.length <= 160) set('qWho', whoS.replace(/[.!…]+$/, ''), 'кто живёт');
-    else if (whoS && !$('qWho').value) $('whoHint').hidden = false;
-    if (done.length) { $('autoFill').hidden = false; $('autoFill').textContent = '✓ Из рассказа заполнили — ' + done.join('; ') + '. Проверьте на следующих шагах.'; save(); }
-  }
-  const bigMic = $('bigMic');
-  bigMic.onclick = () => {
-    if (!SR) { $('micHint').hidden = false; story.focus(); return; }
-    dictate(story, bigMic, (on, err) => {
-      $('voiceState').textContent = on ? 'Слушаю… говорите. Нажмите ещё раз, чтобы закончить'
-        : err ? err : story.value.trim() ? 'Готово. Можно дополнить — нажмите снова' : 'Нажмите и говорите';
-      bigMic.classList.toggle('rec', on);
-      bigMic.setAttribute('aria-pressed', String(on));
-      if (!on) { paintTopics(); autoFill(); }
-    });
+    r.onerror = ev => { if (ev.error !== 'aborted') err = REC_ERR[ev.error] || REC_ERR.other; };
+    r.onend = () => { story.value = story.value.replace(/[ \t]+$/, ''); if (rec === r) rec = null; micState(false, err || (story.value.trim() ? 'Готово. Можно дополнить — нажмите снова.' : '')); paintChips(); save(); };
+    try { r.start(); micState(true); } catch (e) { rec = null; micState(false, REC_ERR.other); }
   };
 
-  // ── сбор брифа
-  const val = id => ($(id) ? $(id).value : '');
-  function collect() {
-    const rooms = [...roomsEl.querySelectorAll('.room-row')].map(r => ({
-      name: r.querySelector('.r-name').value || 'Помещение',
-      type: r.querySelector('.r-type').value,
-      width: +r.querySelector('.r-w').value || null,
-      length: +r.querySelector('.r-l').value || null,
-      level: isHouse() ? +r.querySelector('.r-level').value : undefined
-    }));
-    const st = STYLES.find(s => s.key === selStyle);
+  // ── подробности (необязательно): помещения, высота, состояние, адрес, стиль, класс материалов, ссылки
+  $('stKey').innerHTML = STYLES.map(s => `<option value="${s[0]}">${s[1]}</option>`).join('');
+  const roomsEl = $('rooms');
+  function addRoom(r) {
+    r = r || {};
+    const row = document.createElement('div');
+    row.className = 'room-row'; row.setAttribute('role', 'group'); row.setAttribute('aria-label', 'Помещение');
+    row.innerHTML = `<select class="r-type" aria-label="Помещение">${ROOM_TYPES.map(t => `<option value="${t[0]}"${t[0] === r.type ? ' selected' : ''}>${t[1]}</option>`).join('')}</select>`
+      + `<input type="text" inputmode="decimal" class="r-w" placeholder="шир." aria-label="Ширина, м" value="${esc(r.width || '')}">`
+      + `<input type="text" inputmode="decimal" class="r-l" placeholder="дл." aria-label="Длина, м" value="${esc(r.length || '')}">`
+      + `<button class="x" type="button" aria-label="Убрать помещение">✕</button>`
+      + `<select class="r-level" aria-label="Этаж"${kind() === 'дом' ? '' : ' hidden'}><option value="1">1-й этаж</option><option value="2"${r.level == 2 ? ' selected' : ''}>2-й этаж</option><option value="3"${r.level == 3 ? ' selected' : ''}>3-й этаж</option><option value="0"${r.level === 0 ? ' selected' : ''}>цоколь</option></select>`;
+    row.querySelector('.x').onclick = () => { row.remove(); save(); };
+    roomsEl.appendChild(row);
+    return row;
+  }
+  $('addRoom').onclick = () => { addRoom().querySelector('select').focus(); };
+  function kindUI() {
+    roomsEl.querySelectorAll('.r-level').forEach(s => { s.hidden = kind() !== 'дом'; });
+    $('h1s').textContent = NAMES[0] = kind() === 'дом' ? 'План дома' : 'План квартиры';
+    if (step === 0) $('progName').textContent = NAMES[0];
+  }
+  document.querySelectorAll('input[name="objType"]').forEach(i => i.addEventListener('change', kindUI));
+
+  // ── цена по площади (ставки из TERMS); сервер считает по своему config.php
+  const rubF = n => Math.round(n).toLocaleString('ru-RU').replace(/ |\s/g, ' ') + ' ₽';
+  function price() {
+    const a = num(val('objArea')), P = T.packs;
+    $('pk0n').textContent = P[0].name;
+    if (a && a >= 10) {
+      $('priceLead').textContent = `Сумма за ${String(a).replace('.', ',')} м²`;
+      $('pk0').textContent = rubF(Math.max(P[0].min, P[0].rate * a));
+      $('priceNote').textContent = `${rubF(P[0].rate)} за м², визуализации входят в цену` + (a < T.minArea ? `; меньше ${T.minArea} м² — минимальный заказ` : '') + '. Точную сумму подтвердим по плану до оплаты.';
+    } else {
+      $('priceLead').textContent = 'Ставка за м²';
+      $('pk0').textContent = rubF(P[0].rate) + '/м²';
+      $('priceNote').textContent = `Минимальный заказ — как за ${T.minArea} м² (${rubF(P[0].min)}). Площадь не указана — сумму назовём по плану до оплаты.`;
+    }
+  }
+
+  // ── разбор рассказа: строки-заготовки и ключевые слова → answers (их читает gost-draft tools/site-brief.js)
+  function parseStory(t) {
+    const line = p => { const m = t.match(lineRe(p)); return m ? m[1].trim() : ''; };
+    const sents = t.split(/(?<=[.!?…])\s+|\n+/).map(x => x.replace(/^[^:\n]{2,25}:\s*/, '').trim()).filter(Boolean);
+    const about = re => sents.filter(x => re.test(x)).join('. ').slice(0, 400);
+    const W = w => new RegExp('(^|[^а-яё])(' + w + ')([^а-яё]|$)', 'i');
     return {
-      meta: Object.assign({ created: new Date().toISOString().slice(0, 10), source: 'site-brief-wizard', version: 2, package: val('objPack') || 'proekt' }, TEST ? { test: true } : {}),
-      client: { name: val('cName'), phone: val('cPhone'), email: val('cEmail'), contact: val('cWay'),
+      household: line('Кто живёт') || about(/(живу|живём|живем|живут|муж|жена|дет[иейя]|реб[её]н|сын|доч|бабушк|дедушк)/i),
+      pets: [W('кот|кота|коты|котов|кошка|кошки|котик|кошек').test(t) && 'кот', W('собака|собаки|собак|пёс|пес|щенок').test(t) && 'собака'].filter(Boolean).join(', '),
+      wfh: about(/(работа[юе][а-яё]* из дома|удал[её]нк|кабинет|рабоч[а-яё]+ мест)/i),
+      storage: about(/(хранен|гардероб|кладов|шкаф)/i),
+      kitchen: about(/(кухн|остров|верхн[а-яё]* шкаф|открыт[а-яё]* полк|готов(им|ит|ить|лю))/i),
+      sport: about(/(спорт|йог|трена|дорожк|пилатес|растяжк)/i),
+      dislikes: line('Что мешает сейчас'),
+      must: line('Что точно нужно'),
+      budget: line('Бюджет'),
+      timeline: line('Сроки'),
+      notes: ''
+    };
+  }
+  function budgetClass(text) {
+    if (val('qBudget')) return val('qBudget');
+    if (/эконом|недорог|скромн|бюджетн/i.test(text)) return 'econom';
+    if (/премиум|без компромисс/i.test(text)) return 'premium';
+    return 'business';
+  }
+
+  // ── сбор брифа (схема прежняя: meta, client, object, rooms, story, files, style, budget, answers)
+  function collect() {
+    const t = story.value.trim(), A = parseStory(t), house = kind() === 'дом';
+    const rooms = [...roomsEl.querySelectorAll('.room-row')].map(r => {
+      const ty = r.querySelector('.r-type');
+      return { name: ty.selectedOptions[0].textContent, type: ty.value, width: num(r.querySelector('.r-w').value), length: num(r.querySelector('.r-l').value),
+        level: house ? +r.querySelector('.r-level').value : undefined };
+    });
+    const key = val('stKey') || 'studio', st = STYLES.find(s => s[0] === key);
+    return {
+      meta: Object.assign({ created: new Date().toISOString().slice(0, 10), source: 'site-brief-simple', version: 3, package: pack() }, TEST ? { test: true } : {}),
+      client: { name: val('cName').trim(), phone: val('cPhone').trim(), email: val('cEmail').trim(), contact: val('cPhone').trim() ? 'телефон / WhatsApp' : 'почта',
         // редакция согласия — та же дата, что на soglasie/ (tools/gen-more-pages.js → LEGAL_ED)
         consent: { personalData: $('cConsent').checked, portfolio: $('cPortfolio').checked, edition: '27.10.2026', at: new Date().toISOString() } },
-      object: {
-        type: val('objType'), address: val('objAddr'),
-        area: +val('objArea') || null, ceilingHeight: +val('objH') || null,
-        floors: isHouse() ? +val('objFloors') : undefined, stairs: isHouse() ? val('objStairs') : undefined,
-        plot: isHouse() ? val('objPlot') : undefined, state: val('objState')
-      },
+      object: { type: kind(), address: val('objAddr').trim(), area: num(val('objArea')), ceilingHeight: num(val('objH')), state: val('objState'),
+        needSurvey: $('needSurvey').checked && !files.plans.length },
       rooms,
-      story: val('story'),
+      story: t,
       files: { plans: files.plans.map(f => f.name), photos: files.photos.map(f => f.name) },
-      style: {
-        key: selStyle, title: st ? st.title : selStyle, byStudio: selStyle === 'studio',
-        colors: val('stColors'), avoidColors: val('stAvoid'),
-        liked: Object.keys(refs).filter(k => refs[k] === 'like'),
-        disliked: Object.keys(refs).filter(k => refs[k] === 'dislike'),
-        links: val('stRefs').split(/[\s,]+/).map(s => s.trim()).filter(s => /^https?:\/\//.test(s))
-      },
-      budget: val('qBudget'),
-      answers: {
-        household: val('qWho'), pets: val('qPets'), wfh: val('qWfh'), storage: val('qStorage'),
-        kitchen: val('qKitchen'), sport: val('qSport'), dislikes: val('qDislikes'),
-        timeline: val('qWhen'), notes: val('qNotes')
-      }
+      style: { key, title: st ? st[1] : key, byStudio: key === 'studio', colors: '', avoidColors: '', liked: [...liked], disliked: [],
+        links: val('stRefs').split(/[\s,]+/).map(s => s.trim()).filter(s => /^https?:\/\//.test(s)) },
+      budget: budgetClass(A.budget),
+      answers: A
     };
   }
 
-  // ── черновик в браузере (файлы браузер не хранит — их надо выбрать заново)
-  const KEY = 'linea_brief_draft';
-  const FIELDS = ['objType', 'objPack', 'objArea', 'objH', 'objAddr', 'objFloors', 'objStairs', 'objPlot', 'objState', 'story', 'stColors', 'stAvoid', 'stRefs',
-    'qWho', 'qPets', 'qWfh', 'qStorage', 'qKitchen', 'qSport', 'qDislikes', 'qWhen', 'qBudget', 'qNotes', 'cName', 'cPhone', 'cEmail', 'cWay'];
+  // ── черновик в браузере (файлы браузер не хранит — выбрать заново)
+  const KEY = 'linea_brief_draft3';
+  const FIELDS = ['objArea', 'story', 'objH', 'objState', 'objAddr', 'stKey', 'qBudget', 'stRefs', 'cName', 'cPhone', 'cEmail'];
   let saveT = 0;
   function save() {
     clearTimeout(saveT);
     saveT = setTimeout(() => {
-      const d = { fields: {}, rooms: collect().rooms, style: selStyle, refs, step, files: collect().files };
-      FIELDS.forEach(id => { if ($(id)) d.fields[id] = $(id).value; });
-      try { localStorage.setItem(KEY, JSON.stringify(d)); $('draftNote').hidden = false; } catch (e) {}
+      const b = collect();
+      const d = { v: 3, fields: {}, kind: kind(), pack: pack(), needSurvey: $('needSurvey').checked, liked: [...liked], rooms: b.rooms, step: Math.min(step, SEND), files: b.files };
+      FIELDS.forEach(id => { d.fields[id] = val(id); });
+      try {
+        localStorage.setItem(KEY, JSON.stringify(d));
+        if ($('draftNote').hidden) { $('draftNote').hidden = false; $('draftNote').textContent = 'Черновик сохраняется в этом браузере — можно закрыть и вернуться.'; }
+      } catch (e) {}
     }, 300);
   }
   document.addEventListener('input', save);
@@ -369,73 +318,58 @@
   function restore() {
     let d = null;
     try { d = JSON.parse(localStorage.getItem(KEY) || 'null'); } catch (e) {}
-    if (!d) { addRoom('Гостиная-кухня', 'living-kitchen'); addRoom('Спальня', 'bedroom'); addRoom('Санузел', 'bathroom'); return false; }
+    if (!d || d.v !== 3) return 0;
     FIELDS.forEach(id => { if ($(id) && d.fields && d.fields[id] != null) $(id).value = d.fields[id]; });
-    (d.rooms && d.rooms.length ? d.rooms : [{ name: 'Гостиная-кухня', type: 'living-kitchen' }]).forEach(r => addRoom(r.name, r.type, r.width, r.length, r.level));
-    if (d.style && cardOf(d.style)) pickStyle(cardOf(d.style));
-    Object.assign(refs, d.refs || {});
-    if (Number.isInteger(d.step) && d.step > 0 && d.step < LAST) step = d.step;   // продолжить с того же шага
-    const lost = d.files ? d.files.plans.length + d.files.photos.length : 0;
+    const k = document.querySelector(`input[name="objType"][value="${d.kind}"]`); if (k) k.checked = true;
+    $('needSurvey').checked = !!d.needSurvey;
+    (d.liked || []).forEach(id => liked.add(id));
+    (d.rooms || []).forEach(addRoom);
+    if ((d.rooms || []).length || d.fields.objH || d.fields.objState || d.fields.objAddr) $('more').open = true;
+    const lostPlans = d.files ? d.files.plans.length : 0, lost = lostPlans + (d.files ? d.files.photos.length : 0);
     $('draftNote').hidden = false;
-    $('draftNote').innerHTML = 'Черновик восстановлен — продолжайте с того места, где остановились.' + (lost ? ' Файлы браузер не сохраняет: выберите их ещё раз.' : '')
-      + ' <button type="button" class="linklike" id="draftReset">начать заново</button>';
-    $('draftReset').onclick = () => { try { localStorage.removeItem(KEY); } catch (e) {} location.reload(); };
+    $('draftNote').innerHTML = 'Черновик восстановлен.' + (lost ? ' <b>Файлы браузер не сохраняет — добавьте план и картинки ещё раз.</b>' : '')
+      + ' <button type="button" class="linklike" id="draftReset">Начать заново</button>';
+    $('draftReset').onclick = () => { try { localStorage.removeItem(KEY); } catch (e) {} location.href = location.pathname + (TEST ? '?test=1' : ''); };
+    // план пропал вместе с файлами — к первому шагу; иначе продолжаем с того же шага
+    return lostPlans ? 0 : Number.isInteger(d.step) && d.step > 0 && d.step <= SEND ? d.step : 0;
+  }
+  const start = restore();
+  const want = qs.get('style');
+  if (want && STYLES.some(s => s[0] === want) && val('stKey') === 'studio') $('stKey').value = want;
+  kindUI();
+  paintChips();
+
+  // ── отправка: проверка контактов → архив → приёмник или «Поделиться»
+  function checkContacts() {
+    const ph = val('cPhone').trim(), em = val('cEmail').trim();
+    $('cEmail').setAttribute('aria-invalid', 'false');
+    if (!ph && !em) return setErr('contactErr', 'Оставьте телефон или e-mail — иначе мы не сможем прислать проект.', $('cPhone'));
+    if (ph && ph.replace(/\D/g, '').length < 10) return setErr('contactErr', 'В телефоне меньше 10 цифр — проверьте номер.', $('cPhone'));
+    setErr('contactErr', '', $('cPhone'));
+    if (em && !/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(em)) return setErr('contactErr', 'Проверьте e-mail — в нём ошибка.', $('cEmail'));
+    if (!$('cConsent').checked) return setErr('consentErr', 'Отметьте согласие на обработку данных — без него бриф отправить нельзя.', $('cConsent'));
+    setErr('consentErr', '', $('cConsent'));
     return true;
   }
-  // приход со страницы стиля: brief.html?style=japandi
-  const want = new URLSearchParams(location.search).get('style');
-  const restored = restore();
-  if (want && cardOf(want) && !restored) pickStyle(cardOf(want));
-  houseUI();
+  $('cConsent').addEventListener('change', () => { if ($('cConsent').checked) setErr('consentErr', '', $('cConsent')); });
 
-  // ── итог
   function summaryText(b) {
-    const o = b.object, lines = [];
-    lines.push('Бриф LINEA — ' + (b.client.name || 'клиент') + (b.client.phone ? ', ' + b.client.phone : ''));
-    lines.push('Объект: ' + (o.type || '') + (o.area ? ', ' + o.area + ' м²' : '') + (o.floors ? ', этажей ' + o.floors : '') + (o.address ? ', ' + o.address : ''));
-    if (o.state) lines.push('Состояние: ' + o.state);
-    lines.push('Помещения: ' + b.rooms.map(r => r.name + (r.width && r.length ? ' ' + r.width + '×' + r.length + ' м' : '') + (r.level ? ' (' + r.level + ' эт.)' : '')).join('; '));
-    if (b.story) lines.push('Своими словами: ' + b.story);
-    lines.push('Стиль: ' + b.style.title + (b.style.colors ? '; любит: ' + b.style.colors : '') + (b.style.avoidColors ? '; не любит: ' + b.style.avoidColors : ''));
-    if (b.style.liked.length || b.style.disliked.length) lines.push('Референсы галереи: нравится ' + b.style.liked.length + ', не нравится ' + b.style.disliked.length);
-    if (b.style.links.length) lines.push('Ссылки: ' + b.style.links.join(' '));
-    const a = b.answers;
-    [['Кто живёт', a.household], ['Животные', a.pets], ['Работа из дома', a.wfh], ['Хранение', a.storage], ['Кухня', a.kitchen], ['Спорт', a.sport], ['Не нравится', a.dislikes], ['Ремонт', a.timeline], ['Ещё', a.notes]]
-      .forEach(([k, v]) => { if (v) lines.push(k + ': ' + v); });
-    lines.push('Файлы: план/фото ' + b.files.plans.length + ', свои референсы ' + b.files.photos.length);
-    return lines.join('\n');
-  }
-  let lastBrief = null;
-  function buildResult() {
-    const brief = collect();
-    lastBrief = brief;
-    const json = JSON.stringify(brief, null, 2), text = summaryText(brief);
-    $('json').textContent = json;
-    $('summary').innerHTML = text.split('\n').map(l => {
-      const i = l.indexOf(': ');
-      return i > 0 ? '<div class="srow"><span>' + esc(l.slice(0, i)) + '</span><b>' + esc(l.slice(i + 2)) + '</b></div>' : '<div class="srow"><b>' + esc(l) + '</b></div>';
-    }).join('');
-    $('mailto').href = 'mailto:optteem@mail.ru?subject=' + encodeURIComponent('Бриф на дизайн-проект — ' + (brief.client.name || 'клиент'))
-      + '&body=' + encodeURIComponent(text.slice(0, 1600) + '\n\nАрхив с файлами (бриф, план, фото) приложу к письму.');
-    $('waSend').href = 'https://wa.me/79257338640?text=' + encodeURIComponent(text.slice(0, 1800));
-    $('copyBrief').onclick = () => copy(text + '\n\n' + json, $('copyBrief'));
-    $('dl').onclick = () => saveBlob(new Blob([json], { type: 'application/json' }), 'brief.json');
-    try { localStorage.setItem('linea_brief', json); } catch (e) {}
-  }
-  const esc = s => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;');
-  function copy(t, btn) {
-    const done = () => { const o = btn.textContent; btn.textContent = 'Скопировано ✓'; setTimeout(() => { btn.textContent = o; }, 2500); };
-    if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(t).then(done);
-    else { const ta = document.createElement('textarea'); ta.value = t; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); ta.remove(); done(); }
-  }
-  function saveBlob(blob, name) {
-    const a = document.createElement('a');
-    a.href = URL.createObjectURL(blob); a.download = name;
-    document.body.appendChild(a); a.click(); a.remove();
-    setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+    const o = b.object, L = [];
+    L.push('Бриф LINEA — ' + (b.client.name || 'клиент') + (b.client.phone ? ', ' + b.client.phone : '') + (b.client.email ? ', ' + b.client.email : ''));
+    L.push('Объект: ' + o.type + (o.area ? ', ' + o.area + ' м²' : '') + (o.address ? ', ' + o.address : '') + (o.needSurvey ? ' — плана нет, нужен обмер' : ''));
+    L.push('Пакет: ' + T.packs[0].name);
+    if (o.state) L.push('Состояние: ' + o.state);
+    if (o.ceilingHeight) L.push('Потолки: ' + o.ceilingHeight + ' м');
+    if (b.rooms.length) L.push('Помещения: ' + b.rooms.map(r => r.name + (r.width && r.length ? ' ' + r.width + '×' + r.length + ' м' : '') + (r.level != null ? ' (' + r.level + ' эт.)' : '')).join('; '));
+    if (b.story) L.push('Своими словами: ' + b.story.replace(/\n+/g, ' / '));
+    if (!b.style.byStudio) L.push('Стиль: ' + b.style.title);
+    if (b.style.liked.length) L.push('Кадры галереи: нравится ' + b.style.liked.length);
+    if (b.style.links.length) L.push('Ссылки: ' + b.style.links.join(' '));
+    L.push('Файлы: план ' + b.files.plans.length + ', свои картинки ' + b.files.photos.length);
+    return L.join('\n');
   }
 
-  // ── архив: бриф + план + фото (фото ужимаются до 1600 px, PDF/DWG — как есть)
+  // ── архив: бриф + план + фото (фото ужимаются до 1600 px, PDF/DWG/HEIC — как есть). ZIP без сжатия, имена в UTF-8
   async function shrink(f) {
     if (!/^image\/(jpeg|png|webp)$/.test(f.type) || !window.createImageBitmap) return new Uint8Array(await f.arrayBuffer());
     try {
@@ -448,7 +382,7 @@
   }
   const CRC = (() => { const t = new Uint32Array(256); for (let n = 0; n < 256; n++) { let c = n; for (let k = 0; k < 8; k++) c = c & 1 ? 0xEDB88320 ^ (c >>> 1) : c >>> 1; t[n] = c >>> 0; } return t; })();
   const crc32 = d => { let c = 0xFFFFFFFF; for (let i = 0; i < d.length; i++) c = CRC[(c ^ d[i]) & 255] ^ (c >>> 8); return (c ^ 0xFFFFFFFF) >>> 0; };
-  function zip(entries) {                     // ZIP без сжатия (store), имена в UTF-8
+  function zip(entries) {
     const enc = new TextEncoder(), parts = [], central = [];
     let off = 0;
     const now = new Date(), dt = ((now.getHours() << 11) | (now.getMinutes() << 5) | (now.getSeconds() >> 1)), dd = (((now.getFullYear() - 1980) << 9) | ((now.getMonth() + 1) << 5) | now.getDate());
@@ -472,13 +406,12 @@
     return new Blob([...parts, ...central, new Uint8Array(end.buffer)], { type: 'application/zip' });
   }
   const safe = s => String(s).replace(/[\\/:*?"<>|]+/g, '_').slice(0, 80);
-  async function makeArchive() {
-    const b = lastBrief || collect(), enc = new TextEncoder(), list = [];
+  async function makeArchive(b) {
+    const enc = new TextEncoder(), list = [];
     list.push({ name: 'brief.json', data: enc.encode(JSON.stringify(b, null, 2)) });
     list.push({ name: 'brief.txt', data: enc.encode(summaryText(b)) });
-    const liked = REFS.filter(m => b.style.liked.includes(m.id)).map(m => '+ ' + m.style + ' · ' + m.room + ' (' + m.id + ')')
-      .concat(REFS.filter(m => b.style.disliked.includes(m.id)).map(m => '- ' + m.style + ' · ' + m.room + ' (' + m.id + ')'));
-    if (liked.length) list.push({ name: 'referensy-galereya.txt', data: enc.encode(liked.join('\n')) });
+    const gl = REFS.filter(m => b.style.liked.includes(m.id)).map(m => '+ ' + m.style + ' · ' + m.room + ' (' + m.id + ')');
+    if (gl.length) list.push({ name: 'referensy-galereya.txt', data: enc.encode(gl.join('\n')) });
     let k = 0;
     for (const f of files.plans) list.push({ name: 'plan/' + String(++k).padStart(2, '0') + '-' + safe(f.name.replace(/\.(png|webp)$/i, '.jpg')), data: await shrink(f) });
     k = 0;
@@ -486,59 +419,34 @@
     const who = safe((b.client.name || 'klient').trim().replace(/\s+/g, '-'));
     return new File([zip(list)], `LINEA-brif-${who}-${b.meta.created}.zip`, { type: 'application/zip' });
   }
-  // ── прежний путь: «Поделиться» на телефоне / скачать на компьютере. На GitHub Pages — основной, на Beget — запасной.
-  // На компьютере «Поделиться» нет — архив просто скачается, и человек думает, что бриф уже ушёл. Говорим об этом крупно до нажатия.
-  if (!API && !(navigator.canShare && navigator.share) && $('sendMust')) {
-    $('sendMust').innerHTML = 'На компьютере архив <b>скачается в «Загрузки»</b> и сам к нам не уйдёт. После сборки <b>отправьте файл в WhatsApp</b> на <a href="https://wa.me/79257338640" target="_blank" rel="noopener">+7 925 733-86-40</a> или <b>на почту</b> <a href="mailto:optteem@mail.ru">optteem@mail.ru</a>.';
-  }
-  const AFTER_ZIP = $('afterZip').innerHTML;          // после «Отменено» абзац переписан — возвращаем исходный с #zipInfo
   const sizeText = n => n < 1048576 ? Math.max(1, Math.round(n / 1024)) + ' КБ' : (n / 1048576).toFixed(1) + ' МБ';
-  async function shareOrSave(f) {
-    if (navigator.canShare && navigator.canShare({ files: [f] })) {
-      try { await navigator.share({ files: [f], title: 'Бриф LINEA', text: 'Бриф на дизайн-проект: ' + (lastBrief && lastBrief.client.name || '') }); }
-      catch (e) { if (e.name === 'AbortError') { $('afterZip').hidden = false; $('afterZip').innerHTML = 'Отправка отменена. Нажмите кнопку ещё раз — или <button type="button" class="linklike" id="zipDl">скачайте архив</button> и пришлите его в WhatsApp на +7 925 733-86-40.'; $('zipDl').onclick = () => saveBlob(f, f.name); return; } saveBlob(f, f.name); }
-    } else saveBlob(f, f.name);
-    $('afterZip').innerHTML = AFTER_ZIP;
-    $('afterZip').hidden = false;
-    $('zipInfo').textContent = f.name + ' · ' + sizeText(f.size);
+  function saveBlob(blob, name) {
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob); a.download = name;
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(a.href), 4000);
   }
-
-  // ── приёмник на сервере (Beget): одна кнопка → номер заказа → страница заказа
-  let upBar = null, upState = null;
-  if (API) {
-    $('sendZip').textContent = 'Отправить бриф в студию';
-    $('sendMust').innerHTML = 'Нажмите кнопку — бриф, план и фото уйдут к нам одним архивом, и сразу откроется <b>страница заказа с номером</b>.';
-    const ok = document.querySelector('.result .okmsg');
-    if (ok) ok.innerHTML = 'Работа над проектом начинается <b>после оплаты</b>. Сумма — ставка за м² × площадь, не меньше минимального заказа (на странице заказа будет сумма и как оплатить), '
-      + 'первый вариант квартиры — до 48 часов, дома — до 72 часов от оплаты и получения плана с размерами. Если плана нет — договоримся об обмере.';
-    $('sendZip').closest('.cta-row').insertAdjacentHTML('afterend',
-      '<div id="upBar" hidden style="height:6px;background:rgba(201,164,95,.18);border-radius:3px;overflow:hidden;margin:10px 0 4px"><i style="display:block;height:100%;width:0;background:#C9A45F;transition:width .2s"></i></div>'
-      + '<p class="hint" id="upState" role="status" aria-live="polite" hidden></p>');
-    upBar = $('upBar'); upState = $('upState');
-    // поле-ловушка для ботов: людям не видно, с клавиатуры недоступно
-    const panel = document.querySelector('.panel[data-step="5"]') || document.body;
-    panel.insertAdjacentHTML('beforeend', '<div aria-hidden="true" style="position:absolute;left:-10000px;width:1px;height:1px;overflow:hidden"><label>Сайт <input type="text" id="hpWebsite" tabindex="-1" autocomplete="off"></label></div>');
-  }
-  const say = (html, bad) => { if (!upState) return; upState.hidden = false; upState.style.color = bad ? '#e8a87c' : ''; upState.innerHTML = html; };
+  const say = (html, bad) => { const u = $('upState'); u.hidden = false; u.style.color = bad ? '#e8a87c' : ''; u.innerHTML = html; };
   function upload(f, b) {
     return new Promise(resolve => {
       const fd = new FormData();
       fd.append('brief', f, f.name);
       fd.append('json', JSON.stringify(b));
-      fd.append('website', ($('hpWebsite') || {}).value || '');
+      fd.append('website', val('hpWebsite'));
       if (TEST) fd.append('test', '1');
       const x = new XMLHttpRequest();
       x.open('POST', API + 'brief.php');
       x.timeout = 20 * 60 * 1000;                      // с телефона 50–100 МБ — это минуты
-      x.upload.onprogress = e => { if (!e.lengthComputable) return; const p = Math.round(e.loaded / e.total * 100); upBar.firstChild.style.width = p + '%'; say('Отправляю: ' + p + ' % из ' + sizeText(e.total) + '. Не закрывайте страницу.'); };
+      const bar = $('upBar').firstChild;
+      x.upload.onprogress = e => { if (!e.lengthComputable) return; const p = Math.round(e.loaded / e.total * 100); bar.style.width = p + '%'; say('Отправляю: ' + p + ' % из ' + sizeText(e.total) + '. Не закрывайте страницу.'); };
       x.onload = () => { let r = null; try { r = JSON.parse(x.responseText); } catch (e) {} resolve({ code: x.status, r }); };
       x.onerror = x.ontimeout = x.onabort = () => resolve({ code: 0, r: null });
       x.send(fd);
     });
   }
-  async function sendToStudio(f) {
-    const b = lastBrief || collect();
-    upBar.hidden = false; upBar.firstChild.style.width = '0';
+  // true — дальше ничего не делать (принят или ошибка, которую исправит сам клиент); false — запасной путь (архив)
+  async function sendToStudio(f, b) {
+    $('upBar').hidden = false; $('upBar').firstChild.style.width = '0';
     let res = await upload(f, b);
     if (res.code === 0 || res.code === 502 || res.code === 503 || res.code === 504) {   // обрыв связи — один повтор
       say('Связь прервалась — пробую ещё раз…');
@@ -546,44 +454,66 @@
       res = await upload(f, b);
     }
     if (res.code === 200 && res.r && res.r.ok) {
-      upBar.firstChild.style.width = '100%';
+      $('upBar').firstChild.style.width = '100%';
       say('✓ Бриф принят, заказ <b>№ ' + esc(res.r.number) + '</b>. Открываю страницу заказа…');
       try { localStorage.removeItem(KEY); localStorage.setItem('linea_last_order', res.r.orderUrl); } catch (e) {}
       setTimeout(() => { location.href = res.r.orderUrl; }, 900);
       return true;
     }
-    upBar.hidden = true;
-    const userFix = res.r && res.r.error && res.code >= 400 && res.code < 500 && ![403, 404, 405].includes(res.code);   // 403 — приём закрыт (нет https): архив
-    if (userFix) { say(esc(res.r.error), true); return true; }      // исправимо клиентом (телефон, размер, частота) — архив не навязываем
-    say('Через сайт отправить не получилось' + (res.code ? ' (сервер ответил ' + res.code + ')' : ' — нет связи с сервером')
-      + '. Архив готов — отправьте его в WhatsApp на <a href="https://wa.me/79257338640" target="_blank" rel="noopener">+7 925 733-86-40</a> или на <a href="mailto:optteem@mail.ru">optteem@mail.ru</a>.', true);
+    $('upBar').hidden = true;
+    // 403 — приём закрыт (нет https): уходим на архив; остальные 4xx исправляет сам клиент (телефон, размер, частота)
+    if (res.r && res.r.error && res.code >= 400 && res.code < 500 && ![403, 404, 405].includes(res.code)) { say(esc(res.r.error), true); return true; }
     return false;
   }
 
-  $('sendZip').onclick = async () => {
-    const btn = $('sendZip'), old = btn.textContent;
-    btn.disabled = true; btn.textContent = 'Собираю архив…';
+  let archive = null, lastBrief = null;
+  if (API) $('send').textContent = 'Отправить бриф';
+  $('send').onclick = async () => {
+    if (!checkContacts()) return;
+    const btn = $('send'), old = btn.textContent;
+    btn.disabled = true; btn.textContent = 'Собираю…';
     try {
-      const f = await makeArchive();
-      if (f.size > MAX_MB * 1048576) {
-        const msg = 'Архив ' + sizeText(f.size) + ' — больше ' + MAX_MB + ' МБ. Уберите часть фото на шаге «План и фото» или пришлите их отдельно в WhatsApp.';
-        if (API) say(msg, true); else alert(msg);
-        return;
-      }
+      const b = lastBrief = collect();
+      const f = archive = await makeArchive(b);
+      if (f.size > MAX_MB * 1048576) { say('Файлы весят ' + sizeText(f.size) + ' — больше ' + MAX_MB + ' МБ. Уберите часть фото на шагах 1–2 или пришлите их отдельно в WhatsApp.', true); return; }
+      const heic = files.plans.concat(files.photos).filter(x => /\.(heic|heif)$/i.test(x.name) || /heic|heif/i.test(x.type)).length;
+      let fallback = false;
       if (API) {
         btn.textContent = 'Отправляю…';
-        if (await sendToStudio(f)) return;
+        if (await sendToStudio(f, b)) return;
+        fallback = true;
       }
-      await shareOrSave(f);
+      result(b, heic, fallback);
     } finally { btn.disabled = false; btn.textContent = old; }
   };
-  // HEIC (фото с iPhone) браузер не ужимает — уходит как есть; предупреждаем заранее
-  const heicNote = () => {
-    const n = files.plans.concat(files.photos).filter(f => /\.(heic|heif)$/i.test(f.name) || /heic|heif/i.test(f.type)).length;
-    if (n && upState !== null) say('Фото в формате HEIC (' + n + ') отправим как есть — если какое-то не откроется, попросим прислать JPG.');
-    else if (n && $('afterZip')) { $('afterZip').hidden = false; $('afterZip').textContent = 'Фото в формате HEIC (' + n + ') уйдут как есть, без сжатия — архив будет тяжелее.'; }
+  // запасной путь: «Поделиться» на телефоне / скачать на компьютере
+  function result(b, heic, fallback) {
+    const text = summaryText(b), json = JSON.stringify(b, null, 2);
+    $('summary').innerHTML = text.split('\n').map(l => { const i = l.indexOf(': '); return i > 0 ? '<div class="srow"><span>' + esc(l.slice(0, i)) + '</span><b>' + esc(l.slice(i + 2)) + '</b></div>' : '<div class="srow"><b>' + esc(l) + '</b></div>'; }).join('');
+    $('mailto').href = 'mailto:optteem@mail.ru?subject=' + encodeURIComponent('Бриф на дизайн-проект — ' + (b.client.name || 'клиент')) + '&body=' + encodeURIComponent(text.slice(0, 1600) + '\n\nАрхив с планом и картинками приложу к письму.');
+    $('waSend').href = 'https://wa.me/79257338640?text=' + encodeURIComponent(text.slice(0, 1800));
+    $('copyBrief').onclick = () => { if (navigator.clipboard) navigator.clipboard.writeText(text + '\n\n' + json).then(() => { $('copyBrief').textContent = 'Скопировано ✓'; }, () => {}); };
+    $('dl').onclick = () => saveBlob(new Blob([json], { type: 'application/json' }), 'brief.json');
+    if (!(navigator.canShare && navigator.share)) {
+      $('sendZip').textContent = 'Скачать архив брифа';
+      $('sendMust').innerHTML = 'На компьютере архив <b>скачается в «Загрузки»</b> и сам к нам не уйдёт: пришлите файл в <a href="https://wa.me/79257338640" target="_blank" rel="noopener">WhatsApp на +7 925 733-86-40</a> или на <a href="mailto:optteem@mail.ru">optteem@mail.ru</a>.';
+    }
+    if (fallback) $('sendMust').insertAdjacentHTML('afterbegin', '<b>Через сайт отправить не получилось.</b> ');
+    if (heic) { $('afterZip').hidden = false; $('afterZip').textContent = 'Фото HEIC (' + heic + ') уйдут как есть — если какое-то не откроется, попросим JPG.'; }
+    try { localStorage.setItem('linea_brief', json); } catch (e) {}
+    show(DONE, true);
+  }
+  const AFTER = $('afterZip').innerHTML;
+  $('sendZip').onclick = async () => {
+    const f = archive; if (!f) return;
+    if (navigator.canShare && navigator.canShare({ files: [f] })) {
+      try { await navigator.share({ files: [f], title: 'Бриф LINEA', text: 'Бриф на дизайн-проект: ' + ((lastBrief && lastBrief.client.name) || '') }); }
+      catch (e) { if (e.name === 'AbortError') { $('afterZip').hidden = false; $('afterZip').textContent = 'Отправка отменена — нажмите кнопку ещё раз.'; return; } saveBlob(f, f.name); }
+    } else saveBlob(f, f.name);
+    $('afterZip').innerHTML = AFTER; $('afterZip').hidden = false;
+    $('zipInfo').textContent = f.name + ' · ' + sizeText(f.size);
   };
-  $('next').addEventListener('click', () => { if (step === LAST) heicNote(); });
 
-  renderSteps();
+  show(start, false);
+  ready = true;
 })();

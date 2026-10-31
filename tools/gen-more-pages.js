@@ -228,7 +228,7 @@ ${CARDS.map(tileOf).join('\n')}
       </a>`).join('\n      ')}
     </div>
     <div class="cta-row" style="margin-top:26px">
-      <a class="btn" href="../brief.html">Свой проект — бриф голосом</a>
+      <a class="btn" href="../brief.html">Свой проект — заполнить бриф</a>
       <a class="btn ghost" href="../gost/">Как устроен и проверяется альбом</a>
     </div>
   </div>
@@ -250,7 +250,7 @@ ${CARDS.map(tileOf).join('\n')}
 // путь клиента: бриф → цена и оплата → предварительный альбом → правки голосом → ответы на вопросы и обмер → перевыпуск без пометки.
 // Сроки и условия — одно правило студии (site-shell.js → TERMS).
 const STEPS = [
-  ['Бриф голосом', 'около 10 минут', 'Расскажите о квартире или доме голосом или заполните форму: что за объект, кто живёт, что нравится. Приложите план — от застройщика, БТИ, фото листка с размерами от руки.',
+  ['Бриф', TERMS.brief.time, 'Три шага: план (от застройщика, БТИ или фото листка с размерами от руки), картинки, которые нравятся, и пара слов о том, кто живёт и что нужно, — можно голосом.',
     TERMS.intake.brief + '.'],
   ['Цена и оплата', 'до начала работы', 'Сумму по вашей площади называем до оплаты (ставка за м² фиксирована). Работа над проектом начинается после оплаты — онлайн или по счёту.',
     'Как платить и что с возвратом — на страницах «Оплата» и «Договор-оферта».'],
@@ -265,7 +265,7 @@ w('process/index.html', page({
   file: 'process/index.html',
   sec: 'compare',
   title: 'Как проходит работа — бриф, оплата, альбом, правки | LINEA',
-  desc: 'Пять шагов: бриф голосом, цена и оплата до начала работы, предварительный альбом (квартира до 48 часов, дом до 72), правки на листах, перевыпуск после обмера.',
+  desc: 'Пять шагов: бриф (план, картинки, пара слов), цена и оплата до начала работы, предварительный альбом (квартира до 48 часов, дом до 72), правки на листах, перевыпуск после обмера.',
   h1: 'Как проходит работа',
   crumb: 'Процесс',
   lead: `Пять шагов: рассказать о доме, узнать цену и оплатить, получить предварительный альбом, надиктовать правки на листах, ответить на вопросы и сделать обмер — и забрать комплект без пометки «ПРЕДВАРИТЕЛЬНО». ${TERMS.start}; ${TERMS.term}.`,
@@ -282,7 +282,7 @@ w('process/index.html', page({
       ${STEPS.map((st, i) => `<li id="step-${i + 1}"><h3>${esc(st[0])}</h3><p><b>${esc(st[1])}</b></p><p>${esc(st[2])}</p><p class="hint">${esc(st[3])}</p></li>`).join('\n      ')}
     </ol>
     <div class="cta-row" style="margin-top:28px">
-      <a class="btn" href="../brief.html">🎤 Начать бриф голосом</a>
+      <a class="btn" href="../brief.html">Заполнить бриф — ${TERMS.brief.time}</a>
       <a class="btn ghost" href="../review.html?p=gost-lineademo" rel="nofollow">Попробовать правки на демо-альбоме</a>
     </div>
   </div>
@@ -351,7 +351,7 @@ const cntBy = re => CARDS.map(c => JSON.parse(fs.readFileSync(path.join(SITE, 'p
 const MIN_DOCS = Math.min(...FLATS.map(c => JSON.parse(fs.readFileSync(path.join(SITE, 'portfolio', c.slug, 'sheets.json'), 'utf8')).filter(x => !/-decorator-|concept/.test(x.file)).length));
 const PLAN_N = cntBy(/-(architect|interior-designer)-/), EST_N = cntBy(/-(estimator|colorist)-/);
 const PR = TERMS.pack;
-// состав пакетов: что входит (решение Александра 28.10.2026); «пока без примера» — честная пометка о том, чего нет в опубликованных альбомах
+// состав пакета: что входит (решение Александра 28.10.2026, пакет один с 31.10.2026); «пока без примера» — честная пометка о том, чего нет в опубликованных альбомах
 const PACK_BASE = ['полный рабочий альбом по ГОСТ (у наших квартир — ' + range(FL_MIN, FL_MAX, ...LIST) + ' A3): обмерный план, планировка, мебель с привязками, полы, потолки, развёртки стен, двери',
   'электрика «комфорт»: розетки, свет, щит, слаботочка',
   'сантехника: выводы, разводка воды и канализации, аксонометрии, узел ввода, тёплый пол',
@@ -359,13 +359,13 @@ const PACK_BASE = ['полный рабочий альбом по ГОСТ (у �
   '3D-прогулка по квартире по ссылке с паролем',
   'ролик «как собирается квартира»'];
 const RULE_EX = [40, 60, 80];
-const exRows = RULE_EX.map(a => `<tr><td>${a} м²</td><td>${TERMS.rub(TERMS.sum('proekt', a))}</td><td>${TERMS.rub(TERMS.sum('vizual', a))}</td></tr>`).join('');
+const exRows = RULE_EX.map(a => `<tr><td>${a} м²</td><td>${TERMS.rub(TERMS.sum('proekt', a))}</td></tr>`).join('');
 const offersLd = ['Дизайн-проект квартиры', 'Дизайн-проект дома'].flatMap(n => TERMS.offers(n, `${BASE}/brief.html`));
 w('price/index.html', page({
   file: 'price/index.html',
   sec: 'compare',
   title: `Стоимость дизайн-проекта: от ${TERMS.rate('proekt')} | LINEA`,
-  desc: `Дизайн-проект квартиры и дома: «Проект» — ${TERMS.rate('proekt')}, «Проект + визуализации» — ${TERMS.rate('vizual')}. Минимальный заказ — как за ${TERMS.minArea} м². Полный альбом по ГОСТ, смета, 3D-прогулка. Оплата до начала работы.`,
+  desc: `Дизайн-проект квартиры и дома с визуализациями — ${TERMS.rate('proekt')}, визуализации входят в цену. Минимальный заказ — как за ${TERMS.minArea} м². Полный альбом по ГОСТ, смета, 3D-прогулка. Оплата до начала работы.`,
   h1: 'Стоимость и условия',
   crumb: 'Условия',
   lead: `${TERMS.line}. ${TERMS.start}; сумму по вашей площади знаете до оплаты, ставка за м² не меняется.`,
@@ -376,19 +376,19 @@ w('price/index.html', page({
   ],
   body: `<section class="blk">
   <div class="wrap">
-    <div class="kicker">Два пакета</div>
-    <h2>Цена за м² — одна на весь заказ</h2>
+    <div class="kicker">Цена одна</div>
+    <h2>Одна ставка за м² — визуализации входят в цену</h2>
     <div class="grid g2">
       <div class="card feat"><span class="tag">ПАКЕТ</span><h3>${PR.proekt.name}</h3><b class="p">${TERMS.rate('proekt')}</b>
         <p class="hint">Минимальный заказ — как за ${TERMS.minArea} м²: ${TERMS.minSum('proekt')}</p>
         <ul>${PACK_BASE.map(x => `<li>${esc(x)}</li>`).join('')}</ul>
         <a class="btn sm" href="../brief.html">Заполнить бриф</a></div>
-      <div class="card feat"><span class="tag">ПАКЕТ</span><h3>${PR.vizual.name}</h3><b class="p">${TERMS.rate('vizual')}</b>
-        <p class="hint">Минимальный заказ — как за ${TERMS.minArea} м²: ${TERMS.minSum('vizual')}</p>
-        <ul><li>Всё из пакета «${PR.proekt.name}»</li><li>фотореалистичные визуализации каждого помещения, сверенные с планом</li></ul>
+      <div class="card feat"><span class="tag">ВХОДИТ В ЦЕНУ</span><h3>Визуализации</h3><b class="p">в той же ставке</b>
+        <p class="hint">Без доплаты и без выбора пакета</p>
+        <ul><li>фотореалистичные визуализации помещений, сверенные с планом по чек-листу</li><li>кадр стоит перед листом развёртки своей стены</li></ul>
         <a class="btn sm" href="../brief.html">Заполнить бриф</a></div>
     </div>
-    <p class="hint" style="margin-top:14px">Дом: интерьер — по тем же ставкам за м². Кровля и конструктив — по запросу. Ландшафт участка — по запросу, скоро.
+    <p class="hint" style="margin-top:14px">Дом: интерьер — по той же ставке за м². Кровля и конструктив — по запросу. Ландшафт участка — по запросу, скоро.
     Только рабочая документация или только планировочное решение — <a href="../catalog/">отдельный расчёт</a>.
     Первый вариант квартиры — до 48 часов, дома — до 72 часов от оплаты и получения плана с размерами. Объёмы — по нашим ${NUM_IN[NEW_N] || NEW_N} выпущенным проектам.
     Аксонометрии, узел ввода, тёплый пол, 3D-прогулка и ролик входят в пакет; в уже опубликованных альбомах этих листов и примеров пока нет — они идут в новых выпусках, примеры добавим на сайт.</p>
@@ -402,7 +402,7 @@ w('price/index.html', page({
     <div class="grid g3">
       <div class="card"><h3>Чертит автоматика</h3><p>Лист строится программой из данных вашего объекта в миллиметрах, а не вручную. Поменялась стена — альбом, ведомости и смета пересобираются целиком.</p></div>
       <div class="card"><h3>Проверяют правила и автор</h3><p>Каждый выпуск проходит автопроверку оформления по ГОСТ: штамп, масштаб, наложения, стыковка листов. Смысл листов смотрит автор. <a href="../gost/">Как устроена проверка</a>.</p></div>
-      <div class="card"><h3>Заказ онлайн</h3><p>Бриф голосом за 10 минут, план с размерами, правки метками на листе. Без встреч, договорённостей «на созвоне» и очереди.</p></div>
+      <div class="card"><h3>Заказ онлайн</h3><p>Бриф за 5 минут: план, картинки, пара слов; правки метками на листе. Без встреч, договорённостей «на созвоне» и очереди.</p></div>
     </div>
     <p class="hint" style="margin-top:14px">Подписей проверяющего и нормоконтролёра на листах нет: в штампе — автор. Сопровождение стройки и выезды студии в цену не входят — см. список «Не входит» ниже.</p>
   </div>
@@ -417,8 +417,7 @@ w('price/index.html', page({
         <tr><th></th><th>Объём</th><th>Цена, ₽/м²</th></tr>
         <tr><td>Технический проект без визуализаций, ${TERMS.market.city}</td><td>${TERMS.market.techSheets} листов</td><td>медиана около ${TERMS.market.techMed}</td></tr>
         <tr><td>Полный проект с визуализациями, ${TERMS.market.city}</td><td>в большинстве прайсов не указан</td><td>обычно ${TERMS.market.full}</td></tr>
-        <tr><td class="hi">LINEA, «${PR.proekt.name}»</td><td class="hi">${range(FL_MIN, FL_MAX, ...LIST)} у наших квартир</td><td class="hi">${TERMS.rate('proekt')}</td></tr>
-        <tr><td class="hi">LINEA, «${PR.vizual.name}»</td><td class="hi">то же + визуализации помещений</td><td class="hi">${TERMS.rate('vizual')}</td></tr>
+        <tr><td class="hi">LINEA, «${PR.proekt.name}»</td><td class="hi">${range(FL_MIN, FL_MAX, ...LIST)} у наших квартир + визуализации</td><td class="hi">${TERMS.rate('proekt')}</td></tr>
       </table>
     </div>
     <p class="hint" style="margin-top:14px">Источник — выборка LINEA по открытым прайсам студий и онлайн-сервисов на ${TERMS.market.date} (около ${TERMS.market.fullN} пакетов полного проекта по Москве); это ориентир, а не статистика рынка. Названий студий не приводим: прайсы меняются.</p>
@@ -431,17 +430,16 @@ w('price/index.html', page({
     <h2>Сколько это будет для вашей площади</h2>
     <div class="scroll-x">
       <table class="tbl">
-        <tr><th>Площадь</th><th>«${PR.proekt.name}»</th><th>«${PR.vizual.name}»</th></tr>
+        <tr><th>Площадь</th><th>«${PR.proekt.name}»</th></tr>
         ${exRows}
       </table>
     </div>
-    <p class="hint" style="margin-top:14px">Сумма = ставка × площадь, но не меньше минимального заказа: ${TERMS.minSum('proekt')} и ${TERMS.minSum('vizual')} (как за ${TERMS.minArea} м²).</p>
+    <p class="hint" style="margin-top:14px">Сумма = ставка × площадь, но не меньше минимального заказа: ${TERMS.minSum('proekt')} (как за ${TERMS.minArea} м²).</p>
     <div class="calc" data-pcalc style="margin-top:22px">
       <div class="calc-row"><span>Площадь, м²</span>
         <input type="number" inputmode="decimal" min="10" max="1000" step="0.1" value="60" data-area aria-label="Площадь, м²" style="width:110px;padding:8px 10px;font:inherit;text-align:right;border:1px solid var(--line,#444);background:transparent;color:inherit;border-radius:8px"></div>
       <div class="calc-out">
         <div><b data-sum-proekt>—</b><span>«${PR.proekt.name}»</span></div>
-        <div><b data-sum-vizual>—</b><span>«${PR.vizual.name}»</span></div>
       </div>
       <p class="hint" data-pnote></p>
       <div class="cta-row"><a class="btn" href="../brief.html">Оформить заказ — бриф</a></div>
@@ -451,13 +449,13 @@ w('price/index.html', page({
 <script>
 (function () {
   var root = document.querySelector('[data-pcalc]'); if (!root) return;
-  var R = { proekt: [${PR.proekt.rate}, ${PR.proekt.min}], vizual: [${PR.vizual.rate}, ${PR.vizual.min}] };
+  var R = { proekt: [${PR.proekt.rate}, ${PR.proekt.min}] };
   var inp = root.querySelector('[data-area]');
   function fmt(n) { return String(Math.round(n)).replace(/\\B(?=(\\d{3})+(?!\\d))/g, ' ') + ' ₽'; }
   function render() {
     var a = parseFloat(String(inp.value).replace(',', '.'));
-    if (!(a > 0)) { root.querySelector('[data-sum-proekt]').textContent = '—'; root.querySelector('[data-sum-vizual]').textContent = '—'; root.querySelector('[data-pnote]').textContent = 'Введите площадь.'; return; }
-    ['proekt', 'vizual'].forEach(function (k) { root.querySelector('[data-sum-' + k + ']').textContent = fmt(Math.max(R[k][1], R[k][0] * a)); });
+    if (!(a > 0)) { root.querySelector('[data-sum-proekt]').textContent = '—'; root.querySelector('[data-pnote]').textContent = 'Введите площадь.'; return; }
+    ['proekt'].forEach(function (k) { root.querySelector('[data-sum-' + k + ']').textContent = fmt(Math.max(R[k][1], R[k][0] * a)); });
     root.querySelector('[data-pnote]').textContent = a < ${TERMS.minArea} ? 'Площадь меньше ${TERMS.minArea} м² — действует минимальный заказ.' : 'Ставка × площадь.';
   }
   inp.addEventListener('input', render); render();
@@ -469,7 +467,7 @@ w('price/index.html', page({
     <div class="kicker">Порядок</div>
     <h2>Как платить</h2>
     <ol class="g-steps">
-      <li><h3>Бриф</h3><p>Около 10 минут, можно голосом. ${TERMS.intake.brief}.</p></li>
+      <li><h3>Бриф</h3><p>${TERMS.brief.line}. ${TERMS.intake.brief}.</p></li>
       <li><h3>Цена</h3><p>Называем стоимость и срок — до начала работы. ${TERMS.intake.sumWhere}</p></li>
       <li><h3>Оплата</h3><p>По счёту; онлайн через ЮKassa — когда подключим. Данные карты вводятся на странице платёжного сервиса — мы их не видим.</p></li>
       <li><h3>Работа</h3><p>После оплаты начинаем; ${esc(TERMS.term)}.</p></li>
@@ -486,8 +484,8 @@ w('price/index.html', page({
       <div class="pas-col good">
         <h3>Входит</h3>
         <ul>
-          <li>Бриф голосом или формой и вопросы по нему</li>
-          <li>Предварительный комплект: полный альбом по ГОСТ с автопроверкой оформления и альбом для заказчика; визуализации каждого помещения — в пакете «Проект + визуализации»</li>
+          <li>Бриф (план, картинки, пара слов) и вопросы по нему</li>
+          <li>Предварительный комплект: полный альбом по ГОСТ с автопроверкой оформления и альбом для заказчика; визуализации помещений — входят в цену</li>
           <li>Правки голосом прямо на листах и перевыпуск альбома с ними; ${esc(TERMS.roundsText)}</li>
           <li>Финальный перевыпуск без пометки «ПРЕДВАРИТЕЛЬНО» — после ваших ответов на открытые вопросы и контрольного обмера</li>
           <li>Смета, спецификация и задание на контрольный обмер — в составе альбома</li>
@@ -521,7 +519,7 @@ w('price/index.html', page({
         <div><b>${SECTIONS_FACT.length}</b><span>разделов</span></div>
         <div><b data-elev>—</b><span>из них развёрток стен, около</span></div>
       </div>
-      <p class="hint">Разделы альбома: ${SECTIONS_FACT.join('; ')}. Плюс отдельный альбом для заказчика (с визуализациями — в пакете «Проект + визуализации»).</p>
+      <p class="hint">Разделы альбома: ${SECTIONS_FACT.join('; ')}. Плюс отдельный альбом для заказчика (с визуализациями — они входят в цену).</p>
       <div class="cta-row"><a class="btn" href="../brief.html">Собрать такой альбом — бриф</a></div>
     </div>
   </div>
@@ -561,7 +559,7 @@ w('price/index.html', page({
       <tr><td>Премиум</td><td>массив под УФ-маслом, столярка на заказ, латунь</td><td>8 320 ₽/м²</td></tr>
     </table>
     <div class="cta-row" style="margin-top:26px">
-      <a class="btn ghost" href="../compare/">Полное сравнение пакетов и тарифов</a>
+      <a class="btn ghost" href="../compare/">Полное сравнение с рынком</a>
       <a class="btn ghost" href="../journal/smeta-remonta.html">Как читать смету</a>
     </div>
   </div>
@@ -581,7 +579,7 @@ const FAQ = [
     + `На наших проектах это ${range(FL_MIN, FL_MAX, ...LIST)} A3 для квартиры и ${range(HS_MIN, HS_MAX, ...LIST)} для дома. И альбом для заказчика: визуализации стоят перед развёртками своих стен, у мебели на плане — размеры. `
     + 'Первый выпуск — предварительный: по нему обсуждают решения, а строят после ваших ответов на вопросы и контрольного обмера.'],
   ['Сколько ждать?', 'Первый вариант проекта квартиры — до 48 часов, дома — до 72 часов от оплаты и получения плана с размерами. Сумму по вашей площади называем до оплаты. '
-    + 'Сам бриф занимает около 10 минут, начать можно с рассказа голосом.'],
+    + TERMS.brief.line + '.'],
   ['Можно ли сразу отдать альбом строителям?', 'Нет — и мы говорим это честно. Первый выпуск предварительный: размеры сняты с вашего плана, а часть решений ждёт ваших ответов '
     + '(лист «Открытые вопросы»). Пока это так, на каждом листе стоит пометка «ПРЕДВАРИТЕЛЬНО», и по нему не строят. После ответов и контрольного обмера '
     + '(задание на него — в альбоме) перевыпускаем комплект без пометки. Оформление листов проверяет программа — она ловит наложения, выход за формат, '
@@ -623,7 +621,7 @@ w('faq/index.html', page({
     <h2>${plural(FAQ.length, 'вопрос', 'вопроса', 'вопросов')}</h2>
     ${FAQ.map((f, i) => `<details${i === 0 ? ' open' : ''}><summary>${esc(f[0])}</summary><p>${esc(f[1])}</p></details>`).join('\n    ')}
     <div class="cta-row" style="margin-top:30px">
-      <a class="btn" href="../brief.html">🎤 Бриф голосом — около 10 минут</a>
+      <a class="btn" href="../brief.html">Заполнить бриф — ${TERMS.brief.time}</a>
       <a class="btn ghost" href="../portfolio-hub/">Посмотреть проекты</a>
     </div>
   </div>
@@ -822,7 +820,7 @@ const MAP = [
   ['Разобраться', [['Сравнение с рынком', 'compare/'], ['Как проходит работа', 'process/'], ['Вопросы и ответы', 'faq/'], ['Журнал', 'journal/'], ['Состав дизайн-проекта', 'journal/sostav-dizayn-proekta.html'], ['Развёртки стен', 'journal/razvertki-sten.html'], ['Электрика в проекте', 'journal/elektrika-v-proekte.html'], ['Пирог пола', 'journal/pirog-pola.html'], ['Смета ремонта', 'journal/smeta-remonta.html']]],
   ['Стили', [['Все стили', 'style/'], ['Джапанди', 'style/japandi.html'], ['Скандинавский', 'style/scandi.html'], ['Минимализм', 'style/minimal.html'], ['Современный', 'style/modern.html'], ['Неоклассика', 'style/neoclassic.html'], ['Лофт', 'style/loft.html']]],
   ['Документация', [['Рабочая документация по ГОСТ', 'gost/'], ['Открытые вопросы и знак «*»', 'gost/otkrytye-voprosy/'], ['Правки голосом на листах', 'review.html?p=gost-lineademo']]],
-  ['Студия', [['О студии', 'about/'], ['Контакты', 'contacts/'], ['Истории', 'stories/'], ['Отзывы', 'reviews/'], ['Бриф голосом', 'brief.html'], ['Чек-лист приёмки проекта', 'checklist/'], ['Политика обработки данных', 'policy/'], ['Согласие на обработку данных', 'soglasie/']]]
+  ['Студия', [['О студии', 'about/'], ['Контакты', 'contacts/'], ['Истории', 'stories/'], ['Отзывы', 'reviews/'], ['Бриф', 'brief.html'], ['Чек-лист приёмки проекта', 'checklist/'], ['Политика обработки данных', 'policy/'], ['Согласие на обработку данных', 'soglasie/']]]
 ];
 w('sitemap/index.html', page({
   file: 'sitemap/index.html',
