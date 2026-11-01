@@ -24,7 +24,8 @@ const STOP = new Error('stop');
 // --mysql=<dsn> — та же проверка на MySQL/MariaDB (база должна быть пустой: тест удаляет её таблицы перед прогоном)
 const MYSQL = arg('mysql');
 const BASE = `http://127.0.0.1:${PORT}`;
-const PACK = arg('pack') || path.join(PRIV, '..', 'brigady-pack', 'pack.json');
+// пакет проекта: --pack=<pack.json> (свежий из tools/brigady-pack.mjs) или фикстура репозитория (prompt-kv54, обезличенная)
+const PACK = arg('pack') || path.join(ROOT, 'tools', 'fixtures', 'brigady-pack.json');
 
 let pass = 0, fail = 0;
 const ok = (cond, msg, extra = '') => { if (cond) { pass++; console.log('  ✓ ' + msg); } else { fail++; console.log('  ✗ ' + msg + (extra ? ' — ' + String(extra).slice(0, 300) : '')); } };
