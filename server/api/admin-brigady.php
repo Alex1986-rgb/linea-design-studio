@@ -193,19 +193,13 @@ if (($_SERVER['REQUEST_METHOD'] ?? '') === 'POST') {
             db_update('br_requests', ['status' => 'cancelled', 'updated_at' => $now], 'id = ?', [$id]);
             brig_audit($WHO, 'request-cancel', 'request#' . $id, $reason);
             $back .= '?r=' . $id; $msg = 'Запрос отменён.'; break;
-        case 'j_sign':
-            $j = brig_one('SELECT * FROM br_jobs WHERE id = ?', [$id]);
-            $side = (string)($_POST['side'] ?? '') === 'client' ? 'client_signed_at' : 'brigade_signed_at';
-            if ($j && $j['status'] === 'contract') {
-                db_update('br_jobs', [$side => $now, 'updated_at' => $now], 'id = ?', [$id]);
-                brig_audit($WHO, 'contract-signed', 'job#' . $id, 'Администратор отметил подписание за сторону: ' . $side . ($reason ? '; ' . $reason : ''));
-                brig_maybe_start($id, $WHO);
-            }
-            $back .= '?j=' . $id; break;
+        case 'j_sign':   // с 01.11.2026 договор подписывают только стороны на сайте (ПЭП кодом) — «за сторону» администратор не подписывает
+            $msg = 'Договор подписывают только стороны на сайте кодом подтверждения.'; $back .= '?j=' . $id; break;
         case 'j_invoice':
             $j = brig_one('SELECT j.*, r.object_title, r.test FROM br_jobs j JOIN br_requests r ON r.id = j.request_id WHERE j.id = ?', [$id]);
             $back .= '?view=money';
             if (!$j || $j['commission_kop'] === null) { $msg = 'Вознаграждение ещё не начислено (контакты сторон не открыты).'; break; }
+            if (!$j['commission_due_at']) { $msg = 'Вознаграждение ещё не к оплате: бригада не получила первых денег (нет отметки аванса и принятого этапа).'; break; }
             if (brig_one('SELECT 1 FROM br_invoices WHERE job_id = ?', [$id])) { $msg = 'Счёт уже выставлен.'; break; }
             $iid = db_insert('br_invoices', ['number' => 'tmp-' . bin2hex(random_bytes(4)), 'brigade_id' => (int)$j['brigade_id'], 'job_id' => $id, 'amount_kop' => (int)$j['commission_kop'],
                 'issued_at' => $now, 'due_at' => date('Y-m-d', strtotime('+' . (int)brig_terms()['invoice_days'] . ' days'))]);
@@ -356,12 +350,20 @@ if (isset($_GET['j']) && ($j = brig_one('SELECT j.*, r.object_title, r.test, o.n
         $stg .= '<tr><td>' . $s['idx'] . '. ' . $h($s['name']) . '<div class="mut">' . $h($s['checklist']['title']) . '</div></td><td>' . $st($s['status'], BRIG_STAGE_STATUS) . '</td><td>' . $h($s['planStart'] . ' — ' . $s['planEnd']) . '</td>'
             . '<td><div class="ph">' . implode('', array_map($img, array_slice($s['photos'], 0, 6))) . '</div></td><td>' . implode('<br>', array_map(fn($m) => ($m['closedAt'] ? '✓ ' : '• ') . $h($m['text']) . ($m['closeNote'] ? ' <span class="mut">— ' . $h($m['closeNote']) . '</span>' : ''), $s['remarks'])) . '</td></tr>';
     }
-    $sign = $j['status'] === 'contract' ? $form('j_sign', $jid, '<select name="side"><option value="client">за клиента</option><option value="brigade">за бригаду</option></select><input name="reason" placeholder="основание (скан, письмо)" size="22">', 'Отметить «договор подписан»', 'lt') : '';
+    $sign = '';
+    $cdocs = '';
+    foreach (brig_all('SELECT * FROM br_contracts WHERE job_id = ? ORDER BY id', [$jid]) as $c) {
+        $cdocs .= '<tr><td>' . $h($c['kind'] === 'main' ? 'Договор' : 'Допсоглашение № ' . $c['num']) . '</td><td>' . $h($c['status']) . '</td><td>' . brig_rub((int)$c['total_kop']) . ($c['delta_kop'] ? ' (' . ($c['delta_kop'] > 0 ? '+' : '') . brig_rub((int)$c['delta_kop']) . ')' : '') . '</td>'
+            . '<td>' . $h($c['client_signed_at'] ?: '—') . ' <span class="mut">' . $h($c['client_ip'] ?: '') . '</span></td><td>' . $h($c['brigade_signed_at'] ?: '—') . ' <span class="mut">' . $h($c['brigade_ip'] ?: '') . '</span></td><td class="mut" style="word-break:break-all">' . $h($c['hash']) . '</td></tr>';
+    }
+    $dlog = implode('', array_map(fn($l) => '<tr><td class="mut">' . $h($l['at']) . '</td><td>' . $h($l['who']) . '</td><td>' . $h($l['text']) . '</td></tr>', brig_deal_log($jid)));
     apage('Объект ' . $j['number'], $top . '<div class="box"><h2>Объект по заказу ' . $h($j['number']) . ' ' . $st($j['status'], BRIG_JOB_STATUS) . ($j['test'] ? ' <span class="test">ТЕСТ</span>' : '') . '</h2>'
         . '<p>' . $h($j['object_title']) . ' · бригада <a href="' . $self . '?b=' . (int)$j['brigade_id'] . '">' . $h($j['bname']) . '</a> · смета ' . brig_rub((int)$j['total_kop']) . ' · комиссия ' . brig_rub($j['commission_kop'] !== null ? (int)$j['commission_kop'] : null) . '</p>'
         . '<p class="mut">Договор: клиент ' . $h($j['client_signed_at'] ?: '—') . ', бригада ' . $h($j['brigade_signed_at'] ?: '—') . ' · согласие клиента на передачу контактов ' . $h($j['contacts_consent_at']) . ' · контакты открыты: ' . $h($j['contacts_open_at'] ?: 'нет') . '</p>' . $sign
         . ($j['commission_kop'] !== null && !brig_one('SELECT 1 FROM br_invoices WHERE job_id = ?', [$jid]) ? $form('j_invoice', $jid, '', 'Выставить счёт на комиссию') : '') . '</div>'
         . '<div class="box scroll"><table><tr><th>Этап</th><th>Статус</th><th>План</th><th>Фото</th><th>Замечания</th></tr>' . $stg . '</table></div>'
+        . '<div class="box scroll"><h2>Документы сделки (ПЭП)</h2><table><tr><th>Документ</th><th>Статус</th><th>Сумма</th><th>Заказчик</th><th>Подрядчик</th><th>SHA-256</th></tr>' . ($cdocs ?: '<tr><td colspan="6">Нет.</td></tr>') . '</table></div>'
+        . '<div class="box scroll"><h2>Журнал сделки (видят обе стороны)</h2><table>' . ($dlog ?: '<tr><td>Пусто.</td></tr>') . '</table></div>'
         . '<div class="box"><h2>Переписка по сделке</h2>' . (implode('', array_map(fn($m) => '<p><b>' . $h(['client' => 'Клиент', 'brigade' => 'Бригада', 'admin' => 'LINEA'][$m['who']] ?? $m['who']) . '</b> <span class="mut">' . $h($m['at']) . ($m['masked'] ? ' · контакты скрыты фильтром' : '') . '</span><br>' . nl2br($h($m['text'])) . '</p>', brig_messages($jid))) ?: '<p class="mut">Сообщений нет.</p>') . '</div>');
 }
 
@@ -414,6 +416,11 @@ switch ($view) {
             $stale .= '<tr><td><a href="' . $self . '?j=' . (int)$x['id'] . '">' . $h($x['number']) . '</a></td><td>' . $h($x['object_title']) . '</td><td><a href="' . $self . '?b=' . (int)$x['brigade_id'] . '">' . $h($x['name']) . '</a></td><td>' . $h(substr((string)$x['created_at'], 0, 10)) . '</td>'
                 . '<td>клиент ' . ($x['client_signed_at'] ? '✓' : '—') . ', бригада ' . ($x['brigade_signed_at'] ? '✓' : '—') . '</td><td>' . (int)db_val('SELECT COUNT(*) FROM br_messages WHERE job_id = ?', [(int)$x['id']]) . '</td></tr>';
         }
+        $nm = (int)brig_terms()['signal_no_money_days'];
+        $nomoney = '';
+        foreach (brig_all("SELECT j.*, b.name, r.object_title, o.number FROM br_jobs j JOIN br_brigades b ON b.id = j.brigade_id JOIN br_requests r ON r.id = j.request_id JOIN orders o ON o.id = r.order_id WHERE j.status IN ('work','done') AND j.commission_due_at IS NULL AND j.contacts_open_at < ? ORDER BY j.contacts_open_at", [date('Y-m-d H:i:s', time() - $nm * 86400)]) as $x) {
+            $nomoney .= '<tr><td><a href="' . $self . '?j=' . (int)$x['id'] . '">' . $h($x['number']) . '</a></td><td>' . $h($x['object_title']) . '</td><td><a href="' . $self . '?b=' . (int)$x['brigade_id'] . '">' . $h($x['name']) . '</a></td><td>' . $h(substr((string)$x['contacts_open_at'], 0, 10)) . '</td></tr>';
+        }
         $kinds = ['contact' => 'контакты в тексте (скрыты)', 'cancel' => 'отказ после выбора', 'reregister' => 'повторная регистрация заблокированной'];
         $byB = '';
         foreach (brig_all("SELECT s.brigade_id, b.name, SUM(CASE WHEN s.kind = 'contact' THEN 1 ELSE 0 END) nc, SUM(CASE WHEN s.kind = 'cancel' THEN 1 ELSE 0 END) nx, COUNT(*) n FROM br_signals s JOIN br_brigades b ON b.id = s.brigade_id GROUP BY s.brigade_id, b.name ORDER BY n DESC LIMIT 50") as $x) {
@@ -426,6 +433,7 @@ switch ($view) {
         }
         apage('Сигналы обхода', $top . '<p class="mut">Признаки того, что сделку уводят мимо платформы. Это повод для звонка, а не наказание: решение — по правилам площадки. Контакты в текстах уже скрыты фильтром; сами контакты в журнал не пишутся.</p>'
             . '<div class="box"><h2>Выбрана, договор не подтверждён ' . $days . '+ дн.</h2><div class="scroll"><table><tr><th>Заказ</th><th>Объект</th><th>Бригада</th><th>Выбрана</th><th>Подтверждение</th><th>Сообщений</th></tr>' . ($stale ?: '<tr><td colspan="6">Нет.</td></tr>') . '</table></div></div>'
+            . '<div class="box"><h2>Договор подтверждён, а за ' . $nm . '+ дн. ни аванса, ни принятого этапа</h2><div class="scroll"><table><tr><th>Заказ</th><th>Объект</th><th>Бригада</th><th>Договор подтверждён</th></tr>' . ($nomoney ?: '<tr><td colspan="4">Нет.</td></tr>') . '</table></div></div>'
             . '<div class="box"><h2>По бригадам</h2><div class="scroll"><table><tr><th>Бригада</th><th>Контакты в тексте</th><th>Отказы после выбора</th><th>Всего</th></tr>' . ($byB ?: '<tr><td colspan="4">Нет.</td></tr>') . '</table></div></div>'
             . '<div class="box"><h2>Журнал сигналов</h2><div class="scroll"><table><tr><th>Когда</th><th>Что</th><th>Кто</th><th>Бригада</th><th>Где</th><th>Подробно</th></tr>' . ($log ?: '<tr><td colspan="6">Сигналов нет.</td></tr>') . '</table></div></div>');
     case 'reviews':

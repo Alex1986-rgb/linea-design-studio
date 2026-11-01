@@ -30,7 +30,7 @@ echo ($apply ? 'ПЕРЕНОС' : 'СУХОЙ ПРОГОН (ничего не п
 db_migrate();   // схема (создание таблиц — не данные; безопасно и в сухом прогоне)
 
 $order = ['orders', 'events', 'accounts', 'account_tokens', 'br_brigades', 'br_portfolio', 'br_files', 'br_requests', 'br_invites', 'br_offers',
-    'br_jobs', 'br_stages', 'br_remarks', 'br_reviews', 'br_invoices', 'br_disputes', 'br_dispute_msgs', 'br_sheet_reqs', 'br_audit', 'br_messages', 'br_signals'];
+    'br_jobs', 'br_stages', 'br_remarks', 'br_reviews', 'br_invoices', 'br_disputes', 'br_dispute_msgs', 'br_sheet_reqs', 'br_audit', 'br_messages', 'br_signals', 'br_contracts', 'br_sign_codes'];
 $have = $src->query("SELECT name FROM sqlite_master WHERE type = 'table'")->fetchAll(PDO::FETCH_COLUMN);
 $plan = []; $bad = 0;
 foreach ($order as $t) {

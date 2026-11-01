@@ -233,17 +233,23 @@
       ${J.status === 'work' && s.status !== 'accepted' && s.status !== 'ready' ? `<div class="bx-row"><label class="btn ghost sm">+ фото этапа<input type="file" accept="image/jpeg,image/png,image/webp,application/pdf" data-sp="${s.id}" hidden multiple></label><button type="button" class="btn sm" data-ready="${s.id}">Этап готов к приёмке</button></div>` : ''}</div>`).join('');
     body().innerHTML = `<p><a href="#" id="bxBack">← объекты</a></p>
       <div class="bx-card"><h2>${esc(J.object)} ${st(J.status, J.statusText)}</h2>
-      <p><b>Клиент:</b> ${esc(C.name)} · <a href="tel:${esc(C.phone.replace(/[^\d+]/g, ''))}">${esc(C.phone)}</a> · <a href="mailto:${esc(C.email)}">${esc(C.email)}</a>${C.address ? '<br><b>Адрес:</b> ' + esc(C.address) : ''}</p>
-      <p>Смета: <b>${esc(rub(J.total))}</b>${J.commission != null ? ' · комиссия LINEA 7 %: ' + esc(rub(J.commission)) : ''}</p>
-      <p>Договор подряда: <a href="${API}remont-dogovor.php?j=${J.id}" target="_blank" rel="noopener">шаблон с приложениями (печать в PDF)</a> · подписан клиентом: ${esc(J.clientSigned ? dt(J.clientSigned) : 'нет')}, вами: ${esc(J.brigadeSigned ? dt(J.brigadeSigned) : 'нет')}</p>
-      ${J.status === 'contract' && !J.brigadeSigned ? '<div class="bx-row"><button class="btn" id="bxSign">Договор подписан</button></div>' : ''}</div>
+      ${J.contactsOpen ? `<p><b>Клиент:</b> ${esc(C.name)} · <a href="tel:${esc(String(C.phone).replace(/[^\d+]/g, ''))}">${esc(C.phone)}</a> · <a href="mailto:${esc(C.email)}">${esc(C.email)}</a>${C.address ? '<br><b>Адрес:</b> ' + esc(C.address) : ''}</p>` : `<p class="bx-note">${esc(J.terms.contactsText)}</p>`}
+      <p>Смета: <b>${esc(rub(J.total))}</b>${J.commission != null ? ' · вознаграждение LINEA ' + esc(J.rateText || J.terms.rate) + ': ' + esc(rub(J.commission)) : ' · вознаграждение LINEA ' + esc(J.rateText || J.terms.rate) + ' начислится, когда откроются контакты'}</p>
+      <p>Договор подряда: <a href="${API}remont-dogovor.php?j=${J.id}" target="_blank" rel="noopener">шаблон с приложениями (печать в PDF)</a> · условия подтвердили: клиент — ${esc(J.clientSigned ? dt(J.clientSigned) : 'нет')}, вы — ${esc(J.brigadeSigned ? dt(J.brigadeSigned) : 'нет')}</p>
+      ${J.status === 'contract' && !J.brigadeSigned ? '<div class="bx-row"><button class="btn" id="bxSign">Подтверждаю условия договора</button></div>' : ''}
+      ${J.canCancel ? '<p><button class="btn ghost sm" type="button" id="bxCancel">Отказаться от объекта</button></p>' : ''}</div>
+      <div class="bx-card"><h2>Переписка с клиентом</h2>${(J.messages || []).map(m => `<p><b>${esc({ client: 'Клиент', brigade: 'Вы', admin: 'LINEA' }[m.who] || m.who)}</b> <span class="bx-mut">${esc(dt(m.at))}</span><br>${esc(m.text)}</p>`).join('') || '<p class="bx-mut">Сообщений пока нет.</p>'}
+      ${J.contactsOpen ? '' : '<p class="bx-mut">До подтверждения договора телефоны, почта, ссылки и ники в сообщениях скрываются автоматически.</p>'}
+      <form id="fMsg"><label class="bx-f">Сообщение<textarea name="text" maxlength="2000" rows="2"></textarea></label><div class="bx-row"><button class="btn ghost sm">Отправить</button></div><p class="bx-err"></p></form></div>
       <div class="bx-card"><h2>Этапы</h2>${stages}</div>
       <div class="bx-card" id="bxSheets"><h2>Листы по запросу</h2>${sheetsBlock(J, sh)}</div>
       <div class="bx-card"><h2>Споры</h2>${(J.disputes || []).map(d => `<div class="bx-stage"><h4>${esc(d.subject)} ${st(d.status === 'open' ? 'review' : 'done', d.status === 'open' ? 'открыт' : 'решён')}</h4>${d.messages.map(m => `<p><b>${esc({ client: 'Клиент', brigade: 'Бригада', admin: 'LINEA' }[m.who])}</b> <span class="bx-mut">${esc(dt(m.at))}</span><br>${esc(m.text)}</p>`).join('')}${d.resolution ? '<p><b>Решение:</b> ' + esc(d.resolution) + '</p>' : ''}</div>`).join('') || '<p class="bx-mut">Споров нет.</p>'}
       <details><summary>Открыть спор</summary><form id="fDisp"><label class="bx-f">Тема<input name="subject" required maxlength="120"></label><label class="bx-f">Суть<textarea name="text" required></textarea></label><div class="bx-row"><button class="btn ghost">Отправить в LINEA</button></div><p class="bx-err"></p></form></details></div>`;
     const B = body();
     B.querySelector('#bxBack').onclick = e => { e.preventDefault(); tabJobs(); };
-    const sg = B.querySelector('#bxSign'); if (sg) sg.onclick = async () => { if (confirm('Подтверждаете, что договор подряда с клиентом подписан? После подписания обеими сторонами начисляется комиссия 7 %.')) { const r = await api('jobs.php?a=sign', { json: { j: jid } }); if (!r.ok) alert(r.error); viewJob(jid); } };
+    const sg = B.querySelector('#bxSign'); if (sg) sg.onclick = async () => { if (confirm('Подтверждаете условия договора подряда? Когда подтвердит и клиент, откроются контакты сторон и начислится вознаграждение LINEA ' + (J.rateText || J.terms.rate) + ' от сметы.')) { const r = await api('jobs.php?a=sign', { json: { j: jid } }); if (!r.ok) alert(r.error); viewJob(jid); } };
+    const bc = B.querySelector('#bxCancel'); if (bc) bc.onclick = async () => { const why = prompt('Почему отказываетесь от объекта? (необязательно)'); if (why === null) return; const r = await api('jobs.php?a=cancel', { json: { j: jid, reason: why } }); if (!r.ok) alert(r.error); tabJobs(); };
+    B.querySelector('#fMsg').onsubmit = async ev => { ev.preventDefault(); const r = await api('jobs.php?a=msg', { json: { j: jid, text: ev.target.text.value } }); errBox(ev.target.querySelector('.bx-err'), r); if (r.ok) viewJob(jid); };
     B.querySelectorAll('[data-sp]').forEach(inp => inp.onchange = async () => { for (const f of inp.files) { const fd = new FormData(); fd.append('stage', inp.dataset.sp); fd.append('file', f); const r = await api('jobs.php?a=stage_photo', { form: fd }); if (!r.ok) { alert(r.error); break; } } viewJob(jid); });
     B.querySelectorAll('[data-ready]').forEach(b => b.onclick = async () => { const r = await api('jobs.php?a=stage_ready', { json: { stage: +b.dataset.ready } }); if (!r.ok) alert(r.error); viewJob(jid); });
     B.querySelectorAll('[data-rc]').forEach(b => b.onclick = async () => { const note = B.querySelector(`[data-rn="${b.dataset.rc}"]`).value; const r = await api('jobs.php?a=remark_close', { json: { remark: +b.dataset.rc, note } }); if (!r.ok) alert(r.error); viewJob(jid); });
@@ -256,9 +262,10 @@
     const list = (sh.sheets || []).map(s => `<li>${st(s.status, s.statusText)} ${esc(s.text)} <span class="bx-mut">${esc(s.room)}${s.wall ? ', стена ' + esc(s.wall) : ''} · ${esc(dt(s.created))}</span>
       ${s.result ? `<br><a href="${API}brigade/file.php?f=${s.result}" target="_blank" rel="noopener">Лист PDF</a>${s.note ? ' <span class="bx-mut">' + esc(s.note) + '</span>' : ''}` : ''}
       ${s.status === 'question' ? `<br><b>Вопрос:</b> ${esc(s.question)} <input class="bx-in" style="max-width:320px;padding:4px 8px" data-an="${s.id}" placeholder="ответ"> <button type="button" class="btn ghost sm" data-ab="${s.id}">Ответить</button>` : ''}</li>`).join('');
-    const can = ['contract', 'work'].includes(J.status);
+    const can = sh.inDeal != null ? sh.inDeal : J.status === 'work';
     const speech = !!(window.SpeechRecognition || window.webkitSpeechRecognition), rec = !!(window.MediaRecorder && navigator.mediaDevices);
     return `<p class="bx-mut">Не хватает узла, развёртки или размера — опишите, что нужно. Лист выпускает движок проекта; статус: принят → в работе → готов (или уточняющий вопрос).</p>
+      <p class="bx-note">${esc((sh.terms || {}).sheetsText || '')}</p>
       ${can ? `<form id="fSheet"><div class="bx-grid"><label class="bx-f">Помещение (необязательно)<select name="room"><option value="">—</option>${(sh.rooms || []).map(r => `<option>${esc(r)}</option>`).join('')}</select></label>
       <label class="bx-f">Стена (необязательно)<select name="wall"><option value="">—</option><option>A</option><option>B</option><option>C</option><option>D</option></select></label>
       <label class="bx-f w2">Какой лист нужен<textarea name="text" maxlength="900" placeholder="Например: развёртка стены B кухни с выводами под технику и высотами розеток"></textarea></label></div>
@@ -309,7 +316,7 @@
   async function tabMoney() {
     const j = await api('finance.php');
     if (!j.ok) { body().innerHTML = `<p class="bx-err">${esc(j.error)}</p>`; return; }
-    body().innerHTML = `<div class="bx-card"><h2>Финансы</h2><p>Комиссия LINEA — ${j.rate} % от сметы по выбранному предложению, после подписания договора подряда обеими сторонами. Оплата ремонта — напрямую между вами и клиентом.</p>
+    body().innerHTML = `<div class="bx-card"><h2>Финансы</h2><p>Вознаграждение LINEA — ${esc(j.rate)} от сметы по выбранному предложению; начисляется в момент, когда открываются контакты сторон. ${esc(j.terms.contactsText)} ${j.terms.pilot ? esc(j.terms.pilot) + ' ' : ''}Оплата ремонта — напрямую между вами и клиентом.</p>
       <p>Начислено <b>${esc(rub(j.accrued))}</b> · оплачено <b>${esc(rub(j.paid))}</b> · к оплате <b>${esc(rub(j.debt))}</b></p>
       ${j.requisites ? '<p class="bx-mut">Реквизиты для оплаты: ' + esc(j.requisites) + '</p>' : '<p class="bx-mut">Реквизиты для оплаты счетов будут в счёте.</p>'}
       <div class="bx-tbl-wrap"><table class="bx-tbl"><thead><tr><th>Объект</th><th>Статус</th><th class="r">Смета</th><th class="r">Комиссия</th><th>Счёт</th></tr></thead><tbody>${j.jobs.map(x => `<tr><td>${esc(x.object)}</td><td>${esc(x.status)}</td><td class="r">${esc(rub(x.total))}</td><td class="r">${x.commission != null ? esc(rub(x.commission)) : '—'}</td><td>${x.invoice ? esc(x.invoice.number) + ' — ' + (x.invoice.paid ? '<span class="best">оплачен ' + esc(day(x.invoice.paid)) + '</span>' : 'к оплате до ' + esc(day(x.invoice.due))) : '—'}</td></tr>`).join('') || '<tr><td colspan="5" class="bx-mut">Начислений нет.</td></tr>'}</tbody></table></div></div>

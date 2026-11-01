@@ -146,6 +146,12 @@ return [
         "CREATE UNIQUE INDEX br_brigades_inn ON br_brigades(inn_key)",
         // контакты сторон открываются по условию brig_terms()['contacts_after']; у объектов до 01.11.2026 они уже были открыты при выборе
         "ALTER TABLE br_jobs ADD COLUMN contacts_open_at {KEY}",
+        "ALTER TABLE br_jobs ADD COLUMN commission_rate {REAL}",   // ставка сделки (основная или пилотная) — на момент открытия контактов
+        "UPDATE br_jobs SET commission_rate = 0.07 WHERE commission_kop IS NOT NULL",   // объекты до 01.11.2026 — по ставке 7 %
+        // к оплате: после первых денег бригаде (аванс или принятый первый этап); у объектов до 01.11.2026 — с даты начисления
+        "ALTER TABLE br_jobs ADD COLUMN advance_at {KEY}",
+        "ALTER TABLE br_jobs ADD COLUMN commission_due_at {KEY}",
+        "UPDATE br_jobs SET commission_due_at = commission_at WHERE commission_kop IS NOT NULL",
         "UPDATE br_jobs SET contacts_open_at = contacts_consent_at",
         "ALTER TABLE br_jobs ADD COLUMN cancelled_at {KEY}",
         "ALTER TABLE br_jobs ADD COLUMN cancel_by {KEY}",
@@ -163,5 +169,22 @@ return [
             field {KEY}, detail {TEXT})
             {ENGINE}",
         "CREATE INDEX br_signals_kind ON br_signals(kind)",
+        // договор подряда и допсоглашения — только через сайт (Александр 01.11.2026: «все договора через наш сайт — прозрачность»):
+        // версия текста замораживается (sha256), обе стороны подписывают простой электронной подписью — кодом на почту
+        "CREATE TABLE IF NOT EXISTS br_contracts (
+            id {ID}, job_id {INT} NOT NULL, kind {SHORT} NOT NULL, num {INT} NOT NULL, status {SHORT} NOT NULL DEFAULT 'draft',
+            body {TEXT} NOT NULL, hash {KEY} NOT NULL, total_kop {INT} NOT NULL, delta_kop {INT} NOT NULL DEFAULT 0, days_add {INT} NOT NULL DEFAULT 0, note {TEXT},
+            created_at {KEY} NOT NULL, created_by {KEY} NOT NULL,
+            client_signed_at {KEY}, client_ip {KEY}, client_pep_ed {KEY}, brigade_signed_at {KEY}, brigade_ip {KEY}, brigade_pep_ed {KEY},
+            FOREIGN KEY (job_id) REFERENCES br_jobs(id) ON DELETE CASCADE)
+            {ENGINE}",
+        "CREATE INDEX br_contracts_job ON br_contracts(job_id)",
+        "CREATE TABLE IF NOT EXISTS br_sign_codes (
+            id {ID}, contract_id {INT} NOT NULL, side {SHORT} NOT NULL, code_hash {KEY} NOT NULL, expires_at {INT} NOT NULL, tries {INT} NOT NULL DEFAULT 0,
+            created_at {KEY} NOT NULL, used_at {KEY},
+            FOREIGN KEY (contract_id) REFERENCES br_contracts(id) ON DELETE CASCADE)
+            {ENGINE}",
+        // сумма сделки по подписанным документам (договор + допсоглашения) — база вознаграждения
+        "ALTER TABLE br_jobs ADD COLUMN deal_total_kop {INT}",
     ],
 ];

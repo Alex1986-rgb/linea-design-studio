@@ -20,6 +20,7 @@ if (realpath((string)($_SERVER['SCRIPT_FILENAME'] ?? '')) === __FILE__) { http_r
 require_once __DIR__ . '/db.php';
 require_once __DIR__ . '/accounts.php';
 require_once __DIR__ . '/brig-notify.php';
+require_once __DIR__ . '/contract.php';
 
 // Сбой базы или кода — JSON-ответ без подробностей (подробности — в журнал linea-private/error.log, без ПДн из запроса)
 set_exception_handler(function (Throwable $e) {
@@ -399,20 +400,46 @@ function brig_offer_calc(array $pack, array $items): array
     return [$out, $total];
 }
 
-function brig_commission(int $totalKop): int { return (int)round($totalKop * brig_terms()['rate']); }
+function brig_commission(int $totalKop, ?float $rate = null): int { return (int)round($totalKop * ($rate ?? brig_terms()['rate'])); }
+
+/**
+ * Ставка для следующей сделки бригады: пилотная (brig_terms()['pilot']), если бригада — среди первых N допущенных
+ * (по admitted_at, отдельно для тестовых) и у неё меньше M сделок с открытыми контактами; иначе основная.
+ */
+function brig_rate_for(int $brigadeId): float
+{
+    $t = brig_terms(); $p = $t['pilot'];
+    if (!$p['enabled']) { return $t['rate']; }
+    $b = brig_one('SELECT id, admitted_at, test, demo FROM br_brigades WHERE id = ?', [$brigadeId]);
+    if (!$b || !$b['admitted_at'] || $b['demo']) { return $t['rate']; }
+    $rank = 1 + (int)db_val('SELECT COUNT(*) FROM br_brigades WHERE demo = 0 AND test = ? AND admitted_at IS NOT NULL AND (admitted_at < ? OR (admitted_at = ? AND id < ?))',
+        [(int)$b['test'], $b['admitted_at'], $b['admitted_at'], $brigadeId]);
+    $deals = (int)db_val('SELECT COUNT(*) FROM br_jobs WHERE brigade_id = ? AND contacts_open_at IS NOT NULL', [$brigadeId]);
+    return $rank <= $p['brigades'] && $deals < $p['deals'] ? $p['rate'] : $t['rate'];
+}
+
+/** Пилот одной фразой (для кабинета и страниц); null — пилот выключен. */
+function brig_pilot_text(): ?string
+{
+    $p = brig_terms()['pilot'];
+    return $p['enabled'] ? 'Пилот: первым ' . $p['brigades'] . ' допущенным бригадам первые ' . $p['deals'] . ' сделки — ' . brig_rate_text($p['rate']) . '.' : null;
+}
 
 /** Условия для кабинета и страницы заказа (тексты — из тех же параметров). */
 function brig_terms_public(): array
 {
     $t = brig_terms();
     return [
-        'rate' => brig_rate_text(), 'contactsAfter' => $t['contacts_after'],
+        'rate' => brig_rate_text(), 'pilot' => brig_pilot_text(), 'contactsAfter' => $t['contacts_after'], 'commissionDue' => $t['commission_due'],
+        'dueText' => $t['commission_due'] === 'first_money'
+            ? 'Вознаграждение LINEA ' . brig_rate_text() . ' от сметы — только когда бригада получила первые деньги: аванс или оплату первого этапа.'
+            : 'Вознаграждение LINEA ' . brig_rate_text() . ' от сметы — после подтверждения договора обеими сторонами.',
         'contactsText' => $t['contacts_after'] === 'chosen'
             ? 'Контакты сторон открываются сразу после выбора бригады.'
             : 'Телефоны, почта, адрес объекта и реквизиты откроются обеим сторонам, когда условия договора подряда подтвердят на сайте и заказчик, и бригада. До этого — переписка в карточке сделки.',
         'sheetsText' => 'Листы по запросу под вашу бригаду — бесплатно, пока сделка идёт через LINEA (договор подтверждён обеими сторонами на сайте, объект в работе)'
             . ($t['sheets_free_limit'] !== null ? ', до ' . (int)$t['sheets_free_limit'] . ' листов на объект' : '') . '.',
-        'sheetPrice' => $t['sheets_outside_paid'] ? $t['sheet_price_kop'] / 100 : null,
+        'sheetPrice' => $t['sheets_outside_paid'] ? $t['sheet_price_kop'] / 100 : null,   // вне сделки лист продаётся, только когда платный режим включён
         'safeDeal' => (bool)$t['safe_deal'],
     ];
 }
@@ -485,11 +512,24 @@ function brig_open_contacts(int $jobId, string $who): void
     $j = brig_one('SELECT * FROM br_jobs WHERE id = ?', [$jobId]);
     if (!$j || $j['contacts_open_at'] || $j['status'] === 'cancelled') { return; }
     $o = brig_one('SELECT total_kop FROM br_offers WHERE id = ?', [(int)$j['offer_id']]);
-    $kop = brig_commission((int)$o['total_kop']);
+    $rate = brig_rate_for((int)$j['brigade_id']);
+    $kop = brig_commission((int)$o['total_kop'], $rate);
     $now = linea_now();
-    if (brig_exec('UPDATE br_jobs SET contacts_open_at = ?, commission_kop = ?, commission_at = ?, updated_at = ? WHERE id = ? AND contacts_open_at IS NULL', [$now, $kop, $now, $now, $jobId]) !== 1) { return; }
+    $due = brig_terms()['commission_due'] === 'signed' ? $now : null;   // 'first_money' — к оплате после аванса или первого этапа (brig_commission_due)
+    if (brig_exec('UPDATE br_jobs SET contacts_open_at = ?, commission_kop = ?, commission_rate = ?, commission_at = ?, commission_due_at = ?, updated_at = ? WHERE id = ? AND contacts_open_at IS NULL', [$now, $kop, $rate, $now, $due, $now, $jobId]) !== 1) { return; }
     brig_audit($who, 'contacts-open', 'job#' . $jobId, 'Контакты сторон открыты (условие: ' . brig_terms()['contacts_after'] . ')');
-    brig_audit($who, 'commission', 'job#' . $jobId, 'Начислено вознаграждение ' . brig_rub($kop) . ' (' . brig_rate_text() . ' от ' . brig_rub((int)$o['total_kop']) . ')');
+    brig_audit($who, 'commission', 'job#' . $jobId, 'Начислено вознаграждение ' . brig_rub($kop) . ' (' . brig_rate_text($rate) . ($rate !== brig_terms()['rate'] ? ', пилот' : '') . ' от ' . brig_rub((int)$o['total_kop']) . ')');
+}
+
+/**
+ * Вознаграждение становится к оплате — один раз, при первых деньгах бригаде: клиент отметил аванс или принял первый этап
+ * (что раньше). Счёт выставляется только после этого.
+ */
+function brig_commission_due(int $jobId, string $who, string $why): void
+{
+    if (brig_exec('UPDATE br_jobs SET commission_due_at = ?, updated_at = ? WHERE id = ? AND commission_kop IS NOT NULL AND commission_due_at IS NULL', [linea_now(), linea_now(), $jobId]) === 1) {
+        brig_audit($who, 'commission-due', 'job#' . $jobId, 'Вознаграждение к оплате: ' . $why);
+    }
 }
 
 /** Лента сообщений сделки (клиент ↔ бригада; LINEA видит всё). */

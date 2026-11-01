@@ -8,8 +8,11 @@
  *   POST ?a=cancel               — отказаться от подбора (до выбора)
  *   POST ?a=choose   {offer, consentContacts:true} — выбрать предложение (согласие передать контакты выбранной бригаде;
  *                                 сами контакты открываются по brig_terms()['contacts_after'], по умолчанию — после подтверждения договора обеими сторонами)
- *   POST ?a=sign                 — «условия договора подряда подтверждаю» (обе стороны → контакты, вознаграждение, объект в работе)
+ *   POST ?a=sign {doc?, code?, pep:true} — подпись договора/допсоглашения на сайте (ПЭП): без кода — код уходит на почту заказчика,
+ *                                 с кодом — подпись (время, IP, хеш версии). Обе подписи договора → контакты, вознаграждение, объект в работе
+ *   POST ?a=addendum {items:[{name,unit,qty,price}], daysAdd, note} / ?a=addendum_cancel {doc} — допсоглашение (изменения — только так)
  *   POST ?a=msg {text}           — сообщение бригаде в ленте сделки (до открытия контактов контакты в тексте скрываются)
+ *   POST ?a=advance              — «аванс бригаде внесён» (первые деньги по сделке: с этого момента вознаграждение LINEA к оплате)
  *   POST ?a=job_cancel {reason}  — отказаться от выбранной бригады до подтверждения договора (сигнал обхода в админке)
  *   POST ?a=stage_accept {stage, checks:[…]} / ?a=stage_return {stage, remarks}
  *   POST ?a=review {rating 1–5, text} — только после завершения объекта, один раз
@@ -60,6 +63,8 @@ function rm_state(array $o, string $token): array
                 : ['phone' => null, 'email' => null, 'contact' => null, 'legalFull' => BRIG_LEGAL[$b['legal']] ?? '']),
             'contactsOpen' => $open, 'contactsText' => brig_terms_public()['contactsText'], 'messages' => brig_messages((int)$j['id']),
             'canCancel' => $j['status'] === 'contract' && !$open,
+            'advanceAt' => $j['advance_at'], 'canAdvance' => $j['status'] === 'work' && !$j['advance_at'],
+            'docs' => brig_deal_docs($j),
             'clientSigned' => $j['client_signed_at'], 'brigadeSigned' => $j['brigade_signed_at'], 'stages' => brig_job_stages((int)$j['id']),
             'review' => $rev ? ['rating' => (int)$rev['rating'], 'text' => (string)$rev['text'], 'hidden' => (bool)$rev['hidden']] : null,
             'canReview' => $j['status'] === 'done' && !$rev,
@@ -140,20 +145,40 @@ switch ($a) {
             return $jid;
         });
         brig_audit($who, 'choose', 'job#' . $jid, 'Выбрано предложение #' . $of['id'] . ' на ' . brig_rub((int)$of['total_kop']) . '; согласие на передачу контактов');
+        brig_contract_main(brig_one('SELECT * FROM br_jobs WHERE id = ?', [$jid]));   // версия договора для подписи на сайте — сразу после выбора
         if (brig_terms()['contacts_after'] === 'chosen') { brig_open_contacts($jid, $who); }
         foreach (brig_all('SELECT b.*, o.status ostatus FROM br_offers o JOIN br_brigades b ON b.id = o.brigade_id WHERE o.request_id = ?', [(int)$r['id']]) as $b) {
             brig_mail((string)$b['email'], $b['ostatus'] === 'chosen' ? 'brig_chosen' : 'brig_not_chosen', ['name' => $b['contact_name'], 'object' => $r['object_title'], 'link' => brig_link('brigada/'), 'rate' => brig_rate_text(), 'contacts' => brig_terms_public()['contactsText']], $test || (bool)$b['test']);
         }
         break;
     case 'sign':
-        if (!$j || $j['status'] !== 'contract') { linea_fail('Подписывать нечего'); }
-        db_update('br_jobs', ['client_signed_at' => $now, 'updated_at' => $now], 'id = ?', [(int)$j['id']]);
-        brig_audit($who, 'contract-signed', 'job#' . $j['id'], 'Клиент: условия договора подряда подтверждены');
-        brig_maybe_start((int)$j['id'], $who);
+        if (!$j || $j['status'] === 'cancelled') { linea_fail('Подписывать нечего'); }
+        $c = brig_sign_doc($j, (int)($in['doc'] ?? 0));
+        if (trim((string)($in['code'] ?? '')) === '') {
+            $dev = brig_sign_send($c, 'client', (string)$o['email'], $test);
+            linea_json(rm_state(linea_order_by_token($token), $token) + ['codeSent' => true, 'doc' => (int)$c['id']] + ($dev !== '' ? ['devCode' => $dev] : []));
+        }
+        brig_sign_confirm($c, 'client', (string)$in['code'], ($in['pep'] ?? false) === true, $who);
+        break;
+    case 'addendum':
+        if (!$j) { linea_fail('Допсоглашение — по объекту с выбранной бригадой'); }
+        brig_addendum_propose($j, $in, $who, ['who' => $who, 'job_id' => (int)$j['id'], 'brigade_id' => (int)$j['brigade_id']]);
+        brig_audit($who, 'addendum-propose', 'job#' . $j['id'], 'Заказчик предложил допсоглашение');
+        break;
+    case 'addendum_cancel':
+        if (!$j) { linea_fail('Нет объекта'); }
+        brig_addendum_cancel($j, (int)($in['doc'] ?? 0), $who);
         break;
     case 'msg':
         if (!$j || $j['status'] === 'cancelled') { linea_fail('Переписка — по объекту с выбранной бригадой'); }
         brig_message_add($j, 'client', (string)($in['text'] ?? ''), ['who' => $who, 'request_id' => (int)$r['id']]);
+        break;
+    case 'advance':
+        if (!$j || $j['status'] !== 'work') { linea_fail('Отметить аванс можно, когда договор подтверждён и объект в работе'); }
+        if ($j['advance_at']) { linea_fail('Аванс уже отмечен'); }
+        db_update('br_jobs', ['advance_at' => $now, 'updated_at' => $now], 'id = ?', [(int)$j['id']]);
+        brig_audit($who, 'advance', 'job#' . $j['id'], 'Клиент: аванс бригаде внесён');
+        brig_commission_due((int)$j['id'], $who, 'клиент отметил аванс');
         break;
     case 'job_cancel':
         if (!$j) { linea_fail('Бригада не выбрана'); }
@@ -177,6 +202,7 @@ switch ($a) {
             }
         });
         brig_audit($who, 'stage-accept', 'stage#' . $s['id'], $s['name']);
+        brig_commission_due((int)$j['id'], $who, 'принят этап «' . $s['name'] . '»');   // первый принятый этап = первые деньги бригаде (оплата после приёмки)
         $b = $brig(); brig_mail((string)$b['email'], 'brig_stage_accepted', ['name' => $b['contact_name'], 'stage' => $s['name'], 'object' => $r['object_title']], $test || (bool)$b['test']);
         break;
     case 'stage_return':

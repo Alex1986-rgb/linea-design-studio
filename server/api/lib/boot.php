@@ -68,16 +68,25 @@ const LINEA_KINDS = [
 /**
  * Условия «Ремонта по проекту» — ЕДИНСТВЕННОЕ место на сервере (страницы сайта — tools/site-shell.js → BRIG_TERMS, держать
  * одинаковыми). Поверх — config 'brig_terms'. Решение 01.11.2026: платы за отклик/лид нет; удержание сделки — гарантия сайта и листы
- * по запросу только внутри сделки. Ставка, Безопасная сделка, цена листа вне сделки — ещё не решены: значения ниже — текущие.
+ * по запросу только внутри сделки. Решения 01.11.2026: ставка 10 % («10 % с бригады»), пилот 5 % для первых 5 бригад на первые 3 сделки,
+ * листы в сделке бесплатно до 15 на объект, вне сделки — 2 500 ₽, но продажа выключена до ИП. Безопасная сделка ЮKassa — не включена.
  */
 const BRIG_TERMS_DEFAULT = [
-    'rate' => 0.07,                 // агентское вознаграждение — доля от сметы выбранного предложения (решение 31.10.2026)
+    'rate' => 0.10,                 // агентское вознаграждение — доля от сметы выбранного предложения (Александр 01.11.2026: «10 % с бригады»; до этого 7 %)
+    // пилот: первым N допущенным бригадам первые M сделок — по пониженной ставке (учёт по бригаде: порядок допуска и число сделок
+    // с открытыми контактами; ставка сделки сохраняется в br_jobs.commission_rate)
+    'pilot' => ['enabled' => true, 'rate' => 0.05, 'brigades' => 5, 'deals' => 3],
+    // когда начисленное вознаграждение становится К ОПЛАТЕ (Александр 01.11.2026: «оплата после первого этапа работ или аванса»):
+    // 'first_money' — после первых денег бригаде: клиент отметил аванс или принял первый этап (что раньше); 'signed' — сразу при подтверждении
+    // договора. Начисление (сумма, ставка) создаётся при подтверждении договора обеими сторонами, когда открываются контакты.
+    'commission_due' => 'first_money',
+    'signal_no_money_days' => 14,   // «договор подтверждён, а за N дней ни аванса, ни принятого этапа» — сигнал в админке
     'contacts_after' => 'signed',   // когда открываются контакты сторон и фиксируется комиссия: 'signed' — договор подряда отмечен
                                     // подписанным обеими сторонами на сайте; 'chosen' — сразу при выборе (как было до 01.11.2026)
-    'sheets_free_limit' => null,    // листов по запросу на объект бесплатно внутри сделки; null — без лимита (решение владельца)
+    'sheets_free_limit' => 15,      // листов по запросу на объект бесплатно внутри сделки; null — без лимита
     'sheets_per_day_job' => 10, 'sheets_per_day_brigade' => 30, 'sheets_open_max' => 5,
     'sheets_outside_paid' => false, // листы вне активной сделки — платно (выключено: цену не утвердили)
-    'sheet_price_kop' => null,      // цена листа вне сделки, копейки
+    'sheet_price_kop' => 250000,    // цена листа вне сделки, копейки (2 500 ₽); продаётся, только когда sheets_outside_paid = true
     'signal_unsigned_days' => 5,    // «выбрана, договор не подписан N дней» — сигнал в админке
     'invoice_days' => 10,           // срок оплаты счёта на вознаграждение
     'safe_deal' => false,           // «Безопасная сделка» ЮKassa — не включена (нужны ИП, договор и юрист)
@@ -90,16 +99,21 @@ function brig_terms(): array
     if ($t !== null) { return $t; }
     $t = array_replace(BRIG_TERMS_DEFAULT, is_array(linea_cfg()['brig_terms'] ?? null) ? linea_cfg()['brig_terms'] : []);
     $t['rate'] = max(0.0, min(0.5, (float)$t['rate']));
+    $p = is_array($t['pilot'] ?? null) ? $t['pilot'] : [];
+    $t['pilot'] = ['enabled' => !empty($p['enabled']), 'rate' => max(0.0, min(0.5, (float)($p['rate'] ?? $t['rate']))),
+        'brigades' => max(0, (int)($p['brigades'] ?? 0)), 'deals' => max(0, (int)($p['deals'] ?? 0))];
+    if (!$t['pilot']['brigades'] || !$t['pilot']['deals']) { $t['pilot']['enabled'] = false; }
     if (!in_array($t['contacts_after'], ['signed', 'chosen'], true)) { $t['contacts_after'] = 'signed'; }
+    if (!in_array($t['commission_due'], ['first_money', 'signed'], true)) { $t['commission_due'] = 'first_money'; }
     $t['sheet_price_kop'] = $t['sheet_price_kop'] !== null && (int)$t['sheet_price_kop'] > 0 ? (int)$t['sheet_price_kop'] : null;
     $t['sheets_outside_paid'] = (bool)$t['sheets_outside_paid'] && $t['sheet_price_kop'] !== null;
     return $t;
 }
 
-/** Ставка словами: 0.07 → «7 %», 0.055 → «5,5 %». */
-function brig_rate_text(): string
+/** Ставка словами: 0.05 → «5 %», 0.055 → «5,5 %». Без аргумента — основная ставка из brig_terms(). */
+function brig_rate_text(?float $rate = null): string
 {
-    $p = round(brig_terms()['rate'] * 100, 1);
+    $p = round(($rate ?? brig_terms()['rate']) * 100, 1);
     return str_replace('.', ',', (string)($p == (int)$p ? (int)$p : $p)) . ' %';
 }
 
