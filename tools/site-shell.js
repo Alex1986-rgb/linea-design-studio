@@ -283,6 +283,15 @@ const FOOTER_EXTRA_ALL = [
   { title: 'Обработка данных', href: 'policy/' }, { title: 'Согласие на обработку данных', href: 'soglasie/' },
 ];
 const FOOTER_EXTRA = FOOTER_EXTRA_ALL.filter(x => !(OFERTA_DRAFT && x.href === 'oferta/'));
+/**
+ * Упоминание договора-оферты в тексте страниц (QA 01.11.2026, B1) — единственный способ ссылаться на oferta/ из генераторов.
+ * Пока OFERTA_DRAFT = true, ссылки на черновик нет: выводится нейтральная фраза draft (по умолчанию — «условия — на странице
+ * заказа до оплаты»). Снять флаг — вернётся ссылка: before + <a href="{up}oferta/">{text}</a> + after.
+ *   up — путь к корню сайта от страницы ('../', '../../'); text — «договору-оферте», «в договоре-оферте» и т. п.
+ */
+function ofertaRef(up, text, { before = '', after = '', draft = 'условия — на странице заказа до оплаты' } = {}) {
+  return OFERTA_DRAFT ? draft : `${before}<a href="${up}oferta/">${text}</a>${after}`;
+}
 // Воронка сайта: три состояния посетителя. Полоса стоит перед подвалом на
 // каждой странице и всегда показывает, где человек сейчас и что дальше.
 const FUNNEL = [
@@ -437,4 +446,4 @@ ${ogImageTags(ogImage || OG_DEFAULT)}
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,500;0,600;1,500&family=Inter:wght@400;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="${u}css/main.css?${CSSV}">${extra || ''}`;
 
-module.exports = { OFERTA_DRAFT, TERMS, BRIG_TERMS, INTAKE, intakeOnline, swapIntake, AUTHOR, BASE, SITE, SITE_BASES, SITE_DOMAIN_RU, CSSV, SECTIONS, FOOTER_EXTRA, FUNNEL, funnel, ctaBlock, crumbsBar, crumbsAuto, pic, esc, clamp, header, footer, beta, sticky, crumbsLd, head };
+module.exports = { OFERTA_DRAFT, ofertaRef, TERMS, BRIG_TERMS, INTAKE, intakeOnline, swapIntake, AUTHOR, BASE, SITE, SITE_BASES, SITE_DOMAIN_RU, CSSV, SECTIONS, FOOTER_EXTRA, FUNNEL, funnel, ctaBlock, crumbsBar, crumbsAuto, pic, esc, clamp, header, footer, beta, sticky, crumbsLd, head };

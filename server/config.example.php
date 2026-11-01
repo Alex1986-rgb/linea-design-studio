@@ -64,8 +64,8 @@ return [
     'sheet_worker_token' => '',
     'brig_reg_per_hour' => 5, 'brig_login_per_hour' => 20, 'brig_forgot_per_hour' => 5, 'brig_uploads_per_hour' => 120,
     // Условия «Ремонта по проекту» поверх значений по умолчанию (server/api/lib/boot.php → BRIG_TERMS_DEFAULT). Страницы сайта берут те же
-    // значения из tools/site-shell.js → BRIG_TERMS — меняя здесь, поменяйте и там. Пусто — текущие условия (7 %, контакты после подтверждения договора).
-    // 'brig_terms' => ['rate' => 0.07, 'contacts_after' => 'signed', 'sheets_free_limit' => null, 'sheets_outside_paid' => false, 'sheet_price_kop' => null],
+    // значения из tools/site-shell.js → BRIG_TERMS — меняя здесь, поменяйте и там. Пусто — текущие условия (10 %, пилот 5 % первым 5 бригадам на 3 сделки, контакты после подписания договора).
+    // 'brig_terms' => ['rate' => 0.10, 'contacts_after' => 'signed', 'sheets_free_limit' => null, 'sheets_outside_paid' => false, 'sheet_price_kop' => null],
     'brig_terms' => [],
 
     // Адрес сайта без «/» на конце — для return_url оплаты и ссылок в письмах. Пусто — адрес домена (LINEA_BASE_DEFAULT в boot.php);
