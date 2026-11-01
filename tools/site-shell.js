@@ -144,6 +144,8 @@ const TERMS = {
     }));
   },
   start: 'Проект начинается после оплаты',
+  // площадь в брифе обязательна (01.11.2026): сумма видна сразу на странице заказа; что будет, если план покажет другую площадь
+  areaRecalc: 'Сумма посчитана по площади из брифа. Если по плану площадь окажется другой, пересчитаем по той же ставке и согласуем разницу с вами до начала работы.',
   how: 'Вы присылаете бриф — мы называем сумму по вашей площади и срок, вы оплачиваете, после оплаты начинаем работу',
   term: 'первый вариант квартиры — до 48 часов, дома — до 72 часов от оплаты и получения плана с размерами',
   roundsText: ROUNDS ? `${ROUNDS} ${ROUNDS === 1 ? 'круг' : ROUNDS < 5 ? 'круга' : 'кругов'} правок входят в цену` : 'сколько кругов правок входит в цену — фиксируем в договоре до оплаты',
@@ -157,6 +159,28 @@ const TERMS = {
   // дом и ландшафт
   onRequest: 'Дом: интерьер считаем по той же ставке за м². Кровля и конструктив — по запросу. Ландшафт участка — по запросу, скоро.',
 };
+
+// ── «Ремонт по проекту»: условия бригад — ЕДИНСТВЕННЫЙ источник для страниц сайта ─────────────────────────────────────
+// Серверная копия — server/api/lib/boot.php → BRIG_TERMS_DEFAULT (+ 'brig_terms' в linea-private/config.php): держать одинаковыми.
+// Решение Александра 01.11.2026: платы за отклик, лид и допуск нет. Удержание сделки на платформе — гарантия сайта и листы по запросу
+// под каждую бригаду, доступные только внутри сделки. Ставка (7 % или 5 %), Безопасная сделка ЮKassa, неустойки и цена листа вне
+// сделки ещё не решены — здесь текущие значения.
+const BRIG_TERMS = {
+  rate: 7,                         // % от сметы выбранного предложения (агентское вознаграждение)
+  contactsAfter: 'signed',         // 'signed' — контакты сторон открываются, когда договор подтвердили на сайте обе стороны; 'chosen' — при выборе
+  sheetsFreeLimit: null,           // листов по запросу на объект бесплатно внутри сделки; null — без лимита
+  sheetsOutsidePaid: false,        // листы вне сделки — платно (выключено, цена не утверждена)
+  invoiceDays: 10,
+};
+BRIG_TERMS.rateText = `${String(BRIG_TERMS.rate).replace('.', ',')}\u00a0%`;
+// когда открываются контакты и фиксируется вознаграждение — одной фразой
+BRIG_TERMS.contactsLine = BRIG_TERMS.contactsAfter === 'chosen'
+  ? 'контакты сторон открываются после выбора бригады'
+  : 'телефоны, почта и адрес объекта открываются обеим сторонам, когда условия договора подряда подтвердили на сайте и клиент, и бригада; до этого — переписка в карточке сделки';
+BRIG_TERMS.feeLine = `${BRIG_TERMS.rateText} от суммы сметы по выбранному предложению — начисляется в момент, когда открываются контакты сторон (${BRIG_TERMS.contactsAfter === 'chosen' ? 'при выборе бригады' : 'договор подтвердили обе стороны'})`;
+BRIG_TERMS.sheetsLine = 'листы по запросу под вашу бригаду — бесплатно, пока сделка идёт через LINEA' + (BRIG_TERMS.sheetsFreeLimit ? ` (до ${BRIG_TERMS.sheetsFreeLimit} листов на объект)` : '') + '; вне сделки их нет';
+BRIG_TERMS.guaranteeLine = 'приёмка этапов по чек-листам, споры с участием LINEA и ответственность за свои чертежи действуют, пока сделка идёт через сайт';
+TERMS.brigady = BRIG_TERMS;
 
 // ── Как уходит бриф: ЕДИНСТВЕННЫЙ источник фразы (второй круг критиков 27.10.2026) ────────────────────
 // Приёмник (server/api на Beget) принимает бриф с персональными данными только по https. Пока сайт живёт на GitHub Pages
@@ -391,4 +415,4 @@ ${ogImageTags(ogImage || OG_DEFAULT)}
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,500;0,600;1,500&family=Inter:wght@400;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="${u}css/main.css?${CSSV}">${extra || ''}`;
 
-module.exports = { TERMS, INTAKE, intakeOnline, swapIntake, AUTHOR, BASE, SITE, SITE_BASES, SITE_DOMAIN_RU, CSSV, SECTIONS, FOOTER_EXTRA, FUNNEL, funnel, ctaBlock, crumbsBar, crumbsAuto, pic, esc, clamp, header, footer, beta, sticky, crumbsLd, head };
+module.exports = { TERMS, BRIG_TERMS, INTAKE, intakeOnline, swapIntake, AUTHOR, BASE, SITE, SITE_BASES, SITE_DOMAIN_RU, CSSV, SECTIONS, FOOTER_EXTRA, FUNNEL, funnel, ctaBlock, crumbsBar, crumbsAuto, pic, esc, clamp, header, footer, beta, sticky, crumbsLd, head };

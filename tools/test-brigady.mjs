@@ -160,6 +160,8 @@ try {
   ok(noAdmCsrf.code === 403, 'действие админки без CSRF → 403');
 
   step('5. Заказ клиента (бриф test=1) → оплачен → «Подобрать бригаду»');
+  const noArea = await client.req('POST', '/api/brief.php?test=1', { form: { test: 1, json: JSON.stringify({ ...BRIEF, object: { type: 'квартира' } }), brief: { file: path.join(FX, 'brief.zip'), type: 'application/zip' } } });
+  ok(noArea.code === 400 && /площадь/i.test(noArea.j?.error || ''), 'бриф без площади — отказ (сумма должна быть видна сразу)');
   const br = await client.req('POST', '/api/brief.php?test=1', { form: { test: 1, json: JSON.stringify(BRIEF), brief: { file: path.join(FX, 'brief.zip'), type: 'application/zip' } } });
   ok(br.j?.ok && br.j.token, 'бриф принят: ' + (br.j?.number || ''), br.text);
   const T = br.j.token, NUM = br.j.number;

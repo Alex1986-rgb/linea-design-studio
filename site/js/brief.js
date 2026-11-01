@@ -71,7 +71,8 @@
   function check(n) {
     if (n !== 0) return true;
     const a = val('objArea').trim(), an = num(a);
-    if (a && (an === null || an < 10 || an > 3000)) return setErr('areaErr', 'Площадь — число от 10 до 3000 м², например 62. Не знаете — оставьте пустым.', $('objArea'));
+    // площадь обязательна (01.11.2026): по ней сумма видна сразу на странице заказа
+    if (!a || an === null || an < 10 || an > 3000) return setErr('areaErr', a ? 'Площадь — число от 10 до 3000 м², например 62.' : 'Укажите площадь, м² — по ней считается сумма. Точно не знаете — напишите примерно, уточним по плану.', $('objArea'));
     setErr('areaErr', '', $('objArea'));
     if (!files.plans.length && !$('needSurvey').checked) {
       $('noPlanBox').open = true;
@@ -236,11 +237,11 @@
     if (a && a >= 10) {
       $('priceLead').textContent = `Сумма за ${String(a).replace('.', ',')} м²`;
       $('pk0').textContent = rubF(Math.max(P[0].min, P[0].rate * a));
-      $('priceNote').textContent = `${rubF(P[0].rate)} за м², визуализации входят в цену` + (a < T.minArea ? `; меньше ${T.minArea} м² — минимальный заказ` : '') + '. Точную сумму подтвердим по плану до оплаты.';
+      $('priceNote').textContent = `${rubF(P[0].rate)} за м², визуализации входят в цену` + (a < T.minArea ? `; меньше ${T.minArea} м² — минимальный заказ` : '') + '. ' + (T.areaRecalc || '');
     } else {
       $('priceLead').textContent = 'Ставка за м²';
       $('pk0').textContent = rubF(P[0].rate) + '/м²';
-      $('priceNote').textContent = `Минимальный заказ — как за ${T.minArea} м² (${rubF(P[0].min)}). Площадь не указана — сумму назовём по плану до оплаты.`;
+      $('priceNote').textContent = `Минимальный заказ — как за ${T.minArea} м² (${rubF(P[0].min)}). Укажите площадь на первом шаге — сумма появится сразу.`;
     }
   }
 

@@ -60,8 +60,9 @@ ${SHELL.header(u, null)}
 </section>
 
 ${SHELL.footer(u, null)}
-<script src="js/order.js?v=1"></script>
-<script src="js/remont.js?v=1"></script>
+<script type="application/json" id="ordTerms">${JSON.stringify({ areaRecalc: SHELL.TERMS.areaRecalc, rate: SHELL.TERMS.packs[0].rate, minArea: SHELL.TERMS.minArea })}</script>
+<script src="js/order.js?v=2"></script>
+<script src="js/remont.js?v=2"></script>
 </body>
 </html>
 `;

@@ -332,6 +332,7 @@ function linea_public_order(array $o): array
         'name' => (string)$o['name'],
         'created' => $o['created_at'],
         'amount' => $amount !== null ? $amount / 100 : null,
+        'area' => $o['area'] !== null ? (float)$o['area'] : null,
         'invoiced' => (bool)$o['invoice_at'],
         'paidAt' => $o['paid_at'],
         'deliveredUrl' => $o['status'] === 'delivered' ? (string)$o['delivered_url'] : '',
