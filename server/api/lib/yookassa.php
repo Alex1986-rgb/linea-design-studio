@@ -103,6 +103,7 @@ function yk_payment_for(array $o): array
     if ($o['status'] !== 'awaiting_payment') { return ['ok' => false, 'url' => '', 'why' => 'заказ не ждёт оплаты']; }
     $kop = (int)($o['amount_kop'] ?? 0);
     if ($kop <= 0) { return ['ok' => false, 'url' => '', 'why' => 'сумма ещё не выставлена']; }
+    if (!linea_amount_ok($o)) { return ['ok' => false, 'url' => '', 'why' => 'сумму подтвердим по плану в течение рабочего дня — после этого откроется оплата']; }   // В-3
 
     if ($o['payment_id'] && $o['payment_url'] && strtotime((string)$o['payment_created_at']) > time() - 3600) {
         $chk = yk_call('GET', 'payments/' . rawurlencode((string)$o['payment_id']));
@@ -135,6 +136,66 @@ function yk_payment_for(array $o): array
     return ['ok' => true, 'url' => $url, 'why' => ''];
 }
 
+/** Платёж наш? Текущий или прежний (после смены суммы) id платежа какого-либо заказа — по своей базе, без запроса в API (В-5). */
+function yk_known_payment(string $paymentId): bool
+{
+    if (!preg_match('/^[0-9a-f-]{20,64}$/i', $paymentId)) { return false; }
+    linea_schema();
+    $q = linea_db()->prepare('SELECT COUNT(*) FROM orders WHERE payment_id = ? OR payment_ids_old LIKE ?');
+    $q->execute([$paymentId, '%' . $paymentId . '%']);
+    return (int)$q->fetchColumn() > 0;
+}
+
+/** Адрес в списке подсетей (IPv4/IPv6, «адрес/маска»). */
+function yk_ip_in(string $ip, array $nets): bool
+{
+    $bin = @inet_pton($ip);
+    if ($bin === false) { return false; }
+    foreach ($nets as $net) {
+        [$n, $m] = array_pad(explode('/', (string)$net, 2), 2, null);
+        $nb = @inet_pton((string)$n);
+        if ($nb === false || strlen($nb) !== strlen($bin)) { continue; }
+        $bits = $m === null ? strlen($nb) * 8 : (int)$m;
+        $bytes = intdiv($bits, 8); $rem = $bits % 8;
+        if (substr($bin, 0, $bytes) !== substr($nb, 0, $bytes)) { continue; }
+        if ($rem && ((ord($bin[$bytes]) ^ ord($nb[$bytes])) & (0xFF << (8 - $rem)) & 0xFF)) { continue; }
+        return true;
+    }
+    return false;
+}
+
+/** Тревога по оплате: пометка «нужна проверка» в заказе, событие и письмо Александру — один раз на платёж. */
+function yk_alert(array $o, string $paymentId, string $text, string $subject): void
+{
+    $mark = 'ВНИМАНИЕ: платёж ' . $paymentId;
+    $q = linea_db()->prepare('SELECT COUNT(*) FROM events WHERE order_id = ? AND text LIKE ?');
+    $q->execute([(int)$o['id'], $mark . '%']);
+    if ((int)$q->fetchColumn()) { return; }
+    linea_schema();
+    linea_db()->prepare('UPDATE orders SET pay_alert_at = ?, updated_at = ? WHERE id = ?')->execute([linea_now(), linea_now(), (int)$o['id']]);
+    linea_event((int)$o['id'], 'yookassa', $text);
+    require_once __DIR__ . '/notify.php';
+    linea_notify($subject, $text . "\n" . linea_base() . '/api/admin.php?o=' . rawurlencode((string)$o['number']), (bool)$o['test']);
+}
+
+/**
+ * Старый платёж при смене суммы (В-4): ждёт подтверждения (capture=false) — отменяем; pending с capture=true ЮKassa отменить не даёт —
+ * он истечёт сам, а если клиент всё же оплатит, вебхук узнает id (orders.payment_ids_old) и поднимет тревогу. @return что сделано (для истории)
+ */
+function yk_cancel_stale(string $paymentId): string
+{
+    if (!yk_ready() || !preg_match('/^[0-9a-f-]{20,64}$/i', $paymentId)) { return 'онлайн-оплата не включена'; }
+    $chk = yk_call('GET', 'payments/' . rawurlencode($paymentId));
+    $st = (string)($chk['data']['status'] ?? '');
+    if (!$chk['ok']) { return 'ЮKassa не ответила — проверить в кабинете'; }
+    if ($st === 'waiting_for_capture') {
+        $c = yk_call('POST', 'payments/' . rawurlencode($paymentId) . '/cancel', [], 'cancel-' . $paymentId);
+        return $c['ok'] ? 'отменён в ЮKassa' : 'отменить не удалось — проверить в кабинете';
+    }
+    if ($st === 'pending') { return 'ещё не оплачен, истечёт сам; если оплатят — придёт тревога'; }
+    return 'статус в ЮKassa: ' . ($st ?: '?');
+}
+
 /**
  * Свериться с API по id платежа и отметить заказ. Тело уведомления доказательством не считается.
  * @return array{ok:bool, paid:bool, why:string}  ok=false — сбой у нас или у API (вебхук ответит 500, ЮKassa повторит)
@@ -156,8 +217,10 @@ function yk_settle(string $paymentId): array
 
     if ($status === 'succeeded' && !empty($d['paid'])) {
         if ($kop !== (int)$o['amount_kop'] || ($d['amount']['currency'] ?? '') !== 'RUB') {
+            // В-4: деньги пришли по старой сумме (ссылка до смены суммы) — тревога: пометка «нужна проверка», письмо Александру (один раз на платёж)
             linea_log('pay.log', 'settle ' . $o['number'] . ' ' . $paymentId . ' сумма не совпала ' . $kop . ' != ' . $o['amount_kop']);
-            linea_event((int)$o['id'], 'yookassa', 'Платёж ' . $paymentId . ' на сумму, не совпавшую с заказом — проверить вручную');
+            yk_alert($o, $paymentId, 'ВНИМАНИЕ: платёж ' . $paymentId . ' на ' . number_format($kop / 100, 0, ',', ' ') . ' ₽ не совпал с суммой заказа ' . number_format((int)$o['amount_kop'] / 100, 0, ',', ' ')
+                . ' ₽ — нужна проверка: доплата или возврат разницы', 'LINEA: оплата не совпала с суммой заказа ' . $o['number']);
             return ['ok' => true, 'paid' => false, 'why' => 'сумма не совпала'];
         }
         $q = linea_db()->prepare("UPDATE orders SET status = 'paid', paid_at = ?, paid_by = ?, payment_id = ?, updated_at = ? WHERE id = ? AND status IN ('new','awaiting_payment')");
@@ -180,6 +243,8 @@ function yk_settle(string $paymentId): array
         $q2 = linea_db()->prepare('SELECT COUNT(*) FROM events WHERE order_id = ? AND text LIKE ?');
         $q2->execute([(int)$o['id'], $mark . '%']);
         if (!(int)$q2->fetchColumn()) {
+            linea_schema();
+            linea_db()->prepare('UPDATE orders SET pay_alert_at = ? WHERE id = ?')->execute([linea_now(), (int)$o['id']]);
             linea_event((int)$o['id'], 'yookassa', $mark . ' на ' . number_format($kop / 100, 0, ',', ' ') . ' ₽ пришёл на заказ в статусе «'
                 . (LINEA_STATUS[$cur['status'] ?? ''] ?? ($cur['status'] ?? '?')) . '» — оформить возврат в кабинете ЮKassa или вернуть заказ в работу');
             linea_log('pay.log', 'unexpected ' . $o['number'] . ' ' . $paymentId . ' status=' . ($cur['status'] ?? '?') . ' ' . $kop);

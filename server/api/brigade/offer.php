@@ -14,6 +14,7 @@ $b = brig_me();
 brig_method('POST');
 brig_csrf();
 brig_require_active($b);
+brig_require_no_debt($b);   // лестница долга: просрочка счёта сверх debt_feed_close_days — новые заказы и предложения закрыты (начатые сделки доводятся)
 $bid = (int)$b['id'];
 $in = brig_input();
 $rid = (int)($in['r'] ?? 0);

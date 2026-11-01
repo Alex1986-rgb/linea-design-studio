@@ -12,10 +12,15 @@ require __DIR__ . '/lib/yookassa.php';
 
 if (($_SERVER['REQUEST_METHOD'] ?? '') !== 'POST') { http_response_code(405); exit; }
 if (!linea_https() && !linea_local()) { http_response_code(403); exit; }   // ЮKassa шлёт только на https; по http — не наше
+// В-5: подсети ЮKassa (по флагу config yk_ip_check) и лимит частоты с адреса — флуд не превращается в запросы к API ЮKassa
+if (!empty(linea_cfg()['yk_ip_check']) && !linea_local() && !yk_ip_in(linea_ip(), (array)(linea_cfg()['yk_ips'] ?? []))) { linea_log('pay.log', 'notify: адрес не из подсетей ЮKassa'); http_response_code(403); exit; }
+if (!linea_rate('yk-notify', max(10, (int)(linea_cfg()['yk_notify_per_hour'] ?? 120)))) { http_response_code(429); exit; }
 $raw = (string)file_get_contents('php://input', false, null, 0, 65536);
 $in = json_decode($raw, true);
 $id = is_array($in) ? (string)($in['object']['id'] ?? '') : '';
 if ($id === '') { http_response_code(200); exit; }
+// сначала своя база: неизвестный id (не наш текущий и не прежний платёж) — 200 без обращения к API
+if (!yk_known_payment($id)) { linea_log('pay.log', 'notify: неизвестный платёж — пропущен'); http_response_code(200); exit; }
 try {
     $r = yk_settle($id);
 } catch (Throwable $e) {

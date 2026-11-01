@@ -45,6 +45,11 @@ if (MYSQL) {   // чистая база: снести таблицы прошл�
   execFileSync('php', ['-r', `$p = new PDO($argv[1], $argv[2], ''); $p->exec('SET FOREIGN_KEY_CHECKS=0'); foreach ($p->query('SHOW TABLES')->fetchAll(PDO::FETCH_COLUMN) as $t) { $p->exec("DROP TABLE \`$t\`"); }`, MYSQL, arg('mysql-user') || process.env.USER]);
 }
 
+// ── прямой запрос к базе теста (сдвиг дат для правил «к оплате», проверка мягкой отмены): только тестовая папка/база
+const DSN = MYSQL || 'sqlite:' + path.join(PRIV, 'linea.sqlite');
+const sql = q => JSON.parse(execFileSync('php', ['-r', '$p = new PDO($argv[1], $argv[2], ""); $p->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION); $s = $p->query($argv[3]); echo json_encode($s && $s->columnCount() ? $s->fetchAll(PDO::FETCH_ASSOC) : []);', DSN, MYSQL ? (arg('mysql-user') || process.env.USER) : '', q]).toString() || '[]');
+const ago = days => new Date(Date.now() - days * 86400e3 + 3 * 3600e3).toISOString().slice(0, 19).replace('T', ' ');   // МСК, как linea_now()
+
 // ── файлы для загрузок
 const FX = path.join(PRIV, '_fx'); fs.mkdirSync(FX);
 execFileSync('php', ['-r', `foreach (['before'=>[180,170,160],'after'=>[235,228,214],'stage'=>[120,140,160]] as $k=>$c){$i=imagecreatetruecolor(900,640);imagefill($i,0,0,imagecolorallocate($i,...$c));imagestring($i,5,40,40,"LINEA test $k",imagecolorallocate($i,20,20,20));imagejpeg($i,"${FX}/$k.jpg",80);}`]);
@@ -243,7 +248,8 @@ try {
   ok(jA0.j?.jobs?.length === 0, 'до выбора у A нет объекта и контактов клиента');
   rs = await client.req('POST', `/api/remont.php?t=${T}&a=choose`, { json: { offer: offA.id, consentContacts: true } });
   ok(rs.j?.job?.status === 'contract', 'выбрана A, объект ждёт договора');
-  ok(rs.j?.job?.contactsOpen === false && !rs.text.includes('900 000-11-01') && !rs.text.includes('brig1@example.test') && !rs.text.includes('500100732259'), 'после выбора телефон, почта и ИНН бригады ещё закрыты');
+  ok(rs.j?.job?.contactsOpen === false && !rs.text.includes('900 000-11-01') && !rs.text.includes('brig1@example.test'), 'после выбора телефон и почта бригады ещё закрыты');
+  ok(/ИНН 500100732259/.test(rs.j?.job?.brigade?.legalFull || '') && /Тест-бригада 1/.test(rs.j.job.brigade.legalFull), 'реквизиты бригады (наименование, форма, ИНН) заказчик видит ДО договора (ст. 9 ЗоЗПП, юрист п. 4)');
 
   step('10. Объект: контакты закрыты до подтверждения договора, чужой объект 403, договор, вознаграждение');
   const jl = await B[0].req('GET', '/api/brigade/jobs.php');
@@ -308,9 +314,14 @@ try {
   ok(Math.abs(finAd.j.accrued - Math.round((oA2.j.total + 6000) * 0.05 * 100) / 100) < 0.02, 'база вознаграждения пересчитана по допсоглашению: ' + finAd.j.accrued + ' ₽');
   const dogAd = await B[0].req('GET', `/api/remont-dogovor.php?j=${JID}`, { raw: true });
   ok(dogAd.text.includes('Дополнительное соглашение № 1') && dogAd.text.includes(add1.hash) && dogAd.text.includes('тестовая ул'), 'в документах сделки — договор, допсоглашение с хешем и реквизиты сторон после подписания');
+  ok((await B[0].req('POST', '/api/brigade/jobs.php?a=advance_dispute', { json: { j: JID, reason: 'не было' } })).code === 400, 'оспорить нечего, пока заказчик не отметил аванс — 400');
   rs = await client.req('POST', `/api/remont.php?t=${T}&a=advance`, { json: {} });
+  const finDecl = await B[0].req('GET', '/api/brigade/finance.php');
+  ok(rs.j?.job?.advanceAt && rs.j.job.advanceState === 'declared' && finDecl.j.due === 0, 'В-2: отметка заказчика «аванс внесён» — только заявление, к оплате не становится, пока бригада не подтвердит');
+  ok((await client.req('POST', `/api/remont.php?t=${T}&a=advance`, { json: {} })).code === 400, 'повторная отметка аванса — отказ');
+  ok((await B[0].req('POST', '/api/brigade/jobs.php?a=advance', { json: { j: JID } })).j?.ok, 'бригада подтвердила получение аванса');
   const finAdv = await B[0].req('GET', '/api/brigade/finance.php');
-  ok(rs.j?.job?.advanceAt && finAdv.j.due > 0 && Math.abs(finAdv.j.due - finAdv.j.accrued) < 0.01, 'заказчик отметил аванс — вознаграждение стало к оплате');
+  ok(finAdv.j.due > 0 && Math.abs(finAdv.j.due - finAdv.j.accrued) < 0.01 && /аванс/.test(finAdv.j.jobs[0].dueWhy || ''), 'К-1: аванс подтверждён бригадой — вознаграждение к оплате (' + (finAdv.j.jobs?.[0]?.dueWhy || '') + ')');
 
   step('11. Этапы: фото, «готов», возврат с замечанием, закрытие, приёмка');
   let stg = (await B[0].req('GET', `/api/brigade/jobs.php?j=${JID}`)).j.job.stages;
@@ -418,8 +429,11 @@ try {
     await B[0].req('POST', '/api/brigade/offer.php?a=save', { json: { r: rid2, items: Object.fromEntries(p2pos.map(p => [p.id, { price: 500 }])), materials: 'client', stages: [{ name: 'Демонтаж', days: 3 }], startDate: start, warrantyMonths: 24 } });
     const st2 = await c2.req('GET', `/api/remont.php?t=${T2}`);
     await c2.req('POST', `/api/remont.php?t=${T2}&a=choose`, { json: { offer: st2.j.offers[0]?.id, consentContacts: true } });
+    await c2.req('POST', `/api/remont.php?t=${T2}&a=msg`, { json: { text: 'Добрый день, когда сможете начать?' } });
     const cn = await c2.req('POST', `/api/remont.php?t=${T2}&a=job_cancel`, { json: { reason: 'передумали' } });
     ok(cn.j?.ok && !cn.j.job && cn.j.request?.status === 'cancelled', 'клиент отказался от выбранной бригады до подтверждения договора');
+    const cj = sql(`SELECT j.id, j.status, j.cancel_by, (SELECT COUNT(*) FROM br_messages m WHERE m.job_id = j.id) msgs, (SELECT COUNT(*) FROM br_contracts c WHERE c.job_id = j.id) docs FROM br_jobs j JOIN br_requests r ON r.id = j.request_id JOIN orders o ON o.id = r.order_id WHERE o.token = '${T2}'`)[0] || {};
+    ok(cj.status === 'cancelled' && cj.cancel_by === 'client' && +cj.msgs === 1 && +cj.docs >= 1, 'С-3: отмена мягкая — сделка помечена отменённой, переписка и версия договора сохранены для админки');
     const sg2 = await admin.req('GET', '/api/admin-brigady.php?view=signals', { raw: true });
     ok(sg2.text.includes('отказ после выбора'), 'отказ после выбора — в сигналах обхода');
   }
@@ -441,6 +455,138 @@ try {
   ok(rr3.code === 403 && /заблокирована/.test(rr3.j?.error || ''), 'заблокированная бригада заново не регистрируется (тот же ИНН)');
   const rr4 = await actor('re2').req('POST', '/api/brigade/auth.php?a=register&test=1', { json: { ...reg(3, ALL, ['zao']), email: 'again2@example.test', inn: '7707083893', legal: 'ooo' } });
   ok(rr4.code === 403, 'заблокированная бригада не регистрируется на другой ИНН с тем же телефоном');
+
+  step('15б. Ревью кода сделки: «к оплате» без кликов клиента, аванс, долг, допсоглашения, подпись, вебхук, договор, CSV');
+  {
+    const T3 = (await client.req('POST', '/api/brief.php?test=1', { form: { test: 1, json: JSON.stringify(BRIEF), brief: { file: path.join(FX, 'brief.zip'), type: 'application/zip' } } })).j.token;
+    const N3 = (await client.req('GET', `/api/order.php?t=${T3}`)).j.order.number;
+    const p3 = await admin.req('GET', `/api/admin.php?o=${N3}`, { raw: true });
+    await admin.req('POST', '/api/admin.php', { form: { csrf: adminCsrf(p3.text), act: 'amount', number: N3, rub: 90000, kind: 'kvartira', who: 'тест' }, raw: true });
+    await admin.req('POST', '/api/admin.php', { form: { csrf: adminCsrf(p3.text), act: 'paid', number: N3, who: 'тест' }, raw: true });
+    const c3 = actor('client3'); c3.csrf = (await c3.req('GET', `/api/remont.php?t=${T3}`)).j.csrf;
+    await c3.req('POST', `/api/remont.php?t=${T3}&a=request`, { json: { district: 'zao', consent: true } });
+    const rid3 = +sql(`SELECT r.id FROM br_requests r JOIN orders o ON o.id = r.order_id WHERE o.token = '${T3}'`)[0].id;
+    const pr3 = await admin.req('GET', `/api/admin-brigady.php?r=${rid3}`, { raw: true });
+    await admin.req('POST', '/api/admin-brigady.php', { raw: true, form: { csrf: adminCsrf(pr3.text), act: 'r_pack', id: rid3, pack: { file: PACK, type: 'application/json', name: 'pack.json' } } });
+    await admin.req('POST', '/api/admin-brigady.php', { raw: true, form: { csrf: adminCsrf(pr3.text), act: 'r_send', id: rid3, deadline: dl, 'bid[]': B[1].id } });
+    const p3pos = (await B[1].req('GET', `/api/brigade/feed.php?r=${rid3}`)).j?.request?.positions || [];
+    const start3 = new Date(Date.now() + 7 * 86400e3).toISOString().slice(0, 10);
+    await B[1].req('POST', '/api/brigade/offer.php?a=save', { json: { r: rid3, items: Object.fromEntries(p3pos.map(p => [p.id, { price: 400 }])), materials: 'client', stages: [{ name: 'Демонтаж', days: 3 }, { name: 'Финальная приёмка', days: 2 }], startDate: start3, warrantyMonths: 24 } });
+    const st3 = await c3.req('GET', `/api/remont.php?t=${T3}`);
+    await c3.req('POST', `/api/remont.php?t=${T3}&a=choose`, { json: { offer: st3.j.offers[0]?.id, consentContacts: true } });
+    const J3 = +sql(`SELECT id FROM br_jobs WHERE request_id = ${rid3} AND status <> 'cancelled'`)[0].id;
+    // К-2: номер по частям в трёх сообщениях
+    for (const t of ['8 900', '123']) await B[1].req('POST', '/api/brigade/jobs.php?a=msg', { json: { j: J3, text: t } });
+    const m3 = await B[1].req('POST', '/api/brigade/jobs.php?a=msg', { json: { j: J3, text: '45 67' } });
+    ok(m3.j?.messages?.at(-1)?.masked && !/45 67/.test(m3.j.messages.at(-1).text), 'К-2: телефон по частям в трёх сообщениях — третья часть скрыта, сигнал в админку');
+    const m4 = await B[1].req('POST', '/api/brigade/jobs.php?a=msg', { json: { j: J3, text: 'Мой номер 8 900 123 45 67.' } });
+    ok(!/123 45 67/.test(m4.j?.messages?.at(-1)?.text || 'x'), 'К-2: телефон с точкой в конце фразы скрыт');
+    const m5 = await B[1].req('POST', '/api/brigade/jobs.php?a=msg', { json: { j: J3, text: 'пиши в тeлегрaм, восемь девятьсот сто двадцать три сорок пять шестьдесят семь' } });
+    ok(m5.j?.messages?.at(-1)?.masked && !/телегр|девятьсот/.test(m5.j.messages.at(-1).text), 'К-2: двойники и цифры прописью — сообщение скрыто целиком');
+    // С-1: попытки кода — атомарно, не больше 5; код привязан к версии
+    const sb = await B[1].req('POST', '/api/brigade/jobs.php?a=sign', { json: { j: J3 } });
+    const wrong = await Promise.all([1, 2, 3, 4, 5, 6, 7].map(i => B[1].req('POST', '/api/brigade/jobs.php?a=sign', { json: { j: J3, doc: sb.j.doc, code: '00000' + i, pep: true } })));
+    ok(wrong.filter(r => r.code === 400).length === 5 && wrong.filter(r => r.code === 429).length === 2, 'С-1: 7 неверных кодов подряд — 5 попыток засчитаны, дальше 429');
+    ok((await B[1].req('POST', '/api/brigade/jobs.php?a=sign', { json: { j: J3, doc: sb.j.doc, code: sb.j.devCode, pep: true } })).code === 429, 'С-1: после 5 неверных и верный код не проходит — нужен новый');
+    const sb2 = await B[1].req('POST', '/api/brigade/jobs.php?a=sign', { json: { j: J3 } });
+    const twice = await Promise.all([0, 1].map(() => B[1].req('POST', '/api/brigade/jobs.php?a=sign', { json: { j: J3, doc: sb2.j.doc, code: sb2.j.devCode, pep: true } })));
+    ok(twice.filter(r => r.j?.ok).length === 1, 'С-1: один код — одна подпись (второй запрос с тем же кодом отклонён)');
+    const sc = await c3.req('POST', `/api/remont.php?t=${T3}&a=sign`, { json: {} });
+    let r3 = await c3.req('POST', `/api/remont.php?t=${T3}&a=sign`, { json: { doc: sc.j.doc, code: sc.j.devCode, pep: true } });
+    ok(r3.j?.job?.status === 'work', 'договор второй сделки подписан обеими сторонами');
+    const pil = sql(`SELECT id, pilot_slot, pilot_used FROM br_brigades WHERE id IN (${B[0].id}, ${B[1].id}) ORDER BY id`);
+    ok(+pil[0].pilot_slot === 1 && +pil[1].pilot_slot === 2 && +pil[0].pilot_used === 1 && +pil[1].pilot_used === 1, 'С-5: место в пилоте фиксируется при допуске, пилотные сделки считаются атомарным счётчиком');
+    // К-1: к оплате без кликов заказчика
+    const due = async () => (await B[1].req('GET', '/api/brigade/finance.php')).j.jobs.find(x => x.job === J3);
+    ok(!(await due()).dueAt, 'К-1: сразу после подписания (начало работ через 7 дней) — ещё не к оплате');
+    sql(`UPDATE br_jobs SET contacts_open_at = '${ago(15)}' WHERE id = ${J3}`);
+    let d3 = await due();
+    ok(d3.dueAt && /после подписания/.test(d3.dueWhy), 'К-1: прошло 14 дней после подписания, ни аванса, ни этапа — вознаграждение к оплате само: ' + d3.dueWhy);
+    sql(`UPDATE br_jobs SET contacts_open_at = '${ago(1)}', commission_due_at = NULL, commission_due_why = NULL WHERE id = ${J3}`);
+    sql(`UPDATE br_stages SET plan_start = '${ago(2).slice(0, 10)}' WHERE job_id = ${J3} AND idx = 1`);
+    d3 = await due();
+    ok(d3.dueAt && /начала работ по договору/.test(d3.dueWhy), 'К-1: наступила дата начала работ по договору — к оплате: ' + d3.dueWhy);
+    sql(`UPDATE br_jobs SET commission_due_at = NULL, commission_due_why = NULL WHERE id = ${J3}`);
+    sql(`UPDATE br_stages SET plan_start = '${start3}' WHERE job_id = ${J3} AND idx = 1`);
+    const stg3 = (await B[1].req('GET', `/api/brigade/jobs.php?j=${J3}`)).j.job.stages;
+    ok((await B[1].req('POST', '/api/brigade/jobs.php?a=stage_start', { json: { stage: stg3[0].id } })).j?.ok, 'бригада нажала «Начать работу» по этапу 1');
+    d3 = await due();
+    ok(d3.dueAt && /начала работу/.test(d3.dueWhy), 'К-1: «Начать работу» по этапу 1 — к оплате: ' + d3.dueWhy);
+    ok((await B[1].req('POST', '/api/brigade/jobs.php?a=stage_start', { json: { stage: stg3[0].id } })).code === 400, 'повторный старт этапа — отказ');
+    // В-2: заказчик отметил аванс — бригада оспорила — админ исправил с причиной
+    sql(`UPDATE br_jobs SET commission_due_at = NULL, commission_due_why = NULL WHERE id = ${J3}`);
+    sql(`UPDATE br_stages SET started_at = NULL WHERE job_id = ${J3}`);
+    await c3.req('POST', `/api/remont.php?t=${T3}&a=advance`, { json: {} });
+    ok((await B[1].req('POST', '/api/brigade/jobs.php?a=advance_dispute', { json: { j: J3, reason: 'денег не получали' } })).j?.ok, 'В-2: бригада оспорила отметку аванса');
+    ok(!(await due()).dueAt, 'оспоренный аванс к оплате не переводит');
+    const sg3 = await admin.req('GET', '/api/admin-brigady.php?view=signals', { raw: true });
+    ok(/Расхождение по авансу|advance/.test(sg3.text), 'расхождение по авансу — в сигналах админки');
+    await adminPost({ act: 'j_advance', id: J3, to: 'confirmed' });
+    ok(!sql(`SELECT advance_state FROM br_jobs WHERE id = ${J3}`)[0].advance_state.includes('confirmed'), 'исправить аванс без причины нельзя');
+    await adminPost({ act: 'j_advance', id: J3, to: 'confirmed', reason: 'клиент прислал чек перевода' });
+    ok(sql(`SELECT advance_state FROM br_jobs WHERE id = ${J3}`)[0].advance_state === 'confirmed' && (await due()).dueAt, 'админ подтвердил аванс с причиной — к оплате');
+    ok(sql(`SELECT COUNT(*) n FROM br_audit WHERE action = 'advance' AND detail LIKE '%чек перевода%'`)[0].n > 0, 'исправление аванса — в журнале');
+    // ручной счёт и лестница долга
+    sql(`UPDATE br_jobs SET commission_due_at = NULL, commission_due_why = NULL, advance_at = NULL, advance_state = NULL WHERE id = ${J3}`);
+    await adminPost({ act: 'j_invoice', id: J3 });
+    ok(!sql(`SELECT id FROM br_invoices WHERE job_id = ${J3}`).length, 'счёт без наступившей даты и без «вручную» не выставляется');
+    await adminPost({ act: 'j_invoice', id: J3, manual: 1, reason: 'стороны работают мимо сайта' });
+    ok(sql(`SELECT id FROM br_invoices WHERE job_id = ${J3}`).length === 1, 'К-1: админ выставил счёт вручную (с причиной) — всегда можно');
+    sql(`UPDATE br_invoices SET due_at = '${ago(20).slice(0, 10)}' WHERE job_id = ${J3}`);
+    const fd = await B[1].req('GET', '/api/brigade/feed.php');
+    ok(fd.code === 402 && /закрыты до оплаты/.test(fd.j?.error || ''), 'лестница долга: просрочка 20 дней — лента новых заказов закрыта');
+    ok((await B[1].req('GET', `/api/brigade/jobs.php?j=${J3}`)).code === 200 && (await B[1].req('GET', '/api/brigade/finance.php')).j.debtLadder.level === 'feed_closed', 'начатый объект доступен, в «Финансах» — уровень долга');
+    sql(`UPDATE br_invoices SET due_at = '${ago(3).slice(0, 10)}' WHERE job_id = ${J3}`);
+    ok((await B[1].req('GET', '/api/brigade/feed.php')).code === 200 && (await B[1].req('GET', '/api/brigade/finance.php')).j.debtLadder.level === 'warn', 'просрочка 3 дня — только предупреждение, лента открыта');
+    sql(`UPDATE br_invoices SET paid_at = '${ago(0)}' WHERE job_id = ${J3}`);
+    // В-1: допсоглашения
+    const add = items => B[1].req('POST', '/api/brigade/jobs.php?a=addendum', { json: { j: J3, items } });
+    ok((await add([{ name: 'Минус работа', qty: -1, price: 1000 }])).code === 400, 'В-1: отрицательное количество — отказ');
+    ok((await add([{ name: 'Дорого', qty: 1, price: 1e12 }])).code === 400, 'В-1: цена сверх границы — отказ');
+    ok((await add([{ name: 'Много', qty: 1e9, price: 1 }])).code === 400, 'В-1: количество сверх границы — отказ');
+    const total3 = +sql(`SELECT deal_total_kop t FROM br_jobs WHERE id = ${J3}`)[0].t / 100;
+    const cut = await add([{ name: 'Демонтаж перегородок', qty: 1, price: Math.round(total3 * 0.5), remove: true }]);
+    ok(cut.j?.ok, 'допсоглашение «исключить работу» на 50 % цены предложено');
+    const cutDoc = (await B[1].req('GET', `/api/brigade/jobs.php?j=${J3}`)).j.job.docs.contracts.find(c => c.id === cut.j.doc);
+    ok(cutDoc?.waitAdmin === true, 'В-1: уменьшение цены больше 20 % — ждёт подтверждения LINEA');
+    ok((await B[1].req('POST', '/api/brigade/jobs.php?a=sign', { json: { j: J3, doc: cut.j.doc } })).j?.codeSent && (await B[1].req('POST', '/api/brigade/jobs.php?a=sign', { json: { j: J3, doc: cut.j.doc, code: '123456', pep: true } })).code === 409, 'подписать до подтверждения LINEA нельзя (409)');
+    await adminPost({ act: 'c_approve', id: cut.j.doc, reason: 'объём по согласию сторон' });
+    const sc2 = await B[1].req('POST', '/api/brigade/jobs.php?a=sign', { json: { j: J3, doc: cut.j.doc } });
+    ok((await B[1].req('POST', '/api/brigade/jobs.php?a=sign', { json: { j: J3, doc: cut.j.doc, code: sc2.j.devCode, pep: true } })).j?.ok, 'после подтверждения LINEA бригада подписала');
+    const cc = await c3.req('POST', `/api/remont.php?t=${T3}&a=sign`, { json: { doc: cut.j.doc } });
+    r3 = await c3.req('POST', `/api/remont.php?t=${T3}&a=sign`, { json: { doc: cut.j.doc, code: cc.j.devCode, pep: true } });
+    const comm3 = +sql(`SELECT commission_kop c FROM br_jobs WHERE id = ${J3}`)[0].c, inv3 = +sql(`SELECT amount_kop a FROM br_invoices WHERE job_id = ${J3}`)[0].a;
+    ok(comm3 >= inv3, 'вознаграждение после уменьшения цены не ниже уже выставленного счёта');
+    ok(!(r3.j?.job?.docs?.log || []).some(l => /вознагражд/i.test(l.text)), 'журнал сделки заказчика не показывает вознаграждение LINEA');
+    // приняли этап 1 из 2 — итог не ниже принятого
+    await B[1].req('POST', '/api/brigade/jobs.php?a=stage_photo', { form: { stage: stg3[0].id, file: { file: path.join(FX, 'stage.jpg'), type: 'image/jpeg' } } });
+    await B[1].req('POST', '/api/brigade/jobs.php?a=stage_ready', { json: { stage: stg3[0].id } });
+    await c3.req('POST', `/api/remont.php?t=${T3}&a=stage_accept`, { json: { stage: stg3[0].id, checks: Array(20).fill(true) } });
+    const total3b = +sql(`SELECT deal_total_kop t FROM br_jobs WHERE id = ${J3}`)[0].t / 100;
+    const below = await add([{ name: 'Убрать почти всё', qty: 1, price: Math.round(total3b * 0.8), remove: true }]);
+    ok(below.code === 400 && /принятых этапов/.test(below.j?.error || ''), 'В-1: цена не может стать меньше стоимости принятых этапов');
+    // С-8: печать договора без инлайн-обработчика
+    const dg = await B[1].req('GET', `/api/remont-dogovor.php?j=${J3}`, { raw: true });
+    const csp = dg.headers.get('content-security-policy') || '';
+    ok(!/onclick=/.test(dg.text) && /script-src 'nonce-/.test(csp) && dg.text.includes('nonce="' + (csp.match(/nonce-([^']+)/) || [])[1] + '"'), 'С-8: кнопка печати — скрипт с nonce, без onclick (CSP не блокирует)');
+    // CSV-инъекция
+    sql(`UPDATE br_brigades SET name = '=HYPERLINK("http://x")' WHERE id = ${B[1].id}`);
+    const csv3 = await admin.req('GET', '/api/admin-brigady.php?csv=money', { raw: true });
+    sql(`UPDATE br_brigades SET name = 'Тест-бригада 2' WHERE id = ${B[1].id}`);
+    ok(csv3.text.includes(`'=HYPERLINK`) && !/;=HYPERLINK/.test(csv3.text), 'CSV: ячейка с «=» экранирована префиксом «\'»');
+    // В-5: вебхук ЮKassa — неизвестный платёж отсекается своей базой
+    const wh = await anon.req('POST', '/api/pay-notify.php', { json: { event: 'payment.succeeded', object: { id: '2f1b0c3e-000f-5000-8000-0000000000aa' } }, raw: true });
+    ok(wh.code === 200 && /неизвестный платёж/.test(fs.readFileSync(path.join(PRIV, 'pay.log'), 'utf8')), 'В-5: вебхук с чужим id платежа — 200 без запроса к API ЮKassa');
+    // К-2: файлы портфолио после допуска — в каталоге только после модерации
+    const pf = (await B[0].req('GET', '/api/brigade/profile.php')).j.portfolio[0].id;
+    const up = await B[0].req('POST', '/api/brigade/profile.php?a=photo', { form: { portfolio: pf, kind: 'after', file: { file: path.join(FX, 'after.jpg'), type: 'image/jpeg' } } });
+    const fid = up.j?.file || +sql(`SELECT MAX(id) m FROM br_files WHERE owner_kind = 'portfolio'`)[0].m;
+    const guest = actor('guest');
+    ok((await guest.req('GET', `/api/brigade/file.php?f=${fid}`, { raw: true })).code === 403, 'К-2: новое фото портфолио до модерации в каталоге не отдаётся');
+    await adminPost({ act: 'f_ok', id: fid });
+    ok((await guest.req('GET', `/api/brigade/file.php?f=${fid}`, { raw: true })).code === 200, 'после «Одобрить» — видно в каталоге');
+    if (MYSQL) ok(sql(`SELECT DATA_TYPE t FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'br_contracts' AND COLUMN_NAME = 'body'`)[0]?.t === 'mediumtext', 'С-2: тело договора на MySQL — MEDIUMTEXT');
+  }
 
   step('16. Журналы и письма');
   const mlog = fs.readFileSync(path.join(PRIV, 'brig-mail.log'), 'utf8');

@@ -14,13 +14,14 @@ brig_https();
 header('X-Robots-Tag: noindex, nofollow');
 header('Cache-Control: no-store');
 header('X-Frame-Options: DENY');
-header("Content-Security-Policy: default-src 'none'; style-src 'unsafe-inline'; img-src 'self'");
+$nonce = base64_encode(random_bytes(12));   // С-8: кнопка печати — скриптом с nonce (инлайн-обработчик CSP запрещает)
+header("Content-Security-Policy: default-src 'none'; style-src 'unsafe-inline'; img-src 'self'; script-src 'nonce-" . $nonce . "'");
 header('Referrer-Policy: no-referrer');
 
 $j = null;
 if (isset($_GET['t'])) {
     $o = linea_order_by_token((string)$_GET['t']);
-    if ($o) { $j = brig_one('SELECT j.* FROM br_jobs j JOIN br_requests r ON r.id = j.request_id WHERE r.order_id = ?', [(int)$o['id']]); }
+    if ($o) { $j = brig_one("SELECT j.* FROM br_jobs j JOIN br_requests r ON r.id = j.request_id WHERE r.order_id = ? AND j.status <> 'cancelled' ORDER BY j.id DESC LIMIT 1", [(int)$o['id']]); }
 } else {
     $b = brig_me();
     $j = brig_one('SELECT * FROM br_jobs WHERE id = ?', [(int)($_GET['j'] ?? 0)]);
@@ -55,7 +56,8 @@ echo '<!DOCTYPE html><html lang="ru"><head><meta charset="utf-8"><meta name="vie
     . 'table{width:100%;border-collapse:collapse;font-size:12.5px;margin:6px 0}td,th{border:1px solid #999;padding:4px 6px;vertical-align:top}.r{text-align:right;white-space:nowrap}'
     . '.draft{border:2px solid #b4462b;color:#b4462b;padding:8px 12px;margin:0 0 16px;font:13px/1.4 sans-serif}.src{color:#666;font-size:12px}.sig{display:grid;grid-template-columns:1fr 1fr;gap:30px;margin-top:24px}'
     . '.hash{font:12px/1.4 sans-serif;color:#444;word-break:break-all}.protocol{margin-top:20px;font:12px/1.4 sans-serif}.protocol code{word-break:break-all}.noprint{font:14px sans-serif;margin:0 0 16px}@media print{.noprint{display:none}body{margin:0}}</style></head><body>'
-    . '<p class="noprint"><button onclick="window.print()">Печать / сохранить в PDF</button></p>'
+    . '<p class="noprint"><button id="printBtn" type="button">Печать / сохранить в PDF</button></p>'
+    . '<script nonce="' . $nonce . '">document.getElementById("printBtn").addEventListener("click", function () { window.print(); });</script>'
     . '<div class="draft">Договор и допсоглашения заключаются только на сайте LINEA и подписываются простой электронной подписью (код на почту стороны). '
     . 'Обе стороны видят одни и те же версии — сверить можно по хешу SHA-256. Шаблон договора — редакция ' . BRIG_CONTRACT_ED . '; рекомендуем показать его юристу.</div>'
     . $docs . $req . '</body></html>';

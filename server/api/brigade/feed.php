@@ -12,6 +12,7 @@ require __DIR__ . '/../lib/brig.php';
 brig_https();
 $b = brig_me();
 brig_require_active($b);
+brig_require_no_debt($b);   // лестница долга: просрочка счёта сверх debt_feed_close_days — новые заказы и предложения закрыты (начатые сделки доводятся)
 $bid = (int)$b['id'];
 
 function feed_offer(?array $o): ?array

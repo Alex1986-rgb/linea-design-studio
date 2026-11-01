@@ -75,23 +75,32 @@ function page(string $title, string $body): never
 }
 
 // ── вход
+// С-6: адреса владельца (config admin_ip_allow) не блокируются счётчиками неудач; общий счётчик со всех адресов вход не закрывает,
+// а замедляет ответ (иначе 30 запросов с разных адресов выключали вход и владельцу)
+$ownerIp = in_array(linea_ip(), (array)($cfg['admin_ip_allow'] ?? []), true);
 if (empty($_SESSION['adm'])) {
     $err = '';
     if (($_SERVER['REQUEST_METHOD'] ?? '') === 'POST' && isset($_POST['password'])) {
         if ((string)$cfg['admin_hash'] === '') { $err = 'Пароль не настроен: admin_hash в linea-private/config.php пуст.'; }
-        elseif (adm_fails() >= 5) { $err = 'Слишком много неудачных попыток — подождите 15 минут.'; }
-        elseif (adm_fails(false, true) >= (int)$cfg['admin_fail_global']) { $err = 'Вход временно закрыт: много неудачных попыток со всех адресов. Подождите 15 минут.'; linea_log('error.log', 'admin: глобальный лимит неудачных входов'); }
+        elseif (!$ownerIp && adm_fails() >= 5) { $err = 'Слишком много неудачных попыток — подождите 15 минут.'; }
         elseif (password_verify((string)$_POST['password'], (string)$cfg['admin_hash'])) {
             session_regenerate_id(true);
             $_SESSION['adm'] = 1; $_SESSION['csrf'] = bin2hex(random_bytes(16));
             header('Location: ' . $self); exit;
-        } else { adm_fails(true); adm_fails(true, true); usleep(400000); $err = 'Неверный пароль.'; }
+        } else {
+            adm_fails(true);
+            $g = adm_fails(true, true);
+            if ($g >= (int)$cfg['admin_fail_global']) { linea_log('error.log', 'admin: много неудачных входов со всех адресов (' . $g . ' за 15 мин) — ответы замедлены'); sleep(2); }
+            usleep(400000); $err = 'Неверный пароль.';
+        }
     }
     page('Вход', '<h1>LINEA · заказы</h1>' . ($err ? '<p class="msg">' . $h($err) . '</p>' : '')
         . '<form method="post" class="box"><label>Пароль <input type="password" name="password" autocomplete="current-password" autofocus required></label> <button>Войти</button></form>');
 }
 
 $db = linea_db();
+linea_schema();
+require_once __DIR__ . '/lib/yookassa.php';
 $csrf = (string)$_SESSION['csrf'];
 $msg = '';
 
@@ -120,14 +129,26 @@ if (($_SERVER['REQUEST_METHOD'] ?? '') === 'POST') {
             case 'amount':
                 $kop = (int)round((float)str_replace([' ', ','], ['', '.'], (string)$_POST['rub']) * 100);
                 $kind = isset(LINEA_KINDS[$_POST['kind'] ?? '']) ? (string)$_POST['kind'] : $o['kind'];
-                $upd('amount_kop = ?, kind = ?', [$kop > 0 ? $kop : null, $kind]);
-                linea_event((int)$o['id'], $who, 'Сумма: ' . $rub($kop > 0 ? $kop : null) . ', вид: ' . LINEA_KINDS[$kind]);
-                // сумма изменилась — старая ссылка на оплату (на прежнюю сумму) больше не выдаётся; новая создастся при следующем «Оплатить»
-                if ((int)$o['amount_kop'] !== $kop && $o['payment_url']) {
-                    $upd('payment_id = NULL, payment_url = NULL, payment_created_at = NULL', []);
-                    linea_event((int)$o['id'], $who, 'Ссылка на оплату по прежней сумме сброшена (платёж ' . $o['payment_id'] . ')');
+                // сумму выставил администратор — она подтверждена по плану: онлайн-оплата открыта (В-3)
+                $upd('amount_kop = ?, kind = ?, amount_confirmed_at = ?', [$kop > 0 ? $kop : null, $kind, $kop > 0 ? $now : null]);
+                linea_event((int)$o['id'], $who, 'Сумма: ' . $rub($kop > 0 ? $kop : null) . ', вид: ' . LINEA_KINDS[$kind] . ($kop > 0 ? ' — подтверждена' : ''));
+                // сумма изменилась — старая ссылка на оплату больше не выдаётся; платёж по ней отменяется в ЮKassa, если это возможно (В-4),
+                // а его id запоминается: если клиент всё же оплатит по старой ссылке, вебхук узнает платёж и поднимет тревогу
+                if ((int)$o['amount_kop'] !== $kop && $o['payment_id']) {
+                    $why = yk_cancel_stale((string)$o['payment_id']);
+                    $upd('payment_ids_old = ?, payment_id = NULL, payment_url = NULL, payment_created_at = NULL', [trim((string)$o['payment_ids_old'] . ' ' . $o['payment_id'])]);
+                    linea_event((int)$o['id'], $who, 'Ссылка на оплату по прежней сумме сброшена (платёж ' . $o['payment_id'] . ': ' . $why . ')');
                 }
                 $msg = 'Сумма сохранена.'; break;
+            case 'confirm_amount':   // В-3: сумма сверена с планом — онлайн-оплата открыта
+                if ((int)$o['amount_kop'] <= 0) { $msg = 'Сначала выставьте сумму.'; break; }
+                $upd('amount_confirmed_at = ?, area_mismatch = 0', [$now]);
+                linea_event((int)$o['id'], $who, 'Сумма подтверждена по плану: ' . $rub($o['amount_kop']));
+                $msg = 'Сумма подтверждена — клиент может оплатить онлайн.'; break;
+            case 'pay_checked':   // В-4: тревога по оплате разобрана
+                $upd('pay_alert_at = NULL', []);
+                linea_event((int)$o['id'], $who, 'Тревога по оплате разобрана: ' . (linea_str($_POST['note'] ?? '', 200) ?: 'без комментария'));
+                $msg = 'Отметка «нужна проверка» снята.'; break;
             case 'invoice':
                 $upd("invoice_at = ?, status = CASE WHEN status = 'new' THEN 'awaiting_payment' ELSE status END", [$now]);
                 linea_event((int)$o['id'], $who, 'Счёт выставлен');
@@ -197,6 +218,8 @@ if (isset($_GET['o']) && ($o = linea_order_by_number((string)$_GET['o']))) {
     $kinds = implode('', array_map(fn($k, $t) => '<option value="' . $k . '"' . ($k === $o['kind'] ? ' selected' : '') . '>' . $h($t) . '</option>', array_keys(LINEA_KINDS), LINEA_KINDS));
     $who = '<input name="who" value="Александр" size="10" title="Кто отмечает">';
     $acts = $form('amount', $o['number'], '<select name="kind">' . $kinds . '</select><input name="rub" size="8" placeholder="сумма, ₽" value="' . ($o['amount_kop'] ? (int)$o['amount_kop'] / 100 : '') . '">' . $who, 'Сохранить сумму')
+        . ($o['amount_kop'] && !$o['amount_confirmed_at'] && $o['status'] === 'awaiting_payment' ? $form('confirm_amount', $o['number'], $who, 'Сумма подтверждена по плану') : '')
+        . ($o['pay_alert_at'] ? $form('pay_checked', $o['number'], '<input name="note" size="24" placeholder="что сделано (возврат, доплата…)">' . $who, 'Проверено') : '')
         . $form('invoice', $o['number'], $who, 'Счёт выставлен', 'lt')
         . ($o['status'] === 'awaiting_payment' || $o['status'] === 'new' ? $form('paid', $o['number'], $who, 'Оплачен') : '')
         . ($o['status'] === 'paid' || $o['status'] === 'delivered' ? $form('delivered', $o['number'], '<input name="url" size="30" placeholder="ссылка на альбом" value="' . $h($o['delivered_url']) . '">' . $who, 'Выдан') : '')
@@ -204,7 +227,8 @@ if (isset($_GET['o']) && ($o = linea_order_by_number((string)$_GET['o']))) {
         . ($o['test'] ? $form('delete_test', $o['number'], '', 'Удалить тестовый заказ', 'lt') : '');
     $base = linea_base();
     page($o['number'], $top . '<div class="box"><h2 style="margin:0 0 6px">' . $h($o['number']) . ' <span class="st st-' . $h($o['status']) . '">' . $h(LINEA_STATUS[$o['status']] ?? $o['status']) . '</span>'
-        . ($o['test'] ? ' <span class="test">ТЕСТ</span>' : '') . '</h2>'
+        . ($o['test'] ? ' <span class="test">ТЕСТ</span>' : '') . ($o['pay_alert_at'] ? ' <span class="test">НУЖНА ПРОВЕРКА ОПЛАТЫ</span>' : '') . '</h2>'
+        . ($o['status'] === 'awaiting_payment' && !linea_amount_ok($o) ? '<p class="msg">Онлайн-оплата закрыта, пока сумма не подтверждена по плану' . ($o['area_mismatch'] ? ' (площадь в брифе расходится с суммой площадей помещений)' : '') . '. Клиент видит: «сумму подтвердим по плану в течение рабочего дня».</p>' : '')
         . '<p>' . $h(LINEA_KINDS[$o['kind']] ?? $o['kind']) . ' · ' . $h($o['object_type']) . ($o['area'] ? ', ' . $h($o['area']) . ' м²' : '') . ' · сумма <b>' . $rub($o['amount_kop']) . '</b>'
         . ($o['paid_at'] ? ' · оплачен ' . $h($o['paid_at']) . ' (' . $h($o['paid_by']) . ')' : '') . '</p>'
         . '<p>' . $h($o['name']) . ' · ' . $h($o['phone']) . ' · ' . $h($o['email']) . ($o['contact'] ? ' · связь: ' . $h($o['contact']) : '') . '</p>'
@@ -223,7 +247,7 @@ foreach ($db->query('SELECT * FROM orders ' . $where . ' ORDER BY id DESC LIMIT 
     $rows .= '<tr><td><a href="' . $self . '?o=' . rawurlencode($o['number']) . '">' . $h($o['number']) . '</a>' . ($o['test'] ? ' <span class="test">тест</span>' : '') . '</td>'
         . '<td class="hide-m">' . $h(substr((string)$o['created_at'], 0, 16)) . '</td><td>' . $h($o['name']) . '<div class="mut">' . $h($o['phone']) . ' ' . $h($o['email']) . '</div></td>'
         . '<td class="hide-m">' . $h(LINEA_KINDS[$o['kind']] ?? $o['kind']) . ($o['area'] ? ', ' . $h($o['area']) . ' м²' : '') . '</td>'
-        . '<td><span class="st st-' . $h($o['status']) . '">' . $h(LINEA_STATUS[$o['status']] ?? $o['status']) . '</span></td><td>' . $rub($o['amount_kop']) . '</td>'
+        . '<td><span class="st st-' . $h($o['status']) . '">' . $h(LINEA_STATUS[$o['status']] ?? $o['status']) . '</span>' . (!empty($o['pay_alert_at']) ? ' <span class="test">проверить оплату</span>' : '') . '</td><td>' . $rub($o['amount_kop']) . '</td>'
         . '<td><a href="' . $self . '?dl=' . rawurlencode($o['number']) . '">архив</a></td></tr>';
 }
 $filters = '<p>' . implode(' · ', array_merge(['<a href="' . $self . '">все</a>'], array_map(fn($k, $t) => '<a href="' . $self . '?f=' . $k . '">' . $h($t) . '</a>', array_keys(LINEA_STATUS), LINEA_STATUS))) . '</p>';

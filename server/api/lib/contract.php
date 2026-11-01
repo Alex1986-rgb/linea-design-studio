@@ -153,19 +153,25 @@ function brig_contract_body(array $j, string $kind, int $num, array $add = []): 
 /** Новая версия документа (замороженный текст + хеш). */
 function brig_contract_create(array $j, string $kind, string $by, array $add = []): int
 {
-    $num = $kind === 'main' ? 0 : 1 + (int)db_val("SELECT COUNT(*) FROM br_contracts WHERE job_id = ? AND kind = 'addendum'", [(int)$j['id']]);
+    $num = $kind === 'main' ? 0 : 1 + (int)db_val("SELECT MAX(num) FROM br_contracts WHERE job_id = ? AND kind = 'addendum'", [(int)$j['id']]);
     $body = brig_contract_body($j, $kind, $num, $add);
+    // MySQL: MEDIUMTEXT (миграция 3); тело сверх 2 МБ не пишем ни в одной базе — иначе обрезка и хеш от текста, которого нет (ревью кода С-2)
+    if (strlen($body) > 2000000) { linea_fail('Договор слишком большой — напишите в LINEA', 413); }
     $of = brig_one('SELECT total_kop FROM br_offers WHERE id = ?', [(int)$j['offer_id']]);
+    // UNIQUE (job_id, kind, num): параллельное создание второй копии упадёт на индексе — вызывающий берёт уже созданную
     return db_insert('br_contracts', ['job_id' => (int)$j['id'], 'kind' => $kind, 'num' => $num, 'status' => 'draft', 'body' => $body, 'hash' => brig_contract_hash($body),
         'total_kop' => $kind === 'main' ? (int)$of['total_kop'] : (int)$add['total_kop'], 'delta_kop' => (int)($add['delta_kop'] ?? 0), 'days_add' => (int)($add['days_add'] ?? 0),
-        'note' => (string)($add['note'] ?? ''), 'created_at' => linea_now(), 'created_by' => $by]);
+        'note' => (string)($add['note'] ?? ''), 'created_at' => linea_now(), 'created_by' => $by, 'needs_admin' => !empty($add['needs_admin']) ? 1 : 0]);
 }
 
 /** Основной договор сделки (создаётся при выборе бригады; у объектов до 01.11.2026 — при первом обращении). */
 function brig_contract_main(array $j): array
 {
     $c = brig_one("SELECT * FROM br_contracts WHERE job_id = ? AND kind = 'main'", [(int)$j['id']]);
-    if (!$c) { brig_contract_create($j, 'main', 'system'); $c = brig_one("SELECT * FROM br_contracts WHERE job_id = ? AND kind = 'main'", [(int)$j['id']]); }
+    if (!$c) {
+        try { brig_contract_create($j, 'main', 'system'); } catch (PDOException $e) { /* создан параллельным запросом — берём его */ }
+        $c = brig_one("SELECT * FROM br_contracts WHERE job_id = ? AND kind = 'main'", [(int)$j['id']]);
+    }
     return $c;
 }
 
@@ -174,8 +180,15 @@ function brig_contracts_public(int $jobId): array
 {
     return array_map(fn($c) => ['id' => (int)$c['id'], 'kind' => $c['kind'], 'num' => (int)$c['num'], 'title' => $c['kind'] === 'main' ? 'Договор подряда' : 'Допсоглашение № ' . (int)$c['num'],
         'status' => $c['status'], 'hash' => $c['hash'], 'total' => (int)$c['total_kop'] / 100, 'delta' => (int)$c['delta_kop'] / 100, 'daysAdd' => (int)$c['days_add'], 'note' => (string)$c['note'],
-        'clientSigned' => $c['client_signed_at'], 'brigadeSigned' => $c['brigade_signed_at'], 'created' => $c['created_at']],
+        'clientSigned' => $c['client_signed_at'], 'brigadeSigned' => $c['brigade_signed_at'], 'created' => $c['created_at'],
+        'waitAdmin' => !empty($c['needs_admin']) && empty($c['admin_ok_at'])],
         brig_all('SELECT * FROM br_contracts WHERE job_id = ? ORDER BY id', [$jobId]));
+}
+
+/** HMAC кода подписи: привязан к документу, стороне и хешу версии текста (ревью кода С-1). */
+function brig_sign_hmac(string $code, array $c, string $side): string
+{
+    return hash_hmac('sha256', $code . '|' . $c['id'] . '|' . $side . '|' . $c['hash'], brig_secret());
 }
 
 /** Код подписи: отправить стороне на почту. @return devCode (только тест на маке) или '' */
@@ -186,7 +199,7 @@ function brig_sign_send(array $c, string $side, string $email, bool $test): stri
     }
     if ((int)db_val('SELECT COUNT(*) FROM br_sign_codes WHERE contract_id = ? AND side = ? AND created_at > ?', [(int)$c['id'], $side, date('Y-m-d H:i:s', time() - 3600)]) >= 5) { linea_fail('Слишком много кодов за час — подождите', 429); }
     $code = (string)random_int(100000, 999999);
-    db_insert('br_sign_codes', ['contract_id' => (int)$c['id'], 'side' => $side, 'code_hash' => hash_hmac('sha256', $code . '|' . $c['id'] . '|' . $side, brig_secret()),
+    db_insert('br_sign_codes', ['contract_id' => (int)$c['id'], 'side' => $side, 'code_hash' => brig_sign_hmac($code, $c, $side),
         'expires_at' => time() + 900, 'tries' => 0, 'created_at' => linea_now()]);
     $title = $c['kind'] === 'main' ? 'договор подряда' : 'допсоглашение № ' . (int)$c['num'];
     brig_mail($email, 'sign_code', ['doc' => $title, 'code' => $code, 'hash' => substr((string)$c['hash'], 0, 16)], $test);
@@ -204,16 +217,22 @@ function brig_sign_confirm(array $c, string $side, string $code, bool $pep, stri
     if ($c[$side . '_signed_at']) { linea_fail('Вы уже подписали этот документ — ждём вторую сторону'); }
     $k = brig_one('SELECT * FROM br_sign_codes WHERE contract_id = ? AND side = ? AND used_at IS NULL ORDER BY id DESC LIMIT 1', [(int)$c['id'], $side]);
     if (!$k || (int)$k['expires_at'] < time()) { linea_fail('Код устарел — запросите новый'); }
-    if ((int)$k['tries'] >= 5) { linea_fail('Слишком много неверных попыток — запросите новый код', 429); }
-    if (!hash_equals((string)$k['code_hash'], hash_hmac('sha256', preg_replace('/\D/', '', $code) . '|' . $c['id'] . '|' . $side, brig_secret()))) {
-        db_exec('UPDATE br_sign_codes SET tries = tries + 1 WHERE id = ?', [(int)$k['id']]);
-        linea_fail('Неверный код');
+    if ($c['kind'] === 'addendum') {
+        $jj = brig_one('SELECT status FROM br_jobs WHERE id = ?', [(int)$c['job_id']]);
+        if (!$jj || $jj['status'] !== 'work') { linea_fail('Допсоглашение подписывается, пока объект в работе'); }
+        if (!empty($c['needs_admin']) && empty($c['admin_ok_at'])) { linea_fail('Допсоглашение заметно уменьшает цену договора — подписать можно после подтверждения LINEA (обычно в течение рабочего дня)', 409); }
     }
+    // попытка засчитывается ДО сверки и одним UPDATE с условием: параллельные запросы не дают больше 5 попыток (ревью кода С-1)
+    if (db_exec('UPDATE br_sign_codes SET tries = tries + 1 WHERE id = ? AND tries < 5 AND used_at IS NULL', [(int)$k['id']]) !== 1) { linea_fail('Слишком много неверных попыток — запросите новый код', 429); }
+    if (!hash_equals((string)$k['code_hash'], brig_sign_hmac(preg_replace('/\D/', '', $code) ?? '', $c, $side))) { linea_fail('Неверный код'); }
     $now = linea_now();
-    db_tx(function () use ($c, $k, $side, $now) {
-        db_update('br_sign_codes', ['used_at' => $now], 'id = ?', [(int)$k['id']]);
-        db_update('br_contracts', [$side . '_signed_at' => $now, $side . '_ip' => linea_ip(), $side . '_pep_ed' => BRIG_PEP['ed']], 'id = ? AND status = ?', [(int)$c['id'], 'draft']);
+    $okSign = db_tx(function () use ($c, $k, $side, $now) {
+        // код одноразовый: второй параллельный запрос с тем же кодом не пройдёт
+        if (db_exec('UPDATE br_sign_codes SET used_at = ? WHERE id = ? AND used_at IS NULL', [$now, (int)$k['id']]) !== 1) { return false; }
+        return db_exec('UPDATE br_contracts SET ' . $side . '_signed_at = ?, ' . $side . '_ip = ?, ' . $side . '_pep_ed = ? WHERE id = ? AND status = ? AND ' . $side . '_signed_at IS NULL',
+            [$now, linea_ip(), BRIG_PEP['ed'], (int)$c['id'], 'draft']) === 1;
     });
+    if (!$okSign) { linea_fail('Код уже использован — обновите страницу', 409); }
     brig_audit($who, 'sign', 'job#' . $c['job_id'], ($side === 'client' ? 'Заказчик' : 'Подрядчик') . ' подписал(а) ' . ($c['kind'] === 'main' ? 'договор' : 'допсоглашение № ' . $c['num']) . ' кодом; sha256 ' . substr((string)$c['hash'], 0, 16));
     $c = brig_one('SELECT * FROM br_contracts WHERE id = ?', [(int)$c['id']]);
     if ($c['client_signed_at'] && $c['brigade_signed_at']) { brig_contract_signed($c, $who); }
@@ -236,10 +255,16 @@ function brig_contract_signed(array $c, string $who): void
     $set = ['deal_total_kop' => (int)$c['total_kop'], 'updated_at' => $now];
     if ($j['commission_kop'] !== null) {
         $set['commission_kop'] = brig_commission((int)$c['total_kop'], $j['commission_rate'] !== null ? (float)$j['commission_rate'] : null);
-        if (brig_one('SELECT 1 FROM br_invoices WHERE job_id = ?', [$jid])) { brig_admin_notify('допсоглашение после счёта', 'Объект #' . $jid . ': сумма сделки изменена допсоглашением после выставленного счёта — выставить разницу', brig_link('api/admin-brigady.php?j=' . $jid), false); }
+        $inv = brig_one('SELECT amount_kop FROM br_invoices WHERE job_id = ?', [$jid]);
+        if ($inv) {
+            $set['commission_kop'] = max($set['commission_kop'], (int)$inv['amount_kop']);   // ниже выставленного счёта не уменьшается (ревью кода В-1)
+            brig_admin_notify('допсоглашение после счёта', 'Объект #' . $jid . ': сумма сделки изменена допсоглашением после выставленного счёта — выставить разницу', brig_link('api/admin-brigady.php?j=' . $jid), false);
+        }
     }
     db_update('br_jobs', $set, 'id = ?', [$jid]);
-    brig_audit($who, 'addendum', 'job#' . $jid, 'Допсоглашение № ' . $c['num'] . ' подписано: сумма сделки ' . brig_rub((int)$c['total_kop']) . (isset($set['commission_kop']) ? ', вознаграждение ' . brig_rub($set['commission_kop']) : ''));
+    // журнал сделки видят обе стороны — вознаграждение LINEA туда не пишем (отдельная запись для админки)
+    brig_audit($who, 'addendum', 'job#' . $jid, 'Допсоглашение № ' . $c['num'] . ' подписано: цена договора ' . brig_rub((int)$c['total_kop']));
+    if (isset($set['commission_kop'])) { brig_audit($who, 'commission', 'job#' . $jid, 'Вознаграждение пересчитано по допсоглашению № ' . $c['num'] . ': ' . brig_rub($set['commission_kop'])); }
 }
 
 /** Допсоглашение (предлагает любая сторона; объект в работе; одно неподписанное за раз). */
@@ -247,22 +272,39 @@ function brig_addendum_propose(array $j, array $in, string $by, array $gctx): in
 {
     if ($j['status'] !== 'work') { linea_fail('Допсоглашение — когда договор подписан и объект в работе'); }
     if (brig_one("SELECT 1 FROM br_contracts WHERE job_id = ? AND kind = 'addendum' AND status = 'draft'", [(int)$j['id']])) { linea_fail('Уже есть неподписанное допсоглашение — подпишите или отмените его'); }
+    $t = brig_terms();
     $items = []; $delta = 0;
     foreach (array_slice(is_array($in['items'] ?? null) ? $in['items'] : [], 0, 50) as $x) {
         $name = brig_guard(linea_str($x['name'] ?? '', 200), brig_contacts_open($j), $gctx + ['field' => 'допсоглашение']);
-        $qty = is_numeric($x['qty'] ?? null) ? round((float)$x['qty'], 2) : 0.0;
-        $price = is_numeric($x['price'] ?? null) ? (int)round((float)$x['price'] * 100) : 0;
-        if ($name === '' || $qty == 0) { continue; }
-        $sum = (int)round($qty * $price);
-        $items[] = ['name' => $name, 'unit' => linea_str($x['unit'] ?? 'шт', 12), 'qty' => $qty, 'price_kop' => $price, 'sum_kop' => $sum];
+        if ($name === '') { continue; }
+        // позиции не отрицательные и в границах (ревью кода В-1); исключение работы — отдельной отметкой «исключить», а не минусом
+        if (!is_numeric($x['qty'] ?? null) || !is_numeric($x['price'] ?? null)) { linea_fail('Позиция «' . mb_substr($name, 0, 40) . '»: укажите количество и цену числом'); }
+        $qty = round((float)$x['qty'], 2);
+        $price = (int)round((float)$x['price'] * 100);
+        if ($qty <= 0 || $qty > $t['addendum_max_qty'] || $price < 0 || $price > $t['addendum_max_price_kop']) {
+            linea_fail('Позиция «' . mb_substr($name, 0, 40) . '»: количество — больше нуля и не больше ' . $t['addendum_max_qty'] . ', цена — от 0 до ' . brig_rub($t['addendum_max_price_kop']) . '. Чтобы убрать работу, отметьте «исключить»');
+        }
+        $sum = (int)round($qty * $price) * (!empty($x['remove']) ? -1 : 1);
+        $items[] = ['name' => (!empty($x['remove']) ? 'Исключить: ' : '') . $name, 'unit' => linea_str($x['unit'] ?? 'шт', 12), 'qty' => $qty, 'price_kop' => $price, 'sum_kop' => $sum];
         $delta += $sum;
     }
     $days = max(-365, min(365, (int)($in['daysAdd'] ?? 0)));
     if (!$items && !$days) { linea_fail('Добавьте позиции (название, количество, цена) или изменение срока'); }
     $base = (int)($j['deal_total_kop'] ?? 0) ?: (int)db_val('SELECT total_kop FROM br_offers WHERE id = ?', [(int)$j['offer_id']]);
     if ($base + $delta <= 0) { linea_fail('Цена договора после изменения должна быть больше нуля'); }
-    return brig_contract_create($j, 'addendum', $by, ['items' => $items, 'delta_kop' => $delta, 'total_kop' => $base + $delta, 'days_add' => $days,
+    // итог не ниже уже принятого: доля цены по принятым этапам (у этапов нет своих сумм — пропорционально числу этапов)
+    $st = brig_one("SELECT COUNT(*) n, SUM(CASE WHEN status = 'accepted' THEN 1 ELSE 0 END) acc FROM br_stages WHERE job_id = ?", [(int)$j['id']]);
+    $floor = (int)$st['n'] > 0 ? (int)ceil($base * (int)$st['acc'] / (int)$st['n']) : 0;
+    if ($base + $delta < $floor) { linea_fail('Цена договора не может стать меньше стоимости уже принятых этапов (' . brig_rub($floor) . ')'); }
+    // сильное уменьшение цены — только после подтверждения LINEA (иначе база вознаграждения уходит в ноль одним допсоглашением)
+    $needsAdmin = $delta < 0 && -$delta * 100 > $base * $t['addendum_cut_admin_pct'];
+    $id = brig_contract_create($j, 'addendum', $by, ['items' => $items, 'delta_kop' => $delta, 'total_kop' => $base + $delta, 'days_add' => $days, 'needs_admin' => $needsAdmin,
         'note' => brig_guard(linea_str($in['note'] ?? '', 500), brig_contacts_open($j), $gctx + ['field' => 'допсоглашение'])]);
+    if ($needsAdmin) {
+        brig_signal('addendum_cut', $by, ['job_id' => (int)$j['id'], 'brigade_id' => (int)$j['brigade_id']], 'Допсоглашение уменьшает цену на ' . brig_rub(-$delta) . ' (' . round(-$delta * 100 / max(1, $base)) . ' %) — ждёт подтверждения');
+        brig_admin_notify('допсоглашение уменьшает цену', 'Объект #' . $j['id'] . ': допсоглашение уменьшает цену на ' . brig_rub(-$delta) . ' — подтвердите или отклоните', brig_link('api/admin-brigady.php?j=' . $j['id']), false);
+    }
+    return $id;
 }
 
 /** Журнал сделки — одинаковый для заказчика, бригады и админки. */

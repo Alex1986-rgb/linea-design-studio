@@ -52,18 +52,20 @@ function rm_state(array $o, string $token): array
             'days' => (int)$x['days'], 'startDate' => $x['start_date'], 'warrantyMonths' => (int)$x['owarranty'], 'materials' => BRIG_MATERIALS[$x['materials']] ?? $x['materials'],
             'materialsNote' => (string)$x['materials_note'], 'stages' => json_decode($x['stages'], true) ?: [], 'comment' => (string)$x['comment']];
     }
-    $j = brig_one('SELECT * FROM br_jobs WHERE request_id = ?', [(int)$r['id']]);
+    $j = brig_job_for_request((int)$r['id']);
+    if ($j) { brig_commission_due_check((int)$j['id']); $j = brig_one('SELECT * FROM br_jobs WHERE id = ?', [(int)$j['id']]); }
     if ($j) {
         $b = brig_one('SELECT * FROM br_brigades WHERE id = ?', [(int)$j['brigade_id']]);
         $rev = brig_one('SELECT rating, text, hidden FROM br_reviews WHERE job_id = ?', [(int)$j['id']]);
         $open = brig_contacts_open($j);
         // телефон, почта, ИНН бригады — только когда контакты открыты (до этого — лента сообщений сделки)
         $out['job'] = ['id' => (int)$j['id'], 'status' => $j['status'], 'statusText' => BRIG_JOB_STATUS[$j['status']] ?? $j['status'],
-            'brigade' => brig_public_card($b) + ($open ? ['phone' => $b['phone'], 'email' => $b['email'], 'contact' => $b['contact_name'], 'legalFull' => (BRIG_LEGAL[$b['legal']] ?? '') . ', ИНН ' . $b['inn']]
-                : ['phone' => null, 'email' => null, 'contact' => null, 'legalFull' => BRIG_LEGAL[$b['legal']] ?? '']),
+            'brigade' => brig_public_card($b) + ['legalFull' => trim(($b['company'] ?: $b['name']) . ', ' . (BRIG_LEGAL[$b['legal']] ?? '') . ', ИНН ' . $b['inn']
+                    . ($b['inn_checked_at'] ? ' (документы проверены LINEA ' . date('d.m.Y', strtotime((string)$b['inn_checked_at'])) . ')' : ''))]
+                + ($open ? ['phone' => $b['phone'], 'email' => $b['email'], 'contact' => $b['contact_name']] : ['phone' => null, 'email' => null, 'contact' => null]),
             'contactsOpen' => $open, 'contactsText' => brig_terms_public()['contactsText'], 'messages' => brig_messages((int)$j['id']),
             'canCancel' => $j['status'] === 'contract' && !$open,
-            'advanceAt' => $j['advance_at'], 'canAdvance' => $j['status'] === 'work' && !$j['advance_at'],
+            'advanceAt' => $j['advance_at'], 'advanceState' => $j['advance_state'], 'canAdvance' => $j['status'] === 'work' && !$j['advance_at'],
             'docs' => brig_deal_docs($j),
             'clientSigned' => $j['client_signed_at'], 'brigadeSigned' => $j['brigade_signed_at'], 'stages' => brig_job_stages((int)$j['id']),
             'review' => $rev ? ['rating' => (int)$rev['rating'], 'text' => (string)$rev['text'], 'hidden' => (bool)$rev['hidden']] : null,
@@ -83,7 +85,7 @@ $in = brig_input();
 $a = (string)($_GET['a'] ?? '');
 $now = linea_now();
 $r = brig_one('SELECT * FROM br_requests WHERE order_id = ?', [$oid]);
-$j = $r ? brig_one('SELECT * FROM br_jobs WHERE request_id = ?', [(int)$r['id']]) : null;
+$j = $r ? brig_job_for_request((int)$r['id']) : null;   // действующая сделка; отменённые остаются в базе (С-3)
 $who = 'client:' . $o['number'];
 
 /** Этап своего объекта (клиент). */
@@ -132,6 +134,7 @@ switch ($a) {
         if (($in['consentContacts'] ?? false) !== true) { linea_fail('Отметьте согласие передать ваши контакты и адрес выбранной бригаде'); }
         $of = brig_one("SELECT o.*, b.status bstatus FROM br_offers o JOIN br_brigades b ON b.id = o.brigade_id WHERE o.id = ? AND o.request_id = ? AND o.status = 'submitted'", [(int)($in['offer'] ?? 0), (int)$r['id']]);
         if (!$of) { linea_fail('Это предложение недоступно', 404); }
+        if ($j) { linea_fail('Бригада уже выбрана', 409); }
         if ($of['bstatus'] !== 'active') { linea_fail('Бригада сейчас приостановлена — выберите другое предложение'); }
         $jid = db_tx(function () use ($r, $of, $now) {
             db_update('br_requests', ['status' => 'chosen', 'chosen_offer_id' => (int)$of['id'], 'updated_at' => $now], 'id = ?', [(int)$r['id']]);
@@ -176,9 +179,10 @@ switch ($a) {
     case 'advance':
         if (!$j || $j['status'] !== 'work') { linea_fail('Отметить аванс можно, когда договор подтверждён и объект в работе'); }
         if ($j['advance_at']) { linea_fail('Аванс уже отмечен'); }
-        db_update('br_jobs', ['advance_at' => $now, 'updated_at' => $now], 'id = ?', [(int)$j['id']]);
-        brig_audit($who, 'advance', 'job#' . $j['id'], 'Клиент: аванс бригаде внесён');
-        brig_commission_due((int)$j['id'], $who, 'клиент отметил аванс');
+        // отметка заказчика — «заявлено»: бригада подтверждает или оспаривает за advance_confirm_days (ревью кода В-2), молчание — подтверждение
+        if (brig_exec("UPDATE br_jobs SET advance_at = ?, advance_by = 'client', advance_state = 'declared', updated_at = ? WHERE id = ? AND advance_at IS NULL", [$now, $now, (int)$j['id']]) !== 1) { linea_fail('Аванс уже отмечен'); }
+        brig_audit($who, 'advance', 'job#' . $j['id'], 'Заказчик: аванс бригаде внесён (бригада подтверждает или оспаривает за ' . brig_terms()['advance_confirm_days'] . ' дн.)');
+        $b = $brig(); brig_mail((string)$b['email'], 'brig_advance_declared', ['name' => $b['contact_name'], 'object' => $r['object_title'], 'days' => (string)brig_terms()['advance_confirm_days'], 'link' => brig_link('brigada/')], $test || (bool)$b['test']);
         break;
     case 'job_cancel':
         if (!$j) { linea_fail('Бригада не выбрана'); }
@@ -202,7 +206,7 @@ switch ($a) {
             }
         });
         brig_audit($who, 'stage-accept', 'stage#' . $s['id'], $s['name']);
-        brig_commission_due((int)$j['id'], $who, 'принят этап «' . $s['name'] . '»');   // первый принятый этап = первые деньги бригаде (оплата после приёмки)
+        brig_commission_due_check((int)$j['id'], $who);   // первый принятый этап — одна из дат «к оплате»
         $b = $brig(); brig_mail((string)$b['email'], 'brig_stage_accepted', ['name' => $b['contact_name'], 'stage' => $s['name'], 'object' => $r['object_title']], $test || (bool)$b['test']);
         break;
     case 'stage_return':

@@ -73,4 +73,46 @@ $r3 = yk_settle('2f1b0c3e-000f-5000-8000-000000000002');
 $r4 = yk_settle('2f1b0c3e-000f-5000-8000-000000000002');
 $ok($r3['paid'] && $r4['paid'] && linea_order_by_number('LN-TEST-0002')['status'] === 'paid', 'обычная оплата: заказ оплачен, повтор уведомления — без изменений');
 $ok(!yk_settle('2f1b0c3e-000f-5000-8000-0000000000ff')['paid'], 'неизвестный платёж (404 у API) — ничего не меняется');
+// ── ревью кода сделки 01.11.2026 (docs/reviews/2026-11-01-kod-sdelka.md)
+// К-2: обходы фильтра контактов из ревью — все должны ловиться; суммы, нормы и обычные слова — нет
+$yes = ['Мой номер 8 900 123 45 67.', 'мой тел:89001234567.', 'Пишите 89001234567.', 'тел.89001234567', '+79001234567.', '8.900.123.45.67', '8/900/123/45/67',
+    '8 - 9 - 0 - 0 - 1 - 2 - 3 - 4 - 5 - 6 - 7', 'восемь девятьсот сто двадцать три сорок пять шестьдесят семь', '8 9OO 123 45 67', '８９００１２３４５６７', '٨٩٠٠١٢٣٤٥٦٧',
+    'ivan(at)gmail(dot)com', 'ivan [at] mail [dot] ru', 'Ivan @ gmail . com', 'ivan собака mail точка ru', 'тeлегрaм', 'т е л е г р а м', 'w h a t s a p p', 'wh@tsapp',
+    'вк id12345', 'тг ivan_painter', 'телега ivan_painter', 'вайбер: remont77', 'tme/ivan', 't . me / ivan', 'vk com/ivan', 'wa.me/79001234567'];
+$no = ['Итого 150 000 – 200 000 ₽', 'Итого 850 000 – 900 000 ₽', 'по СП 71.13330.2017, п. 4.6', 'ГОСТ 21.501-2018', 'Плитка 60х120, шов 2 мм', 'Срок 45 дней, старт 15.11.2026',
+    'Два санузла и одна кухня, восемь розеток', 'Смета 1 250 000 ₽, аванс 30 %', 'Стяжка 50 мм, площадь 64,5 м²', 'Максимальная нагрузка', 'телевизор на стене'];
+$miss = []; $fp = [];
+foreach ($yes as $t) { [$c, $k] = brig_contact_scan($t); if (!$k || preg_match('/\d{2}\D{0,3}\d{2}\D{0,3}\d{2}/', str_replace(BRIG_MASK, '', $c))) { $miss[] = $t; } }
+foreach ($no as $t) { if (brig_contact_scan($t)[1]) { $fp[] = $t; } }
+$ok(!$miss, 'К-2: ' . count($yes) . ' обходов из ревью пойманы (точка в конце, разделители, прописью, O вместо 0, полноширинные и арабские цифры, (at)/собака, двойники, разрядка, ники без @, t.me с пробелами)' . ($miss ? ' — пропущены: ' . implode(' | ', $miss) : ''));
+$ok(!$fp, 'К-2: ' . count($no) . ' обычных фраз (суммы, нормы, размеры, даты, числа прописью) не задеты' . ($fp ? ' — ложные: ' . implode(' | ', $fp) : ''));
+// С-4: тестовый режим — только на маке или при allow_test; регистрация бригад test — только на маке
+$_SERVER['REMOTE_ADDR'] = '203.0.113.5'; $_SERVER['HTTP_HOST'] = 'example.ru';
+$ok(!linea_test_req(true) && !linea_test_req(true, true), 'С-4: ?test=1 с боевого адреса без allow_test — не тест');
+$_SERVER['REMOTE_ADDR'] = '127.0.0.1'; $_SERVER['HTTP_HOST'] = '127.0.0.1:8143'; unset($_SERVER['HTTP_X_REAL_IP'], $_SERVER['HTTP_X_FORWARDED_FOR']);
+$ok(linea_test_req(true) && linea_test_req(true, true) && !linea_test_req(false), 'С-4: на маке (php -S) тестовый режим работает');
+// В-3: онлайн-оплата по заявленной площади — только при подтверждённой сумме или площади ≥ порога вида
+$ins = function (string $num, float $area, int $mismatch = 0, ?string $conf = null) use ($db): array {
+    $db->prepare("INSERT INTO orders(number, token, status, kind, created_at, updated_at, amount_kop, area, area_mismatch, amount_confirmed_at, test) VALUES(?,?,?,?,?,?,?,?,?,?,1)")
+        ->execute([$num, bin2hex(random_bytes(16)), 'awaiting_payment', 'kvartira', linea_now(), linea_now(), 9000000, $area, $mismatch, $conf]);
+    return linea_order_by_number($num);
+};
+$small = $ins('LN-TEST-0101', 45.0);
+$ok(!linea_public_order($small)['canPay'] && !yk_payment_for($small)['ok'] && str_contains(yk_payment_for($small)['why'], 'подтвердим'), 'В-3: площадь 45 м² (ниже порога) — оплата закрыта до подтверждения суммы');
+$ok(linea_public_order($ins('LN-TEST-0102', 45.0, 0, linea_now()))['canPay'], 'В-3: сумма подтверждена администратором — оплата открыта');
+$ok(linea_public_order($ins('LN-TEST-0103', 120.0))['canPay'] && !linea_public_order($ins('LN-TEST-0104', 120.0, 1))['canPay'], 'В-3: площадь ≥ порога — сразу; но если помещения брифа больше заявленной площади — только после подтверждения');
+// В-4: платёж по старой сумме — тревога «нужна проверка» и письмо, один раз
+$st = $ins('LN-TEST-0105', 120.0, 0, linea_now());
+$db->prepare('UPDATE orders SET payment_ids_old = ? WHERE id = ?')->execute(['2f1b0c3e-000f-5000-8000-000000000105', $st['id']]);
+file_put_contents($mockDir . '/2f1b0c3e-000f-5000-8000-000000000105.json', json_encode(['id' => '2f1b0c3e-000f-5000-8000-000000000105', 'status' => 'succeeded', 'paid' => true,
+    'amount' => ['value' => '60000.00', 'currency' => 'RUB'], 'metadata' => ['order' => 'LN-TEST-0105']]));
+$ok(yk_known_payment('2f1b0c3e-000f-5000-8000-000000000105') && !yk_known_payment('2f1b0c3e-000f-5000-8000-0000000009ff'), 'В-5: свой платёж (в т. ч. прежний после смены суммы) узнаётся по базе, чужой — нет');
+yk_settle('2f1b0c3e-000f-5000-8000-000000000105'); yk_settle('2f1b0c3e-000f-5000-8000-000000000105');
+$st2 = linea_order_by_number('LN-TEST-0105');
+$nAl = (int)$db->query("SELECT COUNT(*) FROM events WHERE order_id = " . (int)$st['id'] . " AND text LIKE 'ВНИМАНИЕ%'")->fetchColumn();
+$ok($st2['status'] === 'awaiting_payment' && !empty($st2['pay_alert_at']) && $nAl === 1, 'В-4: оплата по старой сумме — заказ не оплачен, пометка «нужна проверка», тревога один раз');
+// В-5: подсети ЮKassa
+$ok(yk_ip_in('185.71.76.5', linea_cfg()['yk_ips']) && yk_ip_in('77.75.156.11', linea_cfg()['yk_ips']) && !yk_ip_in('203.0.113.5', linea_cfg()['yk_ips']) && yk_ip_in('2a02:5180::1', linea_cfg()['yk_ips']), 'В-5: проверка адреса по подсетям ЮKassa (IPv4/IPv6)');
+// юрист п. 1: автоприёмки этапа молчанием нет и из config не включается
+$ok(brig_terms()['stage_autoaccept'] === false && brig_terms()['bypass_penalty']['enabled'] === false, 'автоприёмка молчанием выключена (нельзя для потребителей), неустойка за обход выключена');
 exit($fail ? 1 : 0);

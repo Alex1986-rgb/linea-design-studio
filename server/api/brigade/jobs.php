@@ -7,6 +7,8 @@
  *   POST (CSRF): ?a=sign {j} — «условия договора подтверждаю»; ?a=msg {j, text}; ?a=cancel {j, reason} — отказ до подтверждения;
  *                ?a=stage_photo (multipart: stage, file); ?a=stage_ready {stage};
  *                ?a=remark_close {remark, note}; ?a=dispute {j, subject, text}; ?a=dispute_msg {d, text}
+ *                ?a=advance {j} — «аванс получен» (сразу «к оплате»); ?a=advance_dispute {j, reason} — оспорить отметку заказчика (В-2);
+ *                ?a=stage_start {stage} — «Начать работу» по этапу (этап 1 — одна из дат «к оплате», К-1)
  */
 declare(strict_types=1);
 require __DIR__ . '/../lib/boot.php';
@@ -45,6 +47,8 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'GET') {
     $jid = (int)($_GET['j'] ?? 0);
     if ($jid) {
         $j = job_own($jid, $bid);
+        brig_commission_due_check($jid);
+        $j = job_own($jid, $bid);
         $o = brig_one('SELECT * FROM br_offers WHERE id = ?', [(int)$j['offer_id']]);
         linea_json(['ok' => true, 'job' => [
             'id' => $jid, 'status' => $j['status'], 'statusText' => BRIG_JOB_STATUS[$j['status']] ?? $j['status'], 'object' => (string)$j['object_title'],
@@ -53,6 +57,8 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'GET') {
             'canCancel' => $j['status'] === 'contract' && !brig_contacts_open($j), 'docs' => brig_deal_docs($j),
             'clientSigned' => $j['client_signed_at'], 'brigadeSigned' => $j['brigade_signed_at'],
             'total' => (int)$o['total_kop'] / 100, 'commission' => $j['commission_kop'] !== null ? (int)$j['commission_kop'] / 100 : null,
+            'commissionDueAt' => $j['commission_due_at'], 'commissionDueWhy' => (string)$j['commission_due_why'],
+            'advanceAt' => $j['advance_at'], 'advanceBy' => $j['advance_by'], 'advanceState' => $j['advance_state'], 'debt' => brig_debt($bid),
             'stages' => brig_job_stages($jid), 'disputes' => job_disputes($jid), 'requestId' => (int)$j['request_id'],
         ]]);
     }
@@ -120,9 +126,37 @@ switch ($a) {
         if ((int)db_val('SELECT COUNT(*) FROM br_remarks WHERE stage_id = ? AND closed_at IS NULL', [(int)$s['id']]) > 0) { linea_fail('Сначала закройте замечания клиента — с комментарием, что сделано'); }
         if ((int)db_val("SELECT COUNT(*) FROM br_files WHERE owner_kind = 'stage' AND owner_id = ?", [(int)$s['id']]) < 1) { linea_fail('Добавьте хотя бы одно фото этапа — клиент принимает по фото и на месте'); }
         db_update('br_stages', ['status' => 'ready', 'ready_at' => $now], 'id = ?', [(int)$s['id']]);
+        brig_exec('UPDATE br_stages SET started_at = ? WHERE id = ? AND started_at IS NULL', [$now, (int)$s['id']]);
+        brig_commission_due_check((int)$s['jid'], 'brigade#' . $bid);
         brig_audit('brigade#' . $bid, 'stage-ready', 'stage#' . $s['id'], $s['name']);
         $o = db_one('SELECT email, token, test FROM orders WHERE id = ?', [(int)$s['order_id']]);
         if ($o) { brig_mail((string)$o['email'], 'client_stage_ready', ['stage' => $s['name'], 'link' => brig_link('order.html?t=' . $o['token'])], (bool)$o['test'] || (bool)$s['rtest']); }
+        linea_json(['ok' => true]);
+    case 'advance':   // бригада: «аванс получен» — или подтверждение отметки заказчика
+        $j = job_own((int)($in['j'] ?? 0), $bid);
+        if ($j['status'] !== 'work') { linea_fail('Аванс отмечается, когда договор подписан и объект в работе'); }
+        if ($j['advance_state'] === 'confirmed') { linea_fail('Аванс уже подтверждён'); }
+        brig_exec("UPDATE br_jobs SET advance_at = COALESCE(advance_at, ?), advance_by = COALESCE(advance_by, 'brigade'), advance_state = 'confirmed', updated_at = ? WHERE id = ?", [$now, $now, (int)$j['id']]);
+        brig_audit('brigade#' . $bid, 'advance', 'job#' . $j['id'], $j['advance_at'] ? 'Подрядчик подтвердил получение аванса' : 'Подрядчик: аванс получен');
+        brig_commission_due_check((int)$j['id'], 'brigade#' . $bid);
+        linea_json(['ok' => true]);
+    case 'advance_dispute':   // бригада: «аванс не получал» — отметка заказчика оспорена, в админку сигнал (В-2)
+        $j = job_own((int)($in['j'] ?? 0), $bid);
+        if ($j['advance_state'] !== 'declared') { linea_fail('Оспорить можно только неподтверждённую отметку заказчика'); }
+        $why = brig_guard(linea_str($in['reason'] ?? '', 500), brig_contacts_open($j), ['who' => 'brigade#' . $bid, 'field' => 'аванс', 'job_id' => (int)$j['id'], 'brigade_id' => $bid]);
+        if ($why === '') { linea_fail('Напишите, что не так с авансом'); }
+        brig_exec("UPDATE br_jobs SET advance_state = 'disputed', advance_note = ?, updated_at = ? WHERE id = ? AND advance_state = 'declared'", [$why, $now, (int)$j['id']]);
+        brig_audit('brigade#' . $bid, 'advance', 'job#' . $j['id'], 'Подрядчик оспорил отметку аванса: ' . $why);
+        brig_signal('advance', 'brigade#' . $bid, ['job_id' => (int)$j['id'], 'brigade_id' => $bid], 'Расхождение по авансу: ' . $why);
+        brig_admin_notify('расхождение по авансу', 'Объект #' . $j['id'] . ': бригада оспорила отметку заказчика об авансе', brig_link('api/admin-brigady.php?j=' . $j['id']), (bool)$j['rtest']);
+        linea_json(['ok' => true]);
+    case 'stage_start':   // «Начать работу» по этапу — фиксирует фактический старт (этап 1 — одна из дат «к оплате»)
+        $s = stage_own((int)($in['stage'] ?? 0), $bid);
+        if ($s['jstatus'] !== 'work') { linea_fail('Объект не в работе'); }
+        if ($s['started_at']) { linea_fail('Работа по этапу уже начата'); }
+        brig_exec('UPDATE br_stages SET started_at = ? WHERE id = ? AND started_at IS NULL', [$now, (int)$s['id']]);
+        brig_audit('brigade#' . $bid, 'stage-start', 'job#' . $s['jid'], 'Начата работа: этап ' . (int)$s['idx'] . ' «' . $s['name'] . '»');
+        brig_commission_due_check((int)$s['jid'], 'brigade#' . $bid);
         linea_json(['ok' => true]);
     case 'remark_close':
         $r = brig_one('SELECT * FROM br_remarks WHERE id = ?', [(int)($in['remark'] ?? 0)]);

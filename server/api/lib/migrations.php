@@ -187,4 +187,67 @@ return [
         // сумма сделки по подписанным документам (договор + допсоглашения) — база вознаграждения
         "ALTER TABLE br_jobs ADD COLUMN deal_total_kop {INT}",
     ],
+    // 01.11.2026 — ревью кода сделки (docs/reviews/2026-11-01-kod-sdelka.md): мягкая отмена сделки (С-3: br_jobs.request_id больше не UNIQUE —
+    // отменённая сделка с перепиской и договором остаётся, новая создаётся рядом), аванс с подтверждением бригады (В-2), «Начать работу» (К-1),
+    // допсоглашение с подтверждением LINEA (В-1), договор MEDIUMTEXT на MySQL (С-2), один основной договор на сделку, пилот — слот и счётчик (С-5),
+    // модерация файлов портфолио (К-2), подтверждение суммы заказа и тревога по оплате (В-3, В-4).
+    3 => array_merge(
+        db_driver() === 'mysql' ? [
+            // UNIQUE(request_id) → обычный индекс (внешнему ключу нужен индекс — сначала создаём его, потом снимаем уникальный)
+            "CREATE INDEX br_jobs_request ON br_jobs(request_id)",
+            "ALTER TABLE br_jobs DROP INDEX request_id",
+            "ALTER TABLE br_contracts MODIFY body MEDIUMTEXT NOT NULL",
+        ] : [
+            // SQLite: UNIQUE в определении таблицы не снимается — пересборка таблицы по регламенту SQLite (внешние ключи на время выключены)
+            "PRAGMA foreign_keys=OFF",
+            "CREATE TABLE br_jobs_v3 (
+                id INTEGER PRIMARY KEY AUTOINCREMENT, request_id INTEGER NOT NULL, offer_id INTEGER NOT NULL, brigade_id INTEGER NOT NULL,
+                status VARCHAR(190) NOT NULL DEFAULT 'contract', contacts_consent_at VARCHAR(190) NOT NULL,
+                client_signed_at VARCHAR(190), brigade_signed_at VARCHAR(190), commission_kop INTEGER, commission_at VARCHAR(190),
+                done_at VARCHAR(190), created_at VARCHAR(190) NOT NULL, updated_at VARCHAR(190) NOT NULL,
+                contacts_open_at VARCHAR(190), commission_rate REAL, advance_at VARCHAR(190), commission_due_at VARCHAR(190),
+                cancelled_at VARCHAR(190), cancel_by VARCHAR(190), cancel_reason TEXT, deal_total_kop INTEGER,
+                FOREIGN KEY (request_id) REFERENCES br_requests(id) ON DELETE CASCADE,
+                FOREIGN KEY (brigade_id) REFERENCES br_brigades(id))",
+            "INSERT INTO br_jobs_v3 (id, request_id, offer_id, brigade_id, status, contacts_consent_at, client_signed_at, brigade_signed_at, commission_kop, commission_at,
+                done_at, created_at, updated_at, contacts_open_at, commission_rate, advance_at, commission_due_at, cancelled_at, cancel_by, cancel_reason, deal_total_kop)
+                SELECT id, request_id, offer_id, brigade_id, status, contacts_consent_at, client_signed_at, brigade_signed_at, commission_kop, commission_at,
+                done_at, created_at, updated_at, contacts_open_at, commission_rate, advance_at, commission_due_at, cancelled_at, cancel_by, cancel_reason, deal_total_kop FROM br_jobs",
+            "DROP TABLE br_jobs",
+            "ALTER TABLE br_jobs_v3 RENAME TO br_jobs",
+            "CREATE INDEX br_jobs_request ON br_jobs(request_id)",
+            "PRAGMA foreign_keys=ON",
+        ],
+        [
+            // аванс: кто отметил, состояние (declared — заказчик отметил; confirmed — бригада подтвердила/отметила; disputed — бригада оспорила)
+            "ALTER TABLE br_jobs ADD COLUMN advance_by {SHORT}",
+            "ALTER TABLE br_jobs ADD COLUMN advance_state {SHORT}",
+            "ALTER TABLE br_jobs ADD COLUMN advance_note {TEXT}",
+            "ALTER TABLE br_jobs ADD COLUMN commission_due_why {KEY}",
+            "UPDATE br_jobs SET advance_by = 'client', advance_state = 'confirmed' WHERE advance_at IS NOT NULL",
+            "ALTER TABLE br_stages ADD COLUMN started_at {KEY}",
+            // допсоглашение, уменьшающее цену сильнее порога, ждёт подтверждения LINEA
+            "ALTER TABLE br_contracts ADD COLUMN needs_admin {BOOL} NOT NULL DEFAULT 0",
+            "ALTER TABLE br_contracts ADD COLUMN admin_ok_at {KEY}",
+            // один основной договор на сделку и уникальные номера допсоглашений: дубли неподписанных черновиков (гонка ленивого создания) убираем
+            "DELETE FROM br_contracts WHERE status = 'draft' AND client_signed_at IS NULL AND brigade_signed_at IS NULL AND id NOT IN (SELECT id FROM (SELECT MIN(id) id FROM br_contracts GROUP BY job_id, kind, num) t)",
+            "CREATE UNIQUE INDEX br_contracts_num ON br_contracts(job_id, kind, num)",
+            // пилот: место в очереди пилота фиксируется при допуске, число пилотных сделок — атомарным счётчиком
+            "ALTER TABLE br_brigades ADD COLUMN pilot_slot {INT}",
+            "ALTER TABLE br_brigades ADD COLUMN pilot_used {INT} NOT NULL DEFAULT 0",
+            "UPDATE br_brigades SET pilot_slot = (SELECT COUNT(*) FROM (SELECT DISTINCT id, test, demo, admitted_at FROM br_brigades) b2 WHERE b2.demo = 0 AND b2.test = br_brigades.test
+                AND b2.admitted_at IS NOT NULL AND (b2.admitted_at < br_brigades.admitted_at OR (b2.admitted_at = br_brigades.admitted_at AND b2.id <= br_brigades.id)))
+                WHERE admitted_at IS NOT NULL AND demo = 0",
+            "UPDATE br_brigades SET pilot_used = (SELECT COUNT(*) FROM br_jobs j WHERE j.brigade_id = br_brigades.id AND j.contacts_open_at IS NOT NULL)",
+            // модерация файлов портфолио: уже допущенные бригады — их файлы считаются просмотренными при допуске
+            "ALTER TABLE br_files ADD COLUMN moderated_at {KEY}",
+            "UPDATE br_files SET moderated_at = created_at WHERE owner_kind IN ('portfolio','logo') AND (demo = 1 OR brigade_id IN (SELECT id FROM br_brigades WHERE status = 'active'))",
+            // заказ проекта: сумма подтверждена администратором (по плану), площадь расходится с помещениями брифа, тревога по оплате, прежние платежи
+            "ALTER TABLE orders ADD COLUMN amount_confirmed_at {KEY}",
+            "ALTER TABLE orders ADD COLUMN area_mismatch {BOOL} NOT NULL DEFAULT 0",
+            "ALTER TABLE orders ADD COLUMN pay_alert_at {KEY}",
+            "ALTER TABLE orders ADD COLUMN payment_ids_old {TEXT}",
+            "UPDATE orders SET amount_confirmed_at = updated_at WHERE status IN ('paid','delivered')",
+        ]
+    ),
 ];

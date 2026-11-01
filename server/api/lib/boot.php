@@ -45,6 +45,14 @@ function linea_cfg(): array
         'yk_tax_system' => null,       // чек 54-ФЗ: tax_system_code (1 ОСН, 2 УСН доход, 3 УСН доход−расход, 6 ПСН); null — не передавать
         'brig_terms' => [],            // условия «Ремонта по проекту» поверх BRIG_TERMS_DEFAULT (ставка, когда открываются контакты, листы)
         'db' => null,                  // MySQL: ['dsn' => 'mysql:host=localhost;dbname=…;charset=utf8mb4', 'user' => …, 'pass' => …]; null — SQLite
+        // ревью кода сделки 01.11.2026:
+        'allow_test' => false,         // С-4: ?test=1 на боевом принимается только при этом флаге (на маке — всегда); регистрация бригад test — только на маке
+        'admin_ip_allow' => [],        // С-6: адреса владельца — их вход в admin не блокируется ни своим, ни общим счётчиком неудач
+        'pay_area_min' => ['kvartira' => 80, 'dom' => 150],   // В-3: онлайн-оплата без подтверждения суммы — только если площадь ≥ порога вида
+                                       // (занизить площадь невыгодно крупным объектам); иначе — после «сумма подтверждена» в admin. [] — всегда подтверждать
+        'yk_notify_per_hour' => 120,   // В-5: уведомлений ЮKassa с одного адреса в час
+        'yk_ip_check' => false,        // В-5: принимать уведомления только с адресов ЮKassa (yk_ips)
+        'yk_ips' => ['185.71.76.0/27', '185.71.77.0/27', '77.75.153.0/25', '77.75.156.11/32', '77.75.156.35/32', '77.75.154.128/25', '2a02:5180::/32'],
     ];
     $f = linea_private() . '/config.php';
     $user = is_file($f) ? (require $f) : [];
@@ -67,9 +75,9 @@ const LINEA_KINDS = [
 
 /**
  * Условия «Ремонта по проекту» — ЕДИНСТВЕННОЕ место на сервере (страницы сайта — tools/site-shell.js → BRIG_TERMS, держать
- * одинаковыми). Поверх — config 'brig_terms'. Решение 01.11.2026: платы за отклик/лид нет; удержание сделки — гарантия сайта и листы
+ * одинаковыми). Поверх — config 'brig_terms'. Решение 01.11.2026: платы за отклик/лид нет; удержание сделки — сервис «Сделка через LINEA» и листы
  * по запросу только внутри сделки. Решения 01.11.2026: ставка 10 % («10 % с бригады»), пилот 5 % для первых 5 бригад на первые 3 сделки,
- * листы в сделке бесплатно до 15 на объект, вне сделки — 2 500 ₽, но продажа выключена до ИП. Безопасная сделка ЮKassa — не включена.
+ * листы в сделке бесплатно до 15 на объект, вне сделки — 2 500 ₽, но продажа выключена до ИП. Оплата ремонта через ЮKassa с удержанием — не включена.
  */
 const BRIG_TERMS_DEFAULT = [
     'rate' => 0.10,                 // агентское вознаграждение — доля от сметы выбранного предложения (Александр 01.11.2026: «10 % с бригады»; до этого 7 %)
@@ -89,7 +97,20 @@ const BRIG_TERMS_DEFAULT = [
     'sheet_price_kop' => 250000,    // цена листа вне сделки, копейки (2 500 ₽); продаётся, только когда sheets_outside_paid = true
     'signal_unsigned_days' => 5,    // «выбрана, договор не подписан N дней» — сигнал в админке
     'invoice_days' => 10,           // срок оплаты счёта на вознаграждение
-    'safe_deal' => false,           // «Безопасная сделка» ЮKassa — не включена (нужны ИП, договор и юрист)
+    'safe_deal' => false,           // оплата ремонта через ЮKassa с удержанием до приёмки — не включена (нужны ИП, договор и юрист)
+    // ревью кода сделки 01.11.2026 (К-1) + разбор юриста п. 1: вознаграждение К ОПЛАТЕ — по самой ранней из дат: аванс отмечен бригадой
+    // (или отметка заказчика, не оспоренная бригадой за advance_confirm_days), дата начала работ по договору, «Начать работу» по этапу 1,
+    // первый принятый этап, N дней после подписания договора. Админ может выставить счёт вручную всегда.
+    'commission_due_after_sign_days' => 14,   // 0 — правило «N дней после подписания» выключено
+    'advance_confirm_days' => 5,    // В-2: отметку заказчика «аванс внесён» бригада подтверждает или оспаривает за N дней; молчание — подтверждение
+    'debt_warn_days' => 1,          // лестница долга по счёту на вознаграждение: просрочка ≥ N дней — предупреждение в кабинете бригады
+    'debt_feed_close_days' => 14,   // просрочка ≥ N дней — закрыта лента новых заказов и новые предложения (начатые сделки доводятся)
+    'addendum_cut_admin_pct' => 20, // В-1: допсоглашение уменьшает цену больше чем на N % — подписать можно только после подтверждения LINEA
+    'addendum_max_qty' => 100000, 'addendum_max_price_kop' => 10000000000,   // В-1: границы позиции допсоглашения (кол-во, цена 100 млн ₽)
+    'stage_autoaccept' => false,    // юрист 01.11.2026: молчание заказчика-потребителя ≠ приёмка (ст. 720, 753 ГК, ЗоЗПП) — НЕЛЬЗЯ включать для потребителей
+    'termination_fee_base' => 'accepted',   // юрист п. 6: при расторжении база вознаграждения — фактически выполненное и принятое
+    'bypass_penalty' => ['enabled' => false, 'mult' => 2],   // юрист п. 7: неустойка за обход — только бригаде, выключено до юриста; клиенту штрафов нет
+    'files_premoderation' => true,  // К-2: новые фото/PDF портфолио и логотип видны в каталоге только после модерации LINEA
 ];
 
 /** Условия бригад: значения по умолчанию + config 'brig_terms', с проверкой границ. */
@@ -107,6 +128,18 @@ function brig_terms(): array
     if (!in_array($t['commission_due'], ['first_money', 'signed'], true)) { $t['commission_due'] = 'first_money'; }
     $t['sheet_price_kop'] = $t['sheet_price_kop'] !== null && (int)$t['sheet_price_kop'] > 0 ? (int)$t['sheet_price_kop'] : null;
     $t['sheets_outside_paid'] = (bool)$t['sheets_outside_paid'] && $t['sheet_price_kop'] !== null;
+    $t['commission_due_after_sign_days'] = max(0, min(90, (int)$t['commission_due_after_sign_days']));
+    $t['advance_confirm_days'] = max(1, min(30, (int)$t['advance_confirm_days']));
+    $t['debt_warn_days'] = max(0, min(60, (int)$t['debt_warn_days']));
+    $t['debt_feed_close_days'] = max($t['debt_warn_days'], min(120, (int)$t['debt_feed_close_days']));
+    $t['addendum_cut_admin_pct'] = max(0, min(100, (int)$t['addendum_cut_admin_pct']));
+    $t['addendum_max_qty'] = max(1, min(1000000, (int)$t['addendum_max_qty']));
+    $t['addendum_max_price_kop'] = max(100, min(100000000000, (int)$t['addendum_max_price_kop']));
+    $t['stage_autoaccept'] = false;   // для потребителей нельзя (юрист 01.11.2026) — не включается из config
+    if (!in_array($t['termination_fee_base'], ['accepted', 'paid'], true)) { $t['termination_fee_base'] = 'accepted'; }
+    $bp = is_array($t['bypass_penalty'] ?? null) ? $t['bypass_penalty'] : [];
+    $t['bypass_penalty'] = ['enabled' => !empty($bp['enabled']), 'mult' => max(1, min(5, (int)($bp['mult'] ?? 2)))];
+    $t['files_premoderation'] = (bool)$t['files_premoderation'];
     return $t;
 }
 
@@ -176,6 +209,16 @@ function linea_db(): PDO
     return $db;
 }
 
+/** Схема базы актуальна (миграции lib/migrations.php): для страниц, которые читают новые колонки orders напрямую через linea_db(). */
+function linea_schema(): void
+{
+    static $done = false;
+    if ($done) { return; }
+    $done = true;
+    require_once __DIR__ . '/db.php';
+    db_migrate();
+}
+
 function linea_event(int $orderId, string $who, string $text): void
 {
     linea_db()->prepare('INSERT INTO events(order_id, at, who, text) VALUES(?,?,?,?)')->execute([$orderId, linea_now(), $who, $text]);
@@ -184,6 +227,7 @@ function linea_event(int $orderId, string $who, string $text): void
 function linea_order_by_token(string $t): ?array
 {
     if (!preg_match('/^[0-9a-f]{32}$/', $t)) { return null; }
+    linea_schema();
     $q = linea_db()->prepare('SELECT * FROM orders WHERE token = ?');
     $q->execute([$t]);
     $r = $q->fetch();
@@ -192,10 +236,32 @@ function linea_order_by_token(string $t): ?array
 
 function linea_order_by_number(string $n): ?array
 {
+    linea_schema();
     $q = linea_db()->prepare('SELECT * FROM orders WHERE number = ?');
     $q->execute([$n]);
     $r = $q->fetch();
     return $r ?: null;
+}
+
+/**
+ * Тестовый режим запроса (?test=1 / test в теле): только на маке (php -S 127.0.0.1) или при config allow_test (ревью кода С-4) —
+ * иначе аноним на боевом обходил https-требование и запрет повторной регистрации. Регистрация тестовых бригад — только на маке.
+ */
+function linea_test_req(bool $requested, bool $localOnly = false): bool
+{
+    if (!$requested) { return false; }
+    return linea_local() || (!$localOnly && !empty(linea_cfg()['allow_test']));
+}
+
+/**
+ * Онлайн-оплата по сумме из заказа разрешена? (ревью кода В-3: площадь в брифе можно занизить.) Да, если сумму подтвердил
+ * администратор (amount_confirmed_at — по плану) или площадь не меньше порога вида (config pay_area_min). Иначе — «сумму подтвердим по плану».
+ */
+function linea_amount_ok(array $o): bool
+{
+    if (!empty($o['amount_confirmed_at'])) { return true; }
+    $min = linea_cfg()['pay_area_min'][$o['kind']] ?? (linea_cfg()['pay_area_min'][str_replace('_viz', '', (string)$o['kind'])] ?? null);
+    return $min !== null && $o['area'] !== null && (float)$o['area'] >= (float)$min && empty($o['area_mismatch']);
 }
 
 /** Сумма по прайсу конфига в копейках; null — «уточняется» (цену назовём по брифу). */
@@ -351,7 +417,8 @@ function linea_public_order(array $o): array
         'paidAt' => $o['paid_at'],
         'deliveredUrl' => $o['status'] === 'delivered' ? (string)$o['delivered_url'] : '',
         'mode' => $cfg['mode'],
-        'canPay' => $cfg['mode'] === 'yookassa' && $o['status'] === 'awaiting_payment' && $amount !== null && $amount > 0,
+        'canPay' => $cfg['mode'] === 'yookassa' && $o['status'] === 'awaiting_payment' && $amount !== null && $amount > 0 && linea_amount_ok($o),
+        'amountConfirmed' => linea_amount_ok($o),   // false — «сумму подтвердим по плану в течение рабочего дня» (В-3)
         'test' => (bool)$o['test'],
     ];
 }

@@ -155,8 +155,7 @@ function brig_session(): void { brig_db(); acc_session(); }
 /** ПДн бригад — только по https (как бриф); исключения — test=1 и php -S на маке. */
 function brig_https(): void
 {
-    $test = (string)($_GET['test'] ?? $_POST['test'] ?? '') === '1';
-    linea_require_https($test);
+    linea_require_https(linea_test_req((string)($_GET['test'] ?? $_POST['test'] ?? '') === '1'));   // test — только на маке или при allow_test (С-4)
 }
 
 function brig_method(string $m): void
@@ -313,7 +312,8 @@ function brig_file_allowed(array $f, array $ctx): bool
         case 'portfolio': case 'logo':
             if ($bid && (int)$f['brigade_id'] === $bid) { return true; }
             $b = brig_one('SELECT status FROM br_brigades WHERE id = ?', [(int)$f['brigade_id']]);
-            return $b && $b['status'] === 'active';
+            // картинка/PDF может нести телефон, которого фильтр текста не видит (К-2): публично — только после модерации LINEA
+            return $b && $b['status'] === 'active' && (!brig_terms()['files_premoderation'] || !empty($f['moderated_at']) || !empty($f['demo']));
         case 'pack':
             if ($oid) { return (bool)brig_one('SELECT 1 FROM br_requests WHERE id = ? AND order_id = ?', [(int)$f['owner_id'], $oid]); }
             if ($bid && $ctx['brigade']['status'] === 'active') {
@@ -403,19 +403,35 @@ function brig_offer_calc(array $pack, array $items): array
 function brig_commission(int $totalKop, ?float $rate = null): int { return (int)round($totalKop * ($rate ?? brig_terms()['rate'])); }
 
 /**
- * Ставка для следующей сделки бригады: пилотная (brig_terms()['pilot']), если бригада — среди первых N допущенных
- * (по admitted_at, отдельно для тестовых) и у неё меньше M сделок с открытыми контактами; иначе основная.
+ * Ставка для следующей сделки бригады (для показа): пилотная, если у бригады есть место в пилоте (br_brigades.pilot_slot — фиксируется
+ * при допуске, ревью кода С-5) не дальше N и использовано меньше M пилотных сделок; иначе основная. Само списание пилотной сделки —
+ * атомарно в brig_open_contacts (brig_pilot_take).
  */
 function brig_rate_for(int $brigadeId): float
 {
     $t = brig_terms(); $p = $t['pilot'];
     if (!$p['enabled']) { return $t['rate']; }
-    $b = brig_one('SELECT id, admitted_at, test, demo FROM br_brigades WHERE id = ?', [$brigadeId]);
-    if (!$b || !$b['admitted_at'] || $b['demo']) { return $t['rate']; }
-    $rank = 1 + (int)db_val('SELECT COUNT(*) FROM br_brigades WHERE demo = 0 AND test = ? AND admitted_at IS NOT NULL AND (admitted_at < ? OR (admitted_at = ? AND id < ?))',
-        [(int)$b['test'], $b['admitted_at'], $b['admitted_at'], $brigadeId]);
-    $deals = (int)db_val('SELECT COUNT(*) FROM br_jobs WHERE brigade_id = ? AND contacts_open_at IS NOT NULL', [$brigadeId]);
-    return $rank <= $p['brigades'] && $deals < $p['deals'] ? $p['rate'] : $t['rate'];
+    $b = brig_one('SELECT pilot_slot, pilot_used, demo FROM br_brigades WHERE id = ?', [$brigadeId]);
+    if (!$b || $b['demo'] || $b['pilot_slot'] === null) { return $t['rate']; }
+    return (int)$b['pilot_slot'] <= $p['brigades'] && (int)$b['pilot_used'] < $p['deals'] ? $p['rate'] : $t['rate'];
+}
+
+/** Списать пилотную сделку: один UPDATE с условием (две одновременные сделки не получат пилот сверх лимита). @return ставка сделки */
+function brig_pilot_take(int $brigadeId): float
+{
+    $t = brig_terms(); $p = $t['pilot'];
+    if (!$p['enabled']) { return $t['rate']; }
+    $n = brig_exec('UPDATE br_brigades SET pilot_used = pilot_used + 1 WHERE id = ? AND demo = 0 AND pilot_slot IS NOT NULL AND pilot_slot <= ? AND pilot_used < ?', [$brigadeId, $p['brigades'], $p['deals']]);
+    return $n === 1 ? $p['rate'] : $t['rate'];
+}
+
+/** Место в пилоте при первом допуске: следующее по порядку среди бригад того же вида (тестовые — отдельно). */
+function brig_pilot_slot_assign(int $brigadeId): void
+{
+    $b = brig_one('SELECT test, demo, pilot_slot FROM br_brigades WHERE id = ?', [$brigadeId]);
+    if (!$b || $b['demo'] || $b['pilot_slot'] !== null) { return; }
+    $max = (int)(db_val('SELECT MAX(pilot_slot) FROM br_brigades WHERE test = ? AND demo = 0', [(int)$b['test']]) ?? 0);
+    brig_exec('UPDATE br_brigades SET pilot_slot = ? WHERE id = ? AND pilot_slot IS NULL', [$max + 1, $brigadeId]);
 }
 
 /** Пилот одной фразой (для кабинета и страниц); null — пилот выключен. */
@@ -432,7 +448,10 @@ function brig_terms_public(): array
     return [
         'rate' => brig_rate_text(), 'pilot' => brig_pilot_text(), 'contactsAfter' => $t['contacts_after'], 'commissionDue' => $t['commission_due'],
         'dueText' => $t['commission_due'] === 'first_money'
-            ? 'Вознаграждение LINEA ' . brig_rate_text() . ' от сметы — только когда бригада получила первые деньги: аванс или оплату первого этапа.'
+            ? 'Вознаграждение LINEA ' . brig_rate_text() . ' от цены договора начисляется при подписании договора на сайте, а к оплате — по самой ранней из дат: '
+                . 'бригада отметила аванс (или не оспорила отметку заказчика за ' . $t['advance_confirm_days'] . ' дн.), наступила дата начала работ по договору, '
+                . 'бригада нажала «Начать работу» по первому этапу, принят первый этап'
+                . ($t['commission_due_after_sign_days'] ? ' или прошло ' . $t['commission_due_after_sign_days'] . ' дн. после подписания' : '') . '.'
             : 'Вознаграждение LINEA ' . brig_rate_text() . ' от сметы — после подтверждения договора обеими сторонами.',
         'contactsText' => $t['contacts_after'] === 'chosen'
             ? 'Контакты сторон открываются сразу после выбора бригады.'
@@ -448,34 +467,135 @@ function brig_terms_public(): array
 
 const BRIG_MASK = '[скрыто до подтверждения договора]';
 
+/** Буквы-двойники: латиница → кириллица (для «тeлегрaм» с латинскими e/a и «telegrаm» с кириллической а). */
+const BRIG_HOMO = ['a' => 'а', 'e' => 'е', 'o' => 'о', 'p' => 'р', 'c' => 'с', 'x' => 'х', 'y' => 'у', 'k' => 'к', 'm' => 'м', 't' => 'т', 'h' => 'н', 'b' => 'в'];
+
+/** Слово → регэксп с классами двойников и необязательным разделителем между буквами («т е л е г р а м», «wh@tsapp»). */
+function brig_fuzzy(string $word): string
+{
+    $lat = array_flip(BRIG_HOMO);
+    $out = [];
+    foreach (mb_str_split(mb_strtolower($word)) as $ch) {
+        $alts = [$ch];
+        if (isset(BRIG_HOMO[$ch])) { $alts[] = BRIG_HOMO[$ch]; }
+        if (isset($lat[$ch])) { $alts[] = $lat[$ch]; }
+        if ($ch === 'a' || $ch === 'а') { $alts[] = '@'; }
+        $out[] = '[' . preg_quote(implode('', array_unique($alts)), '/') . ']';
+    }
+    return '(?<!\p{L})' . implode('[\s.\-_*·]?', $out);
+}
+
+/** Цифры прописью → цифры: «восемь девятьсот двадцать шесть» → «8 926». Новая группа — при повторе разряда. */
+function brig_words_to_digits(string $t): string
+{
+    static $ones = ['ноль' => 0, 'нуль' => 0, 'один' => 1, 'одна' => 1, 'два' => 2, 'две' => 2, 'три' => 3, 'четыре' => 4, 'пять' => 5, 'шесть' => 6, 'семь' => 7, 'восемь' => 8, 'девять' => 9];
+    static $teens = ['десять' => 10, 'одиннадцать' => 11, 'двенадцать' => 12, 'тринадцать' => 13, 'четырнадцать' => 14, 'пятнадцать' => 15, 'шестнадцать' => 16, 'семнадцать' => 17, 'восемнадцать' => 18, 'девятнадцать' => 19];
+    static $tens = ['двадцать' => 20, 'тридцать' => 30, 'сорок' => 40, 'пятьдесят' => 50, 'шестьдесят' => 60, 'семьдесят' => 70, 'восемьдесят' => 80, 'девяносто' => 90];
+    static $hund = ['сто' => 100, 'двести' => 200, 'триста' => 300, 'четыреста' => 400, 'пятьсот' => 500, 'шестьсот' => 600, 'семьсот' => 700, 'восемьсот' => 800, 'девятьсот' => 900];
+    $all = $hund + $teens + $tens + $ones;
+    uksort($all, fn($a, $b) => mb_strlen($b) <=> mb_strlen($a));
+    $words = '(?:' . implode('|', array_keys($all)) . ')';
+    return preg_replace_callback('/(?<!\p{L})' . $words . '(?:[\s,\-]+' . $words . ')*(?!\p{L})/u', function ($m) use ($ones, $teens, $tens, $hund) {
+        $out = []; $g = null; $has = ['t' => false, 'o' => false];
+        $flush = function () use (&$out, &$g, &$has) { if ($g !== null) { $out[] = (string)$g; } $g = null; $has = ['t' => false, 'o' => false]; };
+        foreach (preg_split('/[\s,\-]+/u', $m[0]) ?: [] as $w) {
+            if (isset($hund[$w])) { $flush(); $g = $hund[$w]; }
+            elseif (isset($tens[$w])) { if ($g !== null && ($has['t'] || $has['o'])) { $flush(); } $g = ($g ?? 0) + $tens[$w]; $has['t'] = true; }
+            elseif (isset($teens[$w])) { if ($g !== null && ($has['t'] || $has['o'])) { $flush(); } $g = ($g ?? 0) + $teens[$w]; $has['t'] = $has['o'] = true; }
+            elseif (isset($ones[$w])) {
+                if ($ones[$w] === 0) { $flush(); $out[] = '0'; continue; }
+                if ($g !== null && $has['o']) { $flush(); }
+                $g = ($g ?? 0) + $ones[$w]; $has['o'] = true;
+            }
+        }
+        $flush();
+        return implode(' ', $out);
+    }, $t) ?? $t;
+}
+
 /**
- * Найти и замаскировать контакты в свободном тексте: телефоны (в любой записи: +7…, 8…, с пробелами, скобками, дефисами),
- * почту, ссылки и домены, @ники, мессенджеры и просьбы «позвоните / напишите в личку». @return [текст, [что найдено]]
+ * Нормализация текста перед проверкой (ревью кода К-2): NFKC (полноширинные цифры и буквы), арабские цифры, разнесённые по одной
+ * буквы склеены, цифры прописью → цифры, O/О/l между цифрами → 0/1, номера норм (СП, ГОСТ, п.) убраны.
+ * @return array{cyr:string, lat:string, digits:string}  cyr/lat — две «проекции» текста по двойникам; digits — цифры без разделителей
+ */
+function brig_scan_norm(string $text): array
+{
+    $t = class_exists('Normalizer') ? (Normalizer::normalize($text, Normalizer::FORM_KC) ?: $text) : $text;
+    $t = strtr($t, ['٠' => '0', '١' => '1', '٢' => '2', '٣' => '3', '٤' => '4', '٥' => '5', '٦' => '6', '٧' => '7', '٨' => '8', '٩' => '9',
+        '۰' => '0', '۱' => '1', '۲' => '2', '۳' => '3', '۴' => '4', '۵' => '5', '۶' => '6', '۷' => '7', '۸' => '8', '۹' => '9',
+        '０' => '0', '１' => '1', '２' => '2', '３' => '3', '４' => '4', '５' => '5', '６' => '6', '７' => '7', '８' => '8', '９' => '9']);
+    $t = mb_strtolower($t);
+    $t = preg_replace('/(?<!\p{L})(?:сп|гост|снип|ту|sp|iso|din|п\.|пп\.|№|ст\.)\s*[\d.\-–]+/u', ' ', $t) ?? $t;   // номера норм — не телефоны
+    // «т е л е г р а м», «t.e.l.e.g.r.a.m» → «телеграм»
+    $t = preg_replace_callback('/(?<![\p{L}\p{N}])(?:[\p{L}@][\s.\-_*·]+){3,}[\p{L}@](?![\p{L}\p{N}])/u', fn($m) => preg_replace('/[\s.\-_*·]+/u', '', $m[0]) ?? $m[0], $t) ?? $t;
+    $t = brig_words_to_digits($t);
+    // О/o/l/I в окружении цифр → 0/1 («8 9OO 123…»)
+    $t = preg_replace_callback('/[\dOoОоlI|]+(?:[\s.\-()]+[\dOoОоlI|]+)*/u', fn($m) => preg_match_all('/\d/', $m[0]) >= 3 ? strtr($m[0], ['O' => '0', 'o' => '0', 'О' => '0', 'о' => '0', 'l' => '1', 'I' => '1', '|' => '1']) : $m[0], $t) ?? $t;
+    $cyr = strtr($t, BRIG_HOMO);
+    $latT = strtr($t, array_flip(BRIG_HOMO) + ['@' => 'a']);
+    $digits = preg_replace('/(?<=\d)[\s.\-_\/()·–—+]+(?=\d)/u', '', $t) ?? $t;
+    return ['cyr' => $cyr, 'lat' => $latT, 'digits' => $digits];
+}
+
+/** Похоже на номер телефона РФ: 10 цифр с 3/4/8/9 или 11 с 7/8 впереди. */
+function brig_is_phone(string $d): bool
+{
+    return (strlen($d) === 10 && strpos('3489', $d[0]) !== false) || (strlen($d) === 11 && ($d[0] === '7' || $d[0] === '8'));
+}
+
+/**
+ * Найти и замаскировать контакты в свободном тексте (два прохода, ревью кода К-2):
+ *  1) точная маска в исходном тексте: телефоны с любыми разделителями (точки, слэши, тире, скобки, пробелы — и точка в конце фразы),
+ *     почта с (at)/[at]/«собака»/пробелами вокруг @ и точки, ссылки и домены (t.me, wa.me, vk.com — и с пробелами), @ники, ник без @
+ *     рядом с tg/телега/вацап/вайбер/макс, мессенджеры с буквами-двойниками и разрядкой, просьбы «позвоните / в личку / без комиссии»;
+ *  2) проверка нормализованного текста (brig_scan_norm): если контакт виден только после нормализации (цифры прописью, двойники,
+ *     полноширинные цифры) — текст скрывается целиком.
+ * Фильтр — сдерживание, а не гарантия: главный рычаг — вознаграждение не зависит от отметок сторон (К-1). @return [текст, [что найдено]]
  */
 function brig_contact_scan(string $text): array
 {
     $found = [];
+    $msg = '(?:tg|тг|телег\p{L}*|telegram|телеграм\p{L}*|вацап\p{L}*|ватсап\p{L}*|вотсап\p{L}*|whatsapp|вайбер\p{L}*|viber|макс|max|вк|vk|инст\p{L}*|insta\p{L}*)';
+    $dot = '(?:\.|\(\s*dot\s*\)|\[\s*dot\s*\]|\s(?:dot|точка)\s)';
     $rx = [
-        'почта' => '/[A-Z0-9._%+\-]+@[A-Z0-9.\-]+\.[\p{L}]{2,}/iu',
-        'ссылка' => '/(?:\bhttps?:\/\/|\bwww\.)\S+|\b(?:t\.me|wa\.me|vk\.com|vk\.me|ok\.ru|max\.ru|instagram\.com|avito\.ru|profi\.ru|youdo\.com)(?:\/\S*)?'
-            . '|\b[a-z0-9][a-z0-9\-]{1,62}\.(?:ru|su|com|net|org|pro|online|site|store|shop|info|biz|me|io|tech|moscow|club|by|kz)\b(?:\/\S*)?|[\p{L}0-9\-]{2,63}\.рф(?!\p{L})(?:\/\S*)?/iu',
-        'ник' => '/(?<![\p{L}\p{N}._%+\-])@[A-Za-z0-9_]{3,32}/u',
-        'мессенджер' => '/whats\s*app|в[ао]тс?\s*ап+\p{L}*|вацап+\p{L}*|ватсап+\p{L}*|telegram|телеграм+\p{L}*|(?<!\p{L})телег[аеиуо]й?(?!\p{L})|(?<!\p{L})(?:тг|tg)(?!\p{L})'
-            . '|viber|вайбер\p{L}*|skype|скайп\p{L}*|(?:в|через)\s+max(?!\p{L})|в\s+личк[уеи]|(?<!\p{L})в\s+лс(?!\p{L})|в\s+личн\p{L}*\s+сообщени\p{L}*/iu',
+        // ник без @ рядом со словом-мессенджером: «тг ivan_painter», «вайбер: remont77»
+        'ник' => '/(?<!\p{L})' . $msg . '(?!\p{L})\s*[:\-—]?\s*(?:это\s+|мой\s+|ник\s+)?@?[A-Za-z][A-Za-z0-9_.]{2,31}/iu',
+        'почта' => '/[\p{L}0-9._%+\-]+\s*(?:@|\(\s*at\s*\)|\[\s*at\s*\]|\{\s*at\s*\}|\s(?:at|собака|собачка)\s)\s*[\p{L}0-9\-]+(?:\s*' . $dot . '\s*[\p{L}0-9\-]+)*?\s*' . $dot . '\s*(?:ru|com|net|org|рф|su|me|io|pro|info|biz|by|kz|ua|ру|ком)(?!\p{L})/iu',
+        'почта2' => '/[A-Z0-9._%+\-]+@[A-Z0-9.\-]+\.[\p{L}]{2,}/iu',
+        'ссылка' => '/(?:\bhttps?:\/\/|\bwww\.)\S+|(?<![\p{L}\d])(?:t|wa)\s*[.,]?\s*me\s*\/\s*[\w@+]+|(?<![\p{L}\d])tme\/[\w@]+|(?<![\p{L}\d])vk\s*[.,]?\s*(?:com|me)(?:\s*\/\s*[\w.]+)?|(?<![\p{L}\d])(?:vk|вк)\s*id\s*\d+'
+            . '|\b(?:ok\.ru|max\.ru|instagram\.com|avito\.ru|profi\.ru|youdo\.com)(?:\/\S*)?'
+            . '|\b[a-z0-9][a-z0-9\-]{1,62}\s?\.\s?(?:ru|su|com|net|org|pro|online|site|store|shop|info|biz|me|io|tech|moscow|club|by|kz)\b(?:\/\S*)?|[\p{L}0-9\-]{2,63}\.рф(?!\p{L})(?:\/\S*)?/iu',
+        'ник2' => '/(?<![\p{L}\p{N}._%+\-])@[A-Za-z0-9_]{3,32}/u',
+        'мессенджер' => '/(?:' . implode('|', array_map('brig_fuzzy', ['whatsapp', 'вацап', 'ватсап', 'вотсап', 'telegram', 'телеграм', 'viber', 'вайбер', 'skype', 'скайп', 'instagram', 'инстаграм', 'вконтакте'])) . ')\p{L}*'
+            . '|whats\s*app|в[ао]тс?\s*ап+\p{L}*|(?<!\p{L})телег[аеиуо]й?(?!\p{L})|(?<!\p{L})(?:тг|tg)(?!\p{L})'
+            . '|(?:в|через)\s+max(?!\p{L})|в\s+личк[уеи]|(?<!\p{L})в\s+лс(?!\p{L})|в\s+личн\p{L}*\s+сообщени\p{L}*/iu',
         'просьба связаться' => '/(?:мой|наш)\s+(?:номер|телефон|тел\.?|контакт\p{L}*)|(?<!\p{L})(?:по|пере)?звони(?:те)?(?!\p{L})|(?<!\p{L})набери(?:те)?(?!\p{L})'
             . '|свяж(?:итесь|емся)\s+(?:со?\s+мной|с\s+нами|напрямую)|напрямую\s+без\s+(?:сайта|площадки|комиссии|посредник\p{L}*)|(?:без|мимо)\s+(?:сайта|площадки|комиссии)/iu',
     ];
     foreach ($rx as $kind => $re) {
+        $kind = rtrim($kind, '2');
         $text = preg_replace_callback($re, function () use ($kind, &$found) { $found[$kind] = true; return BRIG_MASK; }, $text) ?? $text;
     }
-    // телефоны: 10 цифр (9xx, 4xx, 8xx, 3xx) или 11 с 7/8 впереди; суммы вида «150 000 – 200 000» (12 цифр) не задеваются
-    $text = preg_replace_callback('/(?<![\d.])\+?\d[\d\s\-()]{8,22}\d(?![\d.])/u', function ($m) use (&$found) {
-        $d = preg_replace('/\D/', '', $m[0]) ?? '';
-        $phone = (strlen($d) === 10 && strpos('3489', $d[0]) !== false) || (strlen($d) === 11 && ($d[0] === '7' || $d[0] === '8'));
-        if ($phone) { $found['телефон'] = true; return BRIG_MASK; }
-        return $m[0];
-    }, $text) ?? $text;
-    // цифры прописью («восемь девятьсот…») не ловим — это журнал сигналов и модерация
+    // телефоны: 10–11 цифр с любыми разделителями до 3 знаков между цифрами; номера норм (СП 71.13330.2017) не задеваются
+    $src = $text;
+    $sep = '[\s.\-_\/()·–—]';
+    $text = preg_replace_callback('/(?<!\d)\+?\d(?:' . $sep . '{0,3}\d){9,10}(?!\d)/u', function ($m) use (&$found, $src, $sep) {
+        $before = substr($src, max(0, $m[0][1] - 16), min(16, $m[0][1]));
+        $after = substr($src, $m[0][1] + strlen($m[0][0]), 8);
+        if (preg_match('/(?:СП|ГОСТ|СНиП|ТУ|SP|ISO|п\.|№|ст\.)\s*$/u', $before)) { return $m[0][0]; }
+        // часть более длинного числа («850 000 – 900 000») — не телефон: число продолжается до или после совпадения
+        if (preg_match('/\d' . $sep . '{0,3}$/u', $before) || preg_match('/^' . $sep . '{0,3}\d/u', $after)) { return $m[0][0]; }
+        if (brig_is_phone(preg_replace('/\D/', '', $m[0][0]) ?? '')) { $found['телефон'] = true; return BRIG_MASK; }
+        return $m[0][0];
+    }, $text, -1, $cnt, PREG_OFFSET_CAPTURE) ?? $text;
+    // второй проход: нормализованный текст — контакт виден только после нормализации → текст скрывается целиком
+    $n = brig_scan_norm(str_replace(BRIG_MASK, ' ', $text));
+    $late = [];
+    if (preg_match_all('/(?<!\d)\d{10,11}(?!\d)/', $n['digits'], $mm)) { foreach ($mm[0] as $d) { if (brig_is_phone($d)) { $late['телефон'] = true; } } }
+    if (preg_match('/(?:telegram|whatsapp|viber|skype|instagram|t\.?me\/|wa\.?me\/|vk\.?com)/u', $n['lat'])) { $late['мессенджер'] = true; }
+    if (preg_match('/(?:телеграм|(?<!\p{L})телег[аеиуо]й?(?!\p{L})|вацап|ватсап|вотсап|вайбер|скайп|инстаграм|вконтакте)/u', $n['cyr'])) { $late['мессенджер'] = true; }
+    if (preg_match('/[a-z0-9._%+\-]+(?:@|\(at\)|\[at\]|собака)[a-z0-9\-]+(?:\.|\(dot\)|\[dot\]|точка)(?:ru|com|net|org|рф|ру)/u', preg_replace('/\s+/u', '', $n['lat']) ?? '')) { $late['почта'] = true; }
+    if ($late) { $found += $late; $text = BRIG_MASK; }
     return [$text, array_keys($found)];
 }
 
@@ -512,24 +632,96 @@ function brig_open_contacts(int $jobId, string $who): void
     $j = brig_one('SELECT * FROM br_jobs WHERE id = ?', [$jobId]);
     if (!$j || $j['contacts_open_at'] || $j['status'] === 'cancelled') { return; }
     $o = brig_one('SELECT total_kop FROM br_offers WHERE id = ?', [(int)$j['offer_id']]);
-    $rate = brig_rate_for((int)$j['brigade_id']);
-    $kop = brig_commission((int)$o['total_kop'], $rate);
+    $base = (int)($j['deal_total_kop'] ?? 0) ?: (int)$o['total_kop'];
     $now = linea_now();
-    $due = brig_terms()['commission_due'] === 'signed' ? $now : null;   // 'first_money' — к оплате после аванса или первого этапа (brig_commission_due)
-    if (brig_exec('UPDATE br_jobs SET contacts_open_at = ?, commission_kop = ?, commission_rate = ?, commission_at = ?, commission_due_at = ?, updated_at = ? WHERE id = ? AND contacts_open_at IS NULL', [$now, $kop, $rate, $now, $due, $now, $jobId]) !== 1) { return; }
+    $due = brig_terms()['commission_due'] === 'signed' ? $now : null;   // 'first_money' — к оплате по самой ранней из дат (brig_commission_due_check)
+    // открытие контактов и списание пилотной сделки — в одной транзакции: повторный вызов ничего не меняет, пилот не уходит сверх лимита
+    $res = db_tx(function () use ($j, $jobId, $base, $now, $due) {
+        if (brig_exec('UPDATE br_jobs SET contacts_open_at = ?, updated_at = ? WHERE id = ? AND contacts_open_at IS NULL', [$now, $now, $jobId]) !== 1) { return null; }
+        $rate = brig_pilot_take((int)$j['brigade_id']);
+        $kop = brig_commission($base, $rate);
+        brig_exec('UPDATE br_jobs SET commission_kop = ?, commission_rate = ?, commission_at = ?, commission_due_at = ?, commission_due_why = ? WHERE id = ?', [$kop, $rate, $now, $due, $due ? 'договор подписан' : null, $jobId]);
+        return [$rate, $kop];
+    });
+    if (!$res) { return; }
+    [$rate, $kop] = $res;
     brig_audit($who, 'contacts-open', 'job#' . $jobId, 'Контакты сторон открыты (условие: ' . brig_terms()['contacts_after'] . ')');
-    brig_audit($who, 'commission', 'job#' . $jobId, 'Начислено вознаграждение ' . brig_rub($kop) . ' (' . brig_rate_text($rate) . ($rate !== brig_terms()['rate'] ? ', пилот' : '') . ' от ' . brig_rub((int)$o['total_kop']) . ')');
+    brig_audit($who, 'commission', 'job#' . $jobId, 'Начислено вознаграждение ' . brig_rub($kop) . ' (' . brig_rate_text($rate) . ($rate !== brig_terms()['rate'] ? ', пилот' : '') . ' от ' . brig_rub($base) . ')');
 }
 
 /**
- * Вознаграждение становится к оплате — один раз, при первых деньгах бригаде: клиент отметил аванс или принял первый этап
- * (что раньше). Счёт выставляется только после этого.
+ * Вознаграждение К ОПЛАТЕ (ревью кода К-1, разбор юриста п. 1): по самой ранней из наступивших дат —
+ *   · аванс отмечен бригадой (или отметка заказчика подтверждена бригадой / не оспорена за advance_confirm_days);
+ *   · дата начала работ по договору (Приложение 3, начало этапа 1);
+ *   · «Начать работу» по этапу 1 или первый принятый этап;
+ *   · N дней после подписания договора (commission_due_after_sign_days, 0 — выкл.).
+ * Не зависит только от добровольных кликов заказчика. Ставится один раз; дата — самая ранняя из наступивших. @return дата или null
  */
-function brig_commission_due(int $jobId, string $who, string $why): void
+function brig_commission_due_check(int $jobId, string $who = 'system'): ?string
 {
-    if (brig_exec('UPDATE br_jobs SET commission_due_at = ?, updated_at = ? WHERE id = ? AND commission_kop IS NOT NULL AND commission_due_at IS NULL', [linea_now(), linea_now(), $jobId]) === 1) {
-        brig_audit($who, 'commission-due', 'job#' . $jobId, 'Вознаграждение к оплате: ' . $why);
+    $j = brig_one('SELECT * FROM br_jobs WHERE id = ?', [$jobId]);
+    if (!$j || $j['commission_kop'] === null || $j['commission_due_at'] || $j['status'] === 'cancelled') { return $j['commission_due_at'] ?? null; }
+    $t = brig_terms();
+    $now = linea_now();
+    $c = [];
+    if ($j['advance_at'] && $j['advance_state'] === 'confirmed') { $c['аванс отмечен' . ($j['advance_by'] === 'brigade' ? ' бригадой' : ' и подтверждён')] = (string)$j['advance_at']; }
+    if ($j['advance_at'] && $j['advance_state'] === 'declared' && strtotime((string)$j['advance_at']) + $t['advance_confirm_days'] * 86400 <= time()) {
+        $c['аванс отмечен заказчиком, бригада не оспорила за ' . $t['advance_confirm_days'] . ' дн.'] = (string)$j['advance_at'];
     }
+    $s1 = brig_one('SELECT plan_start, started_at FROM br_stages WHERE job_id = ? ORDER BY idx LIMIT 1', [$jobId]);
+    if ($j['contacts_open_at'] && $s1 && $s1['plan_start'] && $s1['plan_start'] . ' 00:00:00' <= $now) { $c['дата начала работ по договору'] = $s1['plan_start'] . ' 00:00:00'; }
+    if ($s1 && $s1['started_at']) { $c['бригада начала работу по этапу 1'] = (string)$s1['started_at']; }
+    $acc = db_val("SELECT MIN(accepted_at) FROM br_stages WHERE job_id = ? AND accepted_at IS NOT NULL", [$jobId]);
+    if ($acc) { $c['принят первый этап'] = (string)$acc; }
+    $n = $t['commission_due_after_sign_days'];
+    if ($n > 0 && $j['contacts_open_at'] && strtotime((string)$j['contacts_open_at']) + $n * 86400 <= time()) { $c[$n . ' дн. после подписания договора'] = date('Y-m-d H:i:s', strtotime((string)$j['contacts_open_at']) + $n * 86400); }
+    if (!$c) { return null; }
+    asort($c);
+    $why = (string)array_key_first($c); $at = (string)reset($c);
+    if (brig_exec('UPDATE br_jobs SET commission_due_at = ?, commission_due_why = ?, updated_at = ? WHERE id = ? AND commission_due_at IS NULL', [$at, $why, $now, $jobId]) === 1) {
+        brig_audit($who, 'commission-due', 'job#' . $jobId, 'Вознаграждение к оплате: ' . $why . ' (' . $at . ')');
+    }
+    return $at;
+}
+
+/** Совместимость: событие «первые деньги» — пересчитать «к оплате». */
+function brig_commission_due(int $jobId, string $who, string $why): void { brig_commission_due_check($jobId, $who); }
+
+/** Пройти все сделки с начисленным, но ещё не «к оплате» вознаграждением (кабинет бригады, админка, cron). */
+function brig_commission_sweep(?int $brigadeId = null): void
+{
+    foreach (brig_all("SELECT id FROM br_jobs WHERE commission_kop IS NOT NULL AND commission_due_at IS NULL AND status <> 'cancelled'" . ($brigadeId ? ' AND brigade_id = ' . (int)$brigadeId : '')) as $x) {
+        brig_commission_due_check((int)$x['id']);
+    }
+}
+
+/**
+ * Долг бригады по счетам на вознаграждение (лестница: просрочка ≥ debt_warn_days — предупреждение; ≥ debt_feed_close_days — закрыта
+ * лента новых заказов и новые предложения, начатые сделки доводятся). @return ['kop', 'days', 'level' => none|warn|feed_closed, 'text']
+ */
+function brig_debt(int $brigadeId): array
+{
+    $t = brig_terms();
+    $r = brig_one("SELECT SUM(amount_kop) kop, MIN(due_at) due FROM br_invoices WHERE brigade_id = ? AND paid_at IS NULL AND due_at IS NOT NULL AND due_at < ?", [$brigadeId, date('Y-m-d')]);
+    $kop = (int)($r['kop'] ?? 0);
+    $days = $kop > 0 && $r['due'] ? (int)floor((time() - strtotime((string)$r['due'] . ' 23:59:59')) / 86400) + 1 : 0;
+    $level = $kop <= 0 ? 'none' : ($days >= $t['debt_feed_close_days'] ? 'feed_closed' : ($days >= $t['debt_warn_days'] ? 'warn' : 'none'));
+    $text = $level === 'feed_closed' ? 'Счёт на вознаграждение просрочен на ' . $days . ' дн. (' . brig_rub($kop) . '): новые заказы и предложения закрыты до оплаты. Начатые объекты ведите как обычно.'
+        : ($level === 'warn' ? 'Счёт на вознаграждение просрочен (' . brig_rub($kop) . '). Через ' . ($t['debt_feed_close_days'] - $days) . ' дн. лента новых заказов закроется до оплаты.' : '');
+    return ['kop' => $kop, 'days' => $days, 'level' => $level, 'text' => $text];
+}
+
+/** Новые заказы и предложения — только без долга сверх срока. */
+function brig_require_no_debt(array $b): void
+{
+    $d = brig_debt((int)$b['id']);
+    if ($d['level'] === 'feed_closed') { linea_fail($d['text'], 402); }
+}
+
+/** Действующая (не отменённая) сделка запроса: после мягкой отмены (С-3) по запросу может быть несколько строк br_jobs. */
+function brig_job_for_request(int $requestId): ?array
+{
+    return brig_one("SELECT * FROM br_jobs WHERE request_id = ? AND status <> 'cancelled' ORDER BY id DESC LIMIT 1", [$requestId]);
 }
 
 /** Лента сообщений сделки (клиент ↔ бригада; LINEA видит всё). */
@@ -544,12 +736,28 @@ function brig_message_add(array $j, string $who, string $text, array $ctx): void
     $text = linea_str($text, 2000);
     if ($text === '') { linea_fail('Пустое сообщение'); }
     if ((int)db_val('SELECT COUNT(*) FROM br_messages WHERE job_id = ? AND at > ?', [(int)$j['id'], date('Y-m-d H:i:s', time() - 3600)]) >= 60) { linea_fail('Слишком много сообщений за час — подождите', 429); }
-    $clean = brig_guard($text, brig_contacts_open($j), $ctx + ['field' => 'сообщение', 'job_id' => (int)$j['id'], 'brigade_id' => (int)$j['brigade_id']]);
+    $gctx = $ctx + ['field' => 'сообщение', 'job_id' => (int)$j['id'], 'brigade_id' => (int)$j['brigade_id']];
+    $clean = brig_guard($text, brig_contacts_open($j), $gctx);
+    // номер по частям в нескольких сообщениях («8900» + «123» + «4567»): цифры коротких сообщений того же автора за 30 минут склеиваются
+    if (!brig_contacts_open($j) && $clean === $text && preg_match('/\d/', $text)) {
+        $prev = array_reverse(brig_all('SELECT text FROM br_messages WHERE job_id = ? AND who = ? AND at > ? ORDER BY id DESC LIMIT 3', [(int)$j['id'], $who, date('Y-m-d H:i:s', time() - 1800)]));
+        $pd = implode('', array_map(fn($m) => mb_strlen((string)$m['text']) <= 60 ? (preg_replace('/\D/', '', brig_scan_norm((string)$m['text'])['digits']) ?? '') : '', $prev));
+        $nd = preg_replace('/\D/', '', brig_scan_norm($text)['digits']) ?? '';
+        $all = $pd . $nd; $hit = false;
+        for ($i = 0; $i < strlen($pd) && !$hit; $i++) {
+            foreach ([10, 11] as $L) { if ($i + $L > strlen($pd) && $i + $L <= strlen($all) && brig_is_phone(substr($all, $i, $L))) { $hit = true; break; } }
+        }
+        if ($hit) {
+            $clean = preg_replace('/\d[\d\s.\-()]*/u', BRIG_MASK . ' ', $text) ?? BRIG_MASK;
+            brig_signal('contact', (string)($ctx['who'] ?? ''), $gctx, 'найдено: телефон по частям в нескольких сообщениях');
+        }
+    }
     db_insert('br_messages', ['job_id' => (int)$j['id'], 'who' => $who, 'text' => $clean, 'masked' => $clean !== $text ? 1 : 0, 'at' => linea_now()]);
 }
 
 /**
- * Отказ от выбранной бригады до открытия контактов (заказчик или бригада). Объект удаляется (подбор можно начать заново),
+ * Отказ от выбранной бригады до открытия контактов (заказчик или бригада). Сделка помечается отменённой (переписка и договор
+ * сохраняются, подбор можно начать заново),
  * в сигналы обхода пишется «отмена после выбора» — повторы у одной бригады видны в админке.
  */
 function brig_job_cancel(array $j, string $by, string $who, string $reason): void
@@ -558,9 +766,11 @@ function brig_job_cancel(array $j, string $by, string $who, string $reason): voi
     $reason = brig_contact_scan(linea_str($reason, 500))[0];
     brig_signal('cancel', $who, ['brigade_id' => (int)$j['brigade_id'], 'request_id' => (int)$j['request_id'], 'job_id' => (int)$j['id'], 'field' => $by],
         'Отказ после выбора (' . ($by === 'client' ? 'заказчик' : 'бригада') . ')' . ($reason !== '' ? ': ' . $reason : ''));
-    db_tx(function () use ($j) {
+    db_tx(function () use ($j, $by, $reason) {
         $now = linea_now();
-        db_exec('DELETE FROM br_jobs WHERE id = ?', [(int)$j['id']]);
+        // мягкая отмена (ревью кода С-3): сделка, переписка и версии договора остаются — доказательства для админки
+        db_update('br_jobs', ['status' => 'cancelled', 'cancelled_at' => $now, 'cancel_by' => $by, 'cancel_reason' => $reason, 'updated_at' => $now], 'id = ?', [(int)$j['id']]);
+        db_exec("UPDATE br_contracts SET status = 'void' WHERE job_id = ? AND status = 'draft'", [(int)$j['id']]);
         db_update('br_offers', ['status' => 'withdrawn', 'updated_at' => $now], 'id = ?', [(int)$j['offer_id']]);
         db_update('br_requests', ['status' => 'cancelled', 'chosen_offer_id' => null, 'updated_at' => $now], 'id = ?', [(int)$j['request_id']]);
     });
@@ -637,7 +847,8 @@ function brig_public_card(array $b, string $api = ''): array
 {
     $port = [];
     foreach (brig_all('SELECT * FROM br_portfolio WHERE brigade_id = ? ORDER BY id', [(int)$b['id']]) as $p) {
-        $files = brig_all("SELECT id, kind FROM br_files WHERE owner_kind = 'portfolio' AND owner_id = ? ORDER BY id", [(int)$p['id']]);
+        // публично — только файлы, прошедшие модерацию LINEA (К-2: телефон на фото фильтр текста не видит)
+        $files = brig_all("SELECT id, kind FROM br_files WHERE owner_kind = 'portfolio' AND owner_id = ?" . (brig_terms()['files_premoderation'] ? ' AND (moderated_at IS NOT NULL OR demo = 1)' : '') . " ORDER BY id", [(int)$p['id']]);
         $port[] = ['title' => brig_contact_scan((string)$p['title'])[0], 'district' => BRIG_DISTRICTS[$p['district']] ?? '', 'area' => $p['area'] !== null ? (float)$p['area'] : null,
             'year' => $p['year'] !== null ? (int)$p['year'] : null, 'works' => brig_contact_scan((string)$p['works'])[0], 'demo' => !empty($p['demo']),
             'before' => array_values(array_map(fn($f) => (int)$f['id'], array_filter($files, fn($f) => $f['kind'] === 'before'))),
@@ -669,7 +880,7 @@ function brig_job_stages(int $jobId): array
     foreach (brig_all('SELECT * FROM br_stages WHERE job_id = ? ORDER BY idx', [$jobId]) as $s) {
         $out[] = [
             'id' => (int)$s['id'], 'idx' => (int)$s['idx'], 'name' => $s['name'], 'status' => $s['status'], 'statusText' => BRIG_STAGE_STATUS[$s['status']] ?? $s['status'],
-            'planStart' => $s['plan_start'], 'planEnd' => $s['plan_end'], 'readyAt' => $s['ready_at'], 'acceptedAt' => $s['accepted_at'],
+            'planStart' => $s['plan_start'], 'planEnd' => $s['plan_end'], 'readyAt' => $s['ready_at'], 'acceptedAt' => $s['accepted_at'], 'startedAt' => $s['started_at'] ?? null,
             'checklist' => brig_checklist($s['checklist']), 'checks' => json_decode((string)$s['checks'], true) ?: [],
             'photos' => array_map(fn($f) => (int)$f['id'], brig_all("SELECT id FROM br_files WHERE owner_kind = 'stage' AND owner_id = ? ORDER BY id", [(int)$s['id']])),
             'remarks' => array_map(fn($r) => ['id' => (int)$r['id'], 'text' => $r['text'], 'at' => $r['created_at'], 'closedAt' => $r['closed_at'], 'closeNote' => (string)$r['close_note']],

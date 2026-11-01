@@ -13,7 +13,7 @@ require __DIR__ . '/lib/notify.php';
 
 if (($_SERVER['REQUEST_METHOD'] ?? '') !== 'POST') { header('Allow: POST'); linea_fail('Только POST', 405); }
 // бриф с ПДн — только по https; по http — только наши проверки (test=1, заказ тестовый)
-linea_require_https((string)($_POST['test'] ?? $_GET['test'] ?? '') === '1');
+linea_require_https(linea_test_req((string)($_POST['test'] ?? $_GET['test'] ?? '') === '1'));   // test — только на маке или при allow_test (С-4)
 $cfg = linea_cfg();
 $maxBytes = (int)$cfg['max_upload_mb'] * 1048576;
 
@@ -40,7 +40,7 @@ $consentText = 'Согласие на обработку персональны�
     . ' (soglasie/), отмечено в брифе ' . linea_str((string)($consent['at'] ?? ''), 30)
     . '; показ в портфолио: ' . (($consent['portfolio'] ?? false) === true ? 'да' : 'нет');
 
-$test = (string)($_POST['test'] ?? '') === '1' || !empty($brief['meta']['test']);
+$test = linea_test_req((string)($_POST['test'] ?? '') === '1' || !empty($brief['meta']['test']));
 // Площадь обязательна (01.11.2026): по ней сумма видна сразу на странице заказа (критик продукта, п. 3). Можно примерно —
 // расхождение с планом пересчитывается по той же ставке (TERMS.areaRecalc в tools/site-shell.js).
 $areaIn = $brief['object']['area'] ?? null;
@@ -74,10 +74,19 @@ if ($unpacked > $maxBytes * 2) { linea_fail('Архив слишком боль�
 
 // Заказ
 $db = linea_db();
+linea_schema();
 $o = $brief['object'] ?? [];
 $area = is_numeric($o['area'] ?? null) ? (float)$o['area'] : null;
 $kind = linea_kind_from_brief($brief);
 $amount = linea_price($kind, $area);
+// В-3: площадь можно занизить. Σ площадей помещений брифа заметно больше заявленной — онлайн-оплата только после подтверждения суммы
+$roomsArea = 0.0;
+foreach ((array)($brief['rooms'] ?? []) as $rm) {
+    if (!is_array($rm)) { continue; }
+    if (is_numeric($rm['area'] ?? null)) { $roomsArea += (float)$rm['area']; }
+    elseif (is_numeric($rm['width'] ?? null) && is_numeric($rm['length'] ?? null)) { $roomsArea += (float)$rm['width'] * (float)$rm['length']; }   // схема брифа: width × length, м
+}
+$areaMismatch = $area && $roomsArea > $area * 1.1;
 $token = bin2hex(random_bytes(16));
 $now = linea_now();
 
@@ -91,11 +100,11 @@ try {
     $last = (string)($q->fetchColumn() ?: '');
     $number = $pref . str_pad((string)((int)substr($last, -4) + 1), 4, '0', STR_PAD_LEFT);
     $db->prepare('INSERT INTO orders(number, token, status, kind, created_at, updated_at, ip, consent_at, consent_text, name, phone, email, contact,
-            object_type, area, files_bytes, files_count, amount_kop, test) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)')
+            object_type, area, files_bytes, files_count, amount_kop, test, area_mismatch) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)')
         ->execute([$number, $token, 'awaiting_payment', $kind, $now, $now, linea_ip(), $now,
             $consentText,
             linea_str($client['name'] ?? '', 80), $phone, $email, linea_str($client['contact'] ?? '', 60),
-            linea_str($o['type'] ?? '', 30), $area, (int)$f['size'], $count, $amount, $test ? 1 : 0]);
+            linea_str($o['type'] ?? '', 30), $area, (int)$f['size'], $count, $amount, $test ? 1 : 0, $areaMismatch ? 1 : 0]);
     $id = (int)$db->lastInsertId();
 
     $dir = linea_private() . '/orders/' . $number;

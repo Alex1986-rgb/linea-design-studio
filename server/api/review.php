@@ -13,7 +13,7 @@ if (($_SERVER['REQUEST_METHOD'] ?? '') !== 'POST') { header('Allow: POST'); line
 if ((int)($_SERVER['CONTENT_LENGTH'] ?? 0) > 1048576) { linea_fail('Слишком много текста — отправьте частями', 413); }
 $in = json_decode((string)file_get_contents('php://input', false, null, 0, 1048577), true);
 if (!is_array($in)) { linea_fail('Правки не прочитались — нажмите «Отправить» ещё раз'); }
-linea_require_https(!empty($in['test']));   // имя и телефон автора правок — только по https (кроме наших проверок)
+linea_require_https(linea_test_req(!empty($in['test'])));   // имя и телефон автора правок — только по https (кроме наших проверок)
 if (trim((string)($in['website'] ?? '')) !== '') { linea_json(['ok' => true, 'number' => 'R-0000']); }
 $slug = preg_replace('/[^a-z0-9-]/i', '', (string)($in['project'] ?? '')) ?? '';
 $notes = array_values(array_filter(is_array($in['notes'] ?? null) ? $in['notes'] : [], fn($n) => is_array($n) && trim((string)($n['text'] ?? '')) !== ''));
@@ -22,7 +22,7 @@ if (count($notes) > 500) { linea_fail('Правок больше 500 — отп�
 if (!linea_rate('review', (int)linea_cfg()['reviews_per_hour'])) { linea_fail('Слишком много отправок за час — напишите нам в WhatsApp', 429); }
 
 $order = linea_order_by_token((string)($in['t'] ?? ''));
-$test = !empty($in['test']) || ($order && $order['test']);
+$test = linea_test_req(!empty($in['test'])) || ($order && $order['test']);
 $clean = array_map(fn($n) => [
     'file' => linea_str($n['file'] ?? '', 160), 'n' => (int)($n['n'] ?? 0), 'text' => linea_str($n['text'] ?? '', 4000),
     'x' => is_numeric($n['x'] ?? null) ? round((float)$n['x'], 1) : null, 'y' => is_numeric($n['y'] ?? null) ? round((float)$n['y'], 1) : null,

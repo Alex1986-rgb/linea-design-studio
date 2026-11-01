@@ -29,7 +29,8 @@ switch ($a) {
     case 'register':
         if (trim((string)($in['website'] ?? '')) !== '') { linea_json(['ok' => true]); }        // ловушка для ботов
         if (!linea_rate('brg-reg', (int)brig_cfg('brig_reg_per_hour', 5), false)) { linea_fail('С этого адреса уже было несколько регистраций за час — попробуйте позже', 429); }
-        $test = (string)($_GET['test'] ?? '') === '1' || !empty($in['test']);
+        // тестовая регистрация — только на маке (ревью кода С-4): на боевом ?test=1 обходил запрет повторной регистрации по ИНН
+        $test = linea_test_req((string)($_GET['test'] ?? '') === '1' || !empty($in['test']), true);
         $email = mb_strtolower(linea_str($in['email'] ?? '', 120));
         $phone = linea_str($in['phone'] ?? '', 40);
         $name = linea_str($in['name'] ?? '', 80);
@@ -55,8 +56,8 @@ switch ($a) {
         }
         if (acc_by_email('brigade', $email)) { linea_fail('Бригада с такой почтой уже зарегистрирована — войдите или восстановите пароль', 409); }
         // один ИНН — одна бригада (UNIQUE inn_key, миграция 2); заблокированная бригада заново не регистрируется ни по ИНН, ни по телефону
-        $innKey = $inn . ($test ? ':test' : '');
-        $same = brig_one('SELECT id, status FROM br_brigades WHERE inn_key = ?', [$innKey]);
+        $innKey = $inn;   // ключ без «:test» (С-4): блокировка и занятость ИНН проверяются по самому ИНН
+        $same = brig_one("SELECT id, status FROM br_brigades WHERE inn_key = ? OR (inn = ? AND status = 'blocked') ORDER BY (status = 'blocked') DESC LIMIT 1", [$innKey, $inn]);
         $phoneTail = substr(preg_replace('/\D/', '', $phone) ?? '', -10);
         $blockedPhone = false;
         foreach (brig_all("SELECT phone FROM br_brigades WHERE status = 'blocked'") as $x) { if (substr(preg_replace('/\D/', '', (string)$x['phone']) ?? '', -10) === $phoneTail) { $blockedPhone = true; break; } }

@@ -16,7 +16,7 @@ if ((int)($_SERVER['CONTENT_LENGTH'] ?? 0) > 2097152) { linea_fail('Обмер �
 $in = json_decode((string)file_get_contents('php://input', false, null, 0, 2097153), true);
 if (!is_array($in)) { linea_fail('Обмер не прочитался — нажмите «Отправить» ещё раз или скачайте файл'); }
 // адрес объекта и имя замерщика — только по https (кроме наших проверок test=1 и запуска на маке)
-linea_require_https(!empty($in['test']));
+linea_require_https(linea_test_req(!empty($in['test'])));
 if (trim((string)($in['website'] ?? '')) !== '') { linea_json(['ok' => true, 'number' => 'O-0000']); }
 
 $s = $in['survey'] ?? null;
@@ -31,7 +31,7 @@ if (count($rooms) > 60) { linea_fail('Помещений больше 60 — о�
 if (!linea_rate('survey', (int)(linea_cfg()['surveys_per_hour'] ?? 20))) { linea_fail('Слишком много отправок за час — пришлите файл обмера в WhatsApp', 429); }
 
 $order = linea_order_by_token((string)($in['t'] ?? ''));
-$test = !empty($in['test']) || ($order && $order['test']) || !empty($s['meta']['example']);
+$test = linea_test_req(!empty($in['test'])) || ($order && $order['test']) || !empty($s['meta']['example']);
 $number = 'O-' . date('ymd') . '-' . strtoupper(substr(bin2hex(random_bytes(3)), 0, 5));
 $dir = linea_private() . '/surveys';
 linea_mkdir($dir);

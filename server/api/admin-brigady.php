@@ -92,11 +92,13 @@ if (($_GET['csv'] ?? '') === 'money') {
     header('Content-Disposition: attachment; filename="linea-komissiya-' . date('Y-m-d') . '.csv"');
     $out = fopen('php://output', 'w');
     fwrite($out, "\xEF\xBB\xBF");
-    fputcsv($out, ['Объект', 'Заказ', 'Бригада', 'ИНН', 'Сумма сметы, ₽', 'Вознаграждение ' . brig_rate_text() . ', ₽', 'Начислена', 'Счёт', 'Выставлен', 'Оплачен', 'Тест'], ';', '"', '');
-    foreach (brig_all('SELECT j.id, j.commission_kop, j.commission_at, r.object_title, r.test, o2.number onum, b.name, b.inn, ofr.total_kop, i.number inum, i.issued_at, i.paid_at
+    // ячейки, начинающиеся с = + - @ (и табуляции/перевода строки), Excel исполняет как формулу — префикс «'» (ревью кода, низкий)
+    $cell = fn($v) => is_string($v) && $v !== '' && strpbrk($v[0], "=+-@\t\r") !== false ? "'" . $v : $v;
+    fputcsv($out, ['Объект', 'Заказ', 'Бригада', 'ИНН', 'Цена договора, ₽', 'Вознаграждение ' . brig_rate_text() . ', ₽', 'Начислена', 'Счёт', 'Выставлен', 'Оплачен', 'Тест'], ';', '"', '');
+    foreach (brig_all('SELECT j.id, j.commission_kop, j.commission_at, r.object_title, r.test, o2.number onum, b.name, b.inn, COALESCE(j.deal_total_kop, ofr.total_kop) total_kop, i.number inum, i.issued_at, i.paid_at
             FROM br_jobs j JOIN br_requests r ON r.id = j.request_id JOIN orders o2 ON o2.id = r.order_id JOIN br_brigades b ON b.id = j.brigade_id JOIN br_offers ofr ON ofr.id = j.offer_id
             LEFT JOIN br_invoices i ON i.job_id = j.id ORDER BY j.id', []) as $x) {
-        fputcsv($out, [$x['object_title'], $x['onum'], $x['name'], $x['inn'], number_format((int)$x['total_kop'] / 100, 2, ',', ''), $x['commission_kop'] !== null ? number_format((int)$x['commission_kop'] / 100, 2, ',', '') : '',
+        fputcsv($out, [$cell((string)$x['object_title']), $x['onum'], $cell((string)$x['name']), $x['inn'], number_format((int)$x['total_kop'] / 100, 2, ',', ''), $x['commission_kop'] !== null ? number_format((int)$x['commission_kop'] / 100, 2, ',', '') : '',
             $x['commission_at'], $x['inum'], $x['issued_at'], $x['paid_at'], $x['test'] ? 'да' : ''], ';', '"', '');
     }
     brig_audit($WHO, 'csv-export', 'money');
@@ -135,6 +137,11 @@ if (($_SERVER['REQUEST_METHOD'] ?? '') === 'POST') {
             if ($to === 'active' && (!$b['inn_checked_at'] || !$b['call_at'])) { $msg = 'Допуск — только после отметок «ИНН проверен» и «видеозвонок проведён».'; $back .= '?b=' . $id; break; }
             if (in_array($to, ['suspended', 'blocked'], true) && $reason === '') { $msg = 'Укажите причину — бригада её увидит.'; $back .= '?b=' . $id; break; }
             db_update('br_brigades', ['status' => $to, 'status_reason' => $reason, 'updated_at' => $now] + ($to === 'active' && !$b['admitted_at'] ? ['admitted_at' => $now] : []), 'id = ?', [$id]);
+            if ($to === 'active') {
+                brig_pilot_slot_assign($id);   // место в пилоте — один раз, при первом допуске (С-5)
+                // портфолио и логотип просмотрены при допуске — в каталоге видны; новые файлы после допуска — через «Одобрить файл» (К-2)
+                brig_exec("UPDATE br_files SET moderated_at = ? WHERE brigade_id = ? AND owner_kind IN ('portfolio','logo') AND moderated_at IS NULL", [$now, $id]);
+            }
             brig_audit($WHO, 'brigade-status', 'brigade#' . $id, BRIG_STATUS[$b['status']] . ' → ' . BRIG_STATUS[$to] . ($reason ? '; причина: ' . $reason : ''));
             brig_mail((string)$b['email'], $to === 'active' ? 'brig_admitted' : 'brig_status', ['name' => $b['contact_name'], 'status' => BRIG_STATUS[$to], 'reason' => $reason ?: '—', 'link' => brig_link('brigada/')], (bool)$b['test']);
             $msg = 'Статус: ' . BRIG_STATUS[$to]; $back .= '?b=' . $id; break;
@@ -199,7 +206,11 @@ if (($_SERVER['REQUEST_METHOD'] ?? '') === 'POST') {
             $j = brig_one('SELECT j.*, r.object_title, r.test FROM br_jobs j JOIN br_requests r ON r.id = j.request_id WHERE j.id = ?', [$id]);
             $back .= '?view=money';
             if (!$j || $j['commission_kop'] === null) { $msg = 'Вознаграждение ещё не начислено (контакты сторон не открыты).'; break; }
-            if (!$j['commission_due_at']) { $msg = 'Вознаграждение ещё не к оплате: бригада не получила первых денег (нет отметки аванса и принятого этапа).'; break; }
+            brig_commission_due_check($id, $WHO);
+            $j = brig_one('SELECT j.*, r.object_title, r.test FROM br_jobs j JOIN br_requests r ON r.id = j.request_id WHERE j.id = ?', [$id]);
+            $manual = !empty($_POST['manual']);
+            if (!$j['commission_due_at'] && !$manual) { $msg = 'Вознаграждение ещё не к оплате ни по одной дате. Счёт можно выставить вручную — кнопкой «Выставить вручную» с причиной.'; break; }
+            if (!$j['commission_due_at'] && $manual && $reason === '') { $msg = 'Для счёта вручную укажите причину.'; break; }
             if (brig_one('SELECT 1 FROM br_invoices WHERE job_id = ?', [$id])) { $msg = 'Счёт уже выставлен.'; break; }
             $iid = db_insert('br_invoices', ['number' => 'tmp-' . bin2hex(random_bytes(4)), 'brigade_id' => (int)$j['brigade_id'], 'job_id' => $id, 'amount_kop' => (int)$j['commission_kop'],
                 'issued_at' => $now, 'due_at' => date('Y-m-d', strtotime('+' . (int)brig_terms()['invoice_days'] . ' days'))]);
@@ -207,8 +218,49 @@ if (($_SERVER['REQUEST_METHOD'] ?? '') === 'POST') {
             db_update('br_invoices', ['number' => $num], 'id = ?', [$iid]);
             $b = brig_one('SELECT * FROM br_brigades WHERE id = ?', [(int)$j['brigade_id']]);
             brig_mail((string)$b['email'], 'brig_invoice', ['name' => $b['contact_name'], 'number' => $num, 'amount' => brig_rub((int)$j['commission_kop']), 'object' => $j['object_title'], 'link' => brig_link('brigada/')], (bool)$j['test'] || (bool)$b['test']);
-            brig_audit($WHO, 'invoice', 'job#' . $id, $num . ' на ' . brig_rub((int)$j['commission_kop']));
+            brig_audit($WHO, 'invoice', 'job#' . $id, $num . ' на ' . brig_rub((int)$j['commission_kop']) . (!$j['commission_due_at'] ? ' — вручную: ' . $reason : ''));
+            if (!$j['commission_due_at']) { brig_exec('UPDATE br_jobs SET commission_due_at = ?, commission_due_why = ? WHERE id = ? AND commission_due_at IS NULL', [$now, 'счёт выставлен LINEA вручную', $id]); }
             $msg = 'Счёт ' . $num . ' выставлен.'; break;
+        case 'f_ok':   // одобрить файл портфолио/логотип для каталога (К-2: на картинке может быть телефон)
+            $f = brig_one("SELECT * FROM br_files WHERE id = ? AND owner_kind IN ('portfolio','logo')", [$id]);
+            if ($f) { db_update('br_files', ['moderated_at' => $now], 'id = ?', [$id]); brig_audit($WHO, 'file-ok', 'brigade#' . $f['brigade_id'], 'файл #' . $id); $back .= '?b=' . (int)$f['brigade_id']; $msg = 'Файл одобрен для каталога.'; }
+            break;
+        case 'f_del':
+            $f = brig_one("SELECT * FROM br_files WHERE id = ? AND owner_kind IN ('portfolio','logo')", [$id]);
+            if ($f) {
+                @unlink(brig_dir() . '/files/' . $f['stored_path']);
+                brig_exec('DELETE FROM br_files WHERE id = ?', [$id]);
+                if ($f['owner_kind'] === 'logo') { brig_exec('UPDATE br_brigades SET logo_file = NULL WHERE id = ? AND logo_file = ?', [(int)$f['brigade_id'], $id]); }
+                brig_audit($WHO, 'file-del', 'brigade#' . $f['brigade_id'], 'файл #' . $id . ($reason ? ': ' . $reason : ''));
+                $back .= '?b=' . (int)$f['brigade_id']; $msg = 'Файл удалён.';
+            }
+            break;
+        case 'b_inn_release':   // спор за ИНН (кто-то занял чужой ИНН регистрацией): освободить ключ ИНН у недопущенной бригады
+            $b = brig_one('SELECT * FROM br_brigades WHERE id = ?', [$id]);
+            $back .= '?b=' . $id;
+            if (!$b || in_array($b['status'], ['active', 'blocked'], true)) { $msg = 'Освободить ИНН можно только у недопущенной и незаблокированной бригады.'; break; }
+            if ($reason === '') { $msg = 'Укажите причину.'; break; }
+            db_update('br_brigades', ['inn_key' => null, 'status' => 'suspended', 'status_reason' => 'ИНН освобождён: ' . $reason, 'updated_at' => $now], 'id = ?', [$id]);
+            brig_audit($WHO, 'inn-release', 'brigade#' . $id, $reason);
+            $msg = 'ИНН освобождён, анкета приостановлена.'; break;
+        case 'j_advance':   // исправить отметку аванса (расхождение сторон, В-2) — с причиной в журнал
+            $j = brig_one('SELECT * FROM br_jobs WHERE id = ?', [$id]);
+            $back .= '?j=' . $id;
+            if (!$j || $reason === '') { $msg = 'Укажите причину исправления.'; break; }
+            $to = (string)($_POST['to'] ?? '');
+            if ($to === 'confirmed') { brig_exec("UPDATE br_jobs SET advance_at = COALESCE(advance_at, ?), advance_by = COALESCE(advance_by, 'admin'), advance_state = 'confirmed', updated_at = ? WHERE id = ?", [$now, $now, $id]); }
+            elseif ($to === 'clear') { brig_exec("UPDATE br_jobs SET advance_at = NULL, advance_by = NULL, advance_state = NULL, advance_note = NULL, updated_at = ? WHERE id = ?", [$now, $id]); }
+            else { $msg = 'Неизвестное действие.'; break; }
+            brig_audit($WHO, 'advance', 'job#' . $id, 'LINEA исправила отметку аванса (' . ($to === 'clear' ? 'снята' : 'подтверждена') . '): ' . $reason);
+            if ($to === 'confirmed') { brig_commission_due_check($id, $WHO); }
+            $msg = 'Отметка аванса исправлена.'; break;
+        case 'c_approve': case 'c_reject':   // допсоглашение с сильным уменьшением цены (В-1)
+            $c = brig_one("SELECT * FROM br_contracts WHERE id = ? AND kind = 'addendum' AND status = 'draft' AND needs_admin = 1", [$id]);
+            if (!$c) { $msg = 'Нет такого допсоглашения на подтверждении.'; break; }
+            $back .= '?j=' . (int)$c['job_id'];
+            if ($act === 'c_approve') { db_update('br_contracts', ['admin_ok_at' => $now], 'id = ?', [$id]); brig_audit($WHO, 'addendum-ok', 'job#' . $c['job_id'], 'LINEA подтвердила допсоглашение № ' . $c['num'] . ($reason ? ': ' . $reason : '')); $msg = 'Допсоглашение подтверждено — стороны могут подписать.'; }
+            else { db_update('br_contracts', ['status' => 'void'], 'id = ?', [$id]); brig_audit($WHO, 'addendum-cancel', 'job#' . $c['job_id'], 'LINEA отклонила допсоглашение № ' . $c['num'] . ($reason ? ': ' . $reason : '')); $msg = 'Допсоглашение отклонено.'; }
+            break;
         case 'i_paid':
             $i = brig_one('SELECT * FROM br_invoices WHERE id = ?', [$id]);
             if ($i && !$i['paid_at']) {
@@ -282,6 +334,11 @@ if (isset($_GET['b']) && ($b = brig_one('SELECT * FROM br_brigades WHERE id = ?'
         $sts .= $form('b_status', $bid, '<input type="hidden" name="to" value="' . $to . '">' . ($to !== 'active' ? '<input name="reason" size="26" placeholder="причина (увидит бригада)">' : ''), $lbl, $to === 'blocked' ? 'bad' : ($to === 'active' ? '' : 'lt'));
     }
     $logo = $b['logo_file'] ? '<div class="ph">' . $img((int)$b['logo_file']) . '</div>' : '';
+    $pend = brig_all("SELECT id, owner_kind, mime FROM br_files WHERE brigade_id = ? AND owner_kind IN ('portfolio','logo') AND moderated_at IS NULL ORDER BY id", [$bid]);
+    $pendHtml = $pend ? '<div class="box"><h2>Файлы на модерации (' . count($pend) . ')</h2><p class="mut">В каталоге не видны, пока не одобрены: на фото и в PDF может быть телефон или ссылка — фильтр текста их не видит.</p><div class="ph">'
+        . implode('', array_map(fn($f) => '<div>' . ($f['mime'] === 'application/pdf' ? '<a href="' . $self . '?file=' . (int)$f['id'] . '" target="_blank" rel="noopener">PDF #' . (int)$f['id'] . '</a>' : $img((int)$f['id'])) . '<br>'
+            . $form('f_ok', (int)$f['id'], '', 'Одобрить', 'lt') . $form('f_del', (int)$f['id'], '', 'Удалить', 'bad') . '</div>', $pend)) . '</div></div>' : '';
+    $innRel = !in_array($b['status'], ['active', 'blocked'], true) && $b['inn_key'] !== null ? $form('b_inn_release', $bid, '<input name="reason" size="26" placeholder="причина (спор за ИНН)">', 'Освободить ИНН', 'lt') : '';
     $rt = brig_rating($bid);
     apage($b['name'], $top . '<div class="box"><h2>' . $h($b['name']) . ' ' . $st($b['status'], BRIG_STATUS) . ($b['test'] ? ' <span class="test">ТЕСТ</span>' : '') . '</h2>' . $logo
         . ($b['status_reason'] ? '<p>Причина статуса: ' . $h($b['status_reason']) . '</p>' : '')
@@ -296,7 +353,7 @@ if (isset($_GET['b']) && ($b = brig_one('SELECT * FROM br_brigades WHERE id = ?'
         . '<div class="box"><h2>Проверка</h2><p>' . $links . '</p>' . ($b['legal'] === 'npd' ? $form('b_npd', $bid, '', 'Проверить НПД через API ФНС', 'lt') : '')
         . ($b['inn_check_note'] ? '<p class="mut">' . $h($b['inn_check_note']) . '</p>' : '')
         . '<p>' . $checks . '</p><p class="mut">ИНН проверен: ' . $h($b['inn_checked_at'] ?: '—') . ' · видеозвонок: ' . $h($b['call_at'] ?: '—') . ' (' . $h($b['verified_by'] ?: '') . '). Сканы паспортов не запрашиваем и не храним (152-ФЗ).</p>'
-        . '<p>' . $sts . '</p></div><h2>Портфолио</h2>' . ($port ?: '<p>Объектов нет.</p>'));
+        . '<p>' . $sts . $innRel . '</p><p class="mut">Пилот: ' . ($b['pilot_slot'] !== null ? 'место ' . (int)$b['pilot_slot'] . ', использовано ' . (int)$b['pilot_used'] . ' из ' . brig_terms()['pilot']['deals'] : 'нет места') . '</p></div>' . $pendHtml . '<h2>Портфолио</h2>' . ($port ?: '<p>Объектов нет.</p>'));
 }
 
 // ── карточка запроса
@@ -328,7 +385,7 @@ if (isset($_GET['r']) && ($r = brig_one('SELECT r.*, o.number, o.name oname, o.s
     foreach (brig_all('SELECT o.*, b.name FROM br_offers o JOIN br_brigades b ON b.id = o.brigade_id WHERE o.request_id = ? ORDER BY o.total_kop', [$rid]) as $x) {
         $offers .= '<tr><td>' . $h($x['name']) . '</td><td>' . $st($x['status'], ['submitted' => 'подано', 'withdrawn' => 'отозвано', 'chosen' => 'выбрано', 'rejected' => 'не выбрано']) . '</td><td>' . brig_rub((int)$x['total_kop']) . '</td><td>' . (int)$x['days'] . ' дн.</td><td>' . (int)$x['warranty_months'] . ' мес.</td><td>' . $h(BRIG_MATERIALS[$x['materials']] ?? '') . '</td><td class="mut">' . $h($x['updated_at']) . '</td></tr>';
     }
-    $job = brig_one('SELECT id FROM br_jobs WHERE request_id = ?', [$rid]);
+    $job = brig_job_for_request($rid) ?? brig_one('SELECT id FROM br_jobs WHERE request_id = ? ORDER BY id DESC LIMIT 1', [$rid]);
     apage('Запрос ' . $r['number'], $top . '<div class="box"><h2>Запрос по заказу <a href="admin.php?o=' . $h(rawurlencode($r['number'])) . '">' . $h($r['number']) . '</a> ' . $st($r['status'], BRIG_REQ_STATUS) . ($r['test'] ? ' <span class="test">ТЕСТ</span>' : '') . '</h2>'
         . '<p>' . $h($r['object_title']) . ' · ' . $h(BRIG_DISTRICTS[$r['district']] ?? '') . ' · старт: ' . $h($r['start_wish'] ?: 'не указан') . ' · клиент: ' . $h($r['oname']) . '</p>'
         . '<p class="mut">Согласие клиента: ' . $h($r['consent_text']) . ', ' . $h($r['consent_at']) . '</p>'
@@ -360,7 +417,14 @@ if (isset($_GET['j']) && ($j = brig_one('SELECT j.*, r.object_title, r.test, o.n
     apage('Объект ' . $j['number'], $top . '<div class="box"><h2>Объект по заказу ' . $h($j['number']) . ' ' . $st($j['status'], BRIG_JOB_STATUS) . ($j['test'] ? ' <span class="test">ТЕСТ</span>' : '') . '</h2>'
         . '<p>' . $h($j['object_title']) . ' · бригада <a href="' . $self . '?b=' . (int)$j['brigade_id'] . '">' . $h($j['bname']) . '</a> · смета ' . brig_rub((int)$j['total_kop']) . ' · комиссия ' . brig_rub($j['commission_kop'] !== null ? (int)$j['commission_kop'] : null) . '</p>'
         . '<p class="mut">Договор: клиент ' . $h($j['client_signed_at'] ?: '—') . ', бригада ' . $h($j['brigade_signed_at'] ?: '—') . ' · согласие клиента на передачу контактов ' . $h($j['contacts_consent_at']) . ' · контакты открыты: ' . $h($j['contacts_open_at'] ?: 'нет') . '</p>' . $sign
-        . ($j['commission_kop'] !== null && !brig_one('SELECT 1 FROM br_invoices WHERE job_id = ?', [$jid]) ? $form('j_invoice', $jid, '', 'Выставить счёт на комиссию') : '') . '</div>'
+        . '<p class="mut">Аванс: ' . ($j['advance_at'] ? $h($j['advance_at']) . ' (' . $h(['client' => 'отметил заказчик', 'brigade' => 'отметила бригада', 'admin' => 'LINEA'][$j['advance_by']] ?? '') . ', ' . $h(['declared' => 'ждёт подтверждения бригады', 'confirmed' => 'подтверждён', 'disputed' => 'ОСПОРЕН бригадой'][$j['advance_state']] ?? '') . ')' . ($j['advance_note'] ? ': ' . $h($j['advance_note']) : '') : 'нет')
+        . ' · к оплате: ' . $h($j['commission_due_at'] ? $j['commission_due_at'] . ' — ' . $j['commission_due_why'] : 'ещё нет') . '</p>'
+        . $form('j_advance', $jid, '<select name="to"><option value="confirmed">подтвердить аванс</option><option value="clear">снять отметку</option></select><input name="reason" size="24" placeholder="причина (в журнал)">', 'Исправить аванс', 'lt')
+        . ($j['commission_kop'] !== null && !brig_one('SELECT 1 FROM br_invoices WHERE job_id = ?', [$jid])
+            ? ($j['commission_due_at'] ? $form('j_invoice', $jid, '', 'Выставить счёт на комиссию') : $form('j_invoice', $jid, '<input type="hidden" name="manual" value="1"><input name="reason" size="24" placeholder="причина счёта вручную">', 'Выставить вручную', 'lt')) : '')
+        . implode('', array_map(fn($c) => '<p class="msg">Допсоглашение № ' . (int)$c['num'] . ' уменьшает цену на ' . brig_rub(-(int)$c['delta_kop']) . ' — ждёт подтверждения LINEA. '
+            . $form('c_approve', (int)$c['id'], '<input name="reason" size="20" placeholder="комментарий">', 'Подтвердить') . $form('c_reject', (int)$c['id'], '<input name="reason" size="20" placeholder="причина">', 'Отклонить', 'bad') . '</p>',
+            brig_all("SELECT * FROM br_contracts WHERE job_id = ? AND kind = 'addendum' AND status = 'draft' AND needs_admin = 1 AND admin_ok_at IS NULL", [$jid]))) . '</div>'
         . '<div class="box scroll"><table><tr><th>Этап</th><th>Статус</th><th>План</th><th>Фото</th><th>Замечания</th></tr>' . $stg . '</table></div>'
         . '<div class="box scroll"><h2>Документы сделки (ПЭП)</h2><table><tr><th>Документ</th><th>Статус</th><th>Сумма</th><th>Заказчик</th><th>Подрядчик</th><th>SHA-256</th></tr>' . ($cdocs ?: '<tr><td colspan="6">Нет.</td></tr>') . '</table></div>'
         . '<div class="box scroll"><h2>Журнал сделки (видят обе стороны)</h2><table>' . ($dlog ?: '<tr><td>Пусто.</td></tr>') . '</table></div>'
@@ -397,16 +461,21 @@ switch ($view) {
         }
         apage('Споры', $top . ($out ?: '<p>Споров нет.</p>'));
     case 'money':
+        brig_commission_sweep();
         $rows = ''; $sum = ['acc' => 0, 'paid' => 0];
-        foreach (brig_all('SELECT j.id, j.commission_kop, j.commission_at, r.object_title, r.test, b.name, i.id iid, i.number, i.amount_kop, i.issued_at, i.paid_at FROM br_jobs j JOIN br_requests r ON r.id = j.request_id JOIN br_brigades b ON b.id = j.brigade_id LEFT JOIN br_invoices i ON i.job_id = j.id WHERE j.commission_kop IS NOT NULL ORDER BY j.id DESC') as $x) {
+        foreach (brig_all('SELECT j.id, j.commission_kop, j.commission_at, j.commission_due_at, j.commission_due_why, r.object_title, r.test, b.name, i.id iid, i.number, i.amount_kop, i.issued_at, i.due_at, i.paid_at FROM br_jobs j JOIN br_requests r ON r.id = j.request_id JOIN br_brigades b ON b.id = j.brigade_id LEFT JOIN br_invoices i ON i.job_id = j.id WHERE j.commission_kop IS NOT NULL ORDER BY j.id DESC') as $x) {
             $sum['acc'] += (int)$x['commission_kop']; if ($x['paid_at']) { $sum['paid'] += (int)$x['amount_kop']; }
             $rows .= '<tr><td><a href="' . $self . '?j=' . (int)$x['id'] . '">' . $h($x['object_title']) . '</a>' . ($x['test'] ? ' <span class="test">тест</span>' : '') . '</td><td>' . $h($x['name']) . '</td><td>' . brig_rub((int)$x['commission_kop']) . '</td><td class="mut">' . $h($x['commission_at']) . '</td>'
-                . '<td>' . ($x['number'] ? $h($x['number']) . ' от ' . $h(substr($x['issued_at'], 0, 10)) : $form('j_invoice', (int)$x['id'], '', 'Выставить счёт', 'lt')) . '</td>'
+                . '<td>' . ($x['number'] ? $h($x['number']) . ' от ' . $h(substr($x['issued_at'], 0, 10)) . (!$x['paid_at'] && $x['due_at'] && $x['due_at'] < date('Y-m-d') ? ' <span class="no">просрочен с ' . $h($x['due_at']) . '</span>' : '')
+                    : ($x['commission_due_at'] ? '<span class="mut">к оплате с ' . $h(substr($x['commission_due_at'], 0, 10)) . ': ' . $h($x['commission_due_why']) . '</span><br>' . $form('j_invoice', (int)$x['id'], '', 'Выставить счёт', 'lt')
+                        : '<span class="mut">ещё не к оплате</span><br>' . $form('j_invoice', (int)$x['id'], '<input type="hidden" name="manual" value="1"><input name="reason" size="14" placeholder="причина">', 'Вручную', 'lt'))) . '</td>'
                 . '<td>' . ($x['paid_at'] ? '<span class="ok">оплачен ' . $h(substr($x['paid_at'], 0, 10)) . '</span>' : ($x['iid'] ? $form('i_paid', (int)$x['iid'], '<input name="note" size="12" placeholder="как (п/п №)">', 'Оплачен') : '—')) . '</td></tr>';
         }
         apage('Комиссия', $top . '<p>Начислено <b>' . brig_rub($sum['acc']) . '</b> · оплачено <b>' . brig_rub($sum['paid']) . '</b> · долг <b>' . brig_rub($sum['acc'] - $sum['paid']) . '</b> · <a href="' . $self . '?csv=money">CSV</a></p>'
             . '<p class="mut">' . $h(brig_rate_text()) . ' от сметы бригады (brig_terms в config); фиксируется в момент открытия контактов сторон — ' . (brig_terms()['contacts_after'] === 'chosen' ? 'при выборе бригады' : 'когда договор подтвердили обе стороны на сайте')
-            . '. Оплата ремонта — вне сайта; «Безопасная сделка» ЮKassa ' . (brig_terms()['safe_deal'] ? 'включена' : 'не включена') . '.</p>'
+            . '. К оплате — по самой ранней из дат: аванс (бригада отметила или не оспорила отметку заказчика за ' . brig_terms()['advance_confirm_days'] . ' дн.), дата начала работ по договору, «Начать работу» по этапу 1, принятый этап'
+            . (brig_terms()['commission_due_after_sign_days'] ? ', ' . brig_terms()['commission_due_after_sign_days'] . ' дн. после подписания' : '') . '; счёт вручную — всегда. Долг: просрочка ≥ ' . brig_terms()['debt_feed_close_days'] . ' дн. закрывает бригаде ленту новых заказов. '
+            . 'Оплата ремонта — вне сайта; оплата через ЮKassa с удержанием ' . (brig_terms()['safe_deal'] ? 'включена' : 'не включена') . '.</p>'
             . '<div class="scroll"><table><tr><th>Объект</th><th>Бригада</th><th>Комиссия</th><th>Начислена</th><th>Счёт</th><th>Оплата</th></tr>' . ($rows ?: '<tr><td colspan="6">Начислений нет.</td></tr>') . '</table></div>');
     case 'signals':
         // сигналы обхода: выбрана, но договор не подтверждён N дней; фильтр контактов; отмена после выбора; повторная регистрация
