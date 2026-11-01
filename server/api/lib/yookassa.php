@@ -58,14 +58,29 @@ function yk_call(string $method, string $path, ?array $body = null, string $idem
 
 function yk_money(int $kop): array { return ['value' => number_format($kop / 100, 2, '.', ''), 'currency' => 'RUB']; }
 
+/** Телефон для чека ЮKassa: 7XXXXXXXXXX (11 цифр без «+»); 8…/10 цифр с 9 приводятся, остальное — пустая строка (не передаём). */
+function yk_phone(string $raw): string
+{
+    $d = preg_replace('/\D/', '', $raw) ?? '';
+    if (strlen($d) === 11 && ($d[0] === '8' || $d[0] === '7')) { return '7' . substr($d, 1); }
+    if (strlen($d) === 10 && $d[0] === '9') { return '7' . $d; }
+    return '';
+}
+
+/**
+ * Чек 54-ФЗ (передаётся только при config yk_receipt = true; боевой режим этим не включается).
+ * tax_system_code — config yk_tax_system (1 ОСН, 2 УСН «доходы», 3 УСН «доходы − расходы», 6 ПСН): обязателен, если у магазина
+ * несколько систем налогообложения. Контакт покупателя — почта и/или телефон 7XXXXXXXXXX: без них чек не уйдёт.
+ */
 function yk_receipt(array $o, int $kop): array
 {
     $c = linea_cfg();
     $customer = [];
-    if (trim((string)$o['email']) !== '') { $customer['email'] = trim((string)$o['email']); }
-    $phone = preg_replace('~[^0-9]~', '', (string)$o['phone']) ?? '';
+    if (filter_var(trim((string)$o['email']), FILTER_VALIDATE_EMAIL)) { $customer['email'] = trim((string)$o['email']); }
+    $phone = yk_phone((string)$o['phone']);
     if ($phone !== '') { $customer['phone'] = $phone; }
-    return [
+    $tax = $c['yk_tax_system'] ?? null;
+    return (in_array((int)$tax, [1, 2, 3, 4, 5, 6], true) ? ['tax_system_code' => (int)$tax] : []) + [
         'customer' => $customer,
         'items' => [[
             'description' => mb_substr((LINEA_KINDS[$o['kind']] ?? 'Дизайн-проект') . ', заказ ' . $o['number'], 0, 128, 'UTF-8'),
@@ -153,8 +168,27 @@ function yk_settle(string $paymentId): array
             require_once __DIR__ . '/notify.php';
             linea_notify('LINEA: оплачен заказ ' . $o['number'], 'Заказ ' . $o['number'] . ' оплачен через ЮKassa: '
                 . number_format($kop / 100, 0, ',', ' ') . " ₽.\nСтарт работы — сейчас.\n" . linea_base() . '/api/admin.php', (bool)$o['test']);
+            return ['ok' => true, 'paid' => true, 'why' => ''];
         }
-        return ['ok' => true, 'paid' => true, 'why' => ''];
+        $cur = linea_order_by_number((string)$o['number']);
+        if ($cur && in_array($cur['status'], ['paid', 'delivered'], true) && (string)$cur['payment_id'] === $paymentId) {
+            return ['ok' => true, 'paid' => true, 'why' => ''];          // повтор уведомления об уже учтённом платеже
+        }
+        // Деньги пришли на заказ, который оплаты не ждёт (отменён или уже оплачен другим платежом): это НЕ успех.
+        // Пометка в истории заказа (один раз на платёж), журнал и письмо Александру — вернуть деньги или восстановить заказ вручную.
+        $mark = 'ВНИМАНИЕ: платёж ' . $paymentId;
+        $q2 = linea_db()->prepare('SELECT COUNT(*) FROM events WHERE order_id = ? AND text LIKE ?');
+        $q2->execute([(int)$o['id'], $mark . '%']);
+        if (!(int)$q2->fetchColumn()) {
+            linea_event((int)$o['id'], 'yookassa', $mark . ' на ' . number_format($kop / 100, 0, ',', ' ') . ' ₽ пришёл на заказ в статусе «'
+                . (LINEA_STATUS[$cur['status'] ?? ''] ?? ($cur['status'] ?? '?')) . '» — оформить возврат в кабинете ЮKassa или вернуть заказ в работу');
+            linea_log('pay.log', 'unexpected ' . $o['number'] . ' ' . $paymentId . ' status=' . ($cur['status'] ?? '?') . ' ' . $kop);
+            require_once __DIR__ . '/notify.php';
+            linea_notify('LINEA: платёж по заказу ' . $o['number'] . ' вне статуса «ждёт оплаты»', 'Платёж ' . $paymentId . ' на '
+                . number_format($kop / 100, 0, ',', ' ') . ' ₽ пришёл на заказ ' . $o['number'] . ' (статус: ' . ($cur['status'] ?? '?') . ").\nПроверьте и оформите возврат или верните заказ в работу.\n"
+                . linea_base() . '/api/admin.php?o=' . rawurlencode((string)$o['number']), (bool)$o['test']);
+        }
+        return ['ok' => true, 'paid' => false, 'why' => 'заказ не ждёт оплаты — свяжемся и вернём деньги'];
     }
     if ($status === 'canceled' && $o['payment_id'] === $paymentId) {
         linea_db()->prepare('UPDATE orders SET payment_id = NULL, payment_url = NULL, payment_created_at = NULL, updated_at = ? WHERE id = ?')->execute([linea_now(), $o['id']]);

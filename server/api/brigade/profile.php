@@ -41,8 +41,13 @@ $now = linea_now();
 switch ($a) {
     case 'save':
         $set = ['updated_at' => $now];
+        // публичные поля (название, имя на карточке, «о бригаде») — без контактов; рекомендатели и телефон видит только LINEA
+        $pub = ['name' => true, 'contactName' => true, 'about' => true];
         foreach (['name' => 80, 'contactName' => 80, 'phone' => 40, 'company' => 120, 'referees' => 1000, 'about' => 2000] as $k => $max) {
-            if (array_key_exists($k, $in)) { $set[$k === 'contactName' ? 'contact_name' : $k] = linea_str($in[$k], $max); }
+            if (array_key_exists($k, $in)) {
+                $v = linea_str($in[$k], $max);
+                $set[$k === 'contactName' ? 'contact_name' : $k] = isset($pub[$k]) ? brig_guard($v, false, ['who' => 'brigade#' . $bid, 'brigade_id' => $bid, 'field' => 'анкета: ' . $k]) : $v;
+            }
         }
         if (isset($set['name']) && $set['name'] === '') { linea_fail('Название бригады не может быть пустым'); }
         if (isset($set['phone']) && strlen(preg_replace('/\D/', '', $set['phone']) ?? '') < 10) { linea_fail('Проверьте телефон'); }
@@ -58,11 +63,12 @@ switch ($a) {
         break;
     case 'portfolio_add':
         if ((int)db_val('SELECT COUNT(*) FROM br_portfolio WHERE brigade_id = ?', [$bid]) >= 30) { linea_fail('Не больше 30 объектов в портфолио'); }
-        $title = linea_str($in['title'] ?? '', 120);
+        $pctx = ['who' => 'brigade#' . $bid, 'brigade_id' => $bid, 'field' => 'портфолио'];
+        $title = brig_guard(linea_str($in['title'] ?? '', 120), false, $pctx);
         if ($title === '') { linea_fail('Назовите объект: например «Квартира 62 м², Хамовники»'); }
         db_insert('br_portfolio', ['brigade_id' => $bid, 'title' => $title, 'district' => isset(BRIG_DISTRICTS[$in['district'] ?? '']) ? $in['district'] : null,
             'area' => is_numeric($in['area'] ?? null) ? round((float)$in['area'], 1) : null, 'year' => ($y = (int)($in['year'] ?? 0)) >= 1990 && $y <= (int)date('Y') ? $y : null,
-            'works' => linea_str($in['works'] ?? '', 1500), 'created_at' => $now]);
+            'works' => brig_guard(linea_str($in['works'] ?? '', 1500), false, $pctx), 'created_at' => $now]);
         break;
     case 'portfolio_del':
         $p = brig_one('SELECT id FROM br_portfolio WHERE id = ? AND brigade_id = ?', [(int)($in['id'] ?? 0), $bid]);

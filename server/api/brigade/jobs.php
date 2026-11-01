@@ -2,9 +2,10 @@
 /**
  * api/brigade/jobs.php — объекты бригады (выбранные клиентами предложения). Только свои: чужой объект — 403.
  *   GET              — список объектов
- *   GET ?j=<id>      — объект: контакты клиента (открыты, потому что клиент выбрал бригаду и дал согласие на передачу),
- *                      предложение, этапы с датами, фото, замечания, споры, комиссия
- *   POST (CSRF): ?a=sign {j} — «договор подписан»; ?a=stage_photo (multipart: stage, file); ?a=stage_ready {stage};
+ *   GET ?j=<id>      — объект: контакты клиента (только когда открыты — brig_terms()['contacts_after'], по умолчанию после
+ *                      подтверждения договора обеими сторонами), лента сообщений, предложение, этапы, фото, замечания, споры, вознаграждение
+ *   POST (CSRF): ?a=sign {j} — «условия договора подтверждаю»; ?a=msg {j, text}; ?a=cancel {j, reason} — отказ до подтверждения;
+ *                ?a=stage_photo (multipart: stage, file); ?a=stage_ready {stage};
  *                ?a=remark_close {remark, note}; ?a=dispute {j, subject, text}; ?a=dispute_msg {d, text}
  */
 declare(strict_types=1);
@@ -24,8 +25,8 @@ function job_own(int $jid, int $bid): array
 
 function job_client(array $j): array
 {
-    // контакты клиента — только выбранной бригаде и только после согласия клиента на передачу (отметка при выборе)
-    if (!$j['contacts_consent_at']) { return []; }
+    // контакты клиента — только выбранной бригаде, после согласия клиента на передачу (отметка при выборе) и открытия контактов
+    if (!$j['contacts_consent_at'] || !brig_contacts_open($j)) { return ['hidden' => true, 'order' => '']; }
     $o = db_one('SELECT number, name, phone, email, contact FROM orders WHERE id = ?', [(int)$j['order_id']]);
     $bf = linea_private() . '/orders/' . ($o['number'] ?? '') . '/brief.json';
     $brief = is_file($bf) ? (json_decode((string)file_get_contents($bf), true) ?: []) : [];
@@ -48,7 +49,9 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'GET') {
         linea_json(['ok' => true, 'job' => [
             'id' => $jid, 'status' => $j['status'], 'statusText' => BRIG_JOB_STATUS[$j['status']] ?? $j['status'], 'object' => (string)$j['object_title'],
             'district' => BRIG_DISTRICTS[$j['district']] ?? $j['district'], 'area' => $j['area'] !== null ? (float)$j['area'] : null,
-            'client' => job_client($j), 'clientSigned' => $j['client_signed_at'], 'brigadeSigned' => $j['brigade_signed_at'],
+            'client' => job_client($j), 'contactsOpen' => brig_contacts_open($j), 'terms' => brig_terms_public(), 'rateText' => brig_rate_text($j['commission_rate'] !== null ? (float)$j['commission_rate'] : brig_rate_for($bid)), 'messages' => brig_messages($jid),
+            'canCancel' => $j['status'] === 'contract' && !brig_contacts_open($j), 'docs' => brig_deal_docs($j),
+            'clientSigned' => $j['client_signed_at'], 'brigadeSigned' => $j['brigade_signed_at'],
             'total' => (int)$o['total_kop'] / 100, 'commission' => $j['commission_kop'] !== null ? (int)$j['commission_kop'] / 100 : null,
             'stages' => brig_job_stages($jid), 'disputes' => job_disputes($jid), 'requestId' => (int)$j['request_id'],
         ]]);
@@ -74,12 +77,34 @@ function stage_own(int $sid, int $bid): array
 }
 
 switch ($a) {
-    case 'sign':
+    case 'sign':   // подпись договора/допсоглашения на сайте (ПЭП): без кода — код на почту бригады, с кодом — подпись
         $j = job_own((int)($in['j'] ?? 0), $bid);
-        if ($j['status'] !== 'contract') { linea_fail('Договор уже отмечен'); }
-        db_update('br_jobs', ['brigade_signed_at' => $now, 'updated_at' => $now], 'id = ?', [(int)$j['id']]);
-        brig_audit('brigade#' . $bid, 'contract-signed', 'job#' . $j['id'], 'Бригада: договор подряда подписан');
-        brig_maybe_start((int)$j['id'], 'brigade#' . $bid);
+        if ($j['status'] === 'cancelled') { linea_fail('Объект отменён'); }
+        $c = brig_sign_doc($j, (int)($in['doc'] ?? 0));
+        if (trim((string)($in['code'] ?? '')) === '') {
+            $dev = brig_sign_send($c, 'brigade', (string)$b['email'], (bool)$b['test'] || (bool)$j['rtest']);
+            linea_json(['ok' => true, 'codeSent' => true, 'doc' => (int)$c['id']] + ($dev !== '' ? ['devCode' => $dev] : []));
+        }
+        brig_sign_confirm($c, 'brigade', (string)$in['code'], ($in['pep'] ?? false) === true, 'brigade#' . $bid);
+        linea_json(['ok' => true]);
+    case 'addendum':
+        $j = job_own((int)($in['j'] ?? 0), $bid);
+        $id = brig_addendum_propose($j, $in, 'brigade#' . $bid, ['who' => 'brigade#' . $bid, 'job_id' => (int)$j['id'], 'brigade_id' => $bid]);
+        brig_audit('brigade#' . $bid, 'addendum-propose', 'job#' . $j['id'], 'Подрядчик предложил допсоглашение');
+        linea_json(['ok' => true, 'doc' => $id]);
+    case 'addendum_cancel':
+        $j = job_own((int)($in['j'] ?? 0), $bid);
+        brig_addendum_cancel($j, (int)($in['doc'] ?? 0), 'brigade#' . $bid);
+        linea_json(['ok' => true]);
+    case 'msg':
+        $j = job_own((int)($in['j'] ?? 0), $bid);
+        if ($j['status'] === 'cancelled') { linea_fail('Объект отменён'); }
+        brig_message_add($j, 'brigade', (string)($in['text'] ?? ''), ['who' => 'brigade#' . $bid, 'request_id' => (int)$j['request_id']]);
+        linea_json(['ok' => true, 'messages' => brig_messages((int)$j['id'])]);
+    case 'cancel':
+        $j = job_own((int)($in['j'] ?? 0), $bid);
+        brig_job_cancel($j, 'brigade', 'brigade#' . $bid, (string)($in['reason'] ?? ''));
+        brig_admin_notify('бригада отказалась после выбора', 'Бригада #' . $bid . ' отказалась от объекта до подтверждения договора', brig_link('api/admin-brigady.php?view=signals'), (bool)$j['rtest']);
         linea_json(['ok' => true]);
     case 'stage_photo':
         if (!linea_rate('brg-upload', (int)brig_cfg('brig_uploads_per_hour', 120))) { linea_fail('Слишком много загрузок за час — подождите', 429); }
@@ -103,14 +128,16 @@ switch ($a) {
         $r = brig_one('SELECT * FROM br_remarks WHERE id = ?', [(int)($in['remark'] ?? 0)]);
         if (!$r) { linea_fail('Нет такого замечания', 404); }
         stage_own((int)$r['stage_id'], $bid);
-        $note = linea_str($in['note'] ?? '', 1000);
+        $sj = stage_own((int)$r['stage_id'], $bid);
+        $note = brig_guard(linea_str($in['note'] ?? '', 1000), brig_contacts_open(brig_one('SELECT * FROM br_jobs WHERE id = ?', [(int)$sj['jid']]) ?? []), ['who' => 'brigade#' . $bid, 'field' => 'замечание', 'job_id' => (int)$sj['jid'], 'brigade_id' => $bid]);
         if ($note === '') { linea_fail('Напишите, что сделано по замечанию'); }
         db_update('br_remarks', ['closed_at' => $now, 'close_note' => $note], 'id = ?', [(int)$r['id']]);
         brig_audit('brigade#' . $bid, 'remark-close', 'remark#' . $r['id']);
         linea_json(['ok' => true]);
     case 'dispute':
         $j = job_own((int)($in['j'] ?? 0), $bid);
-        $subj = linea_str($in['subject'] ?? '', 120); $text = linea_str($in['text'] ?? '', 3000);
+        $gctx = ['who' => 'brigade#' . $bid, 'field' => 'спор', 'job_id' => (int)$j['id'], 'brigade_id' => $bid];
+        $subj = brig_guard(linea_str($in['subject'] ?? '', 120), brig_contacts_open($j), $gctx); $text = brig_guard(linea_str($in['text'] ?? '', 3000), brig_contacts_open($j), $gctx);
         if ($subj === '' || $text === '') { linea_fail('Опишите суть спора'); }
         $d = db_insert('br_disputes', ['job_id' => (int)$j['id'], 'opened_by' => 'brigade', 'subject' => $subj, 'status' => 'open', 'created_at' => $now]);
         db_insert('br_dispute_msgs', ['dispute_id' => $d, 'who' => 'brigade', 'text' => $text, 'at' => $now]);
@@ -120,9 +147,9 @@ switch ($a) {
     case 'dispute_msg':
         $d = brig_one('SELECT * FROM br_disputes WHERE id = ?', [(int)($in['d'] ?? 0)]);
         if (!$d) { linea_fail('Нет такого спора', 404); }
-        job_own((int)$d['job_id'], $bid);
+        $dj = job_own((int)$d['job_id'], $bid);
         if ($d['status'] !== 'open') { linea_fail('Спор закрыт'); }
-        $text = linea_str($in['text'] ?? '', 3000);
+        $text = brig_guard(linea_str($in['text'] ?? '', 3000), brig_contacts_open($dj), ['who' => 'brigade#' . $bid, 'field' => 'спор', 'job_id' => (int)$dj['id'], 'brigade_id' => $bid]);
         if ($text === '') { linea_fail('Пустое сообщение'); }
         db_insert('br_dispute_msgs', ['dispute_id' => (int)$d['id'], 'who' => 'brigade', 'text' => $text, 'at' => $now]);
         linea_json(['ok' => true]);

@@ -54,15 +54,30 @@ switch ($a) {
             if (($c[$k] ?? null) !== $d['ed']) { linea_fail('Отметьте: ' . $d['title'] . ' (редакция от ' . $d['ed'] . ')'); }
         }
         if (acc_by_email('brigade', $email)) { linea_fail('Бригада с такой почтой уже зарегистрирована — войдите или восстановите пароль', 409); }
+        // один ИНН — одна бригада (UNIQUE inn_key, миграция 2); заблокированная бригада заново не регистрируется ни по ИНН, ни по телефону
+        $innKey = $inn . ($test ? ':test' : '');
+        $same = brig_one('SELECT id, status FROM br_brigades WHERE inn_key = ?', [$innKey]);
+        $phoneTail = substr(preg_replace('/\D/', '', $phone) ?? '', -10);
+        $blockedPhone = false;
+        foreach (brig_all("SELECT phone FROM br_brigades WHERE status = 'blocked'") as $x) { if (substr(preg_replace('/\D/', '', (string)$x['phone']) ?? '', -10) === $phoneTail) { $blockedPhone = true; break; } }
+        if (($same && $same['status'] === 'blocked') || $blockedPhone) {
+            brig_signal('reregister', 'anon', ['brigade_id' => $same ? (int)$same['id'] : null, 'field' => $same ? 'ИНН' : 'телефон'], 'Попытка повторной регистрации заблокированной бригады');
+            linea_fail('Регистрация недоступна: бригада с этим ИНН или телефоном заблокирована по правилам площадки. Обжаловать — письмом в LINEA', 403);
+        }
+        if ($same) { linea_fail('Бригада с таким ИНН уже зарегистрирована — войдите в её кабинет или восстановите пароль', 409); }
+        $gctx = ['who' => 'register', 'field' => 'анкета'];
+        $name = brig_guard($name, false, $gctx);
+        $contact = brig_guard($contact, false, $gctx);
         $now = linea_now();
-        $id = db_tx(function () use ($email, $in, $test, $name, $contact, $phone, $legal, $inn, $specs, $dist, $now) {
+        $about = brig_guard(linea_str($in['about'] ?? '', 2000), false, $gctx);
+        $id = db_tx(function () use ($email, $in, $test, $name, $contact, $phone, $legal, $inn, $innKey, $about, $specs, $dist, $now) {
             $acc = acc_create('brigade', $email, (string)$in['password'], $test);
             $id = db_insert('br_brigades', [
                 'account_id' => $acc, 'status' => 'draft', 'created_at' => $now, 'updated_at' => $now,
-                'name' => $name, 'contact_name' => $contact, 'phone' => $phone, 'email' => $email, 'legal' => $legal, 'inn' => $inn,
+                'name' => $name, 'contact_name' => $contact, 'phone' => $phone, 'email' => $email, 'legal' => $legal, 'inn' => $inn, 'inn_key' => $innKey,
                 'company' => linea_str($in['company'] ?? '', 120), 'specs' => json_encode($specs), 'districts' => json_encode($dist),
                 'team_size' => max(1, min(200, (int)($in['teamSize'] ?? 1))), 'experience' => max(0, min(60, (int)($in['experience'] ?? 0))),
-                'referees' => linea_str($in['referees'] ?? '', 1000), 'about' => linea_str($in['about'] ?? '', 2000),
+                'referees' => linea_str($in['referees'] ?? '', 1000), 'about' => $about,
                 'warranty_months' => max(0, min(120, (int)($in['warrantyMonths'] ?? 12))), 'price_from' => ($pf = (int)($in['priceFrom'] ?? 0)) > 0 ? $pf : null,
                 'public_name' => !empty($in['publicName']) ? 1 : 0,
                 'consent_pd_ed' => BRIG_DOCS['pd']['ed'], 'rules_ed' => BRIG_DOCS['rules']['ed'], 'agency_ed' => BRIG_DOCS['agency']['ed'],

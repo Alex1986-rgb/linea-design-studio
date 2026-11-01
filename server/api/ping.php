@@ -5,7 +5,7 @@ require __DIR__ . '/lib/boot.php';
 $p = linea_private();
 linea_json([
     'ok' => true,
-    'php' => PHP_VERSION,
+    'php' => version_compare(PHP_VERSION, '8.2', '>='),   // только «версия годится» — номер версии наружу не отдаём
     'private' => is_dir($p) && is_writable($p),
     'config' => is_file($p . '/config.php'),
     'mode' => linea_cfg()['mode'],

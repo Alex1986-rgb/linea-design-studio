@@ -20,7 +20,7 @@ function linea_notify(string $subject, string $body, bool $test): string
     $line = ($dry ? 'DRY ' : 'SEND ') . ($test ? '[test] ' : '') . str_replace(["\r", "\n"], ' ', $subject);
     if ($dry) { linea_log('mail.log', $line); return 'dry'; }
 
-    $from = trim((string)$cfg['mail_from']) ?: 'no-reply@' . preg_replace('/[^a-z0-9.-]/i', '', (string)($_SERVER['HTTP_HOST'] ?? 'localhost'));
+    $from = trim((string)$cfg['mail_from']) ?: 'no-reply@' . (string)parse_url(linea_base(), PHP_URL_HOST);   // не из заголовка Host запроса
     $headers = implode("\r\n", [
         'From: LINEA <' . $from . '>',
         'MIME-Version: 1.0',

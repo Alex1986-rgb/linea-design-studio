@@ -144,6 +144,8 @@ const TERMS = {
     }));
   },
   start: 'Проект начинается после оплаты',
+  // площадь в брифе обязательна (01.11.2026): сумма видна сразу на странице заказа; что будет, если план покажет другую площадь
+  areaRecalc: 'Сумма посчитана по площади из брифа. Если по плану площадь окажется другой, пересчитаем по той же ставке и согласуем разницу с вами до начала работы.',
   how: 'Вы присылаете бриф — мы называем сумму по вашей площади и срок, вы оплачиваете, после оплаты начинаем работу',
   term: 'первый вариант квартиры — до 48 часов, дома — до 72 часов от оплаты и получения плана с размерами',
   roundsText: ROUNDS ? `${ROUNDS} ${ROUNDS === 1 ? 'круг' : ROUNDS < 5 ? 'круга' : 'кругов'} правок входят в цену` : 'сколько кругов правок входит в цену — фиксируем в договоре до оплаты',
@@ -157,6 +159,45 @@ const TERMS = {
   // дом и ландшафт
   onRequest: 'Дом: интерьер считаем по той же ставке за м². Кровля и конструктив — по запросу. Ландшафт участка — по запросу, скоро.',
 };
+
+// ── «Ремонт по проекту»: условия бригад — ЕДИНСТВЕННЫЙ источник для страниц сайта ─────────────────────────────────────
+// Серверная копия — server/api/lib/boot.php → BRIG_TERMS_DEFAULT (+ 'brig_terms' в linea-private/config.php): держать одинаковыми.
+// Решение Александра 01.11.2026: платы за отклик, лид и допуск нет. Удержание сделки на платформе — гарантия сайта и листы по запросу
+// под каждую бригаду, доступные только внутри сделки. Решения 01.11.2026: ставка 10 % («10 % с бригады»), пилот — первым 5 бригадам
+// первые 3 сделки по 5 %; листы в сделке бесплатно до 15 на объект; вне сделки 2 500 ₽ за лист, но продажа выключена до ИП.
+// Безопасная сделка ЮKassa и неустойки — не включены. Цифры на страницах — ТОЛЬКО отсюда, руками не вписывать.
+const BRIG_TERMS = {
+  rate: 10,                        // % от сметы выбранного предложения (агентское вознаграждение)
+  pilot: { enabled: true, rate: 5, brigades: 5, deals: 3 },   // пилот: первым N допущенным бригадам первые M сделок — по ставке pilot.rate
+  contactsAfter: 'signed',         // 'signed' — контакты сторон открываются, когда договор подтвердили на сайте обе стороны; 'chosen' — при выборе
+  sheetsFreeLimit: 15,             // листов по запросу на объект бесплатно внутри сделки; null — без лимита
+  sheetPrice: 2500,                // ₽ за лист вне сделки — продаётся, только когда sheetsOutsidePaid = true
+  sheetsOutsidePaid: false,        // выключено до ИП и кассы
+  invoiceDays: 10,
+};
+const pct = n => `${String(n).replace('.', ',')} %`;
+BRIG_TERMS.rateText = pct(BRIG_TERMS.rate);
+BRIG_TERMS.pilotLine = BRIG_TERMS.pilot.enabled
+  ? `Пилот: первым ${BRIG_TERMS.pilot.brigades} допущенным бригадам первые ${BRIG_TERMS.pilot.deals} сделки — ${pct(BRIG_TERMS.pilot.rate)}`
+  : '';
+// пример в рублях: вознаграждение со сметы sum (₽) по основной ставке
+BRIG_TERMS.fee = sum => rub(Math.round(sum * BRIG_TERMS.rate / 100));
+BRIG_TERMS.example = sum => `смета ${rub(sum)} → вознаграждение ${BRIG_TERMS.fee(sum)}`;
+// когда открываются контакты и фиксируется вознаграждение — одной фразой
+BRIG_TERMS.contactsLine = BRIG_TERMS.contactsAfter === 'chosen'
+  ? 'контакты сторон открываются после выбора бригады'
+  : 'телефоны, почта и адрес объекта открываются обеим сторонам, когда условия договора подряда подтвердили на сайте и клиент, и бригада; до этого — переписка в карточке сделки';
+// когда вознаграждение становится к оплате (Александр 01.11.2026: «оплата после первого этапа работ или аванса»):
+// 'first_money' — после первых денег бригаде (клиент отметил аванс или принял первый этап); 'signed' — сразу при подтверждении договора
+BRIG_TERMS.commissionDue = 'first_money';
+BRIG_TERMS.dueLine = BRIG_TERMS.commissionDue === 'first_money' ? 'только когда вы получили первые деньги: аванс или оплату первого этапа' : 'после подтверждения договора обеими сторонами';
+BRIG_TERMS.feeLine = BRIG_TERMS.commissionDue === 'first_money'
+  ? `${BRIG_TERMS.rateText} от суммы сметы по выбранному предложению — только когда вы получили первые деньги: аванс или оплату первого этапа`
+  : `${BRIG_TERMS.rateText} от суммы сметы по выбранному предложению — после подтверждения договора обеими сторонами`;
+BRIG_TERMS.sheetsLine = 'листы по запросу под вашу бригаду — без доплаты, пока сделка идёт через LINEA' + (BRIG_TERMS.sheetsFreeLimit ? ` (до ${BRIG_TERMS.sheetsFreeLimit} листов на объект)` : '')
+  + (BRIG_TERMS.sheetsOutsidePaid ? `; вне сделки — ${rub(BRIG_TERMS.sheetPrice)} за лист` : '; вне сделки листы не выпускаем');
+BRIG_TERMS.guaranteeLine = 'приёмка этапов по чек-листам, споры с участием LINEA и ответственность за свои чертежи действуют, пока сделка идёт через сайт';
+TERMS.brigady = BRIG_TERMS;
 
 // ── Как уходит бриф: ЕДИНСТВЕННЫЙ источник фразы (второй круг критиков 27.10.2026) ────────────────────
 // Приёмник (server/api на Beget) принимает бриф с персональными данными только по https. Пока сайт живёт на GitHub Pages
@@ -229,7 +270,10 @@ const sticky = u => `<div class="sticky-cta">
 </div>`;
 
 // в подвале к разделам добавляются служебные страницы
-const FOOTER_EXTRA = [
+// Договор-оферта — черновик (решение 01.11.2026): пока OFERTA_DRAFT = true, ссылки на него нет в подвале, навигации и карте сайта;
+// страница oferta/ остаётся (noindex, вне sitemap.xml). Снять флаг — ссылки вернутся сами (gen-more-pages.js берёт флаг отсюда).
+const OFERTA_DRAFT = true;
+const FOOTER_EXTRA_ALL = [
   { title: 'Условия', href: 'price/' },
   { title: 'Процесс', href: 'process/' }, { title: 'FAQ', href: 'faq/' },
   { title: 'О студии', href: 'about/' }, { title: 'Контакты', href: 'contacts/' },
@@ -237,6 +281,7 @@ const FOOTER_EXTRA = [
   { title: 'Оплата', href: 'oplata/' }, { title: 'Договор-оферта', href: 'oferta/' },
   { title: 'Обработка данных', href: 'policy/' }, { title: 'Согласие на обработку данных', href: 'soglasie/' },
 ];
+const FOOTER_EXTRA = FOOTER_EXTRA_ALL.filter(x => !(OFERTA_DRAFT && x.href === 'oferta/'));
 // Воронка сайта: три состояния посетителя. Полоса стоит перед подвалом на
 // каждой странице и всегда показывает, где человек сейчас и что дальше.
 const FUNNEL = [
@@ -391,4 +436,4 @@ ${ogImageTags(ogImage || OG_DEFAULT)}
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,500;0,600;1,500&family=Inter:wght@400;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="${u}css/main.css?${CSSV}">${extra || ''}`;
 
-module.exports = { TERMS, INTAKE, intakeOnline, swapIntake, AUTHOR, BASE, SITE, SITE_BASES, SITE_DOMAIN_RU, CSSV, SECTIONS, FOOTER_EXTRA, FUNNEL, funnel, ctaBlock, crumbsBar, crumbsAuto, pic, esc, clamp, header, footer, beta, sticky, crumbsLd, head };
+module.exports = { OFERTA_DRAFT, TERMS, BRIG_TERMS, INTAKE, intakeOnline, swapIntake, AUTHOR, BASE, SITE, SITE_BASES, SITE_DOMAIN_RU, CSSV, SECTIONS, FOOTER_EXTRA, FUNNEL, funnel, ctaBlock, crumbsBar, crumbsAuto, pic, esc, clamp, header, footer, beta, sticky, crumbsLd, head };

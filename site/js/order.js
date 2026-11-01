@@ -31,7 +31,9 @@
         h += '<p>Разберём бриф и назовём цену в течение рабочего дня — пришлём в ' + WA + ' или на почту, и сумма появится здесь. '
           + 'Работу начинаем после оплаты: так мы не тратим ваше и своё время на проект, который ещё не решено заказывать.</p>';
       } else {
-        h += '<div class="ord-sum">' + rub(o.amount) + '</div>';
+        let OT = {}; try { OT = JSON.parse((document.getElementById('ordTerms') || {}).textContent || '{}'); } catch { }
+        h += '<div class="ord-sum">' + rub(o.amount) + '</div>'
+          + (o.area ? '<p class="hint">' + esc(String(o.area).replace('.', ',')) + ' м²' + (OT.rate ? ' × ' + rub(OT.rate) + ' за м²' : '') + (OT.minArea && o.area < OT.minArea ? ' — минимальный заказ, как за ' + OT.minArea + ' м²' : '') + '. ' + esc(OT.areaRecalc || '') + '</p>' : '');
         if (o.canPay) {
           h += '<p>Оплата через ЮKassa. Сразу после оплаты проект уходит в работу — первый вариант через ' + days + ' часов (при плане с размерами).</p>'
             + '<p><button class="btn" id="payBtn" type="button">Оплатить ' + rub(o.amount) + '</button></p><p class="hint" id="payState" role="status"></p>';

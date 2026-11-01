@@ -112,8 +112,8 @@ function db_migrate(): void
     // {KEY} ≤ 190 знаков (utf8mb4 × 4 = 760 байт < 767 — индекс строится и без innodb_large_prefix); {SHORT} — для составных индексов
     $common = ['{KEY}' => 'VARCHAR(190)', '{SHORT}' => 'VARCHAR(32)', '{EMAIL}' => 'VARCHAR(150)', '{TEXT}' => 'TEXT', '{BOOL}' => 'SMALLINT'];
     $types = db_driver() === 'mysql'
-        ? $common + ['{ID}' => 'BIGINT NOT NULL AUTO_INCREMENT PRIMARY KEY', '{INT}' => 'BIGINT', '{REAL}' => 'DOUBLE', '{ENGINE}' => ' ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci']
-        : $common + ['{ID}' => 'INTEGER PRIMARY KEY AUTOINCREMENT', '{INT}' => 'INTEGER', '{REAL}' => 'REAL', '{ENGINE}' => ''];
+        ? $common + ['{ID}' => 'BIGINT NOT NULL AUTO_INCREMENT PRIMARY KEY', '{INT}' => 'BIGINT', '{REAL}' => 'DOUBLE', '{INN_TEST}' => "CONCAT(inn, ':test')", '{ENGINE}' => ' ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci']
+        : $common + ['{ID}' => 'INTEGER PRIMARY KEY AUTOINCREMENT', '{INT}' => 'INTEGER', '{REAL}' => 'REAL', '{INN_TEST}' => "inn || ':test'", '{ENGINE}' => ''];
     db()->exec('CREATE TABLE IF NOT EXISTS schema_version (name ' . $types['{KEY}'] . ' NOT NULL PRIMARY KEY, version ' . $types['{INT}'] . ' NOT NULL, applied_at ' . $types['{KEY}'] . ' NOT NULL)' . $types['{ENGINE}']);
     $have = (int)(db_val("SELECT version FROM schema_version WHERE name = 'linea'") ?? 0);
     $steps = require __DIR__ . '/migrations.php';

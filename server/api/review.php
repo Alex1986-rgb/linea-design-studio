@@ -32,7 +32,9 @@ $dir = linea_private() . '/reviews/' . $slug;
 linea_mkdir($dir);
 $rec = ['number' => $number, 'project' => $slug, 'order' => $order['number'] ?? null, 'from' => linea_str($in['from'] ?? '', 80),
     'phone' => linea_str($in['phone'] ?? '', 40), 'at' => linea_now(), 'test' => $test, 'notes' => $clean];
-file_put_contents($dir . '/' . date('Ymd-His') . '-' . $number . '.json', json_encode($rec, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT));
+$rf = $dir . '/' . date('Ymd-His') . '-' . $number . '.json';
+file_put_contents($rf, json_encode($rec, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT));
+chmod($rf, 0600);   // имя и телефон автора правок — только владельцу файлов
 if ($order) { linea_event((int)$order['id'], 'site', 'Правки ' . $number . ' к альбому: ' . count($clean) . ' шт.'); }
 linea_log('orders.log', 'review ' . $number . ' ' . $slug . ($test ? ' test' : '') . ' ' . count($clean));
 linea_notify('LINEA: правки ' . $number . ' к ' . $slug, count($clean) . ' правок к проекту ' . $slug . ($order ? ' (заказ ' . $order['number'] . ')' : '')
