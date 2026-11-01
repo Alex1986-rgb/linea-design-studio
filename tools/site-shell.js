@@ -190,10 +190,11 @@ BRIG_TERMS.contactsLine = BRIG_TERMS.contactsAfter === 'chosen'
 // когда вознаграждение становится к оплате (Александр 01.11.2026: «оплата после первого этапа работ или аванса»):
 // 'first_money' — после первых денег бригаде (клиент отметил аванс или принял первый этап); 'signed' — сразу при подтверждении договора
 BRIG_TERMS.commissionDue = 'first_money';
+BRIG_TERMS.dueLine = BRIG_TERMS.commissionDue === 'first_money' ? 'только когда вы получили первые деньги: аванс или оплату первого этапа' : 'после подтверждения договора обеими сторонами';
 BRIG_TERMS.feeLine = BRIG_TERMS.commissionDue === 'first_money'
   ? `${BRIG_TERMS.rateText} от суммы сметы по выбранному предложению — только когда вы получили первые деньги: аванс или оплату первого этапа`
   : `${BRIG_TERMS.rateText} от суммы сметы по выбранному предложению — после подтверждения договора обеими сторонами`;
-BRIG_TERMS.sheetsLine = 'листы по запросу под вашу бригаду — бесплатно, пока сделка идёт через LINEA' + (BRIG_TERMS.sheetsFreeLimit ? ` (до ${BRIG_TERMS.sheetsFreeLimit} листов на объект)` : '')
+BRIG_TERMS.sheetsLine = 'листы по запросу под вашу бригаду — без доплаты, пока сделка идёт через LINEA' + (BRIG_TERMS.sheetsFreeLimit ? ` (до ${BRIG_TERMS.sheetsFreeLimit} листов на объект)` : '')
   + (BRIG_TERMS.sheetsOutsidePaid ? `; вне сделки — ${rub(BRIG_TERMS.sheetPrice)} за лист` : '; вне сделки листы не выпускаем');
 BRIG_TERMS.guaranteeLine = 'приёмка этапов по чек-листам, споры с участием LINEA и ответственность за свои чертежи действуют, пока сделка идёт через сайт';
 TERMS.brigady = BRIG_TERMS;

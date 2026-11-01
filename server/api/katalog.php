@@ -54,7 +54,7 @@ $invite = fn(array $c, string $cls = 'btn') => $c['demo']
     : '<span class="k-invite" data-slug="' . $h($c['slug']) . '"><a class="' . $cls . '" href="/remont/" data-inv>Пригласить</a><span class="hint" role="status"></span></span>';
 $allPhotos = fn(array $c) => array_merge(...array_map(fn($p) => array_merge($p['after'], $p['before']), $c['portfolio'] ?: [['after' => [], 'before' => []]]));
 $HOW = '<ol class="k-how"><li><b>Проект</b>Альбом с ведомостями и сметой</li><li><b>Предложения</b>2–5 бригад считают по позициям</li><li><b>Выбор</b>Сравнение в одной таблице, договор</li><li><b>Этапы</b>Листы по запросу, фото, приёмка</li></ol>';
-$JOIN = '<div class="k-join"><div><h2>Вы бригада?</h2><p>Заказы с готовым альбомом и сметой по позициям, листы по запросу голосом — бесплатно внутри сделки. Вознаграждение ' . $h(brig_rate_text()) . ' — только когда договор подтвердили обе стороны.</p></div><a class="btn" href="/brigadam/">Подключиться</a></div>';
+$JOIN = '<div class="k-join"><div><h2>Вы бригада?</h2><p>Заказы с готовым альбомом и сметой по позициям, листы по запросу голосом — без доплаты внутри сделки. Вознаграждение ' . $h(brig_rate_text()) . ' — только когда договор подтвердили обе стороны.</p></div><a class="btn" href="/brigadam/">Подключиться</a></div>';
 
 $slug = (string)($_GET['slug'] ?? '');
 if ($slug !== '') {

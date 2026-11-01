@@ -43,8 +43,8 @@ if ($a === 'create') {
     $over = $inDeal && $T['sheets_free_limit'] !== null
         && (int)db_val("SELECT COUNT(*) FROM br_sheet_reqs WHERE job_id = ? AND (source IS NULL OR source = 'deal') AND status <> 'rejected'", [(int)$j['id']]) >= (int)$T['sheets_free_limit'];
     if (!$inDeal || $over) {
-        $why = $over ? 'Бесплатные листы по этому объекту закончились (' . (int)$T['sheets_free_limit'] . ').'
-            : ($j['status'] === 'contract' ? 'Листы по запросу бесплатно — только внутри сделки на LINEA: когда условия договора подряда подтвердят на сайте и вы, и заказчик (объект перейдёт в работу). Подтвердите договор в карточке объекта.'
+        $why = $over ? 'Листы по запросу по этому объекту закончились (' . (int)$T['sheets_free_limit'] . ').'
+            : ($j['status'] === 'contract' ? 'Листы по запросу без доплаты — только внутри сделки на LINEA: когда условия договора подряда подтвердят на сайте и вы, и заказчик (объект перейдёт в работу). Подтвердите договор в карточке объекта.'
             : 'Объект ' . mb_strtolower(BRIG_JOB_STATUS[$j['status']] ?? $j['status']) . ' — листы по запросу закрыты. Нужен лист по завершённому объекту — напишите в LINEA.');
         if (!$T['sheets_outside_paid']) { linea_fail($why, 403); }
         if (($_POST['paidOk'] ?? '') !== '1') { linea_fail($why . ' Вне сделки лист стоит ' . brig_rub($T['sheet_price_kop']) . ' — подтвердите заказ платного листа.', 402); }
