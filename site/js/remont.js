@@ -84,7 +84,7 @@
       <p><b>Бригада:</b> <a href="brigady/${esc(B.slug)}/" target="_blank" rel="noopener">${esc(B.name)}</a>${J.contactsOpen ? ` · ${esc(B.contact)} · <a href="tel:${esc(String(B.phone).replace(/[^\d+]/g, ''))}">${esc(B.phone)}</a> · <a href="mailto:${esc(B.email)}">${esc(B.email)}</a>` : ''}<br><span class="bx-mut">${esc(B.legalFull)}</span></p>
       ${J.contactsOpen ? '' : `<p class="bx-note">${esc(J.contactsText)}</p>`}
       <p>Договор подряда — напрямую с бригадой: <a href="${API}remont-dogovor.php?t=${t}" target="_blank" rel="noopener">шаблон с приложениями (печать в PDF)</a>. Условия подтвердили: вы — ${esc(J.clientSigned ? dt(J.clientSigned) : 'нет')}, бригада — ${esc(J.brigadeSigned ? dt(J.brigadeSigned) : 'нет')}.</p>
-      ${J.status === 'contract' && !J.clientSigned ? '<div class="bx-row"><button class="btn" type="button" id="rmSign">Подтверждаю условия договора</button></div>' : ''}
+      ${docsBlock(J)}
       ${J.canCancel ? '<p><button class="btn ghost sm" type="button" id="rmJobCancel">Отказаться от этой бригады</button></p>' : ''}
       <h3>Переписка с бригадой</h3>${msgs || '<p class="bx-mut">Сообщений пока нет. Договоритесь здесь о просмотре объекта и деталях договора.</p>'}
       <form id="rmMsg"><label class="bx-f">Сообщение<textarea name="text" maxlength="2000" rows="2"></textarea></label><div class="bx-row"><button class="btn ghost sm">Отправить</button></div><p class="bx-err" role="status"></p></form>
@@ -95,6 +95,29 @@
       <details><summary>Открыть спор</summary><form id="rmDisp"><label class="bx-f">Тема<input name="subject" required maxlength="120"></label><label class="bx-f">Суть<textarea name="text" required></textarea></label><div class="bx-row"><button class="btn ghost">Отправить в LINEA</button></div><p class="bx-err"></p></form></details>`;
   }
 
+  // документы сделки: договор и допсоглашения — только на сайте, одна версия для обеих сторон, подпись кодом (ПЭП)
+  function docsBlock(J) {
+    const D = J.docs || { contracts: [], log: [] };
+    const docs = D.contracts.filter(c => c.status !== 'void').map(c => `<li><b>${esc(c.title)}</b> ${st(c.status === 'signed' ? 'done' : 'review', c.status === 'signed' ? 'подписан' : 'ждёт подписи')}
+      ${c.kind === 'addendum' ? ` · ${c.delta >= 0 ? '+' : '−'}${esc(rub(Math.abs(c.delta)))}, итого ${esc(rub(c.total))}${c.daysAdd ? ', срок ' + (c.daysAdd > 0 ? '+' : '') + c.daysAdd + ' дн.' : ''}` : ''}
+      <br><span class="bx-mut">вы: ${esc(c.clientSigned ? dt(c.clientSigned) : 'не подписано')} · бригада: ${esc(c.brigadeSigned ? dt(c.brigadeSigned) : 'не подписано')} · SHA-256 ${esc(c.hash.slice(0, 16))}…</span>
+      ${c.status === 'draft' && !c.clientSigned ? `<br><button class="btn sm" type="button" data-sign="${c.id}">Подписать кодом</button>` : ''}${c.status === 'draft' && c.kind === 'addendum' ? ` <button class="btn ghost sm" type="button" data-adc="${c.id}">Отозвать</button>` : ''}</li>`).join('');
+    return `<h3>Документы сделки</h3><p class="bx-note">${esc(D.transparency || '')}</p><ul class="bx-list">${docs}</ul>
+      <p><a href="${API}remont-dogovor.php?t=${t}" target="_blank" rel="noopener">Открыть все документы (печать в PDF, с хешами)</a>${D.dealTotal ? ' · сумма сделки: <b>' + esc(rub(D.dealTotal)) + '</b>' : ''}</p>
+      ${J.canAdvance ? '<div class="bx-row"><button class="btn ghost sm" type="button" id="rmAdv">Аванс бригаде внесён</button></div>' : (J.advanceAt ? '<p class="bx-mut">Аванс отмечен ' + esc(dt(J.advanceAt)) + '</p>' : '')}
+      ${J.status === 'work' ? `<details><summary>Допработы или другой срок — допсоглашение</summary><form id="rmAdd"><div class="bx-grid"><label class="bx-f">Работа<input name="an" maxlength="200" required></label><label class="bx-f">Ед.<input name="au" value="шт" maxlength="12"></label><label class="bx-f">Кол-во<input name="aq" type="number" step="0.01" value="1"></label><label class="bx-f">Цена за ед., ₽ (минус — исключить)<input name="ap" type="number" step="1"></label><label class="bx-f">Срок, ± дней<input name="ad" type="number" value="0"></label><label class="bx-f">Пояснение<input name="anote" maxlength="500"></label></div><div class="bx-row"><button class="btn ghost sm">Предложить бригаде</button></div><p class="bx-err"></p></form></details>` : ''}
+      <details><summary>Журнал сделки</summary><ul class="bx-list">${(D.log || []).map(l => `<li><span class="bx-mut">${esc(dt(l.at))}</span> · ${esc(l.who)}: ${esc(l.text)}</li>`).join('') || '<li class="bx-mut">Пока пусто.</li>'}</ul></details>`;
+  }
+  async function signFlow(doc) {
+    const pep = (S.job && S.job.docs && S.job.docs.pep) || {};
+    if (!confirm('Подписать документ простой электронной подписью?\n\n' + (pep.text || '') + '\n(редакция ' + (pep.ed || '') + ')')) return;
+    const r = await call('sign', { doc });
+    if (!r.ok) { alert(r.error); return; }
+    const code = prompt('Код подписи отправлен на вашу почту. Введите 6 цифр:' + (r.devCode ? ' (проверка: ' + r.devCode + ')' : ''));
+    if (code === null) return;
+    act('sign', { doc: r.doc, code, pep: true });
+  }
+
   function bind() {
     const q = s => box.querySelector(s), qa = s => box.querySelectorAll(s);
     const f = q('#rmReq');
@@ -102,7 +125,10 @@
     const c = q('#rmCancel'); if (c) c.onclick = () => { if (confirm('Отказаться от подбора бригады? Проект остаётся вашим.')) act('cancel'); };
     const cat = q('#rmCat'); if (cat) cat.onclick = () => { try { sessionStorage.setItem('linea_rt', t); } catch { } };
     qa('[data-choose]').forEach(b => b.onclick = () => { const cc = q('#rmCC'); if (!cc.checked) { q('#rmChErr').textContent = 'Отметьте согласие на передачу контактов выбранной бригаде'; return; } if (confirm('Выбрать это предложение? Остальные бригады получат отказ.')) act('choose', { offer: +b.dataset.choose, consentContacts: true }, q('#rmChErr')); });
-    const sg = q('#rmSign'); if (sg) sg.onclick = () => { if (confirm('Подтверждаете условия договора подряда (смета, график, приёмка по чек-листам)? Когда подтвердит и бригада, обеим сторонам откроются контакты — для подписи договора на бумаге.')) act('sign'); };
+    qa('[data-sign]').forEach(b => b.onclick = () => signFlow(+b.dataset.sign));
+    const adv = q('#rmAdv'); if (adv) adv.onclick = () => { if (confirm('Подтверждаете, что внесли бригаде аванс?')) act('advance'); };
+    qa('[data-adc]').forEach(b => b.onclick = () => { if (confirm('Отозвать неподписанное допсоглашение?')) act('addendum_cancel', { doc: +b.dataset.adc }); });
+    const af = q('#rmAdd'); if (af) af.onsubmit = e => { e.preventDefault(); act('addendum', { items: [{ name: af.an.value, unit: af.au.value, qty: +af.aq.value, price: +af.ap.value }], daysAdd: +af.ad.value || 0, note: af.anote.value }, af.querySelector('.bx-err')); };
     const jc = q('#rmJobCancel'); if (jc) jc.onclick = () => { const why = prompt('Почему отказываетесь от бригады? (необязательно)'); if (why !== null) act('job_cancel', { reason: why }); };
     const mf = q('#rmMsg'); if (mf) mf.onsubmit = e => { e.preventDefault(); act('msg', { text: mf.text.value }, mf.querySelector('.bx-err')); };
     qa('[data-acc]').forEach(b => b.onclick = () => { const id = b.dataset.acc; const checks = [...qa(`[data-ck="${id}"]`)].map(i => i.checked); if (checks.some(x => !x)) { alert('Принять этап можно, когда отмечены все пункты чек-листа. Если что-то не выполнено — верните этап с замечаниями.'); return; } act('stage_accept', { stage: +id, checks }); });
