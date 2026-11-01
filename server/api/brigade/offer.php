@@ -45,15 +45,17 @@ $pack = json_decode((string)$r['pack'], true) ?: ['positions' => []];
 if ($total <= 0) { linea_fail('Укажите цену хотя бы по одной позиции'); }
 $materials = isset(BRIG_MATERIALS[$in['materials'] ?? '']) ? (string)$in['materials'] : null;
 if (!$materials) { linea_fail('Укажите, чьи материалы'); }
-$stages = brig_stages_clean($in['stages'] ?? []);
+// свободные тексты предложения видит клиент до выбора: контакты в них скрываются, срабатывание — в сигналы обхода
+$gctx = ['who' => 'brigade#' . $bid, 'brigade_id' => $bid, 'request_id' => $rid];
+$stages = array_map(fn($s) => ['name' => brig_guard($s['name'], false, $gctx + ['field' => 'этап']), 'days' => $s['days']], brig_stages_clean($in['stages'] ?? []));
 if (!$stages) { linea_fail('Добавьте график: этапы и их длительность в днях'); }
 $start = (string)($in['startDate'] ?? '');
 if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $start) || $start < date('Y-m-d')) { linea_fail('Укажите дату, с которой бригада может начать (не раньше сегодняшней)'); }
 $warranty = (int)($in['warrantyMonths'] ?? 0);
 if ($warranty < 1 || $warranty > 120) { linea_fail('Укажите гарантию в месяцах (рекомендуем не меньше 24)'); }
 $row = ['status' => 'submitted', 'items' => json_encode($items), 'total_kop' => $total, 'materials' => $materials,
-    'materials_note' => linea_str($in['materialsNote'] ?? '', 500), 'stages' => json_encode($stages, JSON_UNESCAPED_UNICODE), 'start_date' => $start,
-    'days' => array_sum(array_column($stages, 'days')), 'warranty_months' => $warranty, 'comment' => linea_str($in['comment'] ?? '', 2000), 'updated_at' => $now];
+    'materials_note' => brig_guard(linea_str($in['materialsNote'] ?? '', 500), false, $gctx + ['field' => 'материалы']), 'stages' => json_encode($stages, JSON_UNESCAPED_UNICODE), 'start_date' => $start,
+    'days' => array_sum(array_column($stages, 'days')), 'warranty_months' => $warranty, 'comment' => brig_guard(linea_str($in['comment'] ?? '', 2000), false, $gctx + ['field' => 'комментарий']), 'updated_at' => $now];
 if ($offer) {
     db_update('br_offers', $row, 'id = ?', [(int)$offer['id']]);
     brig_audit('brigade#' . $bid, 'offer-update', 'request#' . $rid, brig_rub($total));

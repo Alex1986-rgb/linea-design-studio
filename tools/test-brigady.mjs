@@ -3,9 +3,12 @@
 //   node tools/test-brigady.mjs [--private=<папка>] [--port=8143] [--keep]
 // Сценарий: регистрация 3 бригад → допуск 2 → заказ клиента (проект prompt-kv54, pack.json из tools/brigady-pack.mjs) → подбор
 // (+ приглашение из каталога) → рассылка → 2 предложения → сравнение → выбор → договор → 2 этапа (возврат с замечанием, приёмка) →
-// отзыв → комиссия 7 % → счёт оплачен; «лист по запросу» через API воркера; каталог; восстановление пароля.
+// отзыв → вознаграждение (ставка из brig_terms) → счёт оплачен; «лист по запросу» через API воркера; каталог; восстановление пароля.
 // Негативы: бригада без допуска не видит заказы; чужой объект → 403; POST без CSRF → 403; загрузка .php → отказ;
 // контакты клиента до выбора не видны; токен воркера неверный → 403.
+// Защита от обхода (01.11.2026): контакты сторон закрыты до подтверждения договора обеими сторонами, переписка в ленте сделки,
+// фильтр контактов в свободных текстах + сигналы, уникальный ИНН и отказ заблокированной, приёмка только по всем пунктам чек-листа,
+// листы по запросу — только в активной сделке, отказ после выбора, вкладка «Сигналы обхода».
 // --keep — не останавливать сервер в конце (для браузера), данные остаются в папке.
 import fs from 'node:fs';
 import path from 'node:path';
@@ -119,6 +122,10 @@ try {
   }
   const bad1 = await B[0].req('POST', '/api/brigade/auth.php?a=register&test=1', { json: { ...reg(1, ALL, ['zao']), email: 'x@example.test', inn: '500100732258' } });
   ok(bad1.code === 400 && /ИНН/.test(bad1.j?.error), 'ИНН с неверной контрольной суммой — отказ');
+  const dupInn = await actor('dup').req('POST', '/api/brigade/auth.php?a=register&test=1', { json: { ...reg(1, ALL, ['zao']), email: 'dup@example.test', phone: '+7 900 555-44-33' } });
+  ok(dupInn.code === 409 && /ИНН/.test(dupInn.j?.error || ''), 'второй аккаунт на тот же ИНН — отказ 409');
+  const ab = await B[0].req('POST', '/api/brigade/profile.php?a=save', { json: { about: 'Тестовая бригада: черновые и чистовые работы по проекту. Пишите на brig@mail.ru или звоните 8 926 111-22-33' } });
+  ok(ab.j?.brigade?.about?.startsWith('Тестовая бригада') && !/mail\.ru|111-22-33/.test(ab.text), '«О бригаде»: почта и телефон скрыты фильтром');
 
   step('2. Негатив: загрузки — только изображения/PDF');
   const pid0 = (await B[0].req('GET', '/api/brigade/profile.php')).j.portfolio[0].id;
@@ -208,7 +215,7 @@ try {
   const start = new Date(Date.now() + 7 * 86400e3).toISOString().slice(0, 10);
   const oA = await B[0].req('POST', '/api/brigade/offer.php?a=save', { json: { r: rid, items: priceA, materials: 'mixed', stages: [{ name: 'Черновая электрика', days: 7 }, { name: 'Финальная приёмка', days: 2 }], startDate: start, warrantyMonths: 24, comment: 'Вывоз мусора включён' } });
   ok(oA.j?.ok, 'предложение A: ' + oA.j?.total + ' ₽', oA.text);
-  const oA2 = await B[0].req('POST', '/api/brigade/offer.php?a=save', { json: { r: rid, items: { ...priceA, p1: { price: 999 } }, materials: 'mixed', stages: [{ name: 'Черновая электрика', days: 7 }, { name: 'Финальная приёмка', days: 2 }], startDate: start, warrantyMonths: 24, comment: 'Вывоз мусора включён' } });
+  const oA2 = await B[0].req('POST', '/api/brigade/offer.php?a=save', { json: { r: rid, items: { ...priceA, p1: { price: 999 } }, materials: 'mixed', stages: [{ name: 'Черновая электрика', days: 7 }, { name: 'Финальная приёмка', days: 2 }], startDate: start, warrantyMonths: 24, comment: 'Вывоз мусора включён. Звоните 8 (926) 111-22-33 или в вотсап', materialsNote: 'черновые закупаем сами, прайс на remont-a.ru' } });
   ok(oA2.j?.ok && oA2.j.total !== oA.j.total, 'A поправила предложение до срока');
   const oB = await B[1].req('POST', '/api/brigade/offer.php?a=save', { json: { r: rid, items: priceB, materials: 'client', stages: [{ name: 'Черновая электрика', days: 10 }, { name: 'Плитка', days: 12 }, { name: 'Финальная приёмка', days: 2 }], startDate: start, warrantyMonths: 12 } });
   ok(oB.j?.ok, 'предложение B: ' + oB.j?.total + ' ₽ (сантехнику не делает)', oB.text);
@@ -224,6 +231,9 @@ try {
   rs = await client.req('GET', `/api/remont.php?t=${T}`);
   ok(rs.j?.offers?.length === 2, 'в сравнении 2 предложения');
   ok(!rs.text.includes('900 000-11-01') && !rs.text.includes('brig1@example.test'), 'контактов бригад до выбора нет');
+  const cA = rs.j.offers.find(o => o.brigade.slug === B[0].slug);
+  ok(!/111-22-33|вотсап|remont-a\.ru/.test(rs.text) && cA.comment.includes('Вывоз мусора') && cA.comment.includes('[скрыто'), 'телефон, мессенджер и сайт в предложении скрыты фильтром: «' + cA.comment.slice(0, 70) + '»');
+  ok(rs.j?.brigTerms?.rate === '7 %' && rs.j.brigTerms.contactsAfter === 'signed', 'условия бригад из одного источника: ' + rs.j?.brigTerms?.rate + ', контакты — ' + rs.j?.brigTerms?.contactsAfter);
   const offA = rs.j.offers.find(o => o.brigade.slug === B[0].slug);
   const noCC = await client.req('POST', `/api/remont.php?t=${T}&a=choose`, { json: { offer: offA.id } });
   ok(noCC.code === 400, 'выбор без согласия на передачу контактов — отказ');
@@ -231,23 +241,41 @@ try {
   ok(jA0.j?.jobs?.length === 0, 'до выбора у A нет объекта и контактов клиента');
   rs = await client.req('POST', `/api/remont.php?t=${T}&a=choose`, { json: { offer: offA.id, consentContacts: true } });
   ok(rs.j?.job?.status === 'contract', 'выбрана A, объект ждёт договора');
-  ok(rs.j?.job?.brigade?.phone === '+7 900 000-11-01', 'после выбора клиент видит телефон бригады');
+  ok(rs.j?.job?.contactsOpen === false && !rs.text.includes('900 000-11-01') && !rs.text.includes('brig1@example.test') && !rs.text.includes('500100732259'), 'после выбора телефон, почта и ИНН бригады ещё закрыты');
 
-  step('10. Объект: контакты после выбора, чужой объект 403, договор, комиссия');
+  step('10. Объект: контакты закрыты до подтверждения договора, чужой объект 403, договор, вознаграждение');
   const jl = await B[0].req('GET', '/api/brigade/jobs.php');
   const JID = jl.j.jobs[0].id;
-  const jA = await B[0].req('GET', `/api/brigade/jobs.php?j=${JID}`);
-  ok(jA.j?.job?.client?.phone === BRIEF.client.phone && jA.j.job.client.address.includes('тестовая'), 'A видит контакты и адрес клиента после выбора');
+  let jA = await B[0].req('GET', `/api/brigade/jobs.php?j=${JID}`);
+  ok(jA.j?.job?.contactsOpen === false && !/Тест Клиентов|900 000-00-01|client@example|тестовая ул/.test(jA.text), 'до подтверждения договора A не видит ФИО, телефон, почту и адрес клиента');
+  ok(jA.j?.job?.commission === null, 'вознаграждение до открытия контактов не начислено');
+  const dog0 = await B[0].req('GET', `/api/remont-dogovor.php?j=${JID}`, { raw: true });
+  ok(dog0.code === 200 && !/Тест Клиентов|900 000-00-01|тестовая ул/.test(dog0.text) && dog0.text.includes('откроется после подтверждения'), 'шаблон договора до подтверждения — без контактов и адреса');
+  step('10а. Лента сделки: сообщения сторон, фильтр контактов, сигналы');
+  const m1 = await B[0].req('POST', '/api/brigade/jobs.php?a=msg', { json: { j: JID, text: 'Добрый день! Когда удобно показать объект? Мой номер +7 (926) 111-22-33, пишите в телегу @brigada_a' } });
+  ok(m1.j?.ok && m1.j.messages.length === 1 && !/111-22-33|@brigada_a|телегу/.test(m1.text) && m1.j.messages[0].masked, 'сообщение бригады: телефон, ник и мессенджер скрыты');
+  rs = await client.req('POST', `/api/remont.php?t=${T}&a=msg`, { json: { text: 'Удобно в субботу. Почта client2@mail.ru' } });
+  ok(rs.j?.job?.messages?.length === 2 && !rs.text.includes('client2@mail.ru'), 'сообщение клиента: почта скрыта, лента общая');
+  ok((await B[1].req('POST', '/api/brigade/jobs.php?a=msg', { json: { j: JID, text: 'привет' } })).code === 403, 'чужая бригада в ленту сделки не пишет → 403');
+  const sig = await admin.req('GET', '/api/admin-brigady.php?view=signals', { raw: true });
+  ok(sig.code === 200 && sig.text.includes('Сигналы обхода') && (sig.text.match(/контакты в тексте \(скрыты\)/g) || []).length >= 3 && !/111-22-33|client2@mail/.test(sig.text), 'админка: вкладка «Сигналы обхода», срабатывания фильтра без самих контактов');
+  const shEarly = await B[0].req('POST', '/api/brigade/sheets.php?a=create', { form: { j: JID, text: 'Нужна развёртка кухни' } });
+  ok(shEarly.code === 403 && /внутри сделки/.test(shEarly.j?.error || ''), 'лист по запросу до подтверждения договора — отказ «бесплатно только внутри сделки»');
   ok((await B[1].req('GET', `/api/brigade/jobs.php?j=${JID}`)).code === 403, 'B: чужой объект → 403');
   ok((await B[1].req('POST', '/api/brigade/jobs.php?a=sign', { json: { j: JID } })).code === 403, 'B: подписать чужой договор → 403');
   ok((await B[1].req('GET', `/api/remont-dogovor.php?j=${JID}`, { raw: true })).code === 403, 'B: чужой договор → 403');
   const dog = await client.req('GET', `/api/remont-dogovor.php?t=${T}`, { raw: true });
   ok(dog.code === 200 && dog.text.includes('Договор подряда') && dog.text.includes('Приложение 4'), 'договор подряда с приложениями (HTML → печать в PDF)');
   await B[0].req('POST', '/api/brigade/jobs.php?a=sign', { json: { j: JID } });
+  ok((await B[0].req('GET', `/api/brigade/jobs.php?j=${JID}`)).j?.job?.contactsOpen === false, 'подтвердила только бригада — контакты ещё закрыты');
   rs = await client.req('POST', `/api/remont.php?t=${T}&a=sign`, { json: {} });
-  ok(rs.j?.job?.status === 'work', 'договор подписан обеими сторонами — ремонт идёт');
+  ok(rs.j?.job?.status === 'work', 'договор подтверждён обеими сторонами — ремонт идёт');
+  ok(rs.j?.job?.contactsOpen && rs.j.job.brigade.phone === '+7 900 000-11-01' && /ИНН 500100732259/.test(rs.j.job.brigade.legalFull), 'клиент видит телефон и ИНН бригады после подтверждения');
+  jA = await B[0].req('GET', `/api/brigade/jobs.php?j=${JID}`);
+  ok(jA.j?.job?.client?.phone === BRIEF.client.phone && jA.j.job.client.address.includes('тестовая'), 'A видит контакты и адрес клиента после подтверждения договора');
+  ok(jA.j?.job?.canCancel === false, 'после открытия контактов отказ без спора невозможен');
   const fin = await B[0].req('GET', '/api/brigade/finance.php');
-  ok(Math.abs(fin.j.accrued - Math.round(oA2.j.total * 0.07 * 100) / 100) < 0.02, `комиссия 7 %: ${fin.j.accrued} ₽ от ${oA2.j.total} ₽`);
+  ok(Math.abs(fin.j.accrued - Math.round(oA2.j.total * 0.07 * 100) / 100) < 0.02 && fin.j.rate === '7 %', `вознаграждение ${fin.j.rate}: ${fin.j.accrued} ₽ от ${oA2.j.total} ₽ — зафиксировано при открытии контактов`);
 
   step('11. Этапы: фото, «готов», возврат с замечанием, закрытие, приёмка');
   let stg = (await B[0].req('GET', `/api/brigade/jobs.php?j=${JID}`)).j.job.stages;
@@ -266,6 +294,8 @@ try {
   const photoId = stg[0].photos[0];
   ok((await client.req('GET', `/api/brigade/file.php?f=${photoId}&t=${T}`, { raw: true })).code === 200, 'клиент видит фото этапа по своему токену');
   ok((await B[1].req('GET', `/api/brigade/file.php?f=${photoId}`, { raw: true })).code === 403, 'чужая бригада фото этапа не видит → 403');
+  const part = await client.req('POST', `/api/remont.php?t=${T}&a=stage_accept`, { json: { stage: stg[0].id, checks: [true, true, false, true, true] } });
+  ok(part.code === 400 && /4 из 5/.test(part.j?.error || ''), 'приёмка без всех пунктов чек-листа — отказ: ' + (part.j?.error || '').slice(0, 60));
   rs = await client.req('POST', `/api/remont.php?t=${T}&a=stage_accept`, { json: { stage: stg[0].id, checks: [true, true, true, true, true] } });
   ok(rs.j?.job?.stages[0].status === 'accepted' && rs.j.job.stages[1].status === 'work', 'этап 1 принят, этап 2 в работе');
   step('11б. «Лист по запросу» и API воркера');
@@ -295,10 +325,12 @@ try {
   await B[0].req('POST', '/api/brigade/jobs.php?a=stage_ready', { json: { stage: stg[1].id } });
   rs = await client.req('POST', `/api/remont.php?t=${T}&a=stage_accept`, { json: { stage: stg[1].id, checks: [true, true, true, true] } });
   ok(rs.j?.job?.status === 'done' && rs.j.job.canReview, 'все этапы приняты — объект завершён');
+  const shDone = await B[0].req('POST', '/api/brigade/sheets.php?a=create', { form: { j: JID, text: 'Ещё лист после сдачи' } });
+  ok(shDone.code === 403, 'объект завершён — листы по запросу закрыты (платный режим вне сделки выключен)');
 
   step('13. Отзыв, счёт на комиссию, оплата');
-  rs = await client.req('POST', `/api/remont.php?t=${T}&a=review`, { json: { rating: 5, text: 'Сделали по проекту, этапы сдавали с фото и протоколами.' } });
-  ok(rs.j?.job?.review?.rating === 5, 'отзыв клиента принят');
+  rs = await client.req('POST', `/api/remont.php?t=${T}&a=review`, { json: { rating: 5, text: 'Сделали по проекту, этапы сдавали с фото и протоколами. Бригадир: +7 926 111 22 33' } });
+  ok(rs.j?.job?.review?.rating === 5 && !rs.j.job.review.text.includes('111 22 33'), 'отзыв клиента принят, телефон в публичном отзыве скрыт');
   ok((await client.req('POST', `/api/remont.php?t=${T}&a=review`, { json: { rating: 1, text: 'ещё' } })).code === 400, 'второй отзыв по объекту — отказ');
   await adminPost({ act: 'j_invoice', id: JID });
   const money = await admin.req('GET', '/api/admin-brigady.php?view=money', { raw: true });
@@ -341,6 +373,21 @@ try {
   await c2.req('POST', `/api/remont.php?t=${T2}&a=request`, { json: { district: 'cao', consent: true } });
   ok((await c2.req('POST', `/api/remont.php?t=${T2}&a=invite`, { json: { slug: demoSlug } })).code === 404, 'демо-бригаду нельзя пригласить в запрос');
   ok((await anon.req('POST', '/api/brigade/auth.php?a=login', { json: { email: 'demo-otdelka@linea.invalid', password: 'x' } })).code === 401, 'в демо-аккаунт войти нельзя');
+  // отказ после выбора: второй заказ → пакет → рассылка A → предложение → выбор → отказ клиента до подтверждения
+  {
+    const rid2 = +((await admin.req('GET', '/api/admin-brigady.php?view=requests', { raw: true })).text.match(/\?r=(\d+)/) || [])[1];
+    const pr2 = await admin.req('GET', `/api/admin-brigady.php?r=${rid2}`, { raw: true });
+    await admin.req('POST', '/api/admin-brigady.php', { raw: true, form: { csrf: adminCsrf(pr2.text), act: 'r_pack', id: rid2, pack: { file: PACK, type: 'application/json', name: 'pack.json' } } });
+    await admin.req('POST', '/api/admin-brigady.php', { raw: true, form: { csrf: adminCsrf(pr2.text), act: 'r_send', id: rid2, deadline: dl, 'bid[]': B[0].id } });
+    const p2pos = (await B[0].req('GET', `/api/brigade/feed.php?r=${rid2}`)).j?.request?.positions || [];
+    await B[0].req('POST', '/api/brigade/offer.php?a=save', { json: { r: rid2, items: Object.fromEntries(p2pos.map(p => [p.id, { price: 500 }])), materials: 'client', stages: [{ name: 'Демонтаж', days: 3 }], startDate: start, warrantyMonths: 24 } });
+    const st2 = await c2.req('GET', `/api/remont.php?t=${T2}`);
+    await c2.req('POST', `/api/remont.php?t=${T2}&a=choose`, { json: { offer: st2.j.offers[0]?.id, consentContacts: true } });
+    const cn = await c2.req('POST', `/api/remont.php?t=${T2}&a=job_cancel`, { json: { reason: 'передумали' } });
+    ok(cn.j?.ok && !cn.j.job && cn.j.request?.status === 'cancelled', 'клиент отказался от выбранной бригады до подтверждения договора');
+    const sg2 = await admin.req('GET', '/api/admin-brigady.php?view=signals', { raw: true });
+    ok(sg2.text.includes('отказ после выбора'), 'отказ после выбора — в сигналах обхода');
+  }
   ok(/Демо удалено \(файлов: 1\d\)/.test(seed('--purge')), 'сид --purge удаляет демо с файлами');
   ok(!(await anon.req('GET', '/brigady/', { raw: true })).text.includes('primer-'), 'после --purge образцов нет');
 
@@ -354,6 +401,11 @@ try {
   const ln = await anon.req('POST', '/api/brigade/auth.php?a=login', { json: { email: 'brig1@example.test', password: 'NewPass2026x' } });
   ok(ln.j?.ok, 'вход с новым паролем');
   ok((await anon.req('POST', '/api/brigade/auth.php?a=logout', { csrf: false })).code === 403, 'выход без CSRF → 403');
+  await adminPost({ act: 'b_status', id: B[2].id, to: 'blocked', reason: 'тест: обход платформы' });
+  const rr3 = await actor('re').req('POST', '/api/brigade/auth.php?a=register&test=1', { json: { ...reg(3, ALL, ['zao']), email: 'again@example.test' } });
+  ok(rr3.code === 403 && /заблокирована/.test(rr3.j?.error || ''), 'заблокированная бригада заново не регистрируется (тот же ИНН)');
+  const rr4 = await actor('re2').req('POST', '/api/brigade/auth.php?a=register&test=1', { json: { ...reg(3, ALL, ['zao']), email: 'again2@example.test', inn: '7707083893', legal: 'ooo' } });
+  ok(rr4.code === 403, 'заблокированная бригада не регистрируется на другой ИНН с тем же телефоном');
 
   step('16. Журналы и письма');
   const mlog = fs.readFileSync(path.join(PRIV, 'brig-mail.log'), 'utf8');

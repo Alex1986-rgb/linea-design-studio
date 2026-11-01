@@ -1,7 +1,7 @@
 <?php
 /**
- * api/brigade/finance.php — финансы бригады (только свои): начисленная комиссия 7 % по объектам, счета и их оплата, рейтинг и отзывы.
- * Комиссия начисляется, когда договор подряда отмечен подписанным обеими сторонами (brig_maybe_start). Оплата ремонта — вне сайта.
+ * api/brigade/finance.php — финансы бригады (только свои): начисленное вознаграждение по объектам (ставка — brig_terms()), счета
+ * и их оплата, рейтинг и отзывы. Вознаграждение фиксируется в момент открытия контактов сторон (brig_open_contacts). Оплата ремонта — вне сайта.
  */
 declare(strict_types=1);
 require __DIR__ . '/../lib/boot.php';
@@ -21,6 +21,6 @@ foreach (brig_all('SELECT j.id, j.status, j.commission_kop, j.commission_at, r.o
         'commission' => $r['commission_kop'] !== null ? (int)$r['commission_kop'] / 100 : null, 'commissionAt' => $r['commission_at'],
         'invoice' => $r['number'] ? ['number' => $r['number'], 'amount' => (int)$r['amount_kop'] / 100, 'issued' => $r['issued_at'], 'due' => $r['due_at'], 'paid' => $r['paid_at']] : null];
 }
-linea_json(['ok' => true, 'rate' => BRIG_COMMISSION * 100, 'accrued' => $acc / 100, 'paid' => $paid / 100, 'debt' => max(0, $acc - $paid) / 100, 'jobs' => $rows,
+linea_json(['ok' => true, 'rate' => brig_rate_text(), 'terms' => brig_terms_public(), 'accrued' => $acc / 100, 'paid' => $paid / 100, 'debt' => max(0, $acc - $paid) / 100, 'jobs' => $rows,
     'rating' => brig_rating($bid), 'reviews' => brig_reviews_public($bid), 'requisites' => (string)brig_cfg('brig_requisites', ''),
-    'safeDeal' => false]);   // «безопасная сделка» ЮKassa — заготовка, см. отчёт
+    'safeDeal' => (bool)brig_terms()['safe_deal']]);   // «безопасная сделка» ЮKassa — не включена (решение владельца)

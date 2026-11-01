@@ -6,8 +6,11 @@
  *   POST ?a=request  {district, startWish, consent:true}  — подобрать бригаду (согласие на передачу ОБЕЗЛИЧЕННОГО проекта)
  *   POST ?a=invite   {slug}      — пригласить бригаду из каталога в свой запрос (до 5)
  *   POST ?a=cancel               — отказаться от подбора (до выбора)
- *   POST ?a=choose   {offer, consentContacts:true} — выбрать предложение (согласие передать контакты выбранной бригаде)
- *   POST ?a=sign                 — «договор подряда подписан»
+ *   POST ?a=choose   {offer, consentContacts:true} — выбрать предложение (согласие передать контакты выбранной бригаде;
+ *                                 сами контакты открываются по brig_terms()['contacts_after'], по умолчанию — после подтверждения договора обеими сторонами)
+ *   POST ?a=sign                 — «условия договора подряда подтверждаю» (обе стороны → контакты, вознаграждение, объект в работе)
+ *   POST ?a=msg {text}           — сообщение бригаде в ленте сделки (до открытия контактов контакты в тексте скрываются)
+ *   POST ?a=job_cancel {reason}  — отказаться от выбранной бригады до подтверждения договора (сигнал обхода в админке)
  *   POST ?a=stage_accept {stage, checks:[…]} / ?a=stage_return {stage, remarks}
  *   POST ?a=review {rating 1–5, text} — только после завершения объекта, один раз
  *   POST ?a=dispute {subject, text} / ?a=dispute_msg {d, text}
@@ -30,7 +33,7 @@ function rm_state(array $o, string $token): array
     $oid = (int)$o['id'];
     $r = brig_one('SELECT * FROM br_requests WHERE order_id = ?', [$oid]);
     $out = ['ok' => true, 'csrf' => brig_client_csrf($token), 'eligible' => in_array($o['status'], ['paid', 'delivered'], true),
-        'districts' => BRIG_DISTRICTS, 'terms' => BRIG_CLIENT_TERMS, 'request' => null, 'offers' => [], 'job' => null];
+        'districts' => BRIG_DISTRICTS, 'terms' => BRIG_CLIENT_TERMS, 'brigTerms' => brig_terms_public(), 'request' => null, 'offers' => [], 'job' => null];
     if (!$r) { return $out; }
     $pack = json_decode((string)$r['pack'], true) ?: ['positions' => []];
     $out['request'] = ['status' => $r['status'], 'statusText' => BRIG_REQ_STATUS[$r['status']] ?? $r['status'], 'district' => BRIG_DISTRICTS[$r['district']] ?? $r['district'],
@@ -50,8 +53,13 @@ function rm_state(array $o, string $token): array
     if ($j) {
         $b = brig_one('SELECT * FROM br_brigades WHERE id = ?', [(int)$j['brigade_id']]);
         $rev = brig_one('SELECT rating, text, hidden FROM br_reviews WHERE job_id = ?', [(int)$j['id']]);
+        $open = brig_contacts_open($j);
+        // телефон, почта, ИНН бригады — только когда контакты открыты (до этого — лента сообщений сделки)
         $out['job'] = ['id' => (int)$j['id'], 'status' => $j['status'], 'statusText' => BRIG_JOB_STATUS[$j['status']] ?? $j['status'],
-            'brigade' => brig_public_card($b) + ['phone' => $b['phone'], 'email' => $b['email'], 'contact' => $b['contact_name'], 'legalFull' => (BRIG_LEGAL[$b['legal']] ?? '') . ', ИНН ' . $b['inn']],
+            'brigade' => brig_public_card($b) + ($open ? ['phone' => $b['phone'], 'email' => $b['email'], 'contact' => $b['contact_name'], 'legalFull' => (BRIG_LEGAL[$b['legal']] ?? '') . ', ИНН ' . $b['inn']]
+                : ['phone' => null, 'email' => null, 'contact' => null, 'legalFull' => BRIG_LEGAL[$b['legal']] ?? '']),
+            'contactsOpen' => $open, 'contactsText' => brig_terms_public()['contactsText'], 'messages' => brig_messages((int)$j['id']),
+            'canCancel' => $j['status'] === 'contract' && !$open,
             'clientSigned' => $j['client_signed_at'], 'brigadeSigned' => $j['brigade_signed_at'], 'stages' => brig_job_stages((int)$j['id']),
             'review' => $rev ? ['rating' => (int)$rev['rating'], 'text' => (string)$rev['text'], 'hidden' => (bool)$rev['hidden']] : null,
             'canReview' => $j['status'] === 'done' && !$rev,
@@ -91,7 +99,7 @@ switch ($a) {
         if (!isset(BRIG_DISTRICTS[$dist])) { linea_fail('Выберите район объекта (Москва или МО)'); }
         $row = ['status' => 'new', 'consent_at' => $now, 'district' => $dist, 'area' => $o['area'] !== null ? (float)$o['area'] : null,
             'consent_text' => 'Согласие на передачу обезличенного проекта (без ФИО, адреса и телефона) бригадам площадки; условия сервиса, редакция ' . BRIG_CLIENT_TERMS['ed'] . ' (' . BRIG_CLIENT_TERMS['href'] . ')',
-            'start_wish' => linea_str($in['startWish'] ?? '', 60), 'works' => '[]', 'object_title' => trim(($o['object_type'] ?: 'Объект') . ($o['area'] ? ' ' . rtrim(rtrim(number_format((float)$o['area'], 1, '.', ''), '0'), '.') . ' м²' : '')),
+            'start_wish' => brig_guard(linea_str($in['startWish'] ?? '', 60), false, ['who' => $who, 'field' => 'когда начать']), 'works' => '[]', 'object_title' => trim(($o['object_type'] ?: 'Объект') . ($o['area'] ? ' ' . rtrim(rtrim(number_format((float)$o['area'], 1, '.', ''), '0'), '.') . ' м²' : '')),
             'updated_at' => $now, 'test' => $test ? 1 : 0, 'chosen_offer_id' => null, 'sent_at' => null, 'deadline_at' => null];
         if ($r) { db_update('br_requests', $row, 'id = ?', [(int)$r['id']]); $rid = (int)$r['id']; brig_exec('DELETE FROM br_invites WHERE request_id = ?', [$rid]); }
         else { $rid = db_insert('br_requests', $row + ['order_id' => $oid, 'created_at' => $now]); }
@@ -132,20 +140,35 @@ switch ($a) {
             return $jid;
         });
         brig_audit($who, 'choose', 'job#' . $jid, 'Выбрано предложение #' . $of['id'] . ' на ' . brig_rub((int)$of['total_kop']) . '; согласие на передачу контактов');
+        if (brig_terms()['contacts_after'] === 'chosen') { brig_open_contacts($jid, $who); }
         foreach (brig_all('SELECT b.*, o.status ostatus FROM br_offers o JOIN br_brigades b ON b.id = o.brigade_id WHERE o.request_id = ?', [(int)$r['id']]) as $b) {
-            brig_mail((string)$b['email'], $b['ostatus'] === 'chosen' ? 'brig_chosen' : 'brig_not_chosen', ['name' => $b['contact_name'], 'object' => $r['object_title'], 'link' => brig_link('brigada/')], $test || (bool)$b['test']);
+            brig_mail((string)$b['email'], $b['ostatus'] === 'chosen' ? 'brig_chosen' : 'brig_not_chosen', ['name' => $b['contact_name'], 'object' => $r['object_title'], 'link' => brig_link('brigada/'), 'rate' => brig_rate_text(), 'contacts' => brig_terms_public()['contactsText']], $test || (bool)$b['test']);
         }
         break;
     case 'sign':
         if (!$j || $j['status'] !== 'contract') { linea_fail('Подписывать нечего'); }
         db_update('br_jobs', ['client_signed_at' => $now, 'updated_at' => $now], 'id = ?', [(int)$j['id']]);
-        brig_audit($who, 'contract-signed', 'job#' . $j['id'], 'Клиент: договор подряда подписан');
+        brig_audit($who, 'contract-signed', 'job#' . $j['id'], 'Клиент: условия договора подряда подтверждены');
         brig_maybe_start((int)$j['id'], $who);
+        break;
+    case 'msg':
+        if (!$j || $j['status'] === 'cancelled') { linea_fail('Переписка — по объекту с выбранной бригадой'); }
+        brig_message_add($j, 'client', (string)($in['text'] ?? ''), ['who' => $who, 'request_id' => (int)$r['id']]);
+        break;
+    case 'job_cancel':
+        if (!$j) { linea_fail('Бригада не выбрана'); }
+        brig_job_cancel($j, 'client', $who, (string)($in['reason'] ?? ''));
+        $b = $brig();
+        brig_mail((string)$b['email'], 'brig_not_chosen', ['name' => $b['contact_name'], 'object' => $r['object_title']], $test || (bool)$b['test']);
         break;
     case 'stage_accept':
         $s = $stage((int)($in['stage'] ?? 0));
         if ($s['status'] !== 'ready') { linea_fail('Этап ещё не готов к приёмке'); }
-        $checks = array_slice(array_map(fn($v) => (bool)$v, is_array($in['checks'] ?? null) ? $in['checks'] : []), 0, 20);
+        $checks = array_slice(array_map(fn($v) => $v === true, is_array($in['checks'] ?? null) ? $in['checks'] : []), 0, 20);
+        // приёмка — только когда отмечены ВСЕ пункты чек-листа этапа; не выполнено — этап возвращают с замечаниями
+        $need = count(brig_checklist((string)$s['checklist'])['items']);
+        $done = count(array_filter(array_slice($checks, 0, $need)));
+        if ($done < $need) { linea_fail('Отметьте все пункты чек-листа приёмки (отмечено ' . $done . ' из ' . $need . '). Если пункт не выполнен — верните этап с замечаниями'); }
         db_tx(function () use ($s, $j, $now, $checks) {
             db_update('br_stages', ['status' => 'accepted', 'accepted_at' => $now, 'checks' => json_encode($checks)], 'id = ?', [(int)$s['id']]);
             db_exec("UPDATE br_stages SET status = 'work' WHERE job_id = ? AND idx = ? AND status = 'plan'", [(int)$j['id'], (int)$s['idx'] + 1]);
@@ -159,7 +182,8 @@ switch ($a) {
     case 'stage_return':
         $s = $stage((int)($in['stage'] ?? 0));
         if ($s['status'] !== 'ready') { linea_fail('Вернуть можно этап, отмеченный готовым к приёмке'); }
-        $lines = array_values(array_filter(array_map(fn($x) => linea_str($x, 1000), preg_split('/\R/u', (string)($in['remarks'] ?? '')) ?: [])));
+        $lines = array_values(array_filter(array_map(fn($x) => brig_guard(linea_str($x, 1000), brig_contacts_open($j), ['who' => $who, 'field' => 'замечание', 'job_id' => (int)$j['id'], 'brigade_id' => (int)$j['brigade_id']]),
+            preg_split('/\R/u', (string)($in['remarks'] ?? '')) ?: [])));
         if (!$lines) { linea_fail('Напишите замечания — по одному в строке'); }
         foreach (array_slice($lines, 0, 30) as $t) { db_insert('br_remarks', ['stage_id' => (int)$s['id'], 'text' => $t, 'created_at' => $now]); }
         db_update('br_stages', ['status' => 'returned'], 'id = ?', [(int)$s['id']]);
@@ -171,12 +195,15 @@ switch ($a) {
         if (brig_one('SELECT 1 FROM br_reviews WHERE job_id = ?', [(int)$j['id']])) { linea_fail('Отзыв по объекту уже есть'); }
         $rating = (int)($in['rating'] ?? 0);
         if ($rating < 1 || $rating > 5) { linea_fail('Оценка — от 1 до 5'); }
-        db_insert('br_reviews', ['job_id' => (int)$j['id'], 'brigade_id' => (int)$j['brigade_id'], 'rating' => $rating, 'text' => linea_str($in['text'] ?? '', 3000), 'created_at' => $now, 'hidden' => 0]);
+        // отзыв публичный — контакты в нём скрываются всегда
+        $rtext = brig_guard(linea_str($in['text'] ?? '', 3000), false, ['who' => $who, 'field' => 'отзыв', 'job_id' => (int)$j['id'], 'brigade_id' => (int)$j['brigade_id']]);
+        db_insert('br_reviews', ['job_id' => (int)$j['id'], 'brigade_id' => (int)$j['brigade_id'], 'rating' => $rating, 'text' => $rtext, 'created_at' => $now, 'hidden' => 0]);
         brig_audit($who, 'review', 'job#' . $j['id'], 'Оценка ' . $rating);
         break;
     case 'dispute':
         if (!$j) { linea_fail('Спор — по объекту с выбранной бригадой'); }
-        $subj = linea_str($in['subject'] ?? '', 120); $text = linea_str($in['text'] ?? '', 3000);
+        $gctx = ['who' => $who, 'field' => 'спор', 'job_id' => (int)$j['id'], 'brigade_id' => (int)$j['brigade_id']];
+        $subj = brig_guard(linea_str($in['subject'] ?? '', 120), brig_contacts_open($j), $gctx); $text = brig_guard(linea_str($in['text'] ?? '', 3000), brig_contacts_open($j), $gctx);
         if ($subj === '' || $text === '') { linea_fail('Опишите суть спора'); }
         $d = db_insert('br_disputes', ['job_id' => (int)$j['id'], 'opened_by' => 'client', 'subject' => $subj, 'status' => 'open', 'created_at' => $now]);
         db_insert('br_dispute_msgs', ['dispute_id' => $d, 'who' => 'client', 'text' => $text, 'at' => $now]);
@@ -186,7 +213,7 @@ switch ($a) {
     case 'dispute_msg':
         $d = $j ? brig_one("SELECT * FROM br_disputes WHERE id = ? AND job_id = ? AND status = 'open'", [(int)($in['d'] ?? 0), (int)$j['id']]) : null;
         if (!$d) { linea_fail('Спор не найден или закрыт', 404); }
-        $text = linea_str($in['text'] ?? '', 3000);
+        $text = brig_guard(linea_str($in['text'] ?? '', 3000), brig_contacts_open($j), ['who' => $who, 'field' => 'спор', 'job_id' => (int)$j['id'], 'brigade_id' => (int)$j['brigade_id']]);
         if ($text === '') { linea_fail('Пустое сообщение'); }
         db_insert('br_dispute_msgs', ['dispute_id' => (int)$d['id'], 'who' => 'client', 'text' => $text, 'at' => $now]);
         break;

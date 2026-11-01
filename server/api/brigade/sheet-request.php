@@ -17,9 +17,12 @@ require __DIR__ . '/../lib/sheets.php';
 if (!linea_https() && !linea_local()) { linea_fail('Только https', 403); }
 $tok = (string)brig_cfg('sheet_worker_token', '');
 if ($tok === '') { linea_fail('Очередь листов выключена (sheet_worker_token пуст)', 503); }
+if (strlen($tok) < 32) { linea_fail('Очередь листов выключена: sheet_worker_token короче 32 знаков', 503); }
+// перебор токена: не больше 20 неверных попыток в час с адреса (критик техники 01.11.2026, Н-6)
+if (!linea_rate('sheet-worker-bad', 20, false)) { linea_fail('Слишком много неверных попыток — подождите час', 429); }
 $auth = (string)($_SERVER['HTTP_AUTHORIZATION'] ?? $_SERVER['REDIRECT_HTTP_AUTHORIZATION'] ?? '');
 $given = preg_match('/^Bearer\s+(\S+)$/i', $auth, $m) ? $m[1] : (string)($_SERVER['HTTP_X_WORKER_TOKEN'] ?? '');
-if ($given === '' || !hash_equals($tok, $given)) { linea_fail('Нет доступа', 403); }
+if ($given === '' || !hash_equals($tok, $given)) { linea_rate_add('sheet-worker-bad'); linea_fail('Нет доступа', 403); }
 if (!linea_rate('sheet-worker', 2000)) { linea_fail('Слишком часто', 429); }
 brig_db();
 $a = (string)($_GET['action'] ?? '');
@@ -29,7 +32,8 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'GET') {
     if ($a === 'next') {
         // блокировка 15 минут: взятое и не возвращённое задание снова уходит в очередь
         db_exec("UPDATE br_sheet_reqs SET status = 'new' WHERE status = 'work' AND claimed_at < ?", [date('Y-m-d H:i:s', time() - 900)]);
-        foreach (brig_all("SELECT * FROM br_sheet_reqs WHERE status = 'new' ORDER BY id LIMIT 5") as $s) {
+        // в работу — только запросы активной сделки (объект «в работе») и оплаченные вне сделки (source = 'outside')
+        foreach (brig_all("SELECT s.* FROM br_sheet_reqs s JOIN br_jobs j ON j.id = s.job_id WHERE s.status = 'new' AND (j.status = 'work' OR s.source = 'outside') ORDER BY s.id LIMIT 5") as $s) {
             if (db_exec("UPDATE br_sheet_reqs SET status = 'work', claimed_at = ?, updated_at = ?, worker_note = ? WHERE id = ? AND status = 'new'",
                 [$now, $now, 'воркер: ' . linea_str($_GET['worker'] ?? '', 40), (int)$s['id']]) !== 1) { continue; }
             $s['status'] = 'work';

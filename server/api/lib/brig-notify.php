@@ -18,7 +18,7 @@ const BRIG_MAIL = [
     'brig_admitted' => ['LINEA · бригада допущена', "Здравствуйте, {name}!\n\nПроверка пройдена — бригада допущена к запросам клиентов. Новые запросы появятся в ленте кабинета: {link}"],
     'brig_status' => ['LINEA · статус бригады: {status}', "Здравствуйте, {name}!\n\nСтатус бригады изменён: {status}.\nПричина: {reason}\n\nКабинет: {link}"],
     'brig_invite' => ['LINEA · новый запрос: {object}', "Здравствуйте, {name}!\n\nНовый запрос на ремонт по проекту LINEA: {object}, {district}.\nПредложение — до {deadline}. Позиции сметы и ведомости — в кабинете: {link}"],
-    'brig_chosen' => ['LINEA · клиент выбрал вашу бригаду', "Здравствуйте, {name}!\n\nКлиент выбрал ваше предложение по объекту {object}. Контакты клиента и договор подряда — в кабинете: {link}\n\nКомиссия LINEA (7 %) начисляется после подписания договора обеими сторонами."],
+    'brig_chosen' => ['LINEA · клиент выбрал вашу бригаду', "Здравствуйте, {name}!\n\nКлиент выбрал ваше предложение по объекту {object}. Переписка по сделке и шаблон договора подряда — в кабинете: {link}\n\n{contacts} Вознаграждение LINEA ({rate}) начисляется в момент, когда открываются контакты."],
     'brig_not_chosen' => ['LINEA · по запросу выбрана другая бригада', "Здравствуйте, {name}!\n\nПо запросу {object} клиент выбрал другое предложение. Спасибо за участие."],
     'brig_stage_returned' => ['LINEA · этап возвращён с замечаниями', "Здравствуйте, {name}!\n\nКлиент вернул этап «{stage}» по объекту {object} с замечаниями. Подробности — в кабинете: {link}"],
     'brig_stage_accepted' => ['LINEA · этап принят', "Здравствуйте, {name}!\n\nКлиент принял этап «{stage}» по объекту {object}."],
@@ -39,7 +39,7 @@ function brig_mail(string $to, string $key, array $vars, bool $test): string
     $cfg = linea_cfg();
     $dry = $test || empty($cfg['brig_mail_enabled']) || getenv('LINEA_MAIL_DRY') || !filter_var($to, FILTER_VALIDATE_EMAIL);
     if ($dry) { linea_log('brig-mail.log', 'DRY ' . ($test ? '[test] ' : '') . $key . ' · ' . $subj); return 'dry'; }
-    $from = trim((string)$cfg['mail_from']) ?: 'no-reply@' . preg_replace('/[^a-z0-9.-]/i', '', (string)($_SERVER['HTTP_HOST'] ?? 'localhost'));
+    $from = trim((string)$cfg['mail_from']) ?: 'no-reply@' . (string)parse_url(linea_base(), PHP_URL_HOST);   // не из заголовка Host запроса
     $headers = implode("\r\n", ['From: LINEA <' . $from . '>', 'MIME-Version: 1.0', 'Content-Type: text/plain; charset=UTF-8', 'Content-Transfer-Encoding: 8bit']);
     $ok = @mail($to, '=?UTF-8?B?' . base64_encode($subj) . '?=', $body, $headers, '-f' . $from);
     linea_log('brig-mail.log', ($ok ? 'SENT ' : 'FAILED ') . $key . ' · ' . $subj);

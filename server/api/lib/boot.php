@@ -39,7 +39,11 @@ function linea_cfg(): array
         'notify_enabled' => false, 'notify_to' => '', 'mail_from' => '',
         'admin_hash' => '',
         'max_upload_mb' => 100, 'briefs_per_hour' => 5, 'reviews_per_hour' => 20, 'surveys_per_hour' => 20,
-        'base' => '',                  // адрес сайта без «/» (для ссылок в письмах и return_url); пусто — из запроса
+        'base' => '',                  // адрес сайта без «/» (для ссылок в письмах и return_url); пусто — LINEA_BASE_DEFAULT (Host запроса не используется)
+        'trusted_proxies' => ['127.0.0.1', '::1'],   // X-Real-IP читается, только если запрос пришёл от этих адресов (nginx Beget перед Apache)
+        'admin_fail_global' => 30,     // неудачных входов в admin за 15 минут со всех адресов вместе — дальше вход закрыт для всех
+        'yk_tax_system' => null,       // чек 54-ФЗ: tax_system_code (1 ОСН, 2 УСН доход, 3 УСН доход−расход, 6 ПСН); null — не передавать
+        'brig_terms' => [],            // условия «Ремонта по проекту» поверх BRIG_TERMS_DEFAULT (ставка, когда открываются контакты, листы)
         'db' => null,                  // MySQL: ['dsn' => 'mysql:host=localhost;dbname=…;charset=utf8mb4', 'user' => …, 'pass' => …]; null — SQLite
     ];
     $f = linea_private() . '/config.php';
@@ -60,6 +64,44 @@ const LINEA_KINDS = [
     'planirovka' => 'Планировочное решение',
     'vizual'     => 'Визуализации',
 ];
+
+/**
+ * Условия «Ремонта по проекту» — ЕДИНСТВЕННОЕ место на сервере (страницы сайта — tools/site-shell.js → BRIG_TERMS, держать
+ * одинаковыми). Поверх — config 'brig_terms'. Решение 01.11.2026: платы за отклик/лид нет; удержание сделки — гарантия сайта и листы
+ * по запросу только внутри сделки. Ставка, Безопасная сделка, цена листа вне сделки — ещё не решены: значения ниже — текущие.
+ */
+const BRIG_TERMS_DEFAULT = [
+    'rate' => 0.07,                 // агентское вознаграждение — доля от сметы выбранного предложения (решение 31.10.2026)
+    'contacts_after' => 'signed',   // когда открываются контакты сторон и фиксируется комиссия: 'signed' — договор подряда отмечен
+                                    // подписанным обеими сторонами на сайте; 'chosen' — сразу при выборе (как было до 01.11.2026)
+    'sheets_free_limit' => null,    // листов по запросу на объект бесплатно внутри сделки; null — без лимита (решение владельца)
+    'sheets_per_day_job' => 10, 'sheets_per_day_brigade' => 30, 'sheets_open_max' => 5,
+    'sheets_outside_paid' => false, // листы вне активной сделки — платно (выключено: цену не утвердили)
+    'sheet_price_kop' => null,      // цена листа вне сделки, копейки
+    'signal_unsigned_days' => 5,    // «выбрана, договор не подписан N дней» — сигнал в админке
+    'invoice_days' => 10,           // срок оплаты счёта на вознаграждение
+    'safe_deal' => false,           // «Безопасная сделка» ЮKassa — не включена (нужны ИП, договор и юрист)
+];
+
+/** Условия бригад: значения по умолчанию + config 'brig_terms', с проверкой границ. */
+function brig_terms(): array
+{
+    static $t = null;
+    if ($t !== null) { return $t; }
+    $t = array_replace(BRIG_TERMS_DEFAULT, is_array(linea_cfg()['brig_terms'] ?? null) ? linea_cfg()['brig_terms'] : []);
+    $t['rate'] = max(0.0, min(0.5, (float)$t['rate']));
+    if (!in_array($t['contacts_after'], ['signed', 'chosen'], true)) { $t['contacts_after'] = 'signed'; }
+    $t['sheet_price_kop'] = $t['sheet_price_kop'] !== null && (int)$t['sheet_price_kop'] > 0 ? (int)$t['sheet_price_kop'] : null;
+    $t['sheets_outside_paid'] = (bool)$t['sheets_outside_paid'] && $t['sheet_price_kop'] !== null;
+    return $t;
+}
+
+/** Ставка словами: 0.07 → «7 %», 0.055 → «5,5 %». */
+function brig_rate_text(): string
+{
+    $p = round(brig_terms()['rate'] * 100, 1);
+    return str_replace('.', ',', (string)($p == (int)$p ? (int)$p : $p)) . ' %';
+}
 
 const LINEA_STATUS = [
     'new'              => 'Принят',
@@ -179,23 +221,45 @@ function linea_require_https(bool $test = false): void
     linea_fail('Приём через сайт работает только по защищённому адресу (https). Пришлите архив брифа или правки в WhatsApp: +7 925 733-86-40 или на optteem@mail.ru', 403);
 }
 
-/** Адрес сайта для ссылок (return_url, письма). */
+/** Адрес сайта по умолчанию (домен в Punycode, как в tools/site-shell.js → SITE_BASES.domain). */
+const LINEA_BASE_DEFAULT = 'https://xn-----6kccjicviedfr1b2cbishm8w.xn--p1ai';
+
+/**
+ * Адрес сайта для ссылок (return_url, письма, сброс пароля). Только из config 'base' (или адрес домена по умолчанию):
+ * заголовок Host запроса не используется — иначе подставной Host уводит ссылку сброса пароля и оплаты на чужой домен
+ * (критик техники 01.11.2026, С-3). Исключение — проверка на маке (php -S 127.0.0.1).
+ */
 function linea_base(): string
 {
     $b = rtrim((string)linea_cfg()['base'], '/');
     if ($b !== '') { return $b; }
-    $https = ($_SERVER['HTTPS'] ?? '') === 'on' || ($_SERVER['HTTP_X_FORWARDED_PROTO'] ?? '') === 'https';
-    return ($https ? 'https' : 'http') . '://' . ($_SERVER['HTTP_HOST'] ?? 'localhost');
+    if (linea_local()) { return 'http://' . (string)($_SERVER['HTTP_HOST'] ?? '127.0.0.1'); }
+    return LINEA_BASE_DEFAULT;
 }
 
+/**
+ * Адрес клиента для лимитов частоты. Только REMOTE_ADDR; X-Real-IP — лишь когда запрос пришёл от доверенного прокси
+ * (config 'trusted_proxies', по умолчанию локальный nginx). X-Forwarded-For не читается: его подделывает кто угодно (T5, В-4).
+ */
 function linea_ip(): string
 {
-    // На Beget nginx стоит перед Apache: настоящий адрес — в X-Real-IP / X-Forwarded-For
-    foreach (['HTTP_X_REAL_IP', 'HTTP_X_FORWARDED_FOR', 'REMOTE_ADDR'] as $k) {
-        $v = trim(explode(',', (string)($_SERVER[$k] ?? ''))[0]);
-        if ($v !== '' && filter_var($v, FILTER_VALIDATE_IP)) { return $v; }
+    $ra = trim((string)($_SERVER['REMOTE_ADDR'] ?? ''));
+    if (!filter_var($ra, FILTER_VALIDATE_IP)) { return '0.0.0.0'; }
+    if (in_array($ra, (array)(linea_cfg()['trusted_proxies'] ?? []), true)) {
+        $x = trim((string)($_SERVER['HTTP_X_REAL_IP'] ?? ''));
+        if ($x !== '' && filter_var($x, FILTER_VALIDATE_IP)) { return $x; }
     }
-    return '0.0.0.0';
+    return $ra;
+}
+
+/** Чистка счётчиков частоты: файлы linea-private/rate/* старше суток (иначе каждый новый адрес оставляет файл навсегда). */
+function linea_rate_gc(int $maxAge = 86400): int
+{
+    $n = 0;
+    foreach (glob(linea_private() . '/rate/*') ?: [] as $f) {
+        if (is_file($f) && filemtime($f) < time() - $maxAge && @unlink($f)) { $n++; }
+    }
+    return $n;
 }
 
 /**
@@ -207,6 +271,7 @@ function linea_rate(string $bucket, int $max, bool $add = true): bool
 {
     $dir = linea_private() . '/rate';
     linea_mkdir($dir);
+    if (random_int(1, 200) === 1) { linea_rate_gc(); }
     $f = $dir . '/' . $bucket . '-' . substr(hash('sha256', linea_ip() . '|linea'), 0, 24);
     $now = time();
     $fh = fopen($f, 'c+');
