@@ -248,8 +248,8 @@
       <form id="fMsg"><label class="bx-f">Сообщение<textarea name="text" maxlength="2000" rows="2"></textarea></label><div class="bx-row"><button class="btn ghost sm">Отправить</button></div><p class="bx-err"></p></form></div>
       <div class="bx-card"><h2>Этапы</h2>${stages}</div>
       <div class="bx-card" id="bxSheets"><h2>Листы по запросу</h2>${sheetsBlock(J, sh)}</div>
-      <div class="bx-card"><h2>Споры</h2>${(J.disputes || []).map(d => `<div class="bx-stage"><h4>${esc(d.subject)} ${st(d.status === 'open' ? 'review' : 'done', d.status === 'open' ? 'открыт' : 'решён')}</h4>${d.messages.map(m => `<p><b>${esc({ client: 'Клиент', brigade: 'Бригада', admin: 'LINEA' }[m.who])}</b> <span class="bx-mut">${esc(dt(m.at))}</span><br>${esc(m.text)}</p>`).join('')}${d.resolution ? '<p><b>Решение:</b> ' + esc(d.resolution) + '</p>' : ''}</div>`).join('') || '<p class="bx-mut">Споров нет.</p>'}
-      <details><summary>Открыть спор</summary><form id="fDisp"><label class="bx-f">Тема<input name="subject" required maxlength="120"></label><label class="bx-f">Суть<textarea name="text" required></textarea></label><div class="bx-row"><button class="btn ghost">Отправить в LINEA</button></div><p class="bx-err"></p></form></details></div>`;
+      <div class="bx-card"><h2>Разногласия</h2><p class="bx-mut">Сначала напишите второй стороне в ленте сделки. Не договорились — попросите LINEA рассмотреть разногласие: мы сверим работы с проектом, фото и перепиской и дадим рекомендацию. Она необязательна, право обратиться в суд сохраняется.</p>${(J.disputes || []).map(d => `<div class="bx-stage"><h4>${esc(d.subject)} ${st(d.status === 'open' ? 'review' : 'done', d.status === 'open' ? 'на рассмотрении' : 'рассмотрено')}</h4>${d.messages.map(m => `<p><b>${esc({ client: 'Клиент', brigade: 'Бригада', admin: 'LINEA' }[m.who])}</b> <span class="bx-mut">${esc(dt(m.at))}</span><br>${esc(m.text)}</p>`).join('')}${d.resolution ? '<p><b>Рекомендация LINEA:</b> ' + esc(d.resolution) + '</p>' : ''}</div>`).join('') || '<p class="bx-mut">Разногласий нет.</p>'}
+      <details><summary>Попросить LINEA рассмотреть разногласие</summary><form id="fDisp"><label class="bx-f">Тема<input name="subject" required maxlength="120"></label><label class="bx-f">Суть<textarea name="text" required></textarea></label><div class="bx-row"><button class="btn ghost">Отправить в LINEA</button></div><p class="bx-err"></p></form></details></div>`;
     const B = body();
     B.querySelector('#bxBack').onclick = e => { e.preventDefault(); tabJobs(); };
     B.querySelectorAll('[data-sign]').forEach(b => b.onclick = async () => {
@@ -273,7 +273,7 @@
   // «Нужен лист»: текст или надиктовка (Web Speech API там, где есть; иначе запись голоса и загрузка)
   function sheetsBlock(J, sh) {
     const list = (sh.sheets || []).map(s => `<li>${st(s.status, s.statusText)} ${esc(s.text)} <span class="bx-mut">${esc(s.room)}${s.wall ? ', стена ' + esc(s.wall) : ''} · ${esc(dt(s.created))}</span>
-      ${s.result ? `<br><a href="${API}brigade/file.php?f=${s.result}" target="_blank" rel="noopener">Лист PDF</a>${s.note ? ' <span class="bx-mut">' + esc(s.note) + '</span>' : ''}` : ''}
+      ${s.result ? `<br><a href="${API}brigade/file.php?f=${s.result}" target="_blank" rel="noopener">Лист PDF</a>${s.note ? ' <span class="bx-mut">' + esc(s.note) + '</span>' : ''}${s.license ? '<br><span class="bx-mut"><b>Условия использования листа.</b> ' + esc(s.license) + '</span>' : ''}` : ''}
       ${s.status === 'question' ? `<br><b>Вопрос:</b> ${esc(s.question)} <input class="bx-in" style="max-width:320px;padding:4px 8px" data-an="${s.id}" placeholder="ответ"> <button type="button" class="btn ghost sm" data-ab="${s.id}">Ответить</button>` : ''}</li>`).join('');
     const can = sh.inDeal != null ? sh.inDeal : J.status === 'work';
     const speech = !!(window.SpeechRecognition || window.webkitSpeechRecognition), rec = !!(window.MediaRecorder && navigator.mediaDevices);

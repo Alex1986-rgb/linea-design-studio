@@ -23,10 +23,11 @@ const BRIG_MAIL = [
     'brig_stage_returned' => ['LINEA · этап возвращён с замечаниями', "Здравствуйте, {name}!\n\nКлиент вернул этап «{stage}» по объекту {object} с замечаниями. Подробности — в кабинете: {link}"],
     'brig_stage_accepted' => ['LINEA · этап принят', "Здравствуйте, {name}!\n\nКлиент принял этап «{stage}» по объекту {object}."],
     'brig_invoice' => ['LINEA · счёт на комиссию {number}', "Здравствуйте, {name}!\n\nВыставлен счёт {number} на агентское вознаграждение {amount} по объекту {object}. Реквизиты и статус — в кабинете, раздел «Финансы»: {link}"],
-    'brig_sheet' => ['LINEA · лист по запросу: {status}', "Здравствуйте, {name}!\n\nЗапрос листа по объекту {object}: {status}.\nКабинет: {link}"],
+    'brig_sheet' => ['LINEA · лист по запросу: {status}', "Здравствуйте, {name}!\n\nЗапрос листа по объекту {object}: {status}.\nКабинет: {link}{license_ml}"],
     'client_offers' => ['LINEA · предложения бригад по заказу {number}', "Здравствуйте!\n\nПо вашему проекту пришли предложения бригад ({count}). Сравнить и выбрать — на странице заказа: {link}"],
     'client_stage_ready' => ['LINEA · этап готов к приёмке', "Здравствуйте!\n\nБригада отметила этап «{stage}» готовым к приёмке. Чек-лист приёмки и фото — на странице заказа: {link}"],
     'admin_event' => ['LINEA · {subject}', "{text}\n\n{link}"],
+    'contract_copy' => ['LINEA · подписан {doc} по заказу {number}', "Здравствуйте!\n\nДокумент «{doc}» подписан обеими сторонами простой электронной подписью на сайте LINEA. Копия текста и протокол подписания — ниже; та же версия хранится в карточке сделки (SHA-256 {hash}).\nLINEA стороной договора не является.\n\n{text_ml}"],
     'sign_code' => ['LINEA · код подписи: {doc}', "Код для подписи документа «{doc}» на сайте LINEA: {code}\n\nКод действует 15 минут. Версия документа: SHA-256 {hash}…\nЕсли вы не подписываете документ — никому не сообщайте код и напишите нам."],
 ];
 
@@ -35,8 +36,10 @@ function brig_mail(string $to, string $key, array $vars, bool $test): string
 {
     [$subj, $body] = BRIG_MAIL[$key] ?? ['LINEA', '{text}'];
     $rep = [];
-    foreach ($vars as $k => $v) { $rep['{' . $k . '}'] = str_replace(["\r", "\n"], ' ', (string)$v); }
-    $subj = strtr($subj, $rep); $body = strtr($body, $rep);
+    // переводы строк в подстановках убираются (защита заголовков и вёрстки письма); ключи с окончанием _ml — многострочный текст тела
+    foreach ($vars as $k => $v) { $rep['{' . $k . '}'] = str_ends_with((string)$k, '_ml') ? str_replace("\r", '', (string)$v) : str_replace(["\r", "\n"], ' ', (string)$v); }
+    $subjRep = array_filter($rep, fn($k) => !str_ends_with($k, '_ml}'), ARRAY_FILTER_USE_KEY);
+    $subj = strtr($subj, $subjRep); $body = strtr($body, $rep);
     $cfg = linea_cfg();
     $dry = $test || empty($cfg['brig_mail_enabled']) || getenv('LINEA_MAIL_DRY') || !filter_var($to, FILTER_VALIDATE_EMAIL);
     if ($dry) { linea_log('brig-mail.log', 'DRY ' . ($test ? '[test] ' : '') . $key . ' · ' . $subj); return 'dry'; }

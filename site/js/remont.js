@@ -1,5 +1,5 @@
 // LINEA · «Ремонт по проекту» на странице заказа (order.html?t=…): подбор бригады (необязательно), сравнение предложений
-// по позициям сметы, выбор, договор подряда, этапы и приёмка по чек-листам, отзыв, споры. API — api/remont.php (доступ по токену заказа).
+// по позициям сметы, выбор, договор подряда, этапы и приёмка по чек-листам, отзыв, рассмотрение разногласий. API — api/remont.php (доступ по токену заказа).
 (function () {
   'use strict';
   const box = document.getElementById('ordRemont');
@@ -28,8 +28,8 @@
     let h = '<div class="kicker" style="margin:0 0 6px">Ремонт по проекту · необязательно</div>';
     if (J) h += jobView(J);
     else if (!R || R.status === 'cancelled') {
-      if (!S.eligible) { box.innerHTML = h + '<h2>Ремонт по проекту</h2><p>Когда проект будет оплачен, здесь можно подобрать проверенную бригаду: бригады посчитают ремонт по вашей смете. Это необязательно — проект ваш, работать можно с кем угодно. <a href="remont/">Как это работает</a></p>'; return; }
-      h += `<h2>Подобрать бригаду</h2><p>Проверенные бригады вашего района посчитают ремонт по позициям вашей сметы — вы сравните цены построчно и выберете. Для вас — без комиссии: вознаграждение студии платит бригада. Подбор необязателен. <a href="remont/" target="_blank" rel="noopener">Как это работает</a>${R ? '' : ''}</p>
+      if (!S.eligible) { box.innerHTML = h + '<h2>Ремонт по проекту</h2><p>Когда проект будет оплачен, здесь можно подобрать бригаду (бригады проходят проверку документов): бригады посчитают ремонт по вашей смете. Это необязательно — проект ваш, работать можно с кем угодно. <a href="remont/">Как это работает</a></p>'; return; }
+      h += `<h2>Подобрать бригаду</h2><p>Бригады вашего района, прошедшие проверку документов, посчитают ремонт по позициям вашей сметы — вы сравните цены построчно и выберете. Для вас — без комиссии: вознаграждение студии платит бригада. Подбор необязателен. <a href="remont/" target="_blank" rel="noopener">Как это работает</a>${R ? '' : ''}</p>
         <form id="rmReq"><div class="bx-grid"><label class="bx-f">Район объекта<select name="district" required><option value="">Выберите</option>${Object.entries(S.districts).map(([k, v]) => `<option value="${k}">${esc(v)}</option>`).join('')}</select></label>
         <label class="bx-f">Когда хотите начать<input name="startWish" maxlength="60" placeholder="например, с 15 ноября"></label></div>
         <label class="bx-cb"><input type="checkbox" name="consent" required> Согласен передать бригадам площадки проект <b>без</b> моего имени, адреса и телефона: район, площадь, смету, ведомости и листы (<a href="${esc(S.terms.href)}" target="_blank" rel="noopener">условия сервиса</a>, ред. ${esc(S.terms.ed)}). Контакты получит только бригада, которую я выберу, — когда условия договора подтвердим и я, и она.</label>
@@ -91,8 +91,8 @@
       <h3>Этапы</h3>${stages}
       ${J.canReview ? `<h3>Отзыв о бригаде</h3><form id="rmRev"><div class="bx-chips">${[5, 4, 3, 2, 1].map(n => `<label><input type="radio" name="rating" value="${n}" required> ${'★'.repeat(n)}</label>`).join('')}</div><label class="bx-f" style="margin-top:8px">Текст<textarea name="text" maxlength="3000"></textarea></label><div class="bx-row"><button class="btn">Оставить отзыв</button></div><p class="bx-err"></p></form>` : ''}
       ${J.review ? `<p>Ваш отзыв: ${'★'.repeat(J.review.rating)} ${esc(J.review.text)}${J.review.hidden ? ' <span class="bx-mut">(скрыт модерацией по правилам площадки)</span>' : ''}</p>` : ''}
-      <h3>Споры</h3>${(J.disputes || []).map(d => `<div class="bx-stage"><h4>${esc(d.subject)} ${st(d.status === 'open' ? 'review' : 'done', d.status === 'open' ? 'открыт' : 'решён')}</h4>${d.messages.map(m => `<p><b>${esc({ client: 'Вы', brigade: 'Бригада', admin: 'LINEA' }[m.who])}</b> <span class="bx-mut">${esc(dt(m.at))}</span><br>${esc(m.text)}</p>`).join('')}${d.resolution ? '<p><b>Решение:</b> ' + esc(d.resolution) + '</p>' : ''}</div>`).join('')}
-      <details><summary>Открыть спор</summary><form id="rmDisp"><label class="bx-f">Тема<input name="subject" required maxlength="120"></label><label class="bx-f">Суть<textarea name="text" required></textarea></label><div class="bx-row"><button class="btn ghost">Отправить в LINEA</button></div><p class="bx-err"></p></form></details>`;
+      <h3>Разногласия</h3><p class="bx-mut">Сначала напишите второй стороне в ленте сделки. Не договорились — попросите LINEA рассмотреть разногласие: мы сверим работы с проектом, фото и перепиской и дадим рекомендацию. Она необязательна, право обратиться в суд сохраняется.</p>${(J.disputes || []).map(d => `<div class="bx-stage"><h4>${esc(d.subject)} ${st(d.status === 'open' ? 'review' : 'done', d.status === 'open' ? 'на рассмотрении' : 'рассмотрено')}</h4>${d.messages.map(m => `<p><b>${esc({ client: 'Вы', brigade: 'Бригада', admin: 'LINEA' }[m.who])}</b> <span class="bx-mut">${esc(dt(m.at))}</span><br>${esc(m.text)}</p>`).join('')}${d.resolution ? '<p><b>Рекомендация LINEA:</b> ' + esc(d.resolution) + '</p>' : ''}</div>`).join('')}
+      <details><summary>Попросить LINEA рассмотреть разногласие</summary><form id="rmDisp"><label class="bx-f">Тема<input name="subject" required maxlength="120"></label><label class="bx-f">Суть<textarea name="text" required></textarea></label><div class="bx-row"><button class="btn ghost">Отправить в LINEA</button></div><p class="bx-err"></p></form></details>`;
   }
 
   // документы сделки: договор и допсоглашения — только на сайте, одна версия для обеих сторон, подпись кодом (ПЭП)

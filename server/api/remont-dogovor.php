@@ -3,8 +3,8 @@
  * api/remont-dogovor.php — договор подряда и допсоглашения сделки (HTML для печати в PDF: «Печать → Сохранить как PDF»).
  *   ?t=<токен заказа>      — заказчик своего заказа;   ?j=<объект> — бригада по своей сессии (только свой объект)
  * Обе стороны видят ОДНИ И ТЕ ЖЕ версии: текст из br_contracts (замороженный, lib/contract.php) с хешем SHA-256 и отметками подписи
- * (время; IP — только в админке). Реквизиты и контакты сторон — отдельным блоком, после подписания договора обеими сторонами.
- * LINEA стороной договора подряда не является (агент бригады по агентскому договору). Шаблон — проверить юристом.
+ * и протоколом подписания (время МСК, IP, хеш версии, способ подтверждения, редакция соглашения о ПЭП — разбор юриста 01.11.2026). Реквизиты и контакты сторон — отдельным блоком, после подписания договора обеими сторонами.
+ * LINEA стороной договора подряда не является. Шаблон — проверить юристом.
  */
 declare(strict_types=1);
 require __DIR__ . '/lib/boot.php';
@@ -36,7 +36,7 @@ $dt = fn($s) => $s ? date('d.m.Y H:i', strtotime((string)$s)) : 'не подпи
 $open = brig_contacts_open($j);
 $docs = '';
 foreach (brig_all("SELECT * FROM br_contracts WHERE job_id = ? AND status <> 'void' ORDER BY id", [(int)$j['id']]) as $c) {
-    $docs .= '<section class="doc">' . $c['body']
+    $docs .= '<section class="doc">' . brig_contract_html($c)
         . '<div class="sig"><div><b>Заказчик</b><br>' . ($c['client_signed_at'] ? 'подписано ПЭП ' . $h($dt($c['client_signed_at'])) : 'не подписано') . '</div>'
         . '<div><b>Подрядчик</b><br>' . ($c['brigade_signed_at'] ? 'подписано ПЭП ' . $h($dt($c['brigade_signed_at'])) : 'не подписано') . '</div></div>'
         . '<p class="hash">Версия документа: SHA-256 <code>' . $h($c['hash']) . '</code> · создана ' . $h($dt($c['created_at'])) . ' · статус: ' . ($c['status'] === 'signed' ? 'подписан обеими сторонами' : 'ждёт подписи') . '</p></section>';
@@ -54,7 +54,7 @@ echo '<!DOCTYPE html><html lang="ru"><head><meta charset="utf-8"><meta name="vie
     . 'h2{font-size:16px;margin:22px 0 6px}h3{font-size:15px;margin:26px 0 6px}h4{font-size:14px;margin:12px 0 4px}.doc{margin:0 0 40px;page-break-after:always}'
     . 'table{width:100%;border-collapse:collapse;font-size:12.5px;margin:6px 0}td,th{border:1px solid #999;padding:4px 6px;vertical-align:top}.r{text-align:right;white-space:nowrap}'
     . '.draft{border:2px solid #b4462b;color:#b4462b;padding:8px 12px;margin:0 0 16px;font:13px/1.4 sans-serif}.src{color:#666;font-size:12px}.sig{display:grid;grid-template-columns:1fr 1fr;gap:30px;margin-top:24px}'
-    . '.hash{font:12px/1.4 sans-serif;color:#444;word-break:break-all}.noprint{font:14px sans-serif;margin:0 0 16px}@media print{.noprint{display:none}body{margin:0}}</style></head><body>'
+    . '.hash{font:12px/1.4 sans-serif;color:#444;word-break:break-all}.protocol{margin-top:20px;font:12px/1.4 sans-serif}.protocol code{word-break:break-all}.noprint{font:14px sans-serif;margin:0 0 16px}@media print{.noprint{display:none}body{margin:0}}</style></head><body>'
     . '<p class="noprint"><button onclick="window.print()">Печать / сохранить в PDF</button></p>'
     . '<div class="draft">Договор и допсоглашения заключаются только на сайте LINEA и подписываются простой электронной подписью (код на почту стороны). '
     . 'Обе стороны видят одни и те же версии — сверить можно по хешу SHA-256. Шаблон договора — редакция ' . BRIG_CONTRACT_ED . '; рекомендуем показать его юристу.</div>'

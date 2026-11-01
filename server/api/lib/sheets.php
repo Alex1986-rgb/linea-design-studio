@@ -8,6 +8,22 @@ declare(strict_types=1);
 
 if (realpath((string)($_SERVER['SCRIPT_FILENAME'] ?? '')) === __FILE__) { http_response_code(404); exit; }
 
+/**
+ * Лицензия на лист по запросу (разбор юриста 01.11.2026, п. 8): выдаётся вместе с каждым готовым листом — в кабинете бригады,
+ * в ответе API и в письме. Лист — для одного объекта; обязанность подрядчика проверить решения по месту — ст. 716 ГК РФ.
+ */
+const SHEET_LICENSE = 'Лист выдан бригаде только для работ на одном объекте — {object} (заказ {order}, сделка № {job}) по договору подряда, '
+    . 'заключённому через LINEA. Передавать лист третьим лицам и использовать его на других объектах нельзя. До начала работ бригада обязана '
+    . 'проверить решения листа по месту (размеры, отметки, расположение коммуникаций и несущих конструкций) и сразу сообщить заказчику в ленте сделки '
+    . 'о несоответствиях и обстоятельствах, которые мешают выполнить работу по листу (ст. 716 ГК РФ); до ответа заказчика такие работы приостановить.';
+
+/** Текст лицензии для конкретного объекта (сделки). */
+function sheets_license(int $jobId): string
+{
+    $r = brig_one('SELECT r.object_title, o.number FROM br_jobs j JOIN br_requests r ON r.id = j.request_id JOIN orders o ON o.id = r.order_id WHERE j.id = ?', [$jobId]);
+    return strtr(SHEET_LICENSE, ['{object}' => (string)($r['object_title'] ?? 'объект сделки'), '{order}' => (string)($r['number'] ?? '—'), '{job}' => (string)$jobId]);
+}
+
 function sheets_dir(): string { $d = linea_private() . '/sheet-requests'; linea_mkdir($d); return $d; }
 
 /**
@@ -45,9 +61,11 @@ function sheets_mirror(int $id): void
 
 function sheets_list(int $jobId): array
 {
+    $lic = sheets_license($jobId);
     return array_map(fn($s) => ['id' => (int)$s['id'], 'status' => $s['status'], 'statusText' => BRIG_SHEET_STATUS[$s['status']] ?? $s['status'], 'text' => $s['text'],
         'room' => (string)$s['room'], 'wall' => (string)$s['wall'], 'audio' => $s['audio_file'] ? (int)$s['audio_file'] : null, 'result' => $s['result_file'] ? (int)$s['result_file'] : null,
-        'question' => (string)$s['question'], 'answer' => (string)$s['answer'], 'note' => (string)$s['worker_note'], 'created' => $s['created_at'], 'ready' => $s['ready_at']],
+        'question' => (string)$s['question'], 'answer' => (string)$s['answer'], 'note' => (string)$s['worker_note'], 'created' => $s['created_at'], 'ready' => $s['ready_at'],
+        'license' => $s['result_file'] ? $lic : null],   // каждый выданный лист — с условиями использования (один объект, проверка по месту)
         brig_all('SELECT * FROM br_sheet_reqs WHERE job_id = ? ORDER BY id DESC', [$jobId]));
 }
 
@@ -60,6 +78,7 @@ function sheets_rooms(int $requestId): array
 /** Сообщить бригаде о смене статуса листа. */
 function sheets_notify(int $id): void
 {
-    $s = brig_one('SELECT s.status, b.email, b.contact_name, b.test, r.object_title, r.test rtest FROM br_sheet_reqs s JOIN br_brigades b ON b.id = s.brigade_id JOIN br_jobs j ON j.id = s.job_id JOIN br_requests r ON r.id = j.request_id WHERE s.id = ?', [$id]);
-    if ($s) { brig_mail((string)$s['email'], 'brig_sheet', ['name' => $s['contact_name'], 'object' => $s['object_title'], 'status' => BRIG_SHEET_STATUS[$s['status']] ?? $s['status'], 'link' => brig_link('brigada/')], (bool)$s['test'] || (bool)$s['rtest']); }
+    $s = brig_one('SELECT s.status, s.job_id, b.email, b.contact_name, b.test, r.object_title, r.test rtest FROM br_sheet_reqs s JOIN br_brigades b ON b.id = s.brigade_id JOIN br_jobs j ON j.id = s.job_id JOIN br_requests r ON r.id = j.request_id WHERE s.id = ?', [$id]);
+    if ($s) { brig_mail((string)$s['email'], 'brig_sheet', ['name' => $s['contact_name'], 'object' => $s['object_title'], 'status' => BRIG_SHEET_STATUS[$s['status']] ?? $s['status'], 'link' => brig_link('brigada/'),
+        'license_ml' => $s['status'] === 'ready' ? "\n\nУсловия использования листа: " . sheets_license((int)$s['job_id']) : ''], (bool)$s['test'] || (bool)$s['rtest']); }
 }
