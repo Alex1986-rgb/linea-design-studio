@@ -43,12 +43,15 @@ $h = fn($s) => htmlspecialchars((string)$s, ENT_QUOTES, 'UTF-8');
 $rub = fn($kop) => $kop === null || $kop === '' ? '—' : number_format((int)$kop / 100, 0, ',', ' ') . ' ₽';
 $self = basename(__FILE__);
 
-/** Неудачные входы: файл с отметками времени за 15 минут. */
-function adm_fails(bool $add = false): int
+/**
+ * Неудачные входы: файл с отметками времени за 15 минут. $global = true — общий счётчик со всех адресов
+ * (перебор пароля с множества адресов: после admin_fail_global неудач за 15 минут вход закрыт для всех).
+ */
+function adm_fails(bool $add = false, bool $global = false): int
 {
     $dir = linea_private() . '/rate';
     linea_mkdir($dir);
-    $f = $dir . '/login-' . substr(hash('sha256', linea_ip() . '|adm'), 0, 24);
+    $f = $dir . '/login-' . ($global ? 'all' : substr(hash('sha256', linea_ip() . '|adm'), 0, 24));
     $list = is_file($f) ? array_filter(array_map('intval', explode("\n", (string)file_get_contents($f))), fn($t) => $t > time() - 900) : [];
     if ($add) { $list[] = time(); }
     file_put_contents($f, implode("\n", $list), LOCK_EX);
@@ -77,11 +80,12 @@ if (empty($_SESSION['adm'])) {
     if (($_SERVER['REQUEST_METHOD'] ?? '') === 'POST' && isset($_POST['password'])) {
         if ((string)$cfg['admin_hash'] === '') { $err = 'Пароль не настроен: admin_hash в linea-private/config.php пуст.'; }
         elseif (adm_fails() >= 5) { $err = 'Слишком много неудачных попыток — подождите 15 минут.'; }
+        elseif (adm_fails(false, true) >= (int)$cfg['admin_fail_global']) { $err = 'Вход временно закрыт: много неудачных попыток со всех адресов. Подождите 15 минут.'; linea_log('error.log', 'admin: глобальный лимит неудачных входов'); }
         elseif (password_verify((string)$_POST['password'], (string)$cfg['admin_hash'])) {
             session_regenerate_id(true);
             $_SESSION['adm'] = 1; $_SESSION['csrf'] = bin2hex(random_bytes(16));
             header('Location: ' . $self); exit;
-        } else { adm_fails(true); usleep(400000); $err = 'Неверный пароль.'; }
+        } else { adm_fails(true); adm_fails(true, true); usleep(400000); $err = 'Неверный пароль.'; }
     }
     page('Вход', '<h1>LINEA · заказы</h1>' . ($err ? '<p class="msg">' . $h($err) . '</p>' : '')
         . '<form method="post" class="box"><label>Пароль <input type="password" name="password" autocomplete="current-password" autofocus required></label> <button>Войти</button></form>');
@@ -118,6 +122,11 @@ if (($_SERVER['REQUEST_METHOD'] ?? '') === 'POST') {
                 $kind = isset(LINEA_KINDS[$_POST['kind'] ?? '']) ? (string)$_POST['kind'] : $o['kind'];
                 $upd('amount_kop = ?, kind = ?', [$kop > 0 ? $kop : null, $kind]);
                 linea_event((int)$o['id'], $who, 'Сумма: ' . $rub($kop > 0 ? $kop : null) . ', вид: ' . LINEA_KINDS[$kind]);
+                // сумма изменилась — старая ссылка на оплату (на прежнюю сумму) больше не выдаётся; новая создастся при следующем «Оплатить»
+                if ((int)$o['amount_kop'] !== $kop && $o['payment_url']) {
+                    $upd('payment_id = NULL, payment_url = NULL, payment_created_at = NULL', []);
+                    linea_event((int)$o['id'], $who, 'Ссылка на оплату по прежней сумме сброшена (платёж ' . $o['payment_id'] . ')');
+                }
                 $msg = 'Сумма сохранена.'; break;
             case 'invoice':
                 $upd("invoice_at = ?, status = CASE WHEN status = 'new' THEN 'awaiting_payment' ELSE status END", [$now]);

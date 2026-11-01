@@ -414,6 +414,20 @@ try {
   ok(!logs.includes(tok) && !logs.includes(T) && !logs.includes('NewPass2026x'), 'в журналах нет токенов и паролей');
   const adm = await admin.req('GET', '/api/admin-brigady.php?view=audit&who=admin', { raw: true });
   ok((adm.text.match(/<tr><td class="mut">/g) || []).length >= 6, 'журнал действий администратора ведётся');
+
+  step('17. Модули сервера: адрес клиента, ссылки писем, условия бригад, фильтр контактов, чек 54-ФЗ, оплата через макет ЮKassa');
+  {
+    const UP = path.join(PRIV, '_units'), MD = path.join(PRIV, '_yk-mock'); fs.mkdirSync(MD, { recursive: true });
+    const mport = PORT + 2;
+    const mock = spawn('php', ['-S', `127.0.0.1:${mport}`, path.join(ROOT, 'tools/fixtures/yk-mock.php')], { env: { ...process.env, LINEA_YK_MOCK: MD }, stdio: 'ignore' });
+    for (let i = 0; i < 50; i++) { try { await fetch(`http://127.0.0.1:${mport}/payments/x`); break; } catch { await new Promise(r => setTimeout(r, 100)); } }
+    let out = '';
+    try { out = execFileSync('php', [path.join(ROOT, 'tools/test-units.php'), UP, `http://127.0.0.1:${mport}`, MD]).toString(); }
+    catch (e) { out = String(e.stdout || '') + String(e.stderr || ''); }
+    mock.kill();
+    for (const line of out.split('\n')) { const m = line.match(/^\s+([✓✗]) (.*)$/); if (m) ok(m[1] === '✓', m[2]); }
+    ok(/✓/.test(out) && !/Fatal|Warning/.test(out), 'модульные проверки отработали без ошибок PHP', out.slice(-300));
+  }
 } catch (e) { if (e !== STOP) { fail++; console.log('  ✗ исключение: ' + e.stack); } }
 
 console.log(`\nИтог: ${pass} ✓, ${fail} ✗` + (srvErr.match(/PHP (Fatal|Warning|Notice|Deprecated)[^\n]*/g) || []).map(s => '\n  ' + s).join(''));
