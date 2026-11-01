@@ -270,7 +270,10 @@ const sticky = u => `<div class="sticky-cta">
 </div>`;
 
 // в подвале к разделам добавляются служебные страницы
-const FOOTER_EXTRA = [
+// Договор-оферта — черновик (решение 01.11.2026): пока OFERTA_DRAFT = true, ссылки на него нет в подвале, навигации и карте сайта;
+// страница oferta/ остаётся (noindex, вне sitemap.xml). Снять флаг — ссылки вернутся сами (gen-more-pages.js берёт флаг отсюда).
+const OFERTA_DRAFT = true;
+const FOOTER_EXTRA_ALL = [
   { title: 'Условия', href: 'price/' },
   { title: 'Процесс', href: 'process/' }, { title: 'FAQ', href: 'faq/' },
   { title: 'О студии', href: 'about/' }, { title: 'Контакты', href: 'contacts/' },
@@ -278,6 +281,7 @@ const FOOTER_EXTRA = [
   { title: 'Оплата', href: 'oplata/' }, { title: 'Договор-оферта', href: 'oferta/' },
   { title: 'Обработка данных', href: 'policy/' }, { title: 'Согласие на обработку данных', href: 'soglasie/' },
 ];
+const FOOTER_EXTRA = FOOTER_EXTRA_ALL.filter(x => !(OFERTA_DRAFT && x.href === 'oferta/'));
 // Воронка сайта: три состояния посетителя. Полоса стоит перед подвалом на
 // каждой странице и всегда показывает, где человек сейчас и что дальше.
 const FUNNEL = [
@@ -432,4 +436,4 @@ ${ogImageTags(ogImage || OG_DEFAULT)}
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,500;0,600;1,500&family=Inter:wght@400;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="${u}css/main.css?${CSSV}">${extra || ''}`;
 
-module.exports = { TERMS, BRIG_TERMS, INTAKE, intakeOnline, swapIntake, AUTHOR, BASE, SITE, SITE_BASES, SITE_DOMAIN_RU, CSSV, SECTIONS, FOOTER_EXTRA, FUNNEL, funnel, ctaBlock, crumbsBar, crumbsAuto, pic, esc, clamp, header, footer, beta, sticky, crumbsLd, head };
+module.exports = { OFERTA_DRAFT, TERMS, BRIG_TERMS, INTAKE, intakeOnline, swapIntake, AUTHOR, BASE, SITE, SITE_BASES, SITE_DOMAIN_RU, CSSV, SECTIONS, FOOTER_EXTRA, FUNNEL, funnel, ctaBlock, crumbsBar, crumbsAuto, pic, esc, clamp, header, footer, beta, sticky, crumbsLd, head };

@@ -70,7 +70,8 @@ for (const f of all) {
 // 2–3. Страницы
 const ATTR = /\s(href|src|srcset|action|content|data-src)\s*=\s*("([^"]*)"|'([^']*)')/gi;
 const pageMeta = {};
-for (const f of all.filter(f => /\.html?$/i.test(f))) {
+// серверные шаблоны (api/brigade/tpl/*.html: метки %%CANON%% и т. п. заполняет PHP) — не страницы, проверяются после подстановки
+for (const f of all.filter(f => /\.html?$/i.test(f) && !/(^|\/)api\/brigade\/tpl\//.test(rel(f)))) {
   stat.html++;
   const s = fs.readFileSync(f, 'utf8');
   const r = rel(f);

@@ -775,7 +775,7 @@ w('oplata/index.html', page({
 /* ---------------------------------------------------------- договор-оферта (черновик) */
 // ЧЕРНОВИК: без реквизитов исполнителя и проверки юристом публичной офертой не является. Числа (кругов правок, сроки,
 // цены) — из TERMS; чего нет — пишем «определяется до оплаты», а не выдумываем. noindex и вне sitemap, пока черновик.
-const OFERTA_DRAFT = true;
+const OFERTA_DRAFT = SHELL.OFERTA_DRAFT;   // флаг — в tools/site-shell.js (там же прячется ссылка в подвале)
 w('oferta/index.html', page({
   file: 'oferta/index.html',
   title: 'Договор-оферта на дизайн-проект — черновик | LINEA',
@@ -815,7 +815,7 @@ w('oferta/index.html', page({
 
 /* ---------------------------------------------------------- карта сайта */
 const MAP = [
-  ['Услуги', [['Каталог услуг', 'catalog/'], ['Дизайн-проект квартиры', 'catalog/dizayn-proekt-kvartiry.html'], ['Дизайн-проект дома', 'catalog/dizayn-proekt-doma.html'], ['Только рабочая документация', 'catalog/rabochaya-dokumentatsiya.html'], ['Планировочное решение', 'catalog/planirovochnoe-reshenie.html'], ['Визуализации', 'catalog/vizualizatsii.html'], ['Смета и комплектация', 'catalog/smeta-i-komplektatsiya.html'], ['Стоимость и условия', 'price/'], ['Оплата', 'oplata/'], ['Договор-оферта (черновик)', 'oferta/']]],
+  ['Услуги', [['Каталог услуг', 'catalog/'], ['Дизайн-проект квартиры', 'catalog/dizayn-proekt-kvartiry.html'], ['Дизайн-проект дома', 'catalog/dizayn-proekt-doma.html'], ['Только рабочая документация', 'catalog/rabochaya-dokumentatsiya.html'], ['Планировочное решение', 'catalog/planirovochnoe-reshenie.html'], ['Визуализации', 'catalog/vizualizatsii.html'], ['Смета и комплектация', 'catalog/smeta-i-komplektatsiya.html'], ['Стоимость и условия', 'price/'], ['Оплата', 'oplata/'], ...(OFERTA_DRAFT ? [] : [['Договор-оферта', 'oferta/']])]],
   ['Работы', [['Портфолио', 'portfolio-hub/'], ...CARDS.map(c => [c.name, `portfolio/${c.slug}/`]), ['Кейсы', 'cases/']]],
   ['Разобраться', [['Сравнение с рынком', 'compare/'], ['Как проходит работа', 'process/'], ['Вопросы и ответы', 'faq/'], ['Журнал', 'journal/'], ['Состав дизайн-проекта', 'journal/sostav-dizayn-proekta.html'], ['Развёртки стен', 'journal/razvertki-sten.html'], ['Электрика в проекте', 'journal/elektrika-v-proekte.html'], ['Пирог пола', 'journal/pirog-pola.html'], ['Смета ремонта', 'journal/smeta-remonta.html']]],
   ['Стили', [['Все стили', 'style/'], ['Джапанди', 'style/japandi.html'], ['Скандинавский', 'style/scandi.html'], ['Минимализм', 'style/minimal.html'], ['Современный', 'style/modern.html'], ['Неоклассика', 'style/neoclassic.html'], ['Лофт', 'style/loft.html']]],
