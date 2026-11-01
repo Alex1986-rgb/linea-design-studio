@@ -11,6 +11,7 @@ declare(strict_types=1);
 require __DIR__ . '/lib/boot.php';
 require __DIR__ . '/lib/brig.php';
 require __DIR__ . '/lib/sheets.php';
+require __DIR__ . '/lib/kabinet.php';
 
 header('X-Robots-Tag: noindex, nofollow');
 header('Cache-Control: no-store');
@@ -202,25 +203,11 @@ if (($_SERVER['REQUEST_METHOD'] ?? '') === 'POST') {
             $back .= '?r=' . $id; $msg = 'Запрос отменён.'; break;
         case 'j_sign':   // с 01.11.2026 договор подписывают только стороны на сайте (ПЭП кодом) — «за сторону» администратор не подписывает
             $msg = 'Договор подписывают только стороны на сайте кодом подтверждения.'; $back .= '?j=' . $id; break;
-        case 'j_invoice':
-            $j = brig_one('SELECT j.*, r.object_title, r.test FROM br_jobs j JOIN br_requests r ON r.id = j.request_id WHERE j.id = ?', [$id]);
+        case 'j_invoice':   // общая точка с панелью (ledger_invoice): счёт — только при реквизитах LINEA (до ИП — «отложено»), вручную — с причиной
             $back .= '?view=money';
-            if (!$j || $j['commission_kop'] === null) { $msg = 'Вознаграждение ещё не начислено (контакты сторон не открыты).'; break; }
-            brig_commission_due_check($id, $WHO);
-            $j = brig_one('SELECT j.*, r.object_title, r.test FROM br_jobs j JOIN br_requests r ON r.id = j.request_id WHERE j.id = ?', [$id]);
-            $manual = !empty($_POST['manual']);
-            if (!$j['commission_due_at'] && !$manual) { $msg = 'Вознаграждение ещё не к оплате ни по одной дате. Счёт можно выставить вручную — кнопкой «Выставить вручную» с причиной.'; break; }
-            if (!$j['commission_due_at'] && $manual && $reason === '') { $msg = 'Для счёта вручную укажите причину.'; break; }
-            if (brig_one('SELECT 1 FROM br_invoices WHERE job_id = ?', [$id])) { $msg = 'Счёт уже выставлен.'; break; }
-            $iid = db_insert('br_invoices', ['number' => 'tmp-' . bin2hex(random_bytes(4)), 'brigade_id' => (int)$j['brigade_id'], 'job_id' => $id, 'amount_kop' => (int)$j['commission_kop'],
-                'issued_at' => $now, 'due_at' => date('Y-m-d', strtotime('+' . (int)brig_terms()['invoice_days'] . ' days'))]);
-            $num = 'LB-' . date('ym') . '-' . str_pad((string)$iid, 4, '0', STR_PAD_LEFT);
-            db_update('br_invoices', ['number' => $num], 'id = ?', [$iid]);
-            $b = brig_one('SELECT * FROM br_brigades WHERE id = ?', [(int)$j['brigade_id']]);
-            brig_mail((string)$b['email'], 'brig_invoice', ['name' => $b['contact_name'], 'number' => $num, 'amount' => brig_rub((int)$j['commission_kop']), 'object' => $j['object_title'], 'link' => brig_link('brigada/')], (bool)$j['test'] || (bool)$b['test']);
-            brig_audit($WHO, 'invoice', 'job#' . $id, $num . ' на ' . brig_rub((int)$j['commission_kop']) . (!$j['commission_due_at'] ? ' — вручную: ' . $reason : ''));
-            if (!$j['commission_due_at']) { brig_exec('UPDATE br_jobs SET commission_due_at = ?, commission_due_why = ? WHERE id = ? AND commission_due_at IS NULL', [$now, 'счёт выставлен LINEA вручную', $id]); }
-            $msg = 'Счёт ' . $num . ' выставлен.'; break;
+            $r = ledger_invoice($id, $WHO, $reason, !empty($_POST['manual']));
+            $msg = str_starts_with((string)$r, 'LB-') ? 'Счёт ' . $r . ' выставлен.' : (string)$r;
+            break;
         case 'f_ok':   // одобрить файл портфолио/логотип для каталога (К-2: на картинке может быть телефон)
             $f = brig_one("SELECT * FROM br_files WHERE id = ? AND owner_kind IN ('portfolio','logo')", [$id]);
             if ($f) { db_update('br_files', ['moderated_at' => $now], 'id = ?', [$id]); brig_audit($WHO, 'file-ok', 'brigade#' . $f['brigade_id'], 'файл #' . $id); $back .= '?b=' . (int)$f['brigade_id']; $msg = 'Файл одобрен для каталога.'; }

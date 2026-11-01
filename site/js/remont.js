@@ -2,10 +2,15 @@
 // по позициям сметы, выбор, договор подряда, этапы и приёмка по чек-листам, отзыв, рассмотрение разногласий. API — api/remont.php (доступ по токену заказа).
 (function () {
   'use strict';
-  const box = document.getElementById('ordRemont');
-  const API = (document.querySelector('meta[name="linea-api"]') || {}).content || '';
-  const t = (new URLSearchParams(location.search).get('t') || '').replace(/[^0-9a-f]/gi, '');
-  if (!box || !API || !t) return;
+  // Кабинет клиента (js/kabinet.js) запускает тот же модуль внутри вкладки «Ремонт»: window.lineaRemont(box, токен, api).
+  // Значимые действия требуют свежего входа кодом: ответ {needCode} → window.lineaNeedCode() (окно кода кабинета) → повтор.
+  window.lineaRemont = start;
+  const box0 = document.getElementById('ordRemont');
+  const API0 = (document.querySelector('meta[name="linea-api"]') || {}).content || '';
+  const t0 = (new URLSearchParams(location.search).get('t') || '').replace(/[^0-9a-f]/gi, '');
+  if (box0 && API0 && t0 && !document.getElementById('kab')) start(box0, t0, API0);
+
+  function start(box, t, API) {
   const esc = s => String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
   const rub = n => Math.round(n).toLocaleString('ru-RU') + ' ₽';
   const day = s => { if (!s) return '—'; const d = new Date(String(s).slice(0, 10) + 'T00:00'); return isNaN(d) ? s : d.toLocaleDateString('ru-RU', { day: 'numeric', month: 'long' }); };
@@ -14,9 +19,11 @@
   const SPEC = { demontazh: 'Демонтаж', chernovye: 'Черновые работы', elektrika: 'Электрика', santehnika: 'Сантехника', plitka: 'Плитка', malyarka: 'Малярные работы', poly: 'Полы', potolki: 'Потолки и ГКЛ', mebel: 'Мебель и двери' };
   let S = {};
 
-  async function call(a, json) {
-    const r = await fetch(API + 'remont.php?t=' + t + (a ? '&a=' + a : ''), a ? { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-CSRF': S.csrf || '' }, body: JSON.stringify(json || {}) } : { cache: 'no-store' });
+  async function call(a, json, again) {
+    const r = await fetch(API + 'remont.php?t=' + t + (a ? '&a=' + a : ''), a ? { method: 'POST', credentials: 'same-origin', headers: { 'Content-Type': 'application/json', 'X-CSRF': S.csrf || '' }, body: JSON.stringify(json || {}) } : { cache: 'no-store', credentials: 'same-origin' });
     let j; try { j = await r.json(); } catch { j = { ok: false, error: 'Сервер не ответил' }; }
+    if (j.needCode && !again && typeof window.lineaNeedCode === 'function' && await window.lineaNeedCode()) return call(a, json, true);
+    if (j.needCode && !window.lineaNeedCode) j.error = 'Это действие — в кабинете после входа кодом из письма: откройте kabinet/';
     return j;
   }
   async function load() { const j = await call(); if (j.ok) { S = j; render(); } }
@@ -137,4 +144,5 @@
     const ds = q('#rmDisp'); if (ds) ds.onsubmit = e => { e.preventDefault(); act('dispute', { subject: ds.subject.value, text: ds.text.value }, ds.querySelector('.bx-err')); };
   }
   load();
+  }
 })();

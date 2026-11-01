@@ -22,6 +22,7 @@
 declare(strict_types=1);
 require __DIR__ . '/lib/boot.php';
 require __DIR__ . '/lib/brig.php';
+require __DIR__ . '/lib/kabinet.php';
 
 brig_https();
 $token = (string)($_GET['t'] ?? '');
@@ -35,7 +36,7 @@ function rm_state(array $o, string $token): array
 {
     $oid = (int)$o['id'];
     $r = brig_one('SELECT * FROM br_requests WHERE order_id = ?', [$oid]);
-    $out = ['ok' => true, 'csrf' => brig_client_csrf($token), 'eligible' => in_array($o['status'], ['paid', 'delivered'], true),
+    $out = ['ok' => true, 'csrf' => brig_client_csrf($token), 'eligible' => kab_remont_eligible($o), 'chooseAfter' => brig_terms()['choose_after'],
         'districts' => BRIG_DISTRICTS, 'terms' => BRIG_CLIENT_TERMS, 'brigTerms' => brig_terms_public(), 'request' => null, 'offers' => [], 'job' => null];
     if (!$r) { return $out; }
     $pack = json_decode((string)$r['pack'], true) ?: ['positions' => []];
@@ -83,6 +84,13 @@ brig_client_csrf_check($token);
 if (!linea_rate('remont', 200)) { linea_fail('Слишком много действий — подождите', 429); }
 $in = brig_input();
 $a = (string)($_GET['a'] ?? '');
+// значимые действия (выбор, подписи, отметки оплат, приёмка, разногласие, отзыв, отказ) — только после входа кодом на почту заказа
+// не старше fresh_code_hours (спецификация 3.0 п. 6, ревью техники В-5): одной ссылки с токеном мало
+if (in_array($a, ['request', 'choose', 'sign', 'addendum', 'addendum_cancel', 'advance', 'job_cancel', 'stage_accept', 'stage_return', 'review', 'dispute', 'cancel'], true)) {
+    kab_require_fresh_for_order($o);
+}
+$jf = ($rq = brig_one('SELECT id FROM br_requests WHERE order_id = ?', [$oid])) ? brig_job_for_request((int)$rq['id']) : null;
+if ($jf && !in_array($a, ['msg', 'dispute', 'dispute_msg'], true)) { deal_require_not_frozen($jf); }
 $now = linea_now();
 $r = brig_one('SELECT * FROM br_requests WHERE order_id = ?', [$oid]);
 $j = $r ? brig_job_for_request((int)$r['id']) : null;   // действующая сделка; отменённые остаются в базе (С-3)
@@ -99,7 +107,7 @@ $brig = fn() => brig_one('SELECT * FROM br_brigades WHERE id = ?', [(int)$j['bri
 
 switch ($a) {
     case 'request':
-        if (!in_array($o['status'], ['paid', 'delivered'], true)) { linea_fail('Подбор бригады — после оплаты проекта'); }
+        if (!kab_remont_eligible($o)) { linea_fail(brig_terms()['choose_after'] === 'final' ? 'Подбор бригады — по финальному альбому, после выдачи проекта' : 'Подбор бригады — после оплаты проекта и первого варианта альбома'); }
         if ($r && $r['status'] !== 'cancelled') { linea_fail('Подбор уже идёт'); }
         if (($in['consent'] ?? false) !== true) { linea_fail('Отметьте согласие на передачу обезличенного проекта бригадам'); }
         $dist = (string)($in['district'] ?? '');

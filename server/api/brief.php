@@ -124,6 +124,18 @@ try {
 }
 
 linea_rate_add('brief');
+// кабинет клиента: аккаунт по почте брифа создаётся сам (вход кодом, без пароля), заказ привязывается к нему
+if ($email !== '' && filter_var($email, FILTER_VALIDATE_EMAIL)) {
+    try {
+        require_once __DIR__ . '/lib/kabinet.php';
+        brig_db();
+        $accId = kab_client_account($email, (bool)$test, linea_str($client['name'] ?? '', 80), (string)$phone);
+        foreach (['pd' => 'Обработка персональных данных'] + (str_contains($consentText, 'портфолио: да') ? ['portfolio' => 'Показ в портфолио'] : []) as $k => $_) {
+            db_insert('consents', ['account_id' => $accId, 'order_id' => $id, 'kind' => $k, 'edition' => (string)($consent['edition'] ?? '—'), 'given_at' => $now, 'ip' => linea_ip(), 'text' => $consentText]);
+        }
+        kab_notice($accId, $id, 'proekt', 'Бриф ' . $number . ' получен. ' . ($amount ? 'Сумма — ' . brig_rub((int)$amount) . '.' : 'Сумму подтвердим в течение рабочего дня.'), '#/o/' . $number);
+    } catch (Throwable $e) { linea_log('error.log', 'brief kabinet: ' . $e->getMessage()); }
+}
 linea_event($id, 'site', 'Бриф получен с сайта: ' . $count . ' файлов, ' . round((int)$f['size'] / 1048576, 1) . ' МБ' . ($test ? ' (тест)' : ''));
 linea_log('orders.log', 'new ' . $number . ($test ? ' test' : '') . ' ' . $kind . ' ' . (int)$f['size']);
 linea_notify('LINEA: новый бриф ' . $number, implode("\n", [

@@ -111,14 +111,38 @@ const BRIG_TERMS_DEFAULT = [
     'termination_fee_base' => 'accepted',   // юрист п. 6: при расторжении база вознаграждения — фактически выполненное и принятое
     'bypass_penalty' => ['enabled' => false, 'mult' => 2],   // юрист п. 7: неустойка за обход — только бригаде, выключено до юриста; клиенту штрафов нет
     'files_premoderation' => true,  // К-2: новые фото/PDF портфолио и логотип видны в каталоге только после модерации LINEA
+    // ── кабинеты и правила сделки (решения по разделу 9 спецификации, 01.11.2026: «на твоё усмотрение» — значения координатора;
+    //    все меняются в админке «Настройки» (таблица settings поверх config), сроки «р.дн» — в рабочих днях по календарю holidays)
+    'stage_remind_days' => [2, 4],  // напоминания заказчику о приёмке этапа (р.дн после «готов к приёмке»)
+    'stage_silence_days' => 5,      // р.дн молчания заказчика → сигнал в админку и предложение рассмотреть разногласия (НЕ приёмка: юрист п. 1)
+    'stage_silence_days_hidden' => 3,   // то же для этапа со скрытыми работами
+    'protect_months' => 24,         // защита связи заказчик–бригада: повторный ремонт той же пары — через площадку
+    'exit_fee' => ['enabled' => false, 'pct' => 5, 'min_kop' => 1500000],   // «работать напрямую» за плату — выключено
+    'invite_max' => 6,              // пакет одного запроса получают не больше N бригад
+    'offers_show_max' => 5,         // заказчик видит не больше N предложений (остальные — «ещё N»)
+    'offer_deadline_wd' => 3,       // срок предложений, р.дн
+    'choose_days' => 14,            // срок выбора бригады, календарных дней
+    'sign_days' => 7,               // срок подписи договора, календарных дней
+    'dispute_reply_days' => 5,      // ответ второй стороны в разногласии, р.дн
+    'dispute_proposal_days' => 2,   // согласиться с рекомендацией LINEA, р.дн
+    'fee_base' => 'works',          // база вознаграждения: works — только работы, без материалов; works_materials — с материалами бригады
+    // самозанятые бригады: допускаются с ограничениями — без вознаграждения до перехода в ИП, лимит суммы договора (доход НПД),
+    // крупные объекты (площадь ≥ big_object_m2) — только ИП/ООО
+    'npd' => ['allowed' => true, 'no_fee' => true, 'max_deal_kop' => 240000000, 'big_object_m2' => 120],
+    'retention_years' => 5,         // хранение договоров, актов и подписей после закрытия сделки (⚠ проверить юристом)
+    'expert_visit_payer' => 'loser',   // выезд практика при разногласии оплачивает сторона, чья позиция не подтвердилась
+    'choose_after' => 'final',      // подбор бригады: final — только по финальному альбому (заказ «выдан»); first — с первого варианта
+    'pd_days' => 10,                // заявка по ПДн исполняется за N р.дн (закон — 30 дней)
+    'fresh_code_hours' => 12,       // значимые действия — после входа кодом не старше N часов
 ];
 
 /** Условия бригад: значения по умолчанию + config 'brig_terms', с проверкой границ. */
-function brig_terms(): array
+function brig_terms(bool $fresh = false): array
 {
     static $t = null;
-    if ($t !== null) { return $t; }
-    $t = array_replace(BRIG_TERMS_DEFAULT, is_array(linea_cfg()['brig_terms'] ?? null) ? linea_cfg()['brig_terms'] : []);
+    if ($t !== null && !$fresh) { return $t; }
+    if ($fresh) { linea_settings('brig_terms', true); }
+    $t = array_replace(BRIG_TERMS_DEFAULT, is_array(linea_cfg()['brig_terms'] ?? null) ? linea_cfg()['brig_terms'] : [], linea_settings('brig_terms'));
     $t['rate'] = max(0.0, min(0.5, (float)$t['rate']));
     $p = is_array($t['pilot'] ?? null) ? $t['pilot'] : [];
     $t['pilot'] = ['enabled' => !empty($p['enabled']), 'rate' => max(0.0, min(0.5, (float)($p['rate'] ?? $t['rate']))),
@@ -140,7 +164,44 @@ function brig_terms(): array
     $bp = is_array($t['bypass_penalty'] ?? null) ? $t['bypass_penalty'] : [];
     $t['bypass_penalty'] = ['enabled' => !empty($bp['enabled']), 'mult' => max(1, min(5, (int)($bp['mult'] ?? 2)))];
     $t['files_premoderation'] = (bool)$t['files_premoderation'];
+    $rd = array_values(array_filter(array_map('intval', is_array($t['stage_remind_days']) ? $t['stage_remind_days'] : []), fn($d) => $d > 0 && $d < 60));
+    $t['stage_remind_days'] = $rd;
+    foreach (['stage_silence_days' => [1, 30], 'stage_silence_days_hidden' => [1, 30], 'protect_months' => [0, 60], 'invite_max' => [1, 20], 'offers_show_max' => [1, 20],
+        'offer_deadline_wd' => [1, 20], 'choose_days' => [1, 60], 'sign_days' => [1, 30], 'dispute_reply_days' => [1, 30], 'dispute_proposal_days' => [1, 30],
+        'retention_years' => [1, 10], 'pd_days' => [1, 30], 'fresh_code_hours' => [1, 72]] as $k => [$lo, $hi]) { $t[$k] = max($lo, min($hi, (int)$t[$k])); }
+    $ef = is_array($t['exit_fee'] ?? null) ? $t['exit_fee'] : [];
+    $t['exit_fee'] = ['enabled' => !empty($ef['enabled']), 'pct' => max(0, min(30, (float)($ef['pct'] ?? 5))), 'min_kop' => max(0, (int)($ef['min_kop'] ?? 0))];
+    if (!in_array($t['fee_base'], ['works', 'works_materials'], true)) { $t['fee_base'] = 'works'; }
+    $n = is_array($t['npd'] ?? null) ? $t['npd'] : [];
+    $t['npd'] = ['allowed' => !empty($n['allowed']), 'no_fee' => !empty($n['no_fee']), 'max_deal_kop' => max(0, (int)($n['max_deal_kop'] ?? 0)), 'big_object_m2' => max(0, (int)($n['big_object_m2'] ?? 0))];
+    if (!in_array($t['expert_visit_payer'], ['loser', 'initiator', 'split'], true)) { $t['expert_visit_payer'] = 'loser'; }
+    if (!in_array($t['choose_after'], ['final', 'first'], true)) { $t['choose_after'] = 'final'; }
     return $t;
+}
+
+/**
+ * Настройки из админки (таблица settings: ключ → JSON) поверх config. Нет таблицы (до первой миграции) — пустой массив.
+ * $fresh = true — перечитать (после сохранения в той же странице).
+ */
+function linea_settings(string $key, bool $fresh = false): array
+{
+    static $cache = [];
+    if (!$fresh && array_key_exists($key, $cache)) { return $cache[$key]; }
+    $v = [];
+    try {
+        $q = linea_db()->prepare('SELECT v FROM settings WHERE k = ?');
+        $q->execute([$key]);
+        $raw = $q->fetchColumn();
+        $v = $raw !== false ? (json_decode((string)$raw, true) ?: []) : [];
+    } catch (Throwable $e) { $v = []; }
+    return $cache[$key] = is_array($v) ? $v : [];
+}
+
+/** Реквизиты LINEA (ИП/ООО) для счетов на вознаграждение: настройки админки или config 'requisites'. null — нет ИП: вознаграждение «отложено». */
+function linea_requisites(): ?array
+{
+    $r = linea_settings('requisites') ?: (is_array(linea_cfg()['requisites'] ?? null) ? linea_cfg()['requisites'] : []);
+    return trim((string)($r['name'] ?? '')) !== '' && preg_match('/^\d{10,12}$/', (string)($r['inn'] ?? '')) ? $r : null;
 }
 
 /** Ставка словами: 0.05 → «5 %», 0.055 → «5,5 %». Без аргумента — основная ставка из brig_terms(). */
@@ -156,6 +217,7 @@ const LINEA_STATUS = [
     'paid'             => 'Оплачен — проект в работе',
     'delivered'        => 'Альбом выдан',
     'cancelled'        => 'Отменён',
+    'refunded'         => 'Возврат оплаты',
 ];
 
 function linea_now(): string { return date('Y-m-d H:i:s'); }

@@ -115,7 +115,8 @@ function brig_db(): PDO
 function brig_audit(string $who, string $action, string $target = '', string $detail = ''): void
 {
     brig_db();
-    db_insert('br_audit', ['at' => linea_now(), 'who' => mb_substr($who, 0, 60), 'action' => $action, 'target' => mb_substr($target, 0, 80), 'detail' => mb_substr($detail, 0, 500)]);
+    db_insert('br_audit', ['at' => linea_now(), 'who' => mb_substr($who, 0, 60), 'action' => $action, 'target' => mb_substr($target, 0, 80), 'detail' => mb_substr($detail, 0, 500),
+        'ip' => PHP_SAPI === 'cli' ? 'cli' : linea_ip()]);
 }
 
 function brig_one(string $sql, array $args = []): ?array { brig_db(); return db_one($sql, $args); }
@@ -716,6 +717,9 @@ function brig_require_no_debt(array $b): void
 {
     $d = brig_debt((int)$b['id']);
     if ($d['level'] === 'feed_closed') { linea_fail($d['text'], 402); }
+    // лестница предупреждений: 3-е за 90 дней — лента новых заказов закрыта на 14 дней (начатые объекты — как обычно)
+    $w = brig_one('SELECT * FROM br_warnings WHERE brigade_id = ? AND step >= 3 AND until_at > ? ORDER BY id DESC LIMIT 1', [(int)$b['id'], linea_now()]);
+    if ($w) { linea_fail('Лента новых заказов закрыта до ' . date('d.m.Y', strtotime((string)$w['until_at'])) . ' (третье предупреждение за 90 дней: ' . $w['rule'] . '). Начатые объекты ведите как обычно.', 403); }
 }
 
 /** Действующая (не отменённая) сделка запроса: после мягкой отмены (С-3) по запросу может быть несколько строк br_jobs. */

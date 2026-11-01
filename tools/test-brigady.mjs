@@ -40,7 +40,7 @@ fs.mkdirSync(PRIV, { recursive: true });
 const ADMIN_PASS = crypto.randomBytes(12).toString('hex');
 const WORKER = crypto.randomBytes(24).toString('hex');
 const hash = execFileSync('php', ['-r', 'echo password_hash($argv[1], PASSWORD_DEFAULT);', ADMIN_PASS]).toString();
-fs.writeFileSync(path.join(PRIV, 'config.php'), `<?php return ['mode' => 'manual', 'admin_hash' => '${hash}', 'notify_enabled' => false, 'brig_mail_enabled' => false, 'tg_enabled' => false, 'sheet_worker_token' => '${WORKER}', 'brig_reg_per_hour' => 50, 'briefs_per_hour' => 50${MYSQL ? `, 'db' => ['dsn' => '${MYSQL}', 'user' => '${arg('mysql-user') || process.env.USER}', 'pass' => '']` : ''}];`);
+fs.writeFileSync(path.join(PRIV, 'config.php'), `<?php return ['mode' => 'manual', 'admin_hash' => '${hash}', 'notify_enabled' => false, 'brig_mail_enabled' => false, 'tg_enabled' => false, 'sheet_worker_token' => '${WORKER}', 'brig_reg_per_hour' => 50, 'briefs_per_hour' => 50, 'requisites' => ['name' => 'ИП Тестов Т. Т.', 'inn' => '500100732259'], 'brig_terms' => ['npd' => ['allowed' => true, 'no_fee' => false, 'max_deal_kop' => 240000000, 'big_object_m2' => 120]]${MYSQL ? `, 'db' => ['dsn' => '${MYSQL}', 'user' => '${arg('mysql-user') || process.env.USER}', 'pass' => '']` : ''}];`);
 if (MYSQL) {   // чистая база: снести таблицы прошлого прогона
   execFileSync('php', ['-r', `$p = new PDO($argv[1], $argv[2], ''); $p->exec('SET FOREIGN_KEY_CHECKS=0'); foreach ($p->query('SHOW TABLES')->fetchAll(PDO::FETCH_COLUMN) as $t) { $p->exec("DROP TABLE \`$t\`"); }`, MYSQL, arg('mysql-user') || process.env.USER]);
 }
@@ -109,6 +109,15 @@ const ALL = ['demontazh', 'chernovye', 'elektrika', 'santehnika', 'plitka', 'mal
 const B = [actor('A'), actor('B'), actor('C')];
 const client = actor('client'), admin = actor('admin'), anon = actor('anon');
 const adminCsrf = html => (html.match(/name="csrf" value="([0-9a-f]+)"/) || [])[1];
+// вход клиента кодом на почту (кабинет): devCode отдаётся только локальному серверу с LINEA_MAIL_DRY
+const loginCode = async (who, email = BRIEF.client.email) => {
+  const keep = who.csrf;
+  who.csrf = (await who.req('GET', '/api/vhod.php?a=me')).j.csrf;
+  const cd = await who.req('POST', '/api/vhod.php?a=code', { json: { email } });
+  const vf = await who.req('POST', '/api/vhod.php?a=verify', { json: { email, code: cd.j?.devCode } });
+  who.csrf = keep;
+  return vf;
+};
 const adminPost = async (fields) => { const p = await admin.req('GET', '/api/admin-brigady.php', { raw: true }); return admin.req('POST', '/api/admin-brigady.php', { form: { csrf: adminCsrf(p.text), ...fields }, raw: true }); };
 
 try {
@@ -174,7 +183,19 @@ try {
   await admin.req('POST', '/api/admin.php', { form: { csrf: adminCsrf(p0.text), act: 'amount', number: NUM, rub: 128000, kind: 'kvartira', who: 'тест' }, raw: true });
   await admin.req('POST', '/api/admin.php', { form: { csrf: adminCsrf(p0.text), act: 'paid', number: NUM, who: 'тест' }, raw: true });
   let rs = await client.req('GET', `/api/remont.php?t=${T}`);
-  ok(rs.j?.eligible === true, 'оплаченный заказ — подбор доступен');
+  ok(rs.j?.eligible === false, 'оплачен, но альбом не выдан — подбор закрыт (choose_after = final)');
+  await admin.req('POST', '/api/admin.php', { form: { csrf: adminCsrf(p0.text), act: 'delivered', number: NUM, url: 'https://example.test/album', who: 'тест' }, raw: true });
+  rs = await client.req('GET', `/api/remont.php?t=${T}`);
+  ok(rs.j?.eligible === true, 'финальный альбом выдан — подбор доступен');
+  // значимые действия по ссылке с токеном — только после входа кодом на почту заказа (кабинет, спецификация 3.0)
+  const noFresh = await client.req('POST', `/api/remont.php?t=${T}&a=request`, { json: { district: 'zao', consent: true }, headers: { 'X-CSRF': rs.j.csrf } });
+  ok(noFresh.code === 401 && noFresh.j?.needCode, 'без входа кодом «Подобрать бригаду» → 401 needCode', noFresh.text);
+  {
+    const me = await client.req('GET', '/api/vhod.php?a=me'); client.csrf = me.j.csrf;
+    const cd = await client.req('POST', '/api/vhod.php?a=code', { json: { email: BRIEF.client.email } });
+    const vf = await client.req('POST', '/api/vhod.php?a=verify', { json: { email: BRIEF.client.email, code: cd.j?.devCode } });
+    ok(vf.j?.ok && vf.j.go === 'client', 'клиент вошёл кодом на почту заказа', vf.text);
+  }
   client.csrf = rs.j.csrf;
   const noC = await client.req('POST', `/api/remont.php?t=${T}&a=request`, { json: { district: 'zao', consent: true }, csrf: false });
   ok(noC.code === 403, 'POST клиента без CSRF → 403');
@@ -415,7 +436,9 @@ try {
   const p2 = await admin.req('GET', `/api/admin.php?o=${NUM2}`, { raw: true });
   await admin.req('POST', '/api/admin.php', { form: { csrf: adminCsrf(p2.text), act: 'amount', number: NUM2, rub: 100000, kind: 'kvartira', who: 'тест' }, raw: true });
   await admin.req('POST', '/api/admin.php', { form: { csrf: adminCsrf(p2.text), act: 'paid', number: NUM2, who: 'тест' }, raw: true });
+  await admin.req('POST', '/api/admin.php', { form: { csrf: adminCsrf(p2.text), act: 'delivered', number: NUM2, url: 'https://example.test/a', who: 'тест' }, raw: true });
   const c2 = actor('client2'); c2.csrf = (await c2.req('GET', `/api/remont.php?t=${T2}`)).j.csrf;
+  await loginCode(c2);
   await c2.req('POST', `/api/remont.php?t=${T2}&a=request`, { json: { district: 'cao', consent: true } });
   ok((await c2.req('POST', `/api/remont.php?t=${T2}&a=invite`, { json: { slug: demoSlug } })).code === 404, 'демо-бригаду нельзя пригласить в запрос');
   ok((await anon.req('POST', '/api/brigade/auth.php?a=login', { json: { email: 'demo-otdelka@linea.invalid', password: 'x' } })).code === 401, 'в демо-аккаунт войти нельзя');
@@ -463,7 +486,9 @@ try {
     const p3 = await admin.req('GET', `/api/admin.php?o=${N3}`, { raw: true });
     await admin.req('POST', '/api/admin.php', { form: { csrf: adminCsrf(p3.text), act: 'amount', number: N3, rub: 90000, kind: 'kvartira', who: 'тест' }, raw: true });
     await admin.req('POST', '/api/admin.php', { form: { csrf: adminCsrf(p3.text), act: 'paid', number: N3, who: 'тест' }, raw: true });
+    await admin.req('POST', '/api/admin.php', { form: { csrf: adminCsrf(p3.text), act: 'delivered', number: N3, url: 'https://example.test/a', who: 'тест' }, raw: true });
     const c3 = actor('client3'); c3.csrf = (await c3.req('GET', `/api/remont.php?t=${T3}`)).j.csrf;
+    await loginCode(c3);
     await c3.req('POST', `/api/remont.php?t=${T3}&a=request`, { json: { district: 'zao', consent: true } });
     const rid3 = +sql(`SELECT r.id FROM br_requests r JOIN orders o ON o.id = r.order_id WHERE o.token = '${T3}'`)[0].id;
     const pr3 = await admin.req('GET', `/api/admin-brigady.php?r=${rid3}`, { raw: true });

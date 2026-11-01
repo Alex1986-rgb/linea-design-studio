@@ -250,4 +250,64 @@ return [
             "UPDATE orders SET amount_confirmed_at = updated_at WHERE status IN ('paid','delivered')",
         ]
     ),
+    // 01.11.2026 — кабинеты и админка (спецификация docs/brigady/spec-kabinety-adminka.md, блок 0 и блок I): единый вход кодом на почту,
+    // заказы привязаны к аккаунту клиента, устройства, общая таблица подписей, согласия и заявки по ПДн, уведомления в кабинете,
+    // настройки из админки, производственный календарь, проводки вознаграждения, заморозка сделки, лестница предупреждений бригад.
+    4 => [
+        "ALTER TABLE orders ADD COLUMN account_id {INT}",
+        "CREATE INDEX orders_account ON orders(account_id)",
+        "ALTER TABLE accounts ADD COLUMN name {KEY}",
+        "ALTER TABLE accounts ADD COLUMN phone {KEY}",
+        "ALTER TABLE accounts ADD COLUMN prefs {TEXT}",
+        // коды входа: только sha256 (HMAC) кода, 10 минут, 5 попыток — счётчик атомарный
+        "CREATE TABLE IF NOT EXISTS auth_codes (
+            id {ID}, email {EMAIL} NOT NULL, purpose {SHORT} NOT NULL, code_hash {KEY} NOT NULL, expires_at {INT} NOT NULL,
+            tries {INT} NOT NULL DEFAULT 0, created_at {KEY} NOT NULL, used_at {KEY}, ip {KEY})
+            {ENGINE}",
+        "CREATE INDEX auth_codes_email ON auth_codes(email)",
+        "CREATE TABLE IF NOT EXISTS acc_devices (
+            id {ID}, account_id {INT} NOT NULL, dev {KEY} NOT NULL UNIQUE, ua {KEY}, ip {KEY}, created_at {KEY} NOT NULL, last_at {KEY} NOT NULL, ended_at {KEY})
+            {ENGINE}",
+        "CREATE INDEX acc_devices_acc ON acc_devices(account_id)",
+        // единый реестр подписей кабинетов: согласование решений проекта, принятие альбома (session_code); ПЭП ремонта — в br_contracts
+        // (админка показывает оба источника одним реестром)
+        "CREATE TABLE IF NOT EXISTS signatures (
+            id {ID}, who_role {SHORT} NOT NULL, who_id {INT} NOT NULL, doc_kind {SHORT} NOT NULL, doc_id {KEY} NOT NULL, version {KEY},
+            sha256 {KEY} NOT NULL, method {SHORT} NOT NULL, decision {SHORT}, note {TEXT}, order_id {INT}, job_id {INT}, at {KEY} NOT NULL, ip {KEY}, ua {KEY})
+            {ENGINE}",
+        "CREATE INDEX signatures_order ON signatures(order_id)",
+        // согласия (152-ФЗ): обработка ПДн, показ в портфолио, передача обезличенного проекта бригадам, передача данных выбранной бригаде,
+        // распространение (отзыв в публичной карточке бригады, ст. 10.1) — с редакцией, временем и отзывом
+        "CREATE TABLE IF NOT EXISTS consents (
+            id {ID}, account_id {INT} NOT NULL, order_id {INT}, job_id {INT}, kind {SHORT} NOT NULL, edition {KEY} NOT NULL,
+            given_at {KEY} NOT NULL, revoked_at {KEY}, ip {KEY}, text {TEXT})
+            {ENGINE}",
+        "CREATE INDEX consents_acc ON consents(account_id)",
+        "CREATE TABLE IF NOT EXISTS pd_requests (
+            id {ID}, account_id {INT} NOT NULL, kind {SHORT} NOT NULL, status {SHORT} NOT NULL DEFAULT 'new', note {TEXT}, blockers {TEXT}, reply {TEXT},
+            file {KEY}, created_at {KEY} NOT NULL, due_at {KEY} NOT NULL, done_at {KEY}, done_by {KEY})
+            {ENGINE}",
+        "CREATE TABLE IF NOT EXISTS notices (
+            id {ID}, account_id {INT} NOT NULL, order_id {INT}, grp {SHORT} NOT NULL, text {TEXT} NOT NULL, link {KEY}, at {KEY} NOT NULL, read_at {KEY}, ukey {KEY} UNIQUE)
+            {ENGINE}",
+        "CREATE INDEX notices_acc ON notices(account_id)",
+        "CREATE TABLE IF NOT EXISTS settings (k {KEY} NOT NULL PRIMARY KEY, v {TEXT} NOT NULL, updated_at {KEY} NOT NULL, updated_by {KEY}) {ENGINE}",
+        "CREATE TABLE IF NOT EXISTS holidays (d {KEY} NOT NULL PRIMARY KEY, note {KEY}) {ENGINE}",
+        // проводки вознаграждения: accrual / adjust / payment / writeoff; статус начисления — accrued | deferred (нет ИП LINEA) | due | invoiced | paid | waived
+        "CREATE TABLE IF NOT EXISTS br_ledger (
+            id {ID}, brigade_id {INT} NOT NULL, job_id {INT} NOT NULL, kind {SHORT} NOT NULL, amount_kop {INT} NOT NULL, status {SHORT} NOT NULL,
+            note {TEXT}, invoice_id {INT}, at {KEY} NOT NULL, by_who {KEY})
+            {ENGINE}",
+        "CREATE INDEX br_ledger_job ON br_ledger(job_id)",
+        "ALTER TABLE br_jobs ADD COLUMN frozen_at {KEY}",
+        "ALTER TABLE br_jobs ADD COLUMN frozen_reason {TEXT}",
+        "ALTER TABLE br_disputes ADD COLUMN reply_due_at {KEY}",
+        "ALTER TABLE br_disputes ADD COLUMN proposal {TEXT}",
+        "ALTER TABLE br_disputes ADD COLUMN proposal_due_at {KEY}",
+        "CREATE TABLE IF NOT EXISTS br_warnings (
+            id {ID}, brigade_id {INT} NOT NULL, rule {KEY} NOT NULL, quote {TEXT}, step {INT} NOT NULL, at {KEY} NOT NULL, by_who {KEY}, until_at {KEY})
+            {ENGINE}",
+        "CREATE INDEX br_warnings_b ON br_warnings(brigade_id)",
+        "ALTER TABLE br_audit ADD COLUMN ip {KEY}",
+    ],
 ];
