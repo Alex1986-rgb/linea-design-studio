@@ -381,4 +381,11 @@ return [
             id {ID}, token_hash {KEY} NOT NULL UNIQUE, created_at {KEY} NOT NULL, expires_at {INT} NOT NULL, ip {KEY}, ua {KEY}, ended_at {KEY})
             {ENGINE}",
     ],
+    // 02.11.2026 — исправления ревью «деньги и ops» (docs/reviews/2026-11-02-kod-dengi-ops.md): признак «платёж прошёл с чеком 54-ФЗ»
+    // (В2: второй чек и возврат через API — только для таких заказов), метка пароля у доверенных устройств админки (С6: смена пароля их гасит).
+    8 => [
+        "ALTER TABLE orders ADD COLUMN payment_receipt {BOOL} NOT NULL DEFAULT 0",
+        "ALTER TABLE orders ADD COLUMN paid_receipt {BOOL} NOT NULL DEFAULT 0",
+        "ALTER TABLE adm_devices ADD COLUMN pw_tag {SHORT}",
+    ],
 ];

@@ -245,6 +245,30 @@ function brig_paid_kop(int $jobId): int
     return (int)(db_val("SELECT SUM(CASE WHEN kind = 'refund' THEN -amount_kop ELSE amount_kop END) FROM br_payments WHERE job_id = ? AND status = 'confirmed'", [$jobId]) ?? 0);
 }
 
+/** Получено подрядчиком по реестру: подтверждено второй стороной ИЛИ отмечено самой бригадой как полученное (за вычетом возвратов). */
+function brig_received_kop(int $jobId): int
+{
+    return (int)(db_val("SELECT SUM(CASE WHEN kind = 'refund' THEN -amount_kop ELSE amount_kop END) FROM br_payments WHERE job_id = ? AND (status = 'confirmed' OR (status = 'declared' AND declared_by = 'brigade'))", [$jobId]) ?? 0);
+}
+
+/**
+ * Вознаграждение при расторжении (ревью 02.11.2026, В1) — пол, который соглашение сторон не опускает:
+ *   база 'accepted' (по умолчанию) — принятые этапы + признанные работы сверх них, но не ниже оплаченного по реестру (подтверждённые деньги);
+ *   база 'paid' — всё, что подрядчик получил по реестру (в т. ч. отметки «получено» самой бригадой и аванс), но не ниже принятого по акту;
+ *   и не ниже уже выставленного счёта на вознаграждение — иначе нужно подтверждение LINEA.
+ * @return array{base:int, fee:int, invoice:int, below_invoice:bool}
+ */
+function brig_termination_fee(array $j, int $actKop): array
+{
+    $jid = (int)$j['id'];
+    $base = (brig_terms()['termination_fee_base'] ?? 'accepted') === 'paid'
+        ? max(brig_received_kop($jid), $actKop)
+        : max($actKop, brig_paid_kop($jid));
+    $fee = $j['commission_kop'] !== null ? brig_commission($base, $j['commission_rate'] !== null ? (float)$j['commission_rate'] : null) : 0;
+    $inv = (int)(db_val('SELECT amount_kop FROM br_invoices WHERE job_id = ?', [$jid]) ?? 0);
+    return ['base' => $base, 'fee' => $fee, 'invoice' => $inv, 'below_invoice' => $j['commission_kop'] !== null && $inv > $fee];
+}
+
 /**
  * Предложить расторжение (заказчик или владелец бригады; объект в работе). Акт: принятые этапы с суммами по договору, оплачено по реестру,
  * итоговый расчёт; необязательно — работы, которые стороны признают выполненными сверх принятых этапов (extra, с пояснением).
@@ -260,13 +284,29 @@ function brig_termination_propose(array $j, string $side, array $in, string $who
     $total = (int)($j['deal_total_kop'] ?? 0) ?: (int)db_val('SELECT total_kop FROM br_offers WHERE id = ?', [(int)$j['offer_id']]);
     $extra = is_numeric($in['extra'] ?? null) ? (int)round((float)$in['extra'] * 100) : 0;
     $extraNote = brig_guard(linea_str($in['extraNote'] ?? '', 500), brig_contacts_open($j), $gctx + ['field' => 'расторжение']);
-    if ($extra < 0 || $acc + $extra > $total) { linea_fail('Работы сверх принятых этапов — от 0 и в пределах цены договора (' . brig_rub($total - $acc) . ')'); }
+    // С1: после допсоглашения, уменьшившего цену, суммы этапов договора не пересчитываются — принятое может превышать цену: тогда акт
+    // по принятому, без работ сверх него (раньше расторжение отказывало с невнятным текстом)
+    if ($acc >= $total) {
+        if ($extra > 0) { linea_fail('Принятые этапы (' . brig_rub($acc) . ') уже не меньше цены договора (' . brig_rub($total) . ') — работы сверх принятых этапов добавить нельзя; акт составляется по принятым этапам'); }
+    } elseif ($extra < 0 || $acc + $extra > $total) { linea_fail('Работы сверх принятых этапов — от 0 и в пределах цены договора (' . brig_rub($total - $acc) . ')'); }
     if ($extra > 0 && mb_strlen($extraNote) < 5) { linea_fail('Опишите, какие работы сверх принятых этапов стороны признают выполненными'); }
     $stages = array_map(fn($s) => ['idx' => (int)$s['idx'], 'name' => $s['name'], 'accepted_at' => $s['accepted_at'], 'amount' => (int)(brig_job_stage_amounts((int)$j['id'])[(int)$s['id']] ?? 0)],
         brig_all("SELECT * FROM br_stages WHERE job_id = ? AND status = 'accepted' ORDER BY idx", [(int)$j['id']]));
     $paid = brig_paid_kop((int)$j['id']);
+    // В1: акт на ноль после открытых контактов (стороны «расходятся» и работают напрямую) или вознаграждение ниже выставленного счёта —
+    // соглашение подписывается только после подтверждения LINEA; первый случай — ещё и сигнал обхода
+    $fee = brig_termination_fee($j, $acc + $extra);
+    $zero = $acc + $extra === 0 && brig_contacts_open($j);
+    $needsAdmin = $zero || $fee['below_invoice'];
     $id = brig_contract_create($j, 'termination', $who, ['initiator' => $side, 'reason' => $reason, 'stages' => $stages, 'accepted_kop' => $acc, 'extra_kop' => $extra, 'extra_note' => $extraNote,
-        'paid_kop' => $paid, 'total_kop' => $acc + $extra, 'delta_kop' => $acc + $extra - $paid, 'note' => $reason]);
+        'paid_kop' => $paid, 'total_kop' => $acc + $extra, 'delta_kop' => $acc + $extra - $paid, 'note' => $reason, 'needs_admin' => $needsAdmin]);
+    if ($zero) {
+        brig_signal('termination_zero', $who, ['job_id' => (int)$j['id'], 'brigade_id' => (int)$j['brigade_id']], 'Расторжение без принятых работ после открытия контактов — ждёт подтверждения LINEA');
+    }
+    if ($needsAdmin) {
+        brig_admin_notify('расторжение ждёт подтверждения', 'Объект #' . $j['id'] . ': ' . ($zero ? 'расторжение без принятых работ после открытия контактов' : 'вознаграждение по акту (' . brig_rub($fee['fee']) . ') ниже выставленного счёта (' . brig_rub($fee['invoice']) . ')')
+            . ' — подтвердите или отклоните', brig_link('api/admin-brigady.php?j=' . $j['id']), false);
+    }
     brig_audit($who, 'termination-propose', 'job#' . $j['id'], ($side === 'client' ? 'Заказчик' : 'Подрядчик') . ' предложил(а) расторгнуть договор: принято ' . brig_rub($acc + $extra) . ', оплачено ' . brig_rub($paid));
     $text = ($side === 'client' ? 'Заказчик' : 'Бригада') . ' предлагает расторгнуть договор: «' . $reason . '». Акт о принятом объёме — в документах сделки, подписывается кодом.';
     db_insert('br_messages', ['job_id' => (int)$j['id'], 'who' => 'system', 'text' => $text, 'masked' => 0, 'at' => linea_now()]);
@@ -333,7 +373,13 @@ function brig_sign_confirm(array $c, string $side, string $code, bool $pep, stri
     if ($c['kind'] !== 'main') {
         $jj = brig_one('SELECT status FROM br_jobs WHERE id = ?', [(int)$c['job_id']]);
         if (!$jj || $jj['status'] !== 'work') { linea_fail(($c['kind'] === 'termination' ? 'Соглашение о расторжении' : 'Допсоглашение') . ' подписывается, пока объект в работе'); }
-        if (!empty($c['needs_admin']) && empty($c['admin_ok_at'])) { linea_fail('Допсоглашение заметно уменьшает цену договора — подписать можно после подтверждения LINEA (обычно в течение рабочего дня)', 409); }
+        if (!empty($c['needs_admin']) && empty($c['admin_ok_at'])) {
+            linea_fail(($c['kind'] === 'termination' ? 'Соглашение о расторжении' : 'Допсоглашение заметно уменьшает цену договора —') . ($c['kind'] === 'termination' ? ' подписывается' : ' подписать можно') . ' после подтверждения LINEA (обычно в течение рабочего дня)', 409);
+        }
+        // С1: акт о расторжении составлен по принятому объёму на дату предложения; приняли ещё этап — акт устарел
+        if ($c['kind'] === 'termination' && brig_accepted_kop((int)$c['job_id']) > (int)$c['total_kop']) {
+            linea_fail('После предложения о расторжении принят ещё этап — акт устарел. Отзовите соглашение и предложите заново', 409);
+        }
     }
     // попытка засчитывается ДО сверки и одним UPDATE с условием: параллельные запросы не дают больше 5 попыток (ревью кода С-1)
     if (db_exec('UPDATE br_sign_codes SET tries = tries + 1 WHERE id = ? AND tries < 5 AND used_at IS NULL', [(int)$k['id']]) !== 1) { linea_fail('Слишком много неверных попыток — запросите новый код', 429); }
@@ -392,17 +438,20 @@ function brig_termination_signed(array $c, string $who): void
     $j = brig_one('SELECT * FROM br_jobs WHERE id = ?', [$jid]);
     $acc = (int)$c['total_kop'];
     $set = ['terminated_at' => $now, 'accepted_kop' => $acc, 'updated_at' => $now];
-    if ($j['commission_kop'] !== null && (brig_terms()['termination_fee_base'] ?? 'accepted') === 'accepted') {
-        $set['commission_kop'] = brig_commission($acc, $j['commission_rate'] !== null ? (float)$j['commission_rate'] : null);
-        $inv = brig_one('SELECT * FROM br_invoices WHERE job_id = ?', [$jid]);
-        if ($inv && (int)$inv['amount_kop'] > $set['commission_kop']) {
-            brig_admin_notify('расторжение после счёта', 'Объект #' . $jid . ': договор расторгнут, вознаграждение от принятого объёма — ' . brig_rub($set['commission_kop']) . ', а счёт выставлен на ' . brig_rub((int)$inv['amount_kop']) . ' — оформить корректировку', brig_link('api/panel.php?s=money'), false);
+    if ($j['commission_kop'] !== null) {
+        // В1: база — по brig_termination_fee() (пол: оплаченное по реестру; 'paid' — полученное подрядчиком), не ниже счёта без подтверждения LINEA
+        $fee = brig_termination_fee($j, $acc);
+        $adminOk = !empty($c['needs_admin']) && !empty($c['admin_ok_at']);
+        $set['commission_kop'] = $fee['below_invoice'] && !$adminOk ? $fee['invoice'] : $fee['fee'];
+        if ($fee['below_invoice']) {
+            brig_admin_notify('расторжение после счёта', 'Объект #' . $jid . ': договор расторгнут, вознаграждение по акту — ' . brig_rub($fee['fee']) . ', счёт выставлен на ' . brig_rub($fee['invoice'])
+                . ($adminOk ? ' — LINEA подтвердила уменьшение, оформить корректировку счёта' : ' — вознаграждение оставлено по счёту; уменьшить можно только корректировкой LINEA'), brig_link('api/panel.php?s=money'), false);
         }
-        if ($acc > 0 && !$j['commission_due_at']) { $set['commission_due_at'] = $now; $set['commission_due_why'] = 'расторжение: вознаграждение от принятого объёма'; }
+        if ($set['commission_kop'] > 0 && !$j['commission_due_at']) { $set['commission_due_at'] = $now; $set['commission_due_why'] = 'расторжение: вознаграждение от ' . ($fee['base'] > $acc ? 'оплаченного по реестру' : 'принятого объёма'); }
     }
     db_update('br_jobs', $set, 'id = ?', [$jid]);
     brig_audit($who, 'termination', 'job#' . $jid, 'Договор расторгнут соглашением сторон на сайте: принято работ на ' . brig_rub($acc) . ($c['delta_kop'] > 0 ? ', заказчик доплачивает ' . brig_rub((int)$c['delta_kop']) : ($c['delta_kop'] < 0 ? ', подрядчик возвращает ' . brig_rub(-(int)$c['delta_kop']) : '')));
-    if (isset($set['commission_kop'])) { brig_audit($who, 'commission', 'job#' . $jid, 'Вознаграждение пересчитано от принятого объёма при расторжении: ' . brig_rub($set['commission_kop'])); }
+    if (isset($set['commission_kop'])) { brig_audit($who, 'commission', 'job#' . $jid, 'Вознаграждение пересчитано при расторжении (' . (brig_terms()['termination_fee_base'] ?? 'accepted') . '): ' . brig_rub($set['commission_kop'])); }
     require_once __DIR__ . '/kabinet.php';
     preg_match('/по инициативе (Заказчика|Подрядчика)/u', (string)$c['body'], $m);
     deal_transition($jid, 'cancelled', $who, 'договор расторгнут соглашением сторон, принято работ на ' . brig_rub($acc), false,

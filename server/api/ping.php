@@ -2,7 +2,7 @@
 /**
  * GET api/ping.php — прозвон выкладки и мониторинга: PHP жив, папка данных доступна на запись, конфиг на месте. Без секретов.
  * Публично — только «да/нет» (ревизия 02.11.2026: режим оплаты и признаки TLS наружу не отдаём).
- * С токеном мониторинга (config 'monitor_token', не короче 24 знаков; заголовок X-Monitor-Token или ?token=) — подробности для выкладки
+ * С токеном мониторинга (config 'monitor_token', не короче 24 знаков; ТОЛЬКО заголовок X-Monitor-Token) — подробности для выкладки
  * и внешнего мониторинга: режим оплаты, признаки https, какой REMOTE_ADDR и X-Real-IP видит PHP (проверка trusted_proxies), какой адрес
  * клиента получился у linea_ip(), версия схемы базы, последний прогон cron. Неверный токен — 403 и лимит частоты.
  */
@@ -18,11 +18,15 @@ $out = [
     'sqlite' => extension_loaded('pdo_sqlite'),
     'zip' => class_exists('ZipArchive'),
 ];
-$tok = (string)($_SERVER['HTTP_X_MONITOR_TOKEN'] ?? $_GET['token'] ?? '');
+// С7: токен — только заголовком (?token= попадал бы в журналы доступа); лимит частоты — только для НЕВЕРНЫХ попыток и после сверки:
+// чужие ошибки с того же адреса (прокси не в trusted_proxies — адрес у всех один) не запирают настоящий монитор
+$tok = (string)($_SERVER['HTTP_X_MONITOR_TOKEN'] ?? '');
 if ($tok === '') { linea_json($out); }
 $want = (string)(linea_cfg()['monitor_token'] ?? '');
-if (!linea_rate('ping-token', 30, false)) { linea_fail('Слишком много запросов', 429); }
-if (strlen($want) < 24 || !hash_equals($want, $tok)) { linea_rate_add('ping-token'); usleep(300000); linea_fail('Неверный токен мониторинга', 403); }
+if (strlen($want) < 24 || !hash_equals($want, $tok)) {
+    if (!linea_rate('ping-token', 30, false)) { linea_fail('Слишком много запросов', 429); }
+    linea_rate_add('ping-token'); usleep(300000); linea_fail('Неверный токен мониторинга', 403);
+}
 $ra = (string)($_SERVER['REMOTE_ADDR'] ?? '');
 $trusted = (array)(linea_cfg()['trusted_proxies'] ?? []);
 $ver = null; $driver = null;

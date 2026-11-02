@@ -5,6 +5,8 @@
  *   POST /receipts, /refunds → тело запроса пишется в $LINEA_YK_MOCK/req-<receipts|refunds>-<N>.json, ответ — созданный объект
  *        (статус возврата — из файла refund-status, по умолчанию succeeded; файл fail-<receipts|refunds> — ответ 500).
  *        Повтор с тем же Idempotence-Key возвращает тот же объект (как у ЮKassa) — второй возврат не создаётся.
+ *        Файл lose-<receipts|refunds> — объект СОЗДАЁТСЯ, но ответ теряется (500): обрыв связи после создания у ЮKassa.
+ *   GET  /refunds?payment_id=<id> → {items: [...]} — возвраты по платежу (сверка висящих возвратов).
  */
 declare(strict_types=1);
 $dir = rtrim((string)getenv('LINEA_YK_MOCK'), '/');
@@ -26,8 +28,19 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
         : ['id' => $id, 'type' => $body['type'] ?? 'payment', 'payment_id' => $body['payment_id'] ?? '', 'status' => 'pending'];
     file_put_contents("$dir/idem-$idem.json", json_encode($obj));
     file_put_contents("$dir/$id.json", json_encode($obj));
+    if (is_file("$dir/lose-$what")) { http_response_code(500); echo '{"type":"error","code":"internal_server_error"}'; exit; }
     echo json_encode($obj);
     exit;
+}
+if (basename($path) === 'refunds') {
+    $pid = (string)($_GET['payment_id'] ?? '');
+    $items = [];
+    foreach (glob($dir . '/*.json') ?: [] as $f) {
+        if (str_starts_with(basename($f), 'req-') || str_starts_with(basename($f), 'idem-')) { continue; }
+        $x = json_decode((string)file_get_contents($f), true);
+        if (is_array($x) && isset($x['amount']) && array_key_exists('payment_id', $x) && !isset($x['type']) && ($x['payment_id'] ?? '') === $pid && !isset($x['paid'])) { $items[] = $x; }
+    }
+    echo json_encode(['type' => 'list', 'items' => $items]); exit;
 }
 $id = preg_replace('/[^0-9a-z-]/i', '', basename($path)) ?? '';
 $f = $dir . '/' . $id . '.json';

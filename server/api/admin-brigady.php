@@ -218,9 +218,11 @@ if (isset($_GET['j']) && ($j = brig_one('SELECT j.*, r.object_title, r.test, o.n
         . $form('j_advance', $jid, '<select name="to"><option value="confirmed">подтвердить аванс</option><option value="clear">снять отметку</option></select><input name="reason" size="24" placeholder="причина (в журнал)">', 'Исправить аванс', 'lt')
         . ($j['commission_kop'] !== null && !brig_one('SELECT 1 FROM br_invoices WHERE job_id = ?', [$jid])
             ? ($j['commission_due_at'] ? $form('j_invoice', $jid, '', 'Выставить счёт на комиссию') : $form('j_invoice', $jid, '<input type="hidden" name="manual" value="1"><input name="reason" size="24" placeholder="причина счёта вручную">', 'Выставить вручную', 'lt')) : '')
-        . implode('', array_map(fn($c) => '<p class="msg">Допсоглашение № ' . (int)$c['num'] . ' уменьшает цену на ' . brig_rub(-(int)$c['delta_kop']) . ' — ждёт подтверждения LINEA. '
+        . implode('', array_map(fn($c) => '<p class="msg">' . ($c['kind'] === 'termination'
+                ? 'Соглашение о расторжении № ' . (int)$c['num'] . ': принято по акту ' . brig_rub((int)$c['total_kop']) . ' — ' . ((int)$c['total_kop'] === 0 ? 'без принятых работ после открытия контактов (проверить обход)' : 'вознаграждение ниже выставленного счёта') . '; ждёт подтверждения LINEA. '
+                : 'Допсоглашение № ' . (int)$c['num'] . ' уменьшает цену на ' . brig_rub(-(int)$c['delta_kop']) . ' — ждёт подтверждения LINEA. ')
             . $form('c_approve', (int)$c['id'], '<input name="reason" size="20" placeholder="комментарий">', 'Подтвердить') . $form('c_reject', (int)$c['id'], '<input name="reason" size="20" placeholder="причина">', 'Отклонить', 'bad') . '</p>',
-            brig_all("SELECT * FROM br_contracts WHERE job_id = ? AND kind = 'addendum' AND status = 'draft' AND needs_admin = 1 AND admin_ok_at IS NULL", [$jid]))) . '</div>'
+            brig_all("SELECT * FROM br_contracts WHERE job_id = ? AND kind IN ('addendum','termination') AND status = 'draft' AND needs_admin = 1 AND admin_ok_at IS NULL", [$jid]))) . '</div>'
         . '<div class="box scroll"><table><tr><th>Этап</th><th>Статус</th><th>План</th><th>Фото</th><th>Замечания</th></tr>' . $stg . '</table></div>'
         . '<div class="box scroll"><h2>Документы сделки (ПЭП)</h2><table><tr><th>Документ</th><th>Статус</th><th>Сумма</th><th>Заказчик</th><th>Подрядчик</th><th>SHA-256</th></tr>' . ($cdocs ?: '<tr><td colspan="6">Нет.</td></tr>') . '</table></div>'
         . '<div class="box scroll"><h2>Журнал сделки (видят обе стороны)</h2><table>' . ($dlog ?: '<tr><td>Пусто.</td></tr>') . '</table></div>'

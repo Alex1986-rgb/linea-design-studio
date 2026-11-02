@@ -220,6 +220,10 @@ switch ($a) {
     case 'stage_accept':
         $s = $stage((int)($in['stage'] ?? 0));
         if ($s['status'] !== 'ready') { linea_fail('Этап ещё не готов к приёмке'); }
+        // С1: при неподписанном соглашении о расторжении приёмка устарила бы его акт — сначала отозвать соглашение
+        if (brig_one("SELECT 1 FROM br_contracts WHERE job_id = ? AND kind = 'termination' AND status = 'draft'", [(int)$j['id']])) {
+            linea_fail('Есть неподписанное соглашение о расторжении с актом на сегодняшний принятый объём. Чтобы принять этап, сначала отзовите соглашение, затем предложите расторжение заново', 409);
+        }
         $checks = array_slice(array_map(fn($v) => $v === true, is_array($in['checks'] ?? null) ? $in['checks'] : []), 0, 20);
         // приёмка — только когда отмечены ВСЕ пункты чек-листа этапа; не выполнено — этап возвращают с замечаниями
         $need = count(brig_checklist((string)$s['checklist'])['items']);

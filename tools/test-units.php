@@ -11,7 +11,7 @@ declare(strict_types=1);
 if ($priv === '' || $mock === '' || $mockDir === '') { fwrite(STDERR, "usage: php tools/test-units.php <private> <mock-url> <mock-dir>\n"); exit(2); }
 @mkdir($priv, 0700, true);
 file_put_contents($priv . '/config.php', "<?php return ['mode' => 'yookassa', 'yk_shop_id' => 'test-shop', 'yk_secret' => 'test-secret', 'yk_api' => " . var_export($mock, true)
-    . ", 'yk_receipt' => true, 'yk_tax_system' => 2, 'notify_enabled' => false, 'brig_terms' => ['rate' => 0.05, 'sheets_free_limit' => 15]];");
+    . ", 'yk_receipt' => true, 'yk_tax_system' => 2, 'notify_enabled' => false, 'brig_terms' => ['rate' => 0.05, 'sheets_free_limit' => 15, 'retention_years' => 1]];");
 putenv('LINEA_PRIVATE=' . $priv);
 putenv('LINEA_MAIL_DRY=1');
 $_SERVER['SCRIPT_FILENAME'] = __FILE__;
@@ -113,13 +113,14 @@ $nAl = (int)$db->query("SELECT COUNT(*) FROM events WHERE order_id = " . (int)$s
 $ok($st2['status'] === 'awaiting_payment' && !empty($st2['pay_alert_at']) && $nAl === 1, 'В-4: оплата по старой сумме — заказ не оплачен, пометка «нужна проверка», тревога один раз');
 // В-5: подсети ЮKassa
 $ok(yk_ip_in('185.71.76.5', linea_cfg()['yk_ips']) && yk_ip_in('77.75.156.11', linea_cfg()['yk_ips']) && !yk_ip_in('203.0.113.5', linea_cfg()['yk_ips']) && yk_ip_in('2a02:5180::1', linea_cfg()['yk_ips']), 'В-5: проверка адреса по подсетям ЮKassa (IPv4/IPv6)');
+$ok(brig_terms()['retention_years'] === 3, 'С5: срок хранения договоров не меньше 3 лет (исковая давность), даже если в config 1');
 // юрист п. 1: автоприёмки этапа молчанием нет и из config не включается
 $ok(brig_terms()['stage_autoaccept'] === false && brig_terms()['bypass_penalty']['enabled'] === false, 'автоприёмка молчанием выключена (нельзя для потребителей), неустойка за обход выключена');
 
 // ── 02.11.2026: второй чек «полный расчёт» и возвраты через API (макет ЮKassa; всё — только при yk_receipt)
-$po = function (string $num, string $pid) use ($db): array {
-    $db->prepare("INSERT INTO orders(number, token, status, kind, created_at, updated_at, amount_kop, payment_id, paid_at, paid_by, email, phone, test) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,1)")
-        ->execute([$num, bin2hex(random_bytes(16)), 'paid', 'kvartira', linea_now(), linea_now(), 10000000, $pid, linea_now(), 'yookassa ' . $pid, 'c@example.test', '8 900 000-00-01']);
+$po = function (string $num, string $pid, int $rc = 1) use ($db): array {
+    $db->prepare("INSERT INTO orders(number, token, status, kind, created_at, updated_at, amount_kop, payment_id, paid_at, paid_by, email, phone, paid_receipt, test) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,1)")
+        ->execute([$num, bin2hex(random_bytes(16)), 'paid', 'kvartira', linea_now(), linea_now(), 10000000, $pid, linea_now(), 'yookassa ' . $pid, 'c@example.test', '8 900 000-00-01', $rc]);
     return linea_order_by_number($num);
 };
 $req = fn(string $what) => array_map(fn($f) => json_decode((string)file_get_contents($f), true), glob($mockDir . '/req-' . $what . '-*.json') ?: []);
@@ -170,10 +171,81 @@ $m = $po('LN-TEST-0202', '2f1b0c3e-000f-5000-8000-000000000202');
 $db->prepare("UPDATE orders SET paid_by = 'вручную: Александр', status = 'delivered' WHERE id = ?")->execute([$m['id']]);
 $n0 = count($req('receipts'));
 $ok(!yk_full_receipt(linea_order_by_number('LN-TEST-0202'))['done'] && !yk_refund(linea_order_by_number('LN-TEST-0202'), 100, 'x', 'admin')['ok'] && count($req('receipts')) === $n0, 'оплата счётом: второй чек и возврат через API не делаются (пометка «выбить вручную»)');
+// ── ревью 02.11.2026 «деньги и ops»
+// В2: первый платёж прошёл без чека онлайн-кассы (до включения yk_receipt) — второй чек и возврат через API не делаются, пометка «вручную»
+$old = $po('LN-TEST-0301', '2f1b0c3e-000f-5000-8000-000000000301', 0);
+$db->prepare("UPDATE orders SET status = 'delivered' WHERE id = ?")->execute([$old['id']]);
+$nR = count($req('receipts')); $nF = count($req('refunds'));
+$rOld = yk_full_receipt(linea_order_by_number('LN-TEST-0301'), 'cron'); yk_full_receipt(linea_order_by_number('LN-TEST-0301'), 'cron');
+$evOld = (int)$db->query("SELECT COUNT(*) FROM events WHERE order_id = " . (int)$old['id'] . " AND text LIKE 'Второй чек: первый платёж прошёл без чека%'")->fetchColumn();
+$ok(!$rOld['done'] && $evOld === 1 && count($req('receipts')) === $nR, 'В2: старый заказ (платёж без чека) — второй чек не отправляется, пометка «выбить вручную» один раз');
+$ok(!yk_refund(linea_order_by_number('LN-TEST-0301'), 1000, 'x', 'admin')['ok'] && count($req('refunds')) === $nF, 'В2: возврат через API по старому заказу закрыт (только вручную)');
+// В2: признак «с чеком» ставится при оплате: платёж создан с receipt или ЮKassa вернула receipt_registration
+$nw = $ins('LN-TEST-0302', 120.0, 0, linea_now());
+file_put_contents($mockDir . '/2f1b0c3e-000f-5000-8000-000000000302.json', json_encode(['id' => '2f1b0c3e-000f-5000-8000-000000000302', 'status' => 'succeeded', 'paid' => true, 'receipt_registration' => 'succeeded',
+    'amount' => ['value' => '90000.00', 'currency' => 'RUB'], 'metadata' => ['order' => 'LN-TEST-0302']]));
+$db->prepare('UPDATE orders SET payment_id = ? WHERE id = ?')->execute(['2f1b0c3e-000f-5000-8000-000000000302', $nw['id']]);
+yk_settle('2f1b0c3e-000f-5000-8000-000000000302');
+$ok((int)linea_order_by_number('LN-TEST-0302')['paid_receipt'] === 1 && (int)linea_order_by_number('LN-TEST-0002')['paid_receipt'] === 0, 'В2: оплата с чеком помечается (receipt_registration), без чека — нет');
+$ok(yk_receipt_chain(linea_order_by_number('LN-TEST-0302')) && !yk_receipt_chain(linea_order_by_number('LN-TEST-0301')), 'В2: yk_receipt_chain различает заказы с чеком и без');
+// С2: ответ API потерян ПОСЛЕ создания возврата — операция без id; сверка находит возврат по платежу и проводит один раз
+$lo = $po('LN-TEST-0303', '2f1b0c3e-000f-5000-8000-000000000303');
+touch($mockDir . '/lose-refunds');
+$l1 = yk_refund($lo, 1000000, 'обрыв после создания', 'admin');
+unlink($mockDir . '/lose-refunds');
+$op1 = $db->query("SELECT * FROM pay_ops WHERE kind = 'refund' AND order_id = " . (int)$lo['id'])->fetch();
+$ok(!$l1['ok'] && $op1['status'] === 'failed' && $op1['provider_id'] === null && yk_refund_left(linea_order_by_number('LN-TEST-0303')) === 10000000, 'С2: обрыв после создания — операция «не создан» без id, сумму не держит');
+yk_refund(linea_order_by_number('LN-TEST-0303'), 500000, 'другая сумма после сверки', 'admin');
+$lo2 = linea_order_by_number('LN-TEST-0303');
+$op1b = $db->query("SELECT * FROM pay_ops WHERE id = " . (int)$op1['id'])->fetch();
+$ok($op1b['provider_id'] !== null && $op1b['status'] === 'succeeded' && (int)$lo2['refunded_kop'] >= 1000000, 'С2: перед новым возвратом сверка нашла потерянный возврат по платежу (GET /refunds?payment_id) и провела его');
+$nRef = (int)$db->query("SELECT COUNT(*) FROM pay_ops WHERE kind = 'refund' AND provider_id IS NOT NULL AND order_id = " . (int)$lo['id'])->fetchColumn();
+$ok((int)$lo2['refunded_kop'] === 1000000 + ($nRef === 2 ? 500000 : 0) && yk_refund_reconcile($lo2) === 0, 'С2: проведено ровно то, что создано у ЮKassa; повторная сверка ничего не меняет');
+// С2: касса не ответила (500, возврат НЕ создан) — другая сумма отклоняется, та же — повтор с тем же ключом
+$f5 = $po('LN-TEST-0304', '2f1b0c3e-000f-5000-8000-000000000304');
+touch($mockDir . '/fail-refunds'); yk_refund($f5, 2000000, 'сбой', 'admin'); unlink($mockDir . '/fail-refunds');
+$diff = yk_refund(linea_order_by_number('LN-TEST-0304'), 3000000, 'другая сумма', 'admin');
+$same = yk_refund(linea_order_by_number('LN-TEST-0304'), 2000000, 'повтор', 'admin');
+$ok(!$diff['ok'] && str_contains($diff['why'], 'ту же сумму') && $same['ok'] && (int)linea_order_by_number('LN-TEST-0304')['refunded_kop'] === 2000000, 'С2: после сбоя без ответа другая сумма — отказ (не будет двух возвратов), та же — безопасный повтор');
+// С2: уведомление пришло раньше, чем мы записали id — привязка по платежу и сумме, не «чужой возврат»
+$wh = $po('LN-TEST-0305', '2f1b0c3e-000f-5000-8000-000000000305');
+file_put_contents($mockDir . '/refund-status', 'pending'); touch($mockDir . '/lose-refunds');
+yk_refund($wh, 4000000, 'вебхук раньше id', 'admin');
+unlink($mockDir . '/lose-refunds'); unlink($mockDir . '/refund-status');
+$robj = json_decode((string)file_get_contents($mockDir . '/idem-rf-LN-TEST-0305-1.json'), true);
+$robj['status'] = 'succeeded'; file_put_contents($mockDir . '/' . $robj['id'] . '.json', json_encode($robj));
+$ok(!yk_known_refund($robj['id']), 'С2: id возврата у нас ещё не записан');
+yk_refund_settle($robj['id']); yk_refund_settle($robj['id']);
+$ok(yk_known_refund($robj['id']) && (int)linea_order_by_number('LN-TEST-0305')['refunded_kop'] === 4000000, 'С2: уведомление refund.succeeded до записи id — возврат привязан и проведён один раз');
+// С4: возврат в пути — второй чек ждёт его проведения (иначе чек возврата ушёл бы с «предоплатой» после «полного расчёта»)
+$c4 = $po('LN-TEST-0306', '2f1b0c3e-000f-5000-8000-000000000306');
+file_put_contents($mockDir . '/refund-status', 'pending');
+yk_refund($c4, 1000000, 'частичный', 'admin');
+unlink($mockDir . '/refund-status');
+$db->prepare("UPDATE orders SET status = 'delivered' WHERE id = ?")->execute([$c4['id']]);
+$nR = count($req('receipts'));
+$r4 = yk_full_receipt(linea_order_by_number('LN-TEST-0306'));
+$ok(!$r4['done'] && str_contains($r4['why'], 'возврат в пути') && count($req('receipts')) === $nR, 'С4: пока возврат в пути, второй чек не уходит (повторит cron)');
+// С5/низкий: повтор второго чека из cron — не чаще раза в час и не дольше суток (ключ идемпотентности ЮKassa живёт 24 часа)
+$c5 = $po('LN-TEST-0307', '2f1b0c3e-000f-5000-8000-000000000307');
+$db->prepare("UPDATE orders SET status = 'delivered' WHERE id = ?")->execute([$c5['id']]);
+touch($mockDir . '/fail-receipts'); yk_full_receipt(linea_order_by_number('LN-TEST-0307')); unlink($mockDir . '/fail-receipts');
+$nR = count($req('receipts'));
+$ok(!yk_full_receipt(linea_order_by_number('LN-TEST-0307'), 'cron')['done'] && count($req('receipts')) === $nR, 'С5: cron не повторяет второй чек раньше чем через час');
+$db->prepare("UPDATE pay_ops SET created_at = ?, updated_at = ? WHERE idem = ?")->execute([date('Y-m-d H:i:s', time() - 21 * 3600), date('Y-m-d H:i:s', time() - 2 * 3600), 'rcpt2-LN-TEST-0307']);
+$r5 = yk_full_receipt(linea_order_by_number('LN-TEST-0307'), 'cron');
+$ok(!$r5['done'] && count($req('receipts')) === $nR && (int)$db->query("SELECT COUNT(*) FROM events WHERE order_id = " . (int)$c5['id'] . " AND text LIKE 'Второй чек: онлайн-касса не приняла%'")->fetchColumn() === 1,
+    'С5: после суток попыток — не повторяем (дубль чека), пометка «выбить вручную»');
 // флаг yk_receipt выключен — ни чеков, ни возвратов через API
 $off = $priv . '-off'; @mkdir($off, 0700, true);
 file_put_contents($off . '/config.php', "<?php return ['mode' => 'yookassa', 'yk_shop_id' => 's', 'yk_secret' => 'k', 'yk_api' => " . var_export($mock, true) . "];");
 $outOff = shell_exec('LINEA_PRIVATE=' . escapeshellarg($off) . ' php -r ' . escapeshellarg('$_SERVER["SCRIPT_FILENAME"]="x"; require ' . var_export(__DIR__ . '/../server/api/lib/boot.php', true) . '; require ' . var_export(__DIR__ . '/../server/api/lib/yookassa.php', true)
     . '; $o = ["id"=>1,"number"=>"N","status"=>"delivered","paid_by"=>"yookassa x","payment_id"=>"x","amount_kop"=>100,"refunded_kop"=>0]; echo json_encode([yk_receipts_on(), yk_full_receipt($o)["done"], yk_refund($o, 10, "r", "a")["ok"]]);'));
 $ok(trim((string)$outOff) === '[false,false,false]', 'yk_receipt выключен (по умолчанию): второй чек и возврат через API не работают' . (trim((string)$outOff) === '[false,false,false]' ? '' : ' — ' . $outOff));
+// В2: yk_receipts_since — заказы, оплаченные до даты включения чеков, старые при любом флаге
+$sn = $priv . '-since'; @mkdir($sn, 0700, true);
+file_put_contents($sn . '/config.php', "<?php return ['mode' => 'yookassa', 'yk_shop_id' => 's', 'yk_secret' => 'k', 'yk_receipt' => true, 'yk_receipts_since' => '2026-12-01', 'yk_api' => " . var_export($mock, true) . "];");
+$outSn = shell_exec('LINEA_PRIVATE=' . escapeshellarg($sn) . ' php -r ' . escapeshellarg('$_SERVER["SCRIPT_FILENAME"]="x"; require ' . var_export(__DIR__ . '/../server/api/lib/boot.php', true) . '; require ' . var_export(__DIR__ . '/../server/api/lib/yookassa.php', true)
+    . '; $o = ["paid_by"=>"yookassa x","payment_id"=>"x","paid_receipt"=>1]; echo json_encode([yk_receipt_chain($o + ["paid_at"=>"2026-11-20 10:00:00"]), yk_receipt_chain($o + ["paid_at"=>"2026-12-02 10:00:00"])]);'));
+$ok(trim((string)$outSn) === '[false,true]', 'В2: yk_receipts_since — оплаченные раньше даты включения чеков не получают второй чек автоматически' . (trim((string)$outSn) === '[false,true]' ? '' : ' — ' . $outSn));
 exit($fail ? 1 : 0);

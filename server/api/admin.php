@@ -92,27 +92,44 @@ function adm_2fa_need(array $cfg): array
     if ($mode === 'auto' && (!$emails || empty($cfg['brig_mail_enabled']))) { return [false, 'выключен: нет admin_emails или писем (brig_mail_enabled)']; }
     if (in_array(linea_ip(), (array)($cfg['admin_emergency_ips'] ?? []), true)) { return [false, 'аварийный вход с адреса из admin_emergency_ips']; }
     $tok = (string)($_COOKIE[ADM_DEV_COOKIE] ?? '');
-    if (preg_match('/^[0-9a-f]{64}$/', $tok) && db_val('SELECT 1 FROM adm_devices WHERE token_hash = ? AND ended_at IS NULL AND expires_at > ?', [hash('sha256', $tok), time()])) {
+    // С6: доверенное устройство привязано к текущему паролю (pw_tag) — смена admin_hash гасит все запомненные устройства
+    if (preg_match('/^[0-9a-f]{64}$/', $tok) && db_val('SELECT 1 FROM adm_devices WHERE token_hash = ? AND ended_at IS NULL AND expires_at > ? AND pw_tag = ?', [hash('sha256', $tok), time(), adm_pw_tag($cfg)])) {
         return [false, 'доверенное устройство'];
     }
     return [true, ''];
 }
 
-/** Отправить код (каждому адресу admin_emails). @return devCode (только проверка на маке) или '' */
-function adm_2fa_send(array $cfg): string
+/** Метка текущего пароля админки для доверенных устройств (С6). */
+function adm_pw_tag(array $cfg): string { return substr(hash('sha256', 'adm-dev|' . (string)($cfg['admin_hash'] ?? '')), 0, 16); }
+
+/**
+ * Отправить код (каждому адресу admin_emails). С6: результат отправки проверяется — если ни одно письмо не ушло, вход не «зависает»
+ * на экране кода без кода: страница говорит об этом прямо и показывает аварийный путь.
+ * @return array{dev:string, sent:bool}  dev — код только для проверки на маке
+ */
+function adm_2fa_send(array $cfg): array
 {
     $code = (string)random_int(100000, 999999);
     $_SESSION['adm_code'] = ['h' => hash_hmac('sha256', $code, (string)$_SESSION['adm_salt']), 'exp' => time() + 600, 'tries' => 0];
     require_once __DIR__ . '/lib/brig-notify.php';
-    foreach ((array)($cfg['admin_emails'] ?? []) as $e) { brig_mail(trim((string)$e), 'admin_code', ['code' => $code, 'ip' => linea_ip()], false); }
-    linea_log('admin.log', 'код второго шага отправлен (' . substr(hash('sha256', linea_ip()), 0, 10) . ')');
-    return linea_local() && getenv('LINEA_MAIL_DRY') ? $code : '';
+    $sent = 0;
+    foreach ((array)($cfg['admin_emails'] ?? []) as $e) {
+        $r = brig_mail(trim((string)$e), 'admin_code', ['code' => $code, 'ip' => linea_ip()], false);
+        // 'dry' — письма выключены (brig_mail_enabled) или адрес негодный: доставкой не считается, кроме проверки на маке
+        if ($r === 'sent' || ($r === 'dry' && linea_local() && getenv('LINEA_MAIL_DRY') && filter_var(trim((string)$e), FILTER_VALIDATE_EMAIL))) { $sent++; }
+    }
+    linea_log('admin.log', 'код второго шага: ' . ($sent ? 'отправлен на ' . $sent . ' адрес(а)' : 'НЕ ОТПРАВЛЕН — почта не приняла письмо') . ' (' . substr(hash('sha256', linea_ip()), 0, 10) . ')');
+    if (!$sent) {
+        linea_log('error.log', 'admin 2fa: письмо с кодом не ушло ни на один адрес admin_emails');
+        try { brig_tg('LINEA: письмо с кодом входа в админку не ушло — проверьте почту сервера', false); } catch (Throwable $e) { }
+    }
+    return ['dev' => linea_local() && getenv('LINEA_MAIL_DRY') && $sent ? $code : '', 'sent' => $sent > 0];
 }
 
 function adm_enter(string $how): never
 {
     session_regenerate_id(true);
-    unset($_SESSION['adm_pending'], $_SESSION['adm_code'], $_SESSION['adm_salt']);
+    unset($_SESSION['adm_pending'], $_SESSION['adm_code'], $_SESSION['adm_salt'], $_SESSION['adm_sent'], $_SESSION['adm_dev']);
     $_SESSION['adm'] = 1; $_SESSION['csrf'] = bin2hex(random_bytes(16));
     linea_log('admin.log', 'вход: ' . $how . ' (' . substr(hash('sha256', linea_ip()), 0, 10) . ')');
     header('Location: panel.php'); exit;   // после входа — новая админка (дашборд «Требует действия»)
@@ -136,7 +153,7 @@ if (empty($_SESSION['adm']) && !empty($_SESSION['adm_pending'])) {
             if (hash_equals((string)$c['h'], hash_hmac('sha256', preg_replace('/\D/', '', (string)$_POST['code']) ?? '', (string)$_SESSION['adm_salt']))) {
                 if (!empty($_POST['trust'])) {   // доверенное устройство: в куке — случайный токен, в базе — его sha256
                     $tok = bin2hex(random_bytes(32));
-                    db_insert('adm_devices', ['token_hash' => hash('sha256', $tok), 'created_at' => linea_now(), 'expires_at' => time() + ADM_DEV_DAYS * 86400, 'ip' => linea_ip(),
+                    db_insert('adm_devices', ['token_hash' => hash('sha256', $tok), 'created_at' => linea_now(), 'expires_at' => time() + ADM_DEV_DAYS * 86400, 'ip' => linea_ip(), 'pw_tag' => adm_pw_tag($cfg),
                         'ua' => mb_substr((string)($_SERVER['HTTP_USER_AGENT'] ?? ''), 0, 180)]);
                     setcookie(ADM_DEV_COOKIE, $tok, ['expires' => time() + ADM_DEV_DAYS * 86400, 'path' => dirname((string)($_SERVER['SCRIPT_NAME'] ?? '/api/admin.php')) . '/', 'httponly' => true, 'samesite' => 'Strict', 'secure' => $https]);
                 }
@@ -146,7 +163,22 @@ if (empty($_SESSION['adm']) && !empty($_SESSION['adm_pending'])) {
             $err = 'Неверный код.';
         }
     }
+    if (($_SERVER['REQUEST_METHOD'] ?? '') === 'POST' && isset($_POST['resend'])) {
+        if (!linea_rate('adm2fa-send', 5)) { $err = 'Слишком много кодов за час — подождите.'; }
+        else { $r = adm_2fa_send($cfg); $_SESSION['adm_dev'] = $r['dev']; $_SESSION['adm_sent'] = $r['sent']; $err = $r['sent'] ? 'Новый код отправлен.' : ''; }
+    }
     $dev = (string)($_SESSION['adm_dev'] ?? '');
+    if (empty($_SESSION['adm_sent'])) {
+        // С6: письмо не ушло — не держим владельца на экране кода без кода: прямо говорим и показываем аварийный путь
+        page('Вход: код не отправлен', '<h1>LINEA · второй шаг входа</h1>' . ($err ? '<p class="msg">' . $h($err) . '</p>' : '')
+            . '<p class="msg" id="mailfail">Письмо с кодом не ушло: почта сервера не приняла его. Пароль верный, вход не заблокирован.</p>'
+            . '<div class="box"><p><b>Как войти сейчас:</b></p><ol>'
+            . '<li>Повторить отправку через минуту (кнопка ниже) — если сбой почты разовый.</li>'
+            . '<li>Войти с аварийного адреса (config <code>admin_emergency_ips</code>) или с доверенного устройства — код не нужен.</li>'
+            . '<li>Временно выключить второй шаг: в <code>linea-private/config.php</code> поставить <code>\'admin_2fa\' => false</code> по SSH (копия config — <code>tools/otkat-config.sh</code> возвращает прежнюю). После починки почты — вернуть.</li>'
+            . '</ol><form method="post" class="inl"><button name="resend" value="1">Отправить код ещё раз</button></form></div>'
+            . '<p class="mut"><a href="' . $self . '?step=restart">Начать вход заново</a></p>');
+    }
     page('Вход: код', '<h1>LINEA · второй шаг входа</h1><p>Код отправлен на почту владельца (' . count((array)($cfg['admin_emails'] ?? [])) . ' адрес). Действует 10 минут.</p>'
         . ($err ? '<p class="msg">' . $h($err) . '</p>' : '') . ($dev !== '' ? '<p class="mut" id="devcode">проверка на маке: ' . $h($dev) . '</p>' : '')
         . '<form method="post" class="box"><label>Код <input name="code" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9 ]{6,8}" autofocus required></label> '
@@ -165,7 +197,7 @@ if (empty($_SESSION['adm'])) {
             session_regenerate_id(true);
             $_SESSION = ['adm_pending' => time(), 'adm_salt' => bin2hex(random_bytes(16))];
             if (!linea_rate('adm2fa-send', 5)) { $err = 'Слишком много кодов за час — подождите.'; }
-            else { $_SESSION['adm_dev'] = adm_2fa_send($cfg); header('Location: ' . $self . '?step=code'); exit; }
+            else { $r = adm_2fa_send($cfg); $_SESSION['adm_dev'] = $r['dev']; $_SESSION['adm_sent'] = $r['sent']; header('Location: ' . $self . '?step=code'); exit; }
         } else {
             adm_fails(true);
             $g = adm_fails(true, true);

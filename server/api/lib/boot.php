@@ -34,7 +34,7 @@ function linea_cfg(): array
     if ($cfg !== null) { return $cfg; }
     $def = [
         'mode' => 'manual',            // manual — счёт вручную; yookassa — кнопка «Оплатить» на странице заказа
-        'yk_shop_id' => '', 'yk_secret' => '', 'yk_receipt' => false, 'yk_vat_code' => 1,
+        'yk_shop_id' => '', 'yk_secret' => '', 'yk_receipt' => false, 'yk_receipts_since' => '', 'yk_vat_code' => 1,
         'prices' => [],                // вид заказа → null («уточняется») | копейки | ['per_m2' => коп, 'min' => коп]
         'notify_enabled' => false, 'notify_to' => '', 'mail_from' => '',
         'admin_hash' => '',
@@ -198,7 +198,7 @@ function brig_terms(bool $fresh = false): array
     $t['stage_remind_days'] = $rd;
     foreach (['stage_silence_days' => [1, 30], 'stage_silence_days_hidden' => [1, 30], 'protect_months' => [0, 60], 'invite_max' => [1, 20], 'offers_show_max' => [1, 20],
         'offer_deadline_wd' => [1, 20], 'choose_days' => [1, 60], 'sign_days' => [1, 30], 'dispute_reply_days' => [1, 30], 'dispute_proposal_days' => [1, 30],
-        'retention_years' => [1, 10], 'pd_days' => [1, 30], 'pd_order_months' => [6, 120], 'pd_unpaid_months' => [1, 60], 'fresh_code_hours' => [1, 72]] as $k => [$lo, $hi]) { $t[$k] = max($lo, min($hi, (int)$t[$k])); }
+        'retention_years' => [3, 10], 'pd_days' => [1, 30], 'pd_order_months' => [6, 120], 'pd_unpaid_months' => [1, 60], 'fresh_code_hours' => [1, 72]] as $k => [$lo, $hi]) { $t[$k] = max($lo, min($hi, (int)$t[$k])); }
     $ef = is_array($t['exit_fee'] ?? null) ? $t['exit_fee'] : [];
     $t['exit_fee'] = ['enabled' => !empty($ef['enabled']), 'pct' => max(0, min(30, (float)($ef['pct'] ?? 5))), 'min_kop' => max(0, (int)($ef['min_kop'] ?? 0))];
     if (!in_array($t['fee_base'], ['works', 'works_materials'], true)) { $t['fee_base'] = 'works'; }

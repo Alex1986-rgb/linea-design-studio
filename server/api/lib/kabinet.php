@@ -582,6 +582,17 @@ function kab_pd_order_purge(array $o, string $why): array
  *   4. заявки клиента «удалить после завершения» — исполняются, когда работы закончены (kab_pd_blockers пуст); письмо клиенту до удаления.
  * $dry — только посчитать. @return сводка по видам
  */
+/** Что по закрытой сделке ещё не закончено (С5): разногласие, счёт, вознаграждение, реестр оплат. @return причина или '' */
+function kab_pd_deal_open(array $j): string
+{
+    $jid = (int)$j['id'];
+    if (db_val("SELECT 1 FROM br_disputes WHERE job_id = ? AND status <> 'resolved'", [$jid])) { return 'открытое разногласие'; }
+    if (db_val('SELECT 1 FROM br_invoices WHERE job_id = ? AND paid_at IS NULL', [$jid])) { return 'неоплаченный счёт на вознаграждение'; }
+    if ((int)($j['commission_kop'] ?? 0) > 0 && !empty($j['commission_due_at']) && !db_val('SELECT 1 FROM br_invoices WHERE job_id = ? AND paid_at IS NOT NULL', [$jid])) { return 'вознаграждение начислено и не оплачено'; }
+    if (db_val("SELECT 1 FROM br_payments WHERE job_id = ? AND status IN ('declared','contested')", [$jid])) { return 'неподтверждённые записи реестра оплат'; }
+    return '';
+}
+
 function kab_pd_retention(int $now, bool $dry = false): array
 {
     $t = brig_terms();
@@ -591,6 +602,10 @@ function kab_pd_retention(int $now, bool $dry = false): array
     $dealCut = $ago('-' . (int)$t['retention_years'] . ' years');
     // 1. сделки ремонта после срока хранения договоров
     foreach (brig_all("SELECT * FROM br_jobs WHERE pd_purged_at IS NULL AND status IN ('done','cancelled') AND COALESCE(done_at, cancelled_at, updated_at) < ?", [$dealCut]) as $j) {
+        // С5: тексты договоров удаляются необратимо — не трогаем сделку, пока по ней есть незакрытое: разногласие, неоплаченный счёт,
+        // начисленное и не оплаченное вознаграждение, неподтверждённые записи реестра оплат
+        $why = kab_pd_deal_open($j);
+        if ($why !== '') { $sum['deals_wait'] = ($sum['deals_wait'] ?? 0) + 1; if (!$dry && kab_once('pd-wait-job-' . $j['id'] . '-' . date('Ym', $now))) { kab_pd_log('job#' . $j['id'], 'срок хранения прошёл, но обезличивание отложено: ' . $why); } continue; }
         $sum['deals']++;
         if ($dry) { continue; }
         $jid = (int)$j['id'];
@@ -613,6 +628,13 @@ function kab_pd_retention(int $now, bool $dry = false): array
         // сделка ремонта по заказу: действующая или в сроке хранения договоров — заказ ждёт
         $busy = db_val("SELECT 1 FROM br_jobs j JOIN br_requests r ON r.id = j.request_id WHERE r.order_id = ? AND (j.status IN ('contract','work') OR j.pd_purged_at IS NULL AND j.status IN ('done','cancelled') AND COALESCE(j.done_at, j.cancelled_at, j.updated_at) >= ?)", [(int)$o['id'], $dealCut]);
         if ($busy) { continue; }
+        // С5: старая сделка по заказу не обезличена, потому что по ней не всё закрыто (разногласие, счёт…) — заказ ждёт вместе с ней
+        foreach (brig_all("SELECT j.* FROM br_jobs j JOIN br_requests r ON r.id = j.request_id WHERE r.order_id = ? AND j.pd_purged_at IS NULL AND j.status IN ('done','cancelled')", [(int)$o['id']]) as $oj) {
+            if (kab_pd_deal_open($oj) !== '') { continue 2; }
+        }
+        // С5: второй чек «полный расчёт» ещё не ушёл — без почты покупателя он не уйдёт никогда; ждём чек (или пометку «вручную»)
+        if ($o['status'] === 'delivered' && !empty($o['paid_receipt']) && empty($o['receipt2_id']) && !empty(linea_cfg()['yk_receipt'])
+            && !db_val('SELECT 1 FROM events WHERE order_id = ? AND text LIKE ?', [(int)$o['id'], 'Второй чек: онлайн-касса не приняла%'])) { continue; }
         $sum['orders']++;
         if (!$dry) { kab_pd_order_purge($o, $o['paid_at'] ? 'заказ завершён больше ' . $t['pd_order_months'] . ' мес. назад' : 'бриф без оплаты старше ' . $t['pd_unpaid_months'] . ' мес.'); }
     }

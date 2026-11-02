@@ -13,7 +13,9 @@
  *   6. Сессии старше 31 дня.
  *   7. Автоудаление ПДн по срокам (kab_pd_retention: сделки после срока хранения договоров, заказы и брифы, аккаунты, заявки «удалить после
  *      завершения»); --pd-dry — только посчитать. Журнал — аудит админки (pd-retention) и linea-private/pd.log.
- *   8. Второй чек «полный расчёт» по выданным заказам, если при выдаче онлайн-касса не ответила (только при yk_receipt).
+ *   8. Второй чек «полный расчёт» по выданным заказам, если при выдаче онлайн-касса не ответила (только при yk_receipt и только для
+ *      заказов, оплаченных с чеком онлайн-кассы — orders.paid_receipt; пауза час, после суток — «выбить вручную»).
+ *   9. Сверка возвратов с ЮKassa: висящие «в пути» и созданные без ответа API (yk_refund_reconcile).
  *   Отметка последнего прогона — linea-private/cron.last (её видит ping.php с токеном мониторинга).
  * Время для проверок можно сдвинуть: env LINEA_NOW="ГГГГ-ММ-ДД ЧЧ:ММ:СС". Вывод — сводка строкой (для журнала cron).
  */
@@ -98,8 +100,18 @@ $sum['pd_purge'] = kab_pd_retention($now, in_array('--pd-dry', $argv, true));
 require_once $api . '/lib/yookassa.php';
 $sum['receipt2'] = 0;
 if (yk_receipts_on()) {
-    foreach (brig_all("SELECT * FROM orders WHERE status = 'delivered' AND receipt2_id IS NULL AND paid_by LIKE 'yookassa %'") as $o) {
+    // В2: только заказы, у которых первый платёж прошёл с чеком онлайн-кассы; старые получают пометку «выбить вручную» при выдаче
+    // С5: обезличенные не трогаем (нет почты покупателя); паузы и предел попыток — в yk_full_receipt
+    foreach (brig_all("SELECT * FROM orders WHERE status = 'delivered' AND receipt2_id IS NULL AND paid_by LIKE 'yookassa %' AND paid_receipt = 1 AND pd_purged_at IS NULL") as $o) {
         if (yk_full_receipt($o, 'cron')['done']) { $sum['receipt2']++; }
+    }
+}
+
+// 9. сверка возвратов «в пути» и созданных без ответа API (С2): GET /refunds/{id} и /refunds?payment_id=…
+$sum['refunds'] = 0;
+if (yk_ready()) {
+    foreach (brig_all("SELECT DISTINCT o.* FROM orders o JOIN pay_ops p ON p.order_id = o.id WHERE p.kind = 'refund' AND (p.status IN ('pending','sent') OR (p.status = 'failed' AND p.provider_id IS NULL AND p.created_at > ?))", [date('Y-m-d H:i:s', $now - 48 * 3600)]) as $o) {
+        $sum['refunds'] += yk_refund_reconcile($o);
     }
 }
 

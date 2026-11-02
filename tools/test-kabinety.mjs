@@ -151,6 +151,13 @@ try {
   ok((await panel({ act: 'o_status', o: NA, to: 'delivered' })).code === 302 && sql(`SELECT status FROM orders WHERE number = '${NA}'`)[0].status === 'awaiting_payment', 'недопустимый переход статуса не проходит');
   await panel({ act: 'o_status', o: NA, to: 'paid', reason: 'платёжка 15' });
   ok(sql(`SELECT status FROM orders WHERE number = '${NA}'`)[0].status === 'paid', 'оплата отмечена');
+  // ревью 02.11 С3: «Возврат оплаты» сменой статуса не ставится; двойное нажатие «Отметить возврат» — одна запись
+  await panel({ act: 'o_status', o: NA, to: 'refunded', reason: 'тест' });
+  ok(sql(`SELECT status FROM orders WHERE number = '${NA}'`)[0].status === 'paid', 'С3: статус «Возврат оплаты» вручную не ставится (только через «Возврат»)');
+  await Promise.all([panel({ act: 'o_refund', o: NA, rub: 100, reason: 'двойной клик' }), panel({ act: 'o_refund', o: NA, rub: 100, reason: 'двойной клик' })]);
+  await panel({ act: 'o_refund', o: NA, rub: 100, reason: 'двойной клик' });
+  ok(+sql(`SELECT refunded_kop r FROM orders WHERE number = '${NA}'`)[0].r === 10000 && +sql(`SELECT COUNT(*) n FROM pay_ops WHERE kind = 'refund' AND order_id = (SELECT id FROM orders WHERE number = '${NA}')`)[0].n === 1,
+    'С3: три нажатия «Отметить возврат 100 ₽» — один возврат и одна запись в журнале');
   ok((await A.req('GET', '/api/kabinet.php?a=notices')).j?.notices?.some(n => /Оплата получена/.test(n.text)), 'клиенту — уведомление в кабинете');
   const rel = await panel({ act: 'o_release', o: NA, ver: 'v1', title: 'Первый вариант', prelim: 1, project: 'gost-kv3k', changes: 'Первая версия', pdf: { file: path.join(FX, 'album.pdf'), type: 'application/pdf' }, registry: { file: path.join(FX, 'registry.json'), type: 'application/json' } });
   ok(rel.code === 302 && fs.existsSync(path.join(PRIV, 'orders', NA, 'releases/v1/registry.json')), 'выпуск v1 с PDF и реестром опубликован');
@@ -361,17 +368,23 @@ try {
     };
     const jRecent = deal(o2, 1000);      // сделка закрыта < 5 лет назад — заказ ждёт
     const jOld = deal(o4, 2000);         // сделка закрыта > 5 лет назад — удаляются и сделка, и заказ
+    // ревью 02.11 С5: старая сделка с открытым разногласием — тексты договоров не трогаем, заказ ждёт вместе с ней
+    const o5 = mkO('LN-OLD-5', { status: 'delivered', created_at: ts(2300), updated_at: ts(2200), paid_at: ts(2250), delivered_at: ts(2200) });
+    const jDisp = deal(o5, 2000);
+    ins('br_disputes', { job_id: jDisp, opened_by: 'client', subject: 'Плитка', status: 'open', created_at: ts(2050) });
     // заявка «удалить после завершения»: работы закончены (выдан, сделок нет) — исполняется сама
     const lateAcc = ins('accounts', { role: 'client', email: 'late@example.test', pass_hash: '', status: 'active', fail_n: 0, lock_until: 0, created_at: ts(60), last_login_at: ts(5), test: 1, demo: 0 });
     mkO('LN-LATE-1', { status: 'delivered', created_at: ts(60), updated_at: ts(3), paid_at: ts(50), delivered_at: ts(3), account_id: lateAcc }); dirOf('LN-LATE-1');
     const lateReq = ins('pd_requests', { account_id: lateAcc, kind: 'delete', status: 'new', note: 'Удалить после завершения: идёт работа над оплаченным проектом', created_at: ts(40), due_at: ts(30) });
     const dry = execFileSync('php', [path.join(ROOT, 'server/tools/cron.php'), '--private=' + PRIV, '--pd-dry'], { env: { ...process.env, LINEA_MAIL_DRY: '1' } }).toString();
     const dj = JSON.parse((dry.match(/"pd_purge":(\{[^}]*\})/) || [0, '{}'])[1]);
-    ok(dj.deals === 1 && dj.orders === 3 && dj.requests >= 1 && sql("SELECT name FROM orders WHERE number = 'LN-OLD-1'")[0].name === 'Старый Клиент', 'пробный прогон (--pd-dry): посчитано — 1 сделка, 3 заказа, заявки; ничего не изменено: ' + JSON.stringify(dj));
+    ok(dj.deals === 1 && dj.deals_wait === 1 && dj.orders === 3 && dj.requests >= 1 && sql("SELECT name FROM orders WHERE number = 'LN-OLD-1'")[0].name === 'Старый Клиент', 'пробный прогон (--pd-dry): посчитано — 1 сделка, 3 заказа, заявки; ничего не изменено: ' + JSON.stringify(dj));
     const run = cron();
     const g = n => sql(`SELECT * FROM orders WHERE number = '${n}'`)[0];
     ok(g('LN-OLD-1').name === 'удалено' && !g('LN-OLD-1').email && g('LN-OLD-1').pd_purged_at && !fs.existsSync(path.join(PRIV, 'orders/LN-OLD-1/brief.json')), 'бриф без оплаты старше срока — обезличен, файл брифа удалён');
     ok(g('LN-NEW-1').name === 'Старый Клиент', 'свежий бриф без оплаты — не тронут');
+    ok(g('LN-OLD-5').name === 'Старый Клиент' && sql(`SELECT pd_purged_at p FROM br_jobs WHERE id = ${jDisp}`)[0].p === null && /старый текст/.test(sql(`SELECT body FROM br_contracts WHERE job_id = ${jDisp}`)[0].body)
+      && /открытое разногласие/.test(fs.readFileSync(path.join(PRIV, 'pd.log'), 'utf8')), 'С5: сделка после срока, но с открытым разногласием — договор и заказ не тронуты, причина в pd.log');
     ok(g('LN-OLD-2').name === 'Старый Клиент' && !g('LN-OLD-2').pd_purged_at, 'заказ со сделкой в сроке хранения договоров — ждёт (реквизиты стороны — часть договора)');
     ok(g('LN-OLD-3').name === 'удалено' && +g('LN-OLD-3').amount_kop === +sql("SELECT amount_kop FROM orders WHERE number = 'LN-OLD-3'")[0].amount_kop, 'выданный заказ старше срока — контакты и бриф удалены, номер и суммы остались');
     const jo = sql(`SELECT * FROM br_jobs WHERE id = ${jOld}`)[0], co = sql(`SELECT * FROM br_contracts WHERE job_id = ${jOld}`)[0];
@@ -382,7 +395,7 @@ try {
     ok(sql(`SELECT status FROM accounts WHERE id = ${oldAcc}`)[0].status === 'deleted', 'аккаунт без действующих заказов и без входа дольше срока — обезличен');
     ok(sql(`SELECT status FROM pd_requests WHERE id = ${lateReq}`)[0].status === 'done' && sql(`SELECT status FROM accounts WHERE id = ${lateAcc}`)[0].status === 'deleted' && g('LN-LATE-1').name === 'удалено', 'заявка «удалить после завершения» исполнена cron-ом, когда работы закончились');
     ok(sql("SELECT COUNT(*) n FROM br_audit WHERE action = 'pd-retention'")[0].n >= 6 && fs.readFileSync(path.join(PRIV, 'pd.log'), 'utf8').includes('LN-OLD-1') && !fs.readFileSync(path.join(PRIV, 'pd.log'), 'utf8').includes('old3@example'), 'журнал: аудит админки и pd.log — без самих данных');
-    ok(/"pd_purge":\{"deals":0,"orders":0,"accounts":0,"requests":0\}/.test(cron()), 'повторный прогон ничего не находит');
+    ok(/"pd_purge":\{"deals":0,"orders":0,"accounts":0,"requests":0(,"deals_wait":1)?\}/.test(cron()), 'повторный прогон ничего не находит');
     ok(fs.existsSync(path.join(PRIV, 'cron.last')), 'cron отмечает последний прогон (для мониторинга)');
   }
 
@@ -411,6 +424,17 @@ try {
     await Z.req('POST', '/api/panel.php', { form: { csrf: adminCsrf(sv.text), act: 'logout' }, raw: true });
     const p2 = await Z.req('POST', '/api/admin.php', { form: { password: ADMIN_PASS }, raw: true });
     ok(p2.code === 302 && /panel\.php/.test(p2.headers.get('location') || ''), 'доверенное устройство: следующий вход — только паролем');
+    ok(/Отозвать/.test((await Z.req('GET', '/api/panel.php?s=settings', { raw: true })).text), 'С6: у каждого доверенного устройства — кнопка «Отозвать»');
+    // С6: смена пароля (admin_hash) гасит доверенные устройства
+    const NEWP = crypto.randomBytes(10).toString('hex');
+    const nh = execFileSync('php', ['-r', 'echo password_hash($argv[1], PASSWORD_DEFAULT);', NEWP]).toString();
+    await withCfg(`'admin_2fa' => true, 'monitor_token' => '${MON}', 'admin_hash' => '${nh}'`);
+    const sv0 = await Z.req('GET', '/api/panel.php?s=settings', { raw: true });
+    await Z.req('POST', '/api/panel.php', { form: { csrf: adminCsrf(sv0.text), act: 'logout' }, raw: true });
+    ok(/step=code/.test((await Z.req('POST', '/api/admin.php', { form: { password: NEWP }, raw: true })).headers.get('location') || ''), 'С6: после смены пароля доверенное устройство снова просит код');
+    await Z.req('GET', '/api/admin.php?step=restart', { raw: true });
+    await withCfg(`'admin_2fa' => true, 'monitor_token' => '${MON}'`);
+    ok(/panel\.php/.test((await Z.req('POST', '/api/admin.php', { form: { password: ADMIN_PASS }, raw: true })).headers.get('location') || ''), 'прежний пароль — устройство снова действует (метка привязана к паролю)');
     const Y = actor('admin-other');
     ok(/step=code/.test((await Y.req('POST', '/api/admin.php', { form: { password: ADMIN_PASS }, raw: true })).headers.get('location') || ''), 'другое устройство — снова код');
     const sv2 = await Z.req('GET', '/api/panel.php?s=settings', { raw: true });
@@ -422,6 +446,14 @@ try {
     const E = actor('admin-emerg');
     const em = await E.req('POST', '/api/admin.php', { form: { password: ADMIN_PASS }, raw: true });
     ok(/panel\.php/.test(em.headers.get('location') || '') && /аварийный/.test(fs.readFileSync(path.join(PRIV, 'admin.log'), 'utf8')), 'аварийный адрес из admin_emergency_ips — без кода, запись в журнал', em.code + ' ' + (em.headers.get('location') || '') + (em.text.match(/class="msg">([^<]*)/) || [])[1]);
+    // С6: письмо с кодом не ушло — понятное сообщение и аварийный путь, а не экран кода без кода
+    await withCfg(`'admin_2fa' => true, 'admin_emails' => ['не-почта'], 'monitor_token' => '${MON}', 'admin_ip_allow' => ['127.0.0.1']`);
+    const MF = actor('admin-mailfail');
+    const mf1 = await MF.req('POST', '/api/admin.php', { form: { password: ADMIN_PASS }, raw: true });
+    const mf2 = await MF.req('GET', '/api/admin.php?step=code', { raw: true });
+    ok(/step=code/.test(mf1.headers.get('location') || '') && /id="mailfail"/.test(mf2.text) && /admin_emergency_ips/.test(mf2.text) && /admin_2fa/.test(mf2.text) && /Отправить код ещё раз/.test(mf2.text)
+      && /НЕ ОТПРАВЛЕН/.test(fs.readFileSync(path.join(PRIV, 'admin.log'), 'utf8')) && (await MF.req('GET', '/api/panel.php', { raw: true })).code === 302,
+      'С6: письмо с кодом не ушло — сообщение, аварийный путь (адрес, выключить второй шаг), повтор отправки; в журнале; панель закрыта');
     await withCfg(`'monitor_token' => '${MON}', 'admin_ip_allow' => ['127.0.0.1']`);
     ok(/panel\.php/.test((await actor('admin-auto').req('POST', '/api/admin.php', { form: { password: ADMIN_PASS }, raw: true })).headers.get('location') || ''), 'режим auto без писем (brig_mail_enabled = false) — вход паролем, как раньше');
 
@@ -429,6 +461,10 @@ try {
     const pub = await X.req('GET', '/api/ping.php');
     ok(pub.j?.ok && !('mode' in pub.j) && !('tls' in pub.j) && !('proxy' in pub.j), 'публичный ответ: только «да/нет», без режима оплаты и признаков TLS');
     ok((await X.req('GET', '/api/ping.php', { headers: { 'X-Monitor-Token': 'x'.repeat(40) } })).code === 403, 'неверный токен — 403');
+    const qs = await X.req('GET', '/api/ping.php?token=' + MON);
+    ok(qs.j?.ok && !('mode' in qs.j), 'С7: токен в адресе (?token=) не принимается — только заголовок');
+    let last = 0; for (let i = 0; i < 31; i++) last = (await X.req('GET', '/api/ping.php', { headers: { 'X-Monitor-Token': 'y'.repeat(40) } })).code;
+    ok(last === 429 && (await X.req('GET', '/api/ping.php', { headers: { 'X-Monitor-Token': MON } })).j?.mode === 'manual', 'С7: 31 неверная попытка → 429 для неверных, настоящий монитор не заперт');
     const det = await X.req('GET', '/api/ping.php', { headers: { 'X-Monitor-Token': MON } });
     ok(det.j?.mode === 'manual' && det.j.tls && det.j.proxy?.remote_addr === '127.0.0.1' && det.j.proxy.remote_is_trusted === true && det.j.db?.schema >= 7 && det.j.cron_last, 'с токеном: режим, TLS, какой REMOTE_ADDR видит PHP и доверен ли он, версия схемы, последний cron');
     fs.writeFileSync(cfgPath, cfg0);

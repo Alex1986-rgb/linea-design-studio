@@ -727,6 +727,25 @@ try {
       for (const d of sql(`SELECT id FROM br_contracts WHERE job_id = ${J3} AND status = 'draft'`)) await B[1].req('POST', '/api/brigada.php?m=jobs&a=addendum_cancel', { json: { j: J3, doc: +d.id } });
       ok((await c3.req('POST', `/api/remont.php?t=${T3}&a=terminate`, { json: { reason: '' } })).code === 400, 'расторжение без причины — отказ');
       ok((await B[1].req('POST', '/api/brigada.php?m=jobs&a=terminate', { json: { j: J3, reason: 'Заказчик переносит ремонт', extra: offT, extraNote: 'всё' } })).code === 400, 'работы сверх принятого больше цены договора — отказ');
+      // ревью 02.11 В1: расторжение «на ноль» после открытых контактов — сигнал обхода и подтверждение LINEA (принятый этап временно снят)
+      {
+        const st1 = sql(`SELECT status, accepted_at FROM br_stages WHERE id = ${stg3[0].id}`)[0];
+        sql(`UPDATE br_stages SET status = 'ready' WHERE id = ${stg3[0].id}`);
+        const z = await c3.req('POST', `/api/remont.php?t=${T3}&a=terminate`, { json: { reason: 'Расходимся, дальше сами' } });
+        const zd = z.j?.doc ? sql(`SELECT * FROM br_contracts WHERE id = ${z.j.doc}`)[0] : {};
+        ok(z.j?.ok && +zd.total_kop === 0 && +zd.needs_admin === 1 && sql(`SELECT 1 x FROM br_signals WHERE kind = 'termination_zero' AND job_id = ${J3}`).length > 0,
+          'В1: акт на ноль после открытых контактов — сигнал обхода, соглашение ждёт подтверждения LINEA', z.text);
+        const zs = await c3.req('POST', `/api/remont.php?t=${T3}&a=sign`, { json: { doc: z.j?.doc } });
+        const zc = await c3.req('POST', `/api/remont.php?t=${T3}&a=sign`, { json: { doc: z.j?.doc, code: zs.j?.devCode || '000000', pep: true } });
+        ok(zc.code === 409 && /подтверждения LINEA/.test(zc.text) && sql(`SELECT status FROM br_jobs WHERE id = ${J3}`)[0].status === 'work', 'В1: без подтверждения LINEA подписать нельзя — сделка в работе', zc.text);
+        ok(/без принятых работ/.test((await admin.req('GET', `/api/admin-brigady.php?j=${J3}`, { raw: true })).text), 'В1: админка показывает соглашение на подтверждении');
+        // С1: пока есть неподписанное соглашение о расторжении, приёмка этапа закрыта (акт устарел бы)
+        const sa = await c3.req('POST', `/api/remont.php?t=${T3}&a=stage_accept`, { json: { stage: stg3[0].id, checks: Array(20).fill(true) } });
+        ok(sa.code === 409 && /отзовите соглашение/.test(sa.text) && sql(`SELECT status FROM br_stages WHERE id = ${stg3[0].id}`)[0].status === 'ready', 'С1: приёмка этапа при открытом соглашении о расторжении — отказ', sa.text);
+        await adminPost({ act: 'c_reject', id: z.j?.doc, reason: 'обход' });
+        ok(sql(`SELECT status FROM br_contracts WHERE id = ${z.j?.doc}`)[0].status === 'void', 'В1: LINEA отклонила соглашение — оно недействительно');
+        sql(`UPDATE br_stages SET status = '${st1.status}' WHERE id = ${stg3[0].id}`);
+      }
       const tp = await B[1].req('POST', '/api/brigada.php?m=jobs&a=terminate', { json: { j: J3, reason: 'Заказчик переносит ремонт на весну', extra: 1000, extraNote: 'Штробление под розетки в кухне начато' } });
       ok(tp.j?.ok && tp.j.doc, 'бригада (владелец) предложила расторжение: соглашение и акт', tp.text);
       ok((await c3.req('POST', `/api/remont.php?t=${T3}&a=terminate`, { json: { reason: 'Второе расторжение' } })).code === 400, 'второе неподписанное соглашение — отказ');
@@ -736,6 +755,22 @@ try {
       ok(+tdoc.total_kop === acc + 100000 && +tdoc.delta_kop === acc + 100000 - paid && tdoc.kind === 'termination', `акт: принято ${(acc + 100000) / 100} ₽ (этап 1 + признанные работы), оплачено ${paid / 100} ₽, расчёт ${(acc + 100000 - paid) / 100} ₽`);
       const dgT = await c3.req('GET', `/api/remont-dogovor.php?t=${T3}`, { raw: true });
       ok(/Соглашение о расторжении договора подряда/.test(dgT.text) && /Итого принято/.test(dgT.text) && /по инициативе Подрядчика/.test(dgT.text) && dgT.text.includes(tdoc.hash), 'текст соглашения: инициатор, принятые этапы, расчёт, хеш версии');
+      // В1: счёт на вознаграждение уже выставлен от полной цены, а по акту меньше — подписание только после подтверждения LINEA
+      const inv3 = +(sql(`SELECT amount_kop a FROM br_invoices WHERE job_id = ${J3}`)[0]?.a || 0);
+      ok(inv3 > 0 && +tdoc.needs_admin === 1, 'В1: вознаграждение по акту ниже выставленного счёта — соглашение на подтверждении LINEA');
+      // пол вознаграждения (чистый расчёт): акт на 0 → база не ниже оплаченного по реестру; база 'paid' — полученное подрядчиком
+      const fee = JSON.parse(execFileSync('php', ['-r', 'require $argv[1] . "/server/api/lib/boot.php"; require $argv[1] . "/server/api/lib/brig.php"; require_once $argv[1] . "/server/api/lib/contract.php"; brig_db();'
+        + '$j = db_one("SELECT * FROM br_jobs WHERE id = ' + J3 + '"); $a = brig_termination_fee($j, 0); $b = brig_termination_fee($j, 10000000000);'
+        + '$old = linea_settings("brig_terms"); $new = $old; $new["termination_fee_base"] = "paid"; db_exec("DELETE FROM settings WHERE k = ?", ["brig_terms"]); db_insert("settings", ["k" => "brig_terms", "v" => json_encode($new), "updated_at" => linea_now()]); brig_terms(true);'
+        + '$c = brig_termination_fee($j, 0); db_exec("DELETE FROM settings WHERE k = ?", ["brig_terms"]); if ($old) { db_insert("settings", ["k" => "brig_terms", "v" => json_encode($old), "updated_at" => linea_now()]); } brig_terms(true);'
+        + 'echo json_encode([$a, $b, $c, brig_paid_kop(' + J3 + '), brig_received_kop(' + J3 + ')]);', ROOT], { env: { ...process.env, LINEA_PRIVATE: PRIV } }).toString());
+      ok(fee[0].base === fee[3] && fee[3] > 0 && fee[0].fee > 0 && fee[0].below_invoice === true && fee[1].base === 10000000000 && fee[2].base === fee[4] && fee[4] >= fee[3],
+        `В1: пол — оплачено по реестру (${fee[3] / 100} ₽); 'paid' — полученное подрядчиком (${fee[4] / 100} ₽); ниже счёта — помечено`, JSON.stringify(fee));
+      const sb0 = await B[1].req('POST', '/api/brigada.php?m=jobs&a=sign', { json: { j: J3, doc: tp.j.doc } });
+      const sb1 = await B[1].req('POST', '/api/brigada.php?m=jobs&a=sign', { json: { j: J3, doc: tp.j.doc, code: sb0.j?.devCode, pep: true } });
+      ok(sb1.code === 409 && sql(`SELECT brigade_signed_at s FROM br_contracts WHERE id = ${tp.j.doc}`)[0].s === null, 'В1: до подтверждения LINEA подпись не принимается', sb1.text);
+      await adminPost({ act: 'c_approve', id: tp.j.doc, reason: 'проверено' });
+      ok(!!sql(`SELECT admin_ok_at a FROM br_contracts WHERE id = ${tp.j.doc}`)[0].a, 'LINEA подтвердила соглашение о расторжении');
       const sb = await B[1].req('POST', '/api/brigada.php?m=jobs&a=sign', { json: { j: J3, doc: tp.j.doc } });
       await B[1].req('POST', '/api/brigada.php?m=jobs&a=sign', { json: { j: J3, doc: tp.j.doc, code: sb.j?.devCode, pep: true } });
       ok(sql(`SELECT status FROM br_jobs WHERE id = ${J3}`)[0].status === 'work', 'подписала одна сторона — сделка ещё действует');
@@ -743,7 +778,7 @@ try {
       const fin3 = await c3.req('POST', `/api/remont.php?t=${T3}&a=sign`, { json: { doc: tp.j.doc, code: sc.j?.devCode, pep: true } });
       const jj = sql(`SELECT * FROM br_jobs WHERE id = ${J3}`)[0];
       ok(fin3.j?.job?.status === 'cancelled' && jj.terminated_at && +jj.accepted_kop === acc + 100000, 'обе подписи → договор расторгнут, принятый объём записан в сделку', fin3.text);
-      ok(+jj.commission_kop === Math.round((acc + 100000) * +jj.commission_rate) && jj.commission_due_at, `вознаграждение пересчитано от фактически принятого: ${+jj.commission_kop / 100} ₽ (${+jj.commission_rate * 100} % от ${(acc + 100000) / 100} ₽)`);
+      ok(+jj.commission_kop === Math.round(Math.max(acc + 100000, paid) * +jj.commission_rate) && jj.commission_due_at, `вознаграждение пересчитано от фактически принятого (не ниже оплаченного): ${+jj.commission_kop / 100} ₽ (${+jj.commission_rate * 100} % от ${Math.max(acc + 100000, paid) / 100} ₽); уменьшение ниже счёта — с подтверждения LINEA`);
       ok(sql(`SELECT status FROM br_ledger WHERE job_id = ${J3} AND kind = 'accrual'`)[0]?.status !== 'void' && sql(`SELECT 1 x FROM br_audit WHERE action = 'deal-cancelled' AND target = 'job#${J3}'`).length > 0
         && sql(`SELECT 1 x FROM br_messages WHERE job_id = ${J3} AND who = 'system' AND text LIKE '%расторгнут соглашением%'`).length > 0, 'переход — через deal_transition() (лента «Система», журнал); проводка не аннулирована');
       ok((await B[1].req('POST', '/api/brigada.php?m=jobs&a=stage_ready', { json: { stage: stg3[1].id } })).code >= 400, 'после расторжения этапы закрыты');

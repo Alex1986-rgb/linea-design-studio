@@ -175,12 +175,13 @@ function adm_brig_act(string $act, int $id, string $reason, string $WHO, string 
             brig_audit($WHO, 'advance', 'job#' . $id, 'LINEA исправила отметку аванса (' . ($to === 'clear' ? 'снята' : 'подтверждена') . '): ' . $reason);
             if ($to === 'confirmed') { brig_commission_due_check($id, $WHO); }
             $msg = 'Отметка аванса исправлена.'; break;
-        case 'c_approve': case 'c_reject':   // допсоглашение с сильным уменьшением цены (В-1)
-            $c = brig_one("SELECT * FROM br_contracts WHERE id = ? AND kind = 'addendum' AND status = 'draft' AND needs_admin = 1", [$id]);
-            if (!$c) { $msg = 'Нет такого допсоглашения на подтверждении.'; break; }
+        case 'c_approve': case 'c_reject':   // допсоглашение с сильным уменьшением цены (В-1); расторжение на ноль или ниже счёта (ревью 02.11, В1)
+            $c = brig_one("SELECT * FROM br_contracts WHERE id = ? AND kind IN ('addendum','termination') AND status = 'draft' AND needs_admin = 1", [$id]);
+            if (!$c) { $msg = 'Нет такого документа на подтверждении.'; break; }
             $back .= '?j=' . (int)$c['job_id'];
-            if ($act === 'c_approve') { db_update('br_contracts', ['admin_ok_at' => $now], 'id = ?', [$id]); brig_audit($WHO, 'addendum-ok', 'job#' . $c['job_id'], 'LINEA подтвердила допсоглашение № ' . $c['num'] . ($reason ? ': ' . $reason : '')); $msg = 'Допсоглашение подтверждено — стороны могут подписать.'; }
-            else { db_update('br_contracts', ['status' => 'void'], 'id = ?', [$id]); brig_audit($WHO, 'addendum-cancel', 'job#' . $c['job_id'], 'LINEA отклонила допсоглашение № ' . $c['num'] . ($reason ? ': ' . $reason : '')); $msg = 'Допсоглашение отклонено.'; }
+            $isT = $c['kind'] === 'termination'; $dn = ($isT ? 'соглашение о расторжении' : 'допсоглашение') . ' № ' . $c['num'];
+            if ($act === 'c_approve') { db_update('br_contracts', ['admin_ok_at' => $now], 'id = ?', [$id]); brig_audit($WHO, $isT ? 'termination-ok' : 'addendum-ok', 'job#' . $c['job_id'], 'LINEA подтвердила ' . $dn . ($reason ? ': ' . $reason : '')); $msg = ($isT ? 'Соглашение о расторжении' : 'Допсоглашение') . ' подтверждено — стороны могут подписать.'; }
+            else { db_update('br_contracts', ['status' => 'void'], 'id = ?', [$id]); brig_audit($WHO, $isT ? 'termination-cancel' : 'addendum-cancel', 'job#' . $c['job_id'], 'LINEA отклонила ' . $dn . ($reason ? ': ' . $reason : '')); $msg = ($isT ? 'Соглашение о расторжении' : 'Допсоглашение') . ' отклонено.'; }
             break;
         case 'i_paid':
             $i = brig_one('SELECT * FROM br_invoices WHERE id = ?', [$id]);

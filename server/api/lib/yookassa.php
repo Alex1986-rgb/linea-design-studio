@@ -116,6 +116,26 @@ function yk_receipts_on(): bool { return yk_ready() && !empty(linea_cfg()['yk_re
 /** Заказ оплачен через ЮKassa (а не счётом/вручную) — только к такому платежу API даёт чек и возврат. */
 function yk_paid_online(array $o): bool { return str_starts_with((string)($o['paid_by'] ?? ''), 'yookassa ') && (string)($o['payment_id'] ?? '') !== ''; }
 
+/**
+ * Первый платёж заказа прошёл С ЧЕКОМ 54-ФЗ через ЮKassa (ревью 02.11.2026, В2): только к такому заказу уходит второй чек
+ * «полный расчёт» (settlement prepayment) и возврат через API с чеком возврата. Признак — orders.paid_receipt (ставится при оплате,
+ * если платёж создавался с receipt или ЮKassa вернула receipt_registration), плюс config yk_receipts_since (ГГГГ-ММ-ДД[ ЧЧ:ММ:СС]):
+ * заказы, оплаченные раньше этой даты, считаются старыми при любом флаге. Старые — «выбить вручную» (событие в заказе), не автоматически.
+ */
+function yk_receipt_chain(array $o): bool
+{
+    if (!yk_paid_online($o) || empty($o['paid_receipt'])) { return false; }
+    $since = trim((string)(linea_cfg()['yk_receipts_since'] ?? ''));
+    return $since === '' || (string)($o['paid_at'] ?? '') >= $since;
+}
+
+/** Пометка в заказе (один раз на текст-префикс): чек или возврат — вручную. */
+function yk_manual_mark(array $o, string $who, string $text): void
+{
+    $pfx = mb_substr($text, 0, 40);
+    if (!db_val('SELECT 1 FROM events WHERE order_id = ? AND text LIKE ?', [(int)$o['id'], $pfx . '%'])) { linea_event((int)$o['id'], $who, $text); }
+}
+
 /** Операция в журнале pay_ops: новая или обновление по ключу идемпотентности. @return id */
 function yk_op_put(array $o, string $kind, string $idem, int $kop, string $status, string $reason, string $who, ?string $pid = null): int
 {
@@ -143,14 +163,30 @@ function yk_full_receipt(array $o, string $who = 'system'): array
     if (!empty($o['receipt2_id'])) { return ['ok' => true, 'done' => true, 'why' => 'второй чек уже отправлен']; }
     if ($o['status'] !== 'delivered') { return ['ok' => true, 'done' => false, 'why' => 'альбом ещё не выдан']; }
     if (!yk_paid_online($o)) {
-        if (!db_val('SELECT 1 FROM events WHERE order_id = ? AND text LIKE ?', [(int)$o['id'], 'Второй чек:%'])) {
-            linea_event((int)$o['id'], $who, 'Второй чек: оплата была не через онлайн-кассу — чек «полный расчёт» выбить вручную');
-        }
+        yk_manual_mark($o, $who, 'Второй чек: оплата была не через онлайн-кассу — чек «полный расчёт» выбить вручную');
         return ['ok' => true, 'done' => false, 'why' => 'оплата не через онлайн-кассу'];
     }
+    if (!yk_receipt_chain($o)) {   // В2: первый платёж прошёл без чека ЮKassa (самозанятый, «Мой налог») — второй чек по нему касса не примет
+        yk_manual_mark($o, $who, 'Второй чек: первый платёж прошёл без чека онлайн-кассы (до включения чеков) — чек «полный расчёт» выбить вручную');
+        return ['ok' => true, 'done' => false, 'why' => 'первый платёж без чека онлайн-кассы — выбить вручную'];
+    }
+    if (!empty($o['pd_purged_at'])) { return ['ok' => true, 'done' => false, 'why' => 'данные заказа обезличены — чек вручную']; }   // С5: нет почты покупателя
     $kop = (int)$o['amount_kop'] - (int)($o['refunded_kop'] ?? 0);
     if ($kop <= 0) { return ['ok' => true, 'done' => false, 'why' => 'оплата возвращена полностью — второй чек не нужен']; }
+    // С4: пока возврат в пути, признак расчёта в его чеке уже выбран (предоплата) — второй чек ждёт проведения возврата
+    if ((int)db_val("SELECT COUNT(*) FROM pay_ops WHERE order_id = ? AND kind = 'refund' AND status IN ('pending','sent')", [(int)$o['id']])) {
+        return ['ok' => true, 'done' => false, 'why' => 'возврат в пути — второй чек после его проведения (повторим автоматически)'];
+    }
     $idem = 'rcpt2-' . $o['number'];
+    // повтор после сбоя: ЮKassa помнит ключ идемпотентности 24 часа — позже повтор создал бы второй чек; пауза час между попытками (С5)
+    $prevOp = db_one('SELECT * FROM pay_ops WHERE idem = ?', [$idem]);
+    if ($prevOp && $who === 'cron') {
+        if (strtotime((string)$prevOp['created_at']) < time() - 20 * 3600) {
+            yk_manual_mark($o, $who, 'Второй чек: онлайн-касса не приняла чек «полный расчёт» за сутки попыток — проверить в кабинете ЮKassa и выбить вручную');
+            return ['ok' => true, 'done' => false, 'why' => 'попытки закончились — вручную'];
+        }
+        if (strtotime((string)$prevOp['updated_at']) > time() - 3600) { return ['ok' => true, 'done' => false, 'why' => 'пауза между попытками']; }
+    }
     $body = yk_tax() + ['customer' => yk_customer($o), 'payment_id' => (string)$o['payment_id'], 'type' => 'payment', 'send' => true,
         'items' => [yk_item($o, $kop, 'full_payment')], 'settlement' => [['type' => 'prepayment', 'amount' => yk_money($kop)]]];
     $res = yk_call('POST', 'receipts', $body, $idem);
@@ -186,8 +222,20 @@ function yk_refund(array $o, int $kop, string $reason, string $who): array
     $fail = fn(string $w) => ['ok' => false, 'status' => '', 'why' => $w, 'id' => ''];
     if (!yk_receipts_on()) { return $fail('возврат через API выключен (yk_receipt) — проведите в кабинете онлайн-оплаты и отметьте вручную'); }
     if (!yk_paid_online($o)) { return $fail('заказ оплачен не через онлайн-кассу — возврат банком, отметьте вручную'); }
+    if (!yk_receipt_chain($o)) { return $fail('первый платёж прошёл без чека онлайн-кассы — возврат в кабинете ЮKassa, чек возврата вручную; затем отметьте возврат'); }
     if (!in_array($o['status'], ['paid', 'delivered'], true)) { return $fail('возврат — только по оплаченному заказу'); }
     if (trim($reason) === '') { return $fail('укажите причину'); }
+    // С2: сначала свериться с ЮKassa по возвратам «в пути» и созданным без ответа — иначе повтор другой суммой мог бы создать второй возврат
+    yk_refund_reconcile($o);
+    $o = db_one('SELECT * FROM orders WHERE id = ?', [(int)$o['id']]) ?: $o;
+    if (db_val("SELECT 1 FROM pay_ops WHERE order_id = ? AND kind = 'refund' AND status = 'sent'", [(int)$o['id']])) {
+        return $fail('предыдущий возврат ещё не подтверждён онлайн-кассой — дождитесь сверки (каждые 15 минут) и проверьте журнал заказа');
+    }
+    $limbo = db_one("SELECT * FROM pay_ops WHERE order_id = ? AND kind = 'refund' AND status = 'failed' AND provider_id IS NULL AND created_at > ? ORDER BY id DESC LIMIT 1",
+        [(int)$o['id'], date('Y-m-d H:i:s', time() - 24 * 3600)]);
+    if ($limbo && (int)$limbo['amount_kop'] !== $kop) {
+        return $fail('прошлый возврат на ' . yk_rub((int)$limbo['amount_kop']) . ' мог дойти до онлайн-кассы без ответа — повторите ту же сумму (повтор безопасен) или проверьте кабинет ЮKassa');
+    }
     $left = yk_refund_left($o);
     if ($kop <= 0 || $kop > $left) { return $fail('сумма возврата — больше нуля и не больше ' . yk_rub(max(0, $left))); }
     $prev = db_one("SELECT * FROM pay_ops WHERE order_id = ? AND kind = 'refund' AND status = 'failed' AND amount_kop = ? ORDER BY id DESC LIMIT 1", [(int)$o['id'], $kop]);
@@ -198,7 +246,8 @@ function yk_refund(array $o, int $kop, string $reason, string $who): array
     $res = yk_call('POST', 'refunds', $body, $idem);
     $rid = (string)($res['data']['id'] ?? '');
     if (!$res['ok'] || $rid === '') {
-        db_update('pay_ops', ['status' => 'failed', 'updated_at' => linea_now()], 'id = ?', [$opId]);
+        // 4xx — касса отказала явно (возврата нет); 5xx и обрыв — возврат мог создаться: «failed» без id, его ищет сверка (С2)
+        db_update('pay_ops', ['status' => $res['code'] >= 400 && $res['code'] < 500 ? 'rejected' : 'failed', 'updated_at' => linea_now()], 'id = ?', [$opId]);
         linea_event((int)$o['id'], $who, 'Возврат ' . yk_rub($kop) . ' не создан: ' . ($res['why'] ?: 'нет ответа'));
         linea_log('pay.log', 'refund ' . $o['number'] . ' fail: ' . $res['why']);
         return $fail('онлайн-касса не приняла возврат: ' . ($res['why'] ?: 'нет ответа'));
@@ -233,6 +282,54 @@ function yk_refund_apply(int $opId, string $who = 'yookassa'): bool
     return true;
 }
 
+/**
+ * Привязать возврат из ответа API к своей операции без id (С2): тот же платёж нашего заказа, та же сумма, операция «отправлена» или
+ * «не создана» без ответа. @return привязан
+ */
+function yk_refund_link(array $r): bool
+{
+    $rid = (string)($r['id'] ?? ''); $pid = (string)($r['payment_id'] ?? '');
+    if ($rid === '' || $pid === '' || yk_known_refund($rid)) { return yk_known_refund($rid); }
+    $o = db_one('SELECT * FROM orders WHERE payment_id = ?', [$pid]);
+    if (!$o) { return false; }
+    $kop = (int)round(((float)($r['amount']['value'] ?? 0)) * 100);
+    $op = db_one("SELECT * FROM pay_ops WHERE order_id = ? AND kind = 'refund' AND provider_id IS NULL AND status IN ('sent','failed') AND amount_kop = ? ORDER BY id LIMIT 1", [(int)$o['id'], $kop]);
+    if (!$op) { return false; }
+    $st = (string)($r['status'] ?? 'pending');
+    if (db_exec("UPDATE pay_ops SET provider_id = ?, status = ?, updated_at = ? WHERE id = ? AND provider_id IS NULL", [$rid, $st === 'canceled' ? 'canceled' : 'pending', linea_now(), (int)$op['id']]) !== 1) { return yk_known_refund($rid); }
+    linea_event((int)$o['id'], 'yookassa', 'Возврат ' . yk_rub($kop) . ' найден в онлайн-кассе при сверке (' . $rid . ', ' . $st . ')');
+    linea_log('pay.log', 'refund-link ' . $o['number'] . ' ' . $rid . ' ' . $st);
+    return true;
+}
+
+/**
+ * Сверка возвратов заказа с ЮKassa (С2; cron и перед новым возвратом): операции «в пути» с id — GET /refunds/{id}; без id
+ * (процесс упал или таймаут после создания) — GET /refunds?payment_id=… и привязка по сумме. Не найден за час — «не создан» (не держит сумму).
+ * @return сколько операций изменилось
+ */
+function yk_refund_reconcile(array $o): int
+{
+    if (!yk_ready() || !yk_paid_online($o)) { return 0; }
+    linea_schema();
+    $n = 0;
+    $ops = db_all("SELECT * FROM pay_ops WHERE order_id = ? AND kind = 'refund' AND (status IN ('pending','sent') OR (status = 'failed' AND provider_id IS NULL AND created_at > ?))",
+        [(int)$o['id'], date('Y-m-d H:i:s', time() - 48 * 3600)]);
+    if (!$ops) { return 0; }
+    if (array_filter($ops, fn($x) => $x['provider_id'] === null || $x['provider_id'] === '')) {
+        $list = yk_call('GET', 'refunds?payment_id=' . rawurlencode((string)$o['payment_id']));
+        if ($list['ok']) { foreach ((array)($list['data']['items'] ?? []) as $r) { if (is_array($r) && !yk_known_refund((string)($r['id'] ?? '')) && yk_refund_link($r)) { $n++; } } }
+        foreach (db_all("SELECT * FROM pay_ops WHERE order_id = ? AND kind = 'refund' AND status = 'sent' AND provider_id IS NULL AND updated_at < ?", [(int)$o['id'], date('Y-m-d H:i:s', time() - 3600)]) as $x) {
+            if ($list['ok']) { db_exec("UPDATE pay_ops SET status = 'failed', updated_at = ? WHERE id = ? AND status = 'sent'", [linea_now(), (int)$x['id']]); $n++; }
+        }
+    }
+    foreach (db_all("SELECT * FROM pay_ops WHERE order_id = ? AND kind = 'refund' AND status IN ('pending','sent') AND provider_id IS NOT NULL", [(int)$o['id']]) as $x) {
+        $before = (string)$x['status'];
+        yk_refund_settle((string)$x['provider_id']);
+        if ((string)db_val('SELECT status FROM pay_ops WHERE id = ?', [(int)$x['id']]) !== $before) { $n++; }
+    }
+    return $n;
+}
+
 /** Возврат наш? По своей базе (pay_ops), без запроса в API. */
 function yk_known_refund(string $refundId): bool
 {
@@ -244,9 +341,13 @@ function yk_known_refund(string $refundId): bool
 /** Уведомление refund.succeeded / refund.canceled: статус — только из API (GET /v3/refunds/{id}). @return array{ok:bool, why:string} */
 function yk_refund_settle(string $refundId): array
 {
-    if (!yk_ready() || !yk_known_refund($refundId)) { return ['ok' => true, 'why' => 'не наш возврат']; }
+    if (!yk_ready() || !preg_match('/^[0-9a-f-]{20,64}$/i', $refundId)) { return ['ok' => true, 'why' => 'не наш возврат']; }
+    $known = yk_known_refund($refundId);
+    // С2: уведомление пришло раньше, чем мы записали id (или ответ API потерян) — ищем «свою» операцию без id только при наличии таких
+    if (!$known && !db_val("SELECT 1 FROM pay_ops WHERE kind = 'refund' AND provider_id IS NULL AND status IN ('sent','failed')")) { return ['ok' => true, 'why' => 'не наш возврат']; }
     $res = yk_call('GET', 'refunds/' . rawurlencode($refundId));
     if (!$res['ok']) { return $res['code'] === 404 ? ['ok' => true, 'why' => 'возврат не найден'] : ['ok' => false, 'why' => $res['why']]; }
+    if (!$known && !yk_refund_link($res['data'])) { return ['ok' => true, 'why' => 'не наш возврат']; }
     $op = db_one("SELECT * FROM pay_ops WHERE kind = 'refund' AND provider_id = ?", [$refundId]);
     $st = (string)($res['data']['status'] ?? '');
     $kop = (int)round(((float)($res['data']['amount']['value'] ?? 0)) * 100);
@@ -296,8 +397,9 @@ function yk_payment_for(array $o): array
     $url = (string)($res['data']['confirmation']['confirmation_url'] ?? '');
     $id = (string)($res['data']['id'] ?? '');
     if ($url === '' || $id === '') { return ['ok' => false, 'url' => '', 'why' => 'в ответе нет ссылки на оплату']; }
-    linea_db()->prepare('UPDATE orders SET payment_id = ?, payment_url = ?, payment_created_at = ?, payment_tries = ?, updated_at = ? WHERE id = ?')
-        ->execute([$id, $url, linea_now(), $try, linea_now(), $o['id']]);
+    linea_schema();
+    linea_db()->prepare('UPDATE orders SET payment_id = ?, payment_url = ?, payment_created_at = ?, payment_tries = ?, payment_receipt = ?, updated_at = ? WHERE id = ?')
+        ->execute([$id, $url, linea_now(), $try, isset($body['receipt']) ? 1 : 0, linea_now(), $o['id']]);
     linea_event((int)$o['id'], 'yookassa', 'Создан платёж на ' . number_format($kop / 100, 0, ',', ' ') . ' ₽ (' . $id . ')');
     linea_log('pay.log', 'create ' . $o['number'] . ' ' . $id . ' ' . $kop);
     return ['ok' => true, 'url' => $url, 'why' => ''];
@@ -390,8 +492,11 @@ function yk_settle(string $paymentId): array
                 . ' ₽ — нужна проверка: доплата или возврат разницы', 'LINEA: оплата не совпала с суммой заказа ' . $o['number']);
             return ['ok' => true, 'paid' => false, 'why' => 'сумма не совпала'];
         }
-        $q = linea_db()->prepare("UPDATE orders SET status = 'paid', paid_at = ?, paid_by = ?, payment_id = ?, updated_at = ? WHERE id = ? AND status IN ('new','awaiting_payment')");
-        $q->execute([linea_now(), 'yookassa ' . $paymentId, $paymentId, linea_now(), $o['id']]);
+        // В2: «первый платёж с чеком» — платёж создавался с receipt (текущий платёж заказа) или ЮKassa сообщила о регистрации чека
+        linea_schema();
+        $withRcpt = (!empty($d['receipt_registration']) || ((string)$o['payment_id'] === $paymentId && !empty($o['payment_receipt']))) ? 1 : 0;
+        $q = linea_db()->prepare("UPDATE orders SET status = 'paid', paid_at = ?, paid_by = ?, payment_id = ?, paid_receipt = ?, updated_at = ? WHERE id = ? AND status IN ('new','awaiting_payment')");
+        $q->execute([linea_now(), 'yookassa ' . $paymentId, $paymentId, $withRcpt, linea_now(), $o['id']]);
         if ($q->rowCount() === 1) {
             linea_event((int)$o['id'], 'yookassa', 'Оплата получена: ' . number_format($kop / 100, 0, ',', ' ') . ' ₽ (' . $paymentId . ')');
             linea_log('pay.log', 'paid ' . $o['number'] . ' ' . $paymentId . ' ' . $kop);

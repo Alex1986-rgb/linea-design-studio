@@ -22,7 +22,7 @@ $event = is_array($in) ? (string)($in['event'] ?? '') : '';
 if ($id === '') { http_response_code(200); exit; }
 // возврат: свой id ищем в журнале операций pay_ops, статус — только из API (GET /v3/refunds/{id})
 if (str_starts_with($event, 'refund.')) {
-    if (!yk_known_refund($id)) { linea_log('pay.log', 'notify: неизвестный возврат — пропущен'); http_response_code(200); exit; }
+    // неизвестный id: yk_refund_settle сам решает — чужой (200) или наш, ответ API о котором потерян (С2: привязка по платежу и сумме)
     try { $r = yk_refund_settle($id); } catch (Throwable $e) { linea_log('error.log', 'notify refund: ' . $e->getMessage()); http_response_code(500); exit; }
     linea_log('pay.log', 'notify refund ' . substr(preg_replace('/[^0-9a-f-]/i', '', $id) ?? '', 0, 64) . ' → ' . ($r['ok'] ? $r['why'] : 'error ' . $r['why']));
     http_response_code($r['ok'] ? 200 : 500); exit;
