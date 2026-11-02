@@ -308,7 +308,9 @@ function brig_addendum_propose(array $j, array $in, string $by, array $gctx): in
     $floor = (int)$st['n'] > 0 ? (int)ceil($base * (int)$st['acc'] / (int)$st['n']) : 0;
     if ($base + $delta < $floor) { linea_fail('Цена договора не может стать меньше стоимости уже принятых этапов (' . brig_rub($floor) . ')'); }
     // сильное уменьшение цены — только после подтверждения LINEA (иначе база вознаграждения уходит в ноль одним допсоглашением)
-    $needsAdmin = $delta < 0 && -$delta * 100 > $base * $t['addendum_cut_admin_pct'];
+    // С-4: порог — суммарное уменьшение от ИСХОДНОЙ цены договора (серия допсоглашений по −19 % не обходит подтверждение LINEA)
+    $orig = (int)(db_val("SELECT total_kop FROM br_contracts WHERE job_id = ? AND kind = 'main' AND status = 'signed' ORDER BY id LIMIT 1", [(int)$j['id']]) ?? $base);
+    $needsAdmin = $delta < 0 && ($orig - ($base + $delta)) * 100 > $orig * $t['addendum_cut_admin_pct'];
     $id = brig_contract_create($j, 'addendum', $by, ['items' => $items, 'delta_kop' => $delta, 'total_kop' => $base + $delta, 'days_add' => $days, 'needs_admin' => $needsAdmin,
         'note' => brig_guard(linea_str($in['note'] ?? '', 500), brig_contacts_open($j), $gctx + ['field' => 'допсоглашение'])]);
     if ($needsAdmin) {

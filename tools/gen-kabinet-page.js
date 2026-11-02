@@ -19,7 +19,7 @@ ${SHELL.head(u, { title, desc: 'Кабинет клиента LINEA: дизай�
 <meta name="robots" content="noindex, nofollow">
 <meta name="referrer" content="no-referrer">
 <link rel="stylesheet" href="${u}css/brigady.css?v=2">
-<link rel="stylesheet" href="${u}css/kabinet.css?v=2">
+<link rel="stylesheet" href="${u}css/kabinet.css?v=3">
 </head>
 <body class="kab-body">
 ${SHELL.header(u, null)}
@@ -31,7 +31,7 @@ ${SHELL.header(u, null)}
 <nav class="kab-tabbar" id="kabBar" hidden aria-label="Разделы кабинета">
   <a href="#/" data-r="o"><span aria-hidden="true">▦</span>Объекты</a>
   <a href="#/docs" data-r="docs"><span aria-hidden="true">▤</span>Документы</a>
-  <a href="#/uvedomleniya" data-r="uv"><span aria-hidden="true">◔</span>Уведомления<b id="kabBell" hidden></b></a>
+  <a href="#/uvedomleniya" data-r="uv"><span aria-hidden="true">🔔</span>Уведомления<b id="kabBell" hidden></b></a>
   <a href="#/profil" data-r="pr"><span aria-hidden="true">◉</span>Профиль</a>
 </nav>
 
@@ -52,7 +52,7 @@ ${SHELL.header(u, null)}
 ${SHELL.footer(u, null)}
 <script type="application/json" id="kabTerms">${JSON.stringify({ areaRecalc: SHELL.TERMS.areaRecalc, roundsText: SHELL.TERMS.roundsText, rounds: SHELL.TERMS.rounds, wa: 'https://wa.me/79257338640', mail: 'optteem@mail.ru' })}</script>
 <script src="${u}js/kabinet-remont.js?v=1"></script>
-<script src="${u}js/kabinet.js?v=1"></script>
+<script src="${u}js/kabinet.js?v=2"></script>
 </body>
 </html>
 `;
@@ -69,7 +69,7 @@ ${SHELL.head(u, { title: 'Кабинет бригады — LINEA', desc: 'Ка�
 <meta name="robots" content="noindex, nofollow">
 <meta name="referrer" content="no-referrer">
 <link rel="stylesheet" href="${u}css/brigady.css?v=3">
-<link rel="stylesheet" href="${u}css/kabinet.css?v=2">
+<link rel="stylesheet" href="${u}css/kabinet.css?v=3">
 </head>
 <body class="kab-body">
 ${SHELL.header(u, 'brigadam')}

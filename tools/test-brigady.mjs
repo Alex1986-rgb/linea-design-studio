@@ -691,6 +691,16 @@ try {
     ok(ex.code === 200 && /text\/csv/.test(ex.headers.get('content-type') || '') && ex.text.includes(`'=HYPERLINK`) && !/;=HYPERLINK/.test(ex.text), 'экспорт CSV из панели: ячейка с «=» выгружается с апострофом');
     ok(sql(`SELECT 1 x FROM br_audit WHERE action = 'csv-export' AND target = 'signals'`).length > 0, 'выгрузка CSV — в журнале');
     ok((await B1.req('GET', '/api/brigada.php?m=kab&a=docs')).j?.jobs?.length >= 1 && (await B1.req('GET', '/api/brigada.php?m=kab&a=rating')).j?.stats, 'документы бригады и показатели рейтинга');
+    // ревью кода кабинетов 01.11: С-3, С-7, фильтр контактов
+    const pw = await anon.req('POST', '/api/brigada.php?m=auth&a=login', { json: { email: 'brig3@example.test', password: 'Pass3word77' } });
+    ok(pw.code === 401 && sql("SELECT pass_hash FROM accounts WHERE email = 'brig3@example.test'")[0].pass_hash === '', 'С-3: после первого входа кодом прежний пароль бригадного аккаунта не действует (сброшен)');
+    const g7 = actor('guest7'); g7.csrf = (await g7.req('GET', `/api/remont.php?t=${T3}`)).j?.csrf;
+    ok((await g7.req('POST', `/api/remont.php?t=${T3}&a=msg`, { json: { text: 'я заказчик' } })).code === 401, 'С-7: сообщение бригаде по одной ссылке, без кода — 401');
+    ok((await g7.req('POST', `/api/remont.php?t=${T3}&a=invite`, { json: { slug: 'x' } })).code === 401, 'С-7: приглашение бригады без кода — 401');
+    const scan = t => JSON.parse(execFileSync('php', ['-r', 'require $argv[1] . "/server/api/lib/boot.php"; require $argv[1] . "/server/api/lib/brig.php"; echo json_encode(brig_contact_scan($argv[2]), JSON_UNESCAPED_UNICODE);', ROOT, t], { env: { ...process.env, LINEA_PRIVATE: PRIV } }).toString());
+    ok(scan('звоните восемь девятьсот ноль один два три четыре пять шесть семь')[1].includes('телефон'), 'фильтр: номер словами с лишней цифрой — скрыт');
+    ok(scan('пишите ivan гав gmail дот ком')[1].includes('почта'), 'фильтр: «гав» и «дот» вместо @ и точки — скрыто');
+    ok(scan('плитка 60 на 120, три коробки')[1].length === 0, 'фильтр: размеры и количества словами — не трогает');
     if (UNTIL === 'shots') {   // данные для tools/shots-brigada.mjs: бригада с объектом в работе, бригадир, заказчик того же объекта
       fs.writeFileSync(path.join(PRIV, '_dev.json'), JSON.stringify({ base: BASE, brigade: 'brig2@example.test', foreman: 'foreman2@example.test', client: BRIEF.client.email, order: N3, job: J3, admin: ADMIN_PASS }, null, 2));
       throw STOP;

@@ -138,3 +138,10 @@
 .rm-facts{list-style:none;padding:0;margin:0;font-size:14px;line-height:1.55;color:var(--mut)}
 .brg-wiz [aria-pressed="true"]{outline:2px solid var(--gold)}
 @media (max-width:760px){.rm-cards{grid-auto-columns:86%}}
+
+/* QA 01.11: цели касания ≥ 44 px на телефоне; подсказка, что полосы шагов и вкладок прокручиваются вбок */
+@media (max-width:760px){
+  .kab .btn.sm,.kab .btn.ghost.sm,.kab-list a,.kab-tabs a,.kab-row .btn{min-height:44px;display:inline-flex;align-items:center}
+  .kab p.kab-mut>a,.kab-card a:not(.btn){display:inline-block;padding:12px 0}
+  .kab-tabs,.kab-steps{-webkit-mask-image:linear-gradient(90deg,#000 85%,transparent);mask-image:linear-gradient(90deg,#000 85%,transparent);padding-right:24px}
+}

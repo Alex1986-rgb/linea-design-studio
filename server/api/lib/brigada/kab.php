@@ -18,7 +18,7 @@ $a = (string)($_GET['a'] ?? 'me');
 if ($a === 'me') {
     $b = brig_me(false);
     acc_session();
-    linea_json(['ok' => true, 'csrf' => acc_csrf_token(), 'fresh' => kab_fresh(), 'email' => isset($_SESSION['email']) ? preg_replace('/^(.).*(@.*)$/u', '$1•••$2', (string)$_SESSION['email']) : null,
+    linea_json(['ok' => true, 'csrf' => acc_csrf_token(), 'fresh' => kab_fresh(), 'passReset' => !empty($_SESSION['pass_reset']), 'email' => isset($_SESSION['email']) ? preg_replace('/^(.).*(@.*)$/u', '$1•••$2', (string)$_SESSION['email']) : null,
         'roles' => array_keys($_SESSION['roles'] ?? []), 'passwordLogin' => (bool)(linea_cfg()['acc_password_login'] ?? true),
         'brigade' => $b ? brig_public_self($b) + ['role' => brig_role($b), 'roleText' => BRIG_ROLES[brig_role($b)] ?? '', 'me' => (string)($b['_name'] ?? ''),
             'can' => array_combine($p = ['feed', 'offer_send', 'sign', 'money', 'team', 'profile', 'msg', 'stage', 'photo', 'sheets'], array_map(fn($x) => brig_can($b, $x), $p)),

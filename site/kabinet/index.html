@@ -25,7 +25,7 @@
 <meta name="robots" content="noindex, nofollow">
 <meta name="referrer" content="no-referrer">
 <link rel="stylesheet" href="../css/brigady.css?v=2">
-<link rel="stylesheet" href="../css/kabinet.css?v=2">
+<link rel="stylesheet" href="../css/kabinet.css?v=3">
 </head>
 <body class="kab-body">
 <header class="site">
@@ -69,7 +69,7 @@
 <nav class="kab-tabbar" id="kabBar" hidden aria-label="Разделы кабинета">
   <a href="#/" data-r="o"><span aria-hidden="true">▦</span>Объекты</a>
   <a href="#/docs" data-r="docs"><span aria-hidden="true">▤</span>Документы</a>
-  <a href="#/uvedomleniya" data-r="uv"><span aria-hidden="true">◔</span>Уведомления<b id="kabBell" hidden></b></a>
+  <a href="#/uvedomleniya" data-r="uv"><span aria-hidden="true">🔔</span>Уведомления<b id="kabBell" hidden></b></a>
   <a href="#/profil" data-r="pr"><span aria-hidden="true">◉</span>Профиль</a>
 </nav>
 
@@ -139,8 +139,8 @@
   document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && !m.hidden) b.click(); });
 })();
 </script>
-<script type="application/json" id="kabTerms">{"areaRecalc":"Сумма посчитана по площади из брифа. Если по плану площадь окажется другой, пересчитаем по той же ставке и согласуем разницу с вами до начала работы.","roundsText":"сколько кругов правок входит в цену — фиксируем в договоре до оплаты","rounds":null,"wa":"https://wa.me/79257338640","mail":"optteem@mail.ru"}</script>
+<script type="application/json" id="kabTerms">{"areaRecalc":"Сумма посчитана по площади из брифа. Если по плану площадь окажется другой, пересчитаем по той же ставке и согласуем разницу с вами до начала работы.","roundsText":"число кругов правок называем до оплаты — оно будет в договоре","rounds":null,"wa":"https://wa.me/79257338640","mail":"optteem@mail.ru"}</script>
 <script src="../js/kabinet-remont.js?v=1"></script>
-<script src="../js/kabinet.js?v=1"></script>
+<script src="../js/kabinet.js?v=2"></script>
 </body>
 </html>

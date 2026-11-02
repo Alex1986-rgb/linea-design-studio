@@ -17,6 +17,7 @@ function acc_session(): void
     linea_mkdir(linea_private() . '/sessions');
     ini_set('session.save_handler', 'files');      // на Beget свой обработчик по умолчанию — см. admin.php
     ini_set('session.use_strict_mode', '1');
+    ini_set('session.gc_maxlifetime', (string)(30 * 86400));   // С-6: «запомнить устройство» на 30 дней не съедает сборщик PHP (24 мин по умолчанию)
     session_save_path(linea_private() . '/sessions');
     session_name('linea_acc');
     // кука на всю папку api/ (api/brigade/*.php и api/*.php — одна сессия)
@@ -64,6 +65,7 @@ function acc_login(string $role, string $email, string $password)
     if (!$a) { password_verify($password, password_hash('linea-timing', PASSWORD_DEFAULT)); usleep(300000); return $bad; }   // время ответа как у настоящей проверки
     if ((int)$a['lock_until'] > time()) { return 'Слишком много неудачных попыток — подождите 15 минут'; }
     if ($a['status'] !== 'active') { return 'Вход закрыт'; }
+    if ((string)$a['pass_hash'] === '') { usleep(300000); return 'Для этой почты вход — кодом из письма'; }
     if (!password_verify($password, (string)$a['pass_hash'])) {
         $n = (int)$a['fail_n'] + 1;
         db_update('accounts', ['fail_n' => $n >= 5 ? 0 : $n, 'lock_until' => $n >= 5 ? time() + 900 : 0], 'id = ?', [(int)$a['id']]);
@@ -81,6 +83,7 @@ function acc_start(int $id, string $role): void
     acc_session();
     session_regenerate_id(true);
     $_SESSION['acc'] = $id; $_SESSION['role'] = $role; $_SESSION['csrf'] = bin2hex(random_bytes(16));
+    $_SESSION['epoch'] = (int)(db_val('SELECT sess_epoch FROM accounts WHERE id = ?', [$id]) ?? 0);
 }
 
 function acc_logout(): void
@@ -100,7 +103,11 @@ function acc_current(string $role): ?array
     acc_session();
     if (($_SESSION['role'] ?? '') !== $role || empty($_SESSION['acc'])) { return null; }
     $a = db_one('SELECT * FROM accounts WHERE id = ? AND role = ?', [(int)$_SESSION['acc'], $role]);
-    return $a && $a['status'] === 'active' ? $a : null;
+    if (!$a || $a['status'] !== 'active') { return null; }
+    // сессии, выданные до сброса (вход кодом владельца почты, «выйти везде»), больше не действуют; устройство завершено — тоже
+    if ((int)($_SESSION['epoch'] ?? 0) !== (int)($a['sess_epoch'] ?? 0)) { return null; }
+    if (!empty($_SESSION['dev']) && db_val('SELECT ended_at FROM acc_devices WHERE dev = ?', [(string)$_SESSION['dev']])) { return null; }
+    return $a;
 }
 
 /** Токен восстановления пароля (1 час, одноразовый). Возвращает сам токен — только для письма. */

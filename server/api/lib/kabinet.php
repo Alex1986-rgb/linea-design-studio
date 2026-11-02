@@ -25,7 +25,7 @@ const KAB_LEGAL = [   // редакции согласий кабинета кл
     'portfolio' => ['title' => 'Показ проекта в портфолио студии (без имени и адреса)', 'href' => 'soglasie/'],
     'project_to_brigades' => ['title' => 'Передача обезличенного проекта бригадам для расчёта', 'href' => 'remont/usloviya/'],
     'transfer_brigade' => ['title' => 'Передача моих контактов и адреса выбранной бригаде', 'href' => 'remont/usloviya/'],
-    'public_review' => ['title' => 'Распространение: мой отзыв и имя в публичной карточке бригады (ст. 10.1 152-ФЗ)', 'href' => 'remont/usloviya/'],
+    'public_review' => ['title' => 'Публикация моего отзыва и имени в карточке бригады', 'href' => 'remont/usloviya/'],
 ];
 const KAB_PD_KINDS = ['delete' => 'Удалить мои данные', 'export' => 'Выгрузить мои данные', 'revoke' => 'Отозвать согласие', 'fix' => 'Исправить данные'];
 const KAB_GROUPS = ['proekt' => 'Проект', 'voprosy' => 'Вопросы и правки', 'remont' => 'Ремонт', 'dengi' => 'Деньги'];
@@ -88,7 +88,7 @@ function kab_roles_for(string $email): array
 }
 
 /** Аккаунт клиента по почте: найти или создать (без пароля — вход кодом). Заказы с этой почтой привязываются. */
-function kab_client_account(string $email, bool $test = false, string $name = '', string $phone = ''): int
+function kab_client_account(string $email, bool $test = false, string $name = '', string $phone = '', bool $bind = true): int
 {
     $e = mb_strtolower(trim($email));
     $a = acc_by_email('client', $e);
@@ -98,8 +98,18 @@ function kab_client_account(string $email, bool $test = false, string $name = ''
                 'created_at' => linea_now(), 'test' => $test ? 1 : 0, 'name' => linea_str($name, 120) ?: null, 'phone' => linea_str($phone, 40) ?: null]);
         } catch (PDOException $ex) { $id = (int)(acc_by_email('client', $e)['id'] ?? 0); }   // параллельный запрос успел создать
     } else { $id = (int)$a['id']; }
-    if ($id) { db_exec('UPDATE orders SET account_id = ? WHERE account_id IS NULL AND LOWER(email) = ?', [$id, $e]); }
+    if ($id && $bind) {
+        db_exec('UPDATE orders SET account_id = ? WHERE account_id IS NULL AND LOWER(email) = ?', [$id, $e]);
+        // согласия из брифа (до подтверждения почты записаны без аккаунта) — к аккаунту
+        db_exec('UPDATE consents SET account_id = ? WHERE account_id = 0 AND order_id IN (SELECT id FROM orders WHERE account_id = ?)', [$id, $id]);
+    }
     return $id;
+}
+
+/** Журнал «уже сделано» для таймеров: true — ключ записан сейчас (делаем), false — уже был (не повторяем). Не зависит от аккаунта. */
+function kab_once(string $key): bool
+{
+    try { db_insert('sent_marks', ['k' => mb_substr($key, 0, 180), 'at' => linea_now()]); return true; } catch (PDOException $e) { return false; }
 }
 
 // ───────────────────────── коды входа
@@ -115,9 +125,14 @@ function kab_code_send(string $email, bool $allowUnknown = false): string
     $e = mb_strtolower(trim($email));
     if (!kab_email_ok($e)) { linea_fail('Проверьте адрес почты'); }
     if (!linea_rate('authcode', (int)(linea_cfg()['auth_codes_per_hour_ip'] ?? 20))) { linea_fail('Слишком много запросов кода — подождите немного', 429); }
-    if ((int)db_val('SELECT COUNT(*) FROM auth_codes WHERE email = ? AND created_at > ?', [$e, date('Y-m-d H:i:s', time() - 3600)]) >= 5) {
-        return '';   // лимит на адрес — молча (тот же ответ), чтобы не раскрывать, есть ли почта
+    // С-1: лимит — по паре «адрес + IP» (чужие запросы с других IP не лишают владельца входа) и мягкий общий на адрес;
+    // действующий код младше минуты не заменяется новым (иначе каждый чужой запрос «гасит» код, который уже пришёл владельцу)
+    $hour = date('Y-m-d H:i:s', time() - 3600);
+    if ((int)db_val('SELECT COUNT(*) FROM auth_codes WHERE email = ? AND ip = ? AND created_at > ?', [$e, linea_ip(), $hour]) >= 5
+        || (int)db_val('SELECT COUNT(*) FROM auth_codes WHERE email = ? AND created_at > ?', [$e, $hour]) >= 15) {
+        return '';   // тот же ответ, чтобы не раскрывать, есть ли почта
     }
+    if (db_val('SELECT 1 FROM auth_codes WHERE email = ? AND used_at IS NULL AND tries < 5 AND created_at > ? AND expires_at > ?', [$e, date('Y-m-d H:i:s', time() - 60), time()])) { return ''; }
     if (!$allowUnknown && !kab_roles_for($e)) { usleep(200000); return ''; }
     $code = (string)random_int(100000, 999999);
     db_exec('UPDATE auth_codes SET used_at = ? WHERE email = ? AND used_at IS NULL', [linea_now(), $e]);   // прежние коды больше не действуют
@@ -171,6 +186,18 @@ function kab_set_role(string $role): ?string
     if ($role === 'client' && !$id) { $id = kab_client_account((string)$_SESSION['email']); $_SESSION['roles']['client'] = $id; }
     $_SESSION['acc'] = $id; $_SESSION['role'] = $role;
     if ($id) {
+        // почта подтверждена кодом. С-3: бригадный аккаунт, заведённый с паролем на чужую почту, — пароль и прежние сессии гасим
+        $acc = db_one('SELECT * FROM accounts WHERE id = ?', [$id]);
+        if ($acc && !$acc['verified_at']) {
+            $reset = $role === 'brigade' && (string)$acc['pass_hash'] !== '';
+            db_update('accounts', ['verified_at' => linea_now()] + ($reset ? ['pass_hash' => '', 'sess_epoch' => (int)$acc['sess_epoch'] + 1] : []), 'id = ?', [$id]);
+            if ($reset) {
+                db_exec('UPDATE acc_devices SET ended_at = ? WHERE account_id = ? AND ended_at IS NULL', [linea_now(), $id]);
+                $_SESSION['pass_reset'] = true;
+                brig_audit('account#' . $id, 'verify-reset', 'account#' . $id, 'первый вход кодом: пароль и прежние сессии сброшены');
+            }
+        }
+        $_SESSION['epoch'] = (int)db_val('SELECT sess_epoch FROM accounts WHERE id = ?', [$id]);
         db_update('accounts', ['last_login_at' => linea_now()], 'id = ?', [$id]);
         if (!db_one('SELECT 1 FROM acc_devices WHERE dev = ?', [(string)$_SESSION['dev']])) {
             db_insert('acc_devices', ['account_id' => $id, 'dev' => (string)$_SESSION['dev'], 'ua' => mb_substr((string)($_SERVER['HTTP_USER_AGENT'] ?? ''), 0, 180),
@@ -311,6 +338,41 @@ function kab_answers_save(array $o, array $a): void
     @chmod($f, 0600);
 }
 
+/** Почему согласие сейчас нельзя отозвать (null — можно). Те же правила, что в consent_revoke. */
+function kab_consent_why_not(array $c, array $x): ?string
+{
+    $o = $x['order_id'] ? brig_one('SELECT * FROM orders WHERE id = ?', [(int)$x['order_id']]) : null;
+    switch ($x['kind']) {
+        case 'pd':
+            $b = kab_pd_blockers($c);
+            return $b ? 'Пока идёт работа (' . implode('; ', $b) . '), отозвать нельзя — можно подать заявку на удаление после завершения' : null;
+        case 'project_to_brigades':
+            $rm = $o ? kab_remont($o) : ['job' => null];
+            return $rm['job'] && $rm['job']['status'] !== 'cancelled' ? 'Договор с бригадой заключается или исполняется — проект нужен для работы' : null;
+        case 'transfer_brigade':
+            $j = $x['job_id'] ? brig_one('SELECT * FROM br_jobs WHERE id = ?', [(int)$x['job_id']]) : null;
+            return $j && $j['contacts_open_at'] && $j['status'] !== 'cancelled' ? 'Договор подписан и исполняется — контакты нужны бригаде для работы' : null;
+    }
+    return null;
+}
+
+/** Ответ К-N под блокировкой файла: два одновременных ответа не теряют друг друга; прежний ответ уходит в историю (ревью кода, низкий). */
+function kab_answers_put(array $o, string $id, array $rec): void
+{
+    linea_mkdir(kab_order_dir($o));
+    $f = kab_order_dir($o) . '/answers.json';
+    $h = fopen($f, 'c+');
+    if (!$h) { linea_fail('Ответ не сохранился — повторите', 500); }
+    flock($h, LOCK_EX);
+    $a = json_decode((string)stream_get_contents($h), true);
+    $a = is_array($a) ? $a + ['items' => []] : ['items' => []];
+    if (isset($a['items'][$id])) { $a['history'][] = ['id' => $id] + $a['items'][$id]; }
+    $a['items'][$id] = $rec;
+    ftruncate($h, 0); rewind($h); fwrite($h, json_encode($a, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT)); fflush($h);
+    flock($h, LOCK_UN); fclose($h);
+    @chmod($f, 0600);
+}
+
 /** Подпись кабинета в общий реестр signatures. */
 function kab_sign(string $role, int $whoId, string $kind, string $docId, ?string $version, string $sha, string $decision = '', string $note = '', ?int $orderId = null, ?int $jobId = null): int
 {
@@ -379,7 +441,7 @@ function kab_next_action(array $o): array
     if ($o['status'] === 'paid' && !$rel) { return ['text' => 'Делаем первый вариант проекта. Как будет готов — напишем на почту', 'btn' => null, 'href' => null, 'who' => 'studio']; }
     if ($o['status'] === 'paid') {
         $last = end($rel);
-        return ['text' => 'Посмотрите альбом и отметьте правки, если что-то хотите изменить', 'btn' => 'Открыть альбом', 'href' => $base . '/proekt', 'who' => 'client', 'ver' => $last['ver']];
+        return ['text' => 'Посмотрите альбом и отметьте правки, если что-то хотите изменить', 'btn' => 'Открыть альбом', 'href' => $base . '/proekt', 'act' => 'album', 'who' => 'client', 'ver' => $last['ver']];
     }
     // выдан — ремонт
     $rm = kab_remont($o);

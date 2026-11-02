@@ -346,4 +346,15 @@ return [
             advance_by, advance_at, CASE advance_state WHEN 'confirmed' THEN 'brigade' ELSE NULL END, CASE advance_state WHEN 'confirmed' THEN advance_at ELSE NULL END,
             advance_note, 'перенесено из отметки аванса (сумма не указывалась)', advance_at FROM br_jobs WHERE advance_at IS NOT NULL",
     ],
+    // 01.11.2026 — ревью кода кабинетов (docs/reviews/2026-11-01-kod-kabinety.md): журнал «уже отправлено» для таймеров cron отдельно от
+    // уведомлений (В-2: у заказа без аккаунта письмо уходило каждые 15 минут), привязка старых заказов к аккаунтам клиентов по почте,
+    // подтверждение почты аккаунта и поколение сессий (С-3: вход кодом в бригадный аккаунт, заведённый на чужую почту, гасит чужой пароль и сессии).
+    6 => [
+        "CREATE TABLE IF NOT EXISTS sent_marks (k {KEY} NOT NULL PRIMARY KEY, at {KEY} NOT NULL) {ENGINE}",
+        "INSERT INTO sent_marks (k, at) SELECT ukey, MIN(at) FROM notices WHERE ukey IS NOT NULL GROUP BY ukey",
+        "UPDATE orders SET account_id = (SELECT a.id FROM accounts a WHERE a.role = 'client' AND a.email = LOWER(orders.email)) WHERE account_id IS NULL AND email IS NOT NULL AND email <> ''",
+        "ALTER TABLE accounts ADD COLUMN verified_at {KEY}",
+        "ALTER TABLE accounts ADD COLUMN sess_epoch {INT} NOT NULL DEFAULT 0",
+        "UPDATE accounts SET verified_at = last_login_at WHERE role = 'client' AND last_login_at IS NOT NULL",
+    ],
 ];

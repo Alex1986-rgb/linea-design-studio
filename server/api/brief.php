@@ -124,12 +124,13 @@ try {
 }
 
 linea_rate_add('brief');
-// кабинет клиента: аккаунт по почте брифа создаётся сам (вход кодом, без пароля), заказ привязывается к нему
+// кабинет клиента (С-2): до подтверждения почты кодом аккаунт не создаётся и заказ ни к кому не привязывается — согласия пишутся без аккаунта
+// (account_id = 0) и переходят к аккаунту при первом входе кодом (kab_client_account); бриф на чужую почту не попадает в чужой кабинет сам
 if ($email !== '' && filter_var($email, FILTER_VALIDATE_EMAIL)) {
     try {
         require_once __DIR__ . '/lib/kabinet.php';
         brig_db();
-        $accId = kab_client_account($email, (bool)$test, linea_str($client['name'] ?? '', 80), (string)$phone);
+        $accId = 0;
         foreach (['pd' => 'Обработка персональных данных'] + (str_contains($consentText, 'портфолио: да') ? ['portfolio' => 'Показ в портфолио'] : []) as $k => $_) {
             db_insert('consents', ['account_id' => $accId, 'order_id' => $id, 'kind' => $k, 'edition' => (string)($consent['edition'] ?? '—'), 'given_at' => $now, 'ip' => linea_ip(), 'text' => $consentText]);
         }

@@ -159,7 +159,7 @@
       const D = J.docs || { contracts: [], log: [] };
       const docs = D.contracts.filter(c => c.status !== 'void').map(c => `<li><b>${esc(c.title)}</b> ${st(c.status === 'signed' ? 'done' : 'review', c.status === 'signed' ? 'подписан' : 'ждёт подписи')}
         ${c.kind === 'addendum' ? ` · ${c.delta >= 0 ? '+' : '−'}${esc(rub(Math.abs(c.delta)))}, итого ${esc(rub(c.total))}${c.daysAdd ? ', срок ' + (c.daysAdd > 0 ? '+' : '') + c.daysAdd + ' дн.' : ''}` : ''}
-        <br><span class="bx-mut">вы: ${esc(c.clientSigned ? dt(c.clientSigned) : 'не подписано')} · бригада: ${esc(c.brigadeSigned ? dt(c.brigadeSigned) : 'не подписано')} · SHA-256 ${esc(c.hash.slice(0, 16))}…</span>
+        <br><span class="bx-mut">вы: ${esc(c.clientSigned ? dt(c.clientSigned) : 'не подписано')} · бригада: ${esc(c.brigadeSigned ? dt(c.brigadeSigned) : 'не подписано')} · отпечаток ${esc(c.hash.slice(0, 16))}…</span>
         ${c.waitAdmin ? '<br><span class="bx-mut">Цена заметно уменьшается — подписать можно после подтверждения LINEA.</span>' : ''}${c.status === 'draft' && !c.clientSigned && !c.waitAdmin && !J.frozen ? `<br><button class="btn sm" type="button" data-sign="${c.id}">Подписать кодом</button>` : ''}${c.status === 'draft' && c.kind === 'addendum' ? ` <button class="btn ghost sm" type="button" data-adc="${c.id}">Отозвать</button>` : ''}</li>`).join('');
       return `<p class="bx-note">${esc(D.transparency || '')}</p><ul class="bx-list">${docs}</ul>
         <p><a href="${API}remont-dogovor.php?t=${t}" target="_blank" rel="noopener">Открыть все документы (печать в PDF, с хешами)</a>${D.dealTotal ? ' · сумма сделки: <b>' + esc(rub(D.dealTotal)) + '</b>' : ''}</p>

@@ -7,7 +7,7 @@
   if (!root) return;
   const API = (document.querySelector('meta[name="linea-api"]') || {}).content || '';
   const T = JSON.parse((document.getElementById('kabTerms') || {}).textContent || '{}');
-  const esc = s => String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  const esc = s => String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
   const rub = n => Math.round(n).toLocaleString('ru-RU') + ' ₽';
   const dt = s => { if (!s) return ''; const d = new Date(String(s).replace(' ', 'T')); return isNaN(d) ? s : d.toLocaleString('ru-RU', { day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' }); };
   const day = s => { if (!s) return ''; const d = new Date(String(s).slice(0, 10) + 'T12:00'); return isNaN(d) ? s : d.toLocaleDateString('ru-RU', { day: 'numeric', month: 'long', year: 'numeric' }); };
@@ -35,7 +35,7 @@
     let j = await api(a, json);
     if (j.needCode && await needCode()) j = await api(a, json);
     if (!j.ok && errEl) errEl.textContent = j.error || 'Не получилось';
-    else if (!j.ok && !j.needCode) alert(j.error || 'Не получилось');
+    else if (!j.ok && !j.needCode) say(j.error || 'Не получилось');
     return j;
   }
 
@@ -57,6 +57,24 @@
     });
   }
   window.lineaNeedCode = needCode;
+
+  // ── свои окна вместо confirm/alert/prompt (в стиле кабинета, на телефоне не блокируют страницу)
+  function dialog(text, { ok = 'Да', cancel = 'Отмена', input = false, alertOnly = false } = {}) {
+    return new Promise(resolve => {
+      const m = document.createElement('div'); m.className = 'kab-modal'; m.setAttribute('role', 'dialog'); m.setAttribute('aria-modal', 'true');
+      m.innerHTML = `<div class="kab-modal-in"><p style="white-space:pre-line">${esc(text)}</p>${input ? '<label class="kab-f"><textarea rows="3" id="kabDlgT"></textarea></label>' : ''}
+        <div class="kab-row"><button class="btn" type="button" id="kabDlgOk">${esc(alertOnly ? 'Понятно' : ok)}</button>${alertOnly ? '' : `<button class="btn ghost" type="button" id="kabDlgNo">${esc(cancel)}</button>`}</div></div>`;
+      document.body.appendChild(m);
+      const done = v => { m.remove(); resolve(v); };
+      m.querySelector('#kabDlgOk').onclick = () => done(input ? m.querySelector('#kabDlgT').value : true);
+      const no = m.querySelector('#kabDlgNo'); if (no) no.onclick = () => done(input ? null : false);
+      (m.querySelector('#kabDlgT') || m.querySelector('#kabDlgOk')).focus();
+    });
+  }
+  const ask = (t, ok) => dialog(t, { ok });
+  const say = t => dialog(t, { alertOnly: true });
+  const askText = t => dialog(t, { input: true, ok: 'Отправить' });
+  window.lineaAsk = ask; window.lineaSay = say;
 
   // ── вход
   function loginView(note) {
@@ -89,7 +107,7 @@
   function chooseRole(roles) {
     const R = { client: ['Мои проекты и ремонт', 'Дизайн-проект, вопросы, ремонт, документы'], brigade: ['Кабинет бригады', 'Заказы, объекты, деньги'], admin: ['Админка', 'Вход паролем администратора'] };
     set('<div class="kab-login"><h1>Куда войти?</h1><div class="kab-roles">' + roles.map(r => `<button type="button" data-role="${r}"><b>${esc(R[r][0])}</b><span class="kab-mut">${esc(R[r][1])}</span></button>`).join('') + '</div></div>');
-    root.querySelectorAll('[data-role]').forEach(b => b.onclick = async () => { const j = await vh('role', { role: b.dataset.role }); if (j.ok) { ME = j; try { localStorage.setItem('linea_role', b.dataset.role); } catch { } go(j.go); } else alert(j.error); });
+    root.querySelectorAll('[data-role]').forEach(b => b.onclick = async () => { const j = await vh('role', { role: b.dataset.role }); if (j.ok) { ME = j; try { localStorage.setItem('linea_role', b.dataset.role); } catch { } go(j.go); } else say(j.error); });
   }
 
   // ── каркас
@@ -108,6 +126,8 @@
 
   function nowBlock(nx, sticky) {
     if (!nx) return '';
+    const num = (String(nx.href || '').match(/#\/o\/([A-Za-z0-9-]+)/) || [])[1];
+    if (nx.act === 'album' && num && nx.ver) return `<div class="kab-card kab-now"><div class="kab-kick">Сейчас от вас нужно</div><p class="big">${esc(nx.text)}</p>${(sticky ? '<div class="kab-sticky-src">' : '') + `<a class="btn" href="${API}kabinet.php?a=file&o=${encodeURIComponent(num)}&v=${encodeURIComponent(nx.ver)}&f=album.pdf" target="_blank" rel="noopener">Открыть альбом (PDF)</a>` + (sticky ? '</div>' : '')}</div>`;
     const btn = nx.btn ? (nx.act === 'pay' ? `<button class="btn" type="button" data-pay>${esc(nx.btn)}</button>` : `<a class="btn" href="${esc(nx.href)}">${esc(nx.btn)}</a>`) : '';
     return `<div class="kab-card kab-now ${nx.who === 'client' ? '' : 'studio'}"><div class="kab-kick">${nx.who === 'client' ? 'Сейчас от вас нужно' : 'Сейчас'}</div><p class="big">${esc(nx.text)}</p>${nx.blocker ? '<p><span class="kab-tag r">Нужно для финального альбома</span></p>' : ''}${btn ? (sticky ? '<div class="kab-sticky-src">' + btn + '</div>' : btn) : ''}</div>`;
   }
@@ -162,10 +182,10 @@
       pay = O.amount ? `<div class="ord-sum" style="font-family:var(--serif);font-size:28px;color:var(--gold)">${rub(O.amount)}</div>${O.area ? `<p class="kab-mut">${String(O.area).replace('.', ',')} м² по брифу</p>` : ''}${O.amountConfirmed === false ? '<p class="kab-mut">' + esc(T.areaRecalc || '') + '</p>' : ''}`
         + (O.canPay ? '<button class="btn" type="button" data-pay>Оплатить картой или СБП</button>' : O.invoiced ? '<p>Счёт отправлен на почту — оплатите по реквизитам из счёта.</p>' : '<p class="kab-mut">Счёт на оплату пришлём на почту.</p>')
         : '<p>Сумму пересчитаем по плану и подтвердим в течение рабочего дня.</p>';
-    } else if (O.paidAt) pay = `<p><span class="kab-tag ok">Оплачено</span> ${O.amount ? rub(O.amount) : ''} · ${esc(dt(O.paidAt))}</p><p class="kab-mut">Чек — в письме от ЮKassa; копия — в «Документах».</p>`;
+    } else if (O.paidAt) pay = `<p><span class="kab-tag ok">Оплачено</span> ${O.amount ? rub(O.amount) : ''} · ${esc(dt(O.paidAt))}</p><p class="kab-mut">Чек об оплате — в письме сервиса онлайн-оплаты; копия — в «Документах».</p>`;
     else pay = `<p>${esc(O.statusText)}</p>`;
     const album = last ? `<p><b>${esc(last.title)}</b> · ${esc(day(last.date))} ${last.prelim ? '<span class="kab-tag g">Предварительный — для обсуждения</span>' : ''}${last.final ? '<span class="kab-tag ok">Финальный — для стройки</span>' : ''}</p>
-        <div class="kab-row">${last.url ? `<a class="btn sm" href="${esc(last.url)}" target="_blank" rel="noopener">Открыть альбом</a>` : ''}${last.pdf ? `<a class="btn ghost sm" href="${API}kabinet.php?a=file&o=${encodeURIComponent(O.number)}&v=${encodeURIComponent(last.ver)}&f=album.pdf" target="_blank" rel="noopener">Скачать PDF</a>` : ''}</div>
+        <div class="kab-row">${last.url && /^(https?:\/\/|\/|\.\.?\/)/i.test(last.url) ? `<a class="btn sm" href="${esc(last.url)}" target="_blank" rel="noopener">Открыть альбом</a>` : ''}${last.pdf ? `<a class="btn ghost sm" href="${API}kabinet.php?a=file&o=${encodeURIComponent(O.number)}&v=${encodeURIComponent(last.ver)}&f=album.pdf" target="_blank" rel="noopener">Скачать PDF</a>` : ''}</div>
         ${last.final && !last.accepted ? `<div class="kab-row"><button class="btn ghost sm" type="button" data-accept="${esc(last.ver)}">Принять альбом (акт сдачи-приёмки)</button></div>` : ''}${last.final && last.accepted ? '<p class="kab-ok">Альбом принят</p>' : ''}`
       : `<p class="kab-empty">Альбом появится здесь, как только будет готов первый вариант. Мы напишем на почту.</p>`;
     const vers = rel.length > 1 ? `<div class="kab-card"><h3>Версии альбома</h3><ul class="kab-list">${rel.slice().reverse().map(r => `<li><div><b>${esc(r.title)}</b> <span class="kab-mut">${esc(day(r.date))}</span>${r.changes.length ? '<div class="kab-mut">Что изменилось: ' + r.changes.map(esc).join('; ') + '</div>' : ''}</div>${r.url ? `<a href="${esc(r.url)}" target="_blank" rel="noopener">Открыть</a>` : ''}</li>`).join('')}</ul></div>` : '';
@@ -227,7 +247,7 @@
     const num = j.order.number, q = s => root.querySelector(s), qa = s => root.querySelectorAll(s);
     bindPay(j);
     const m = q('#kabMsg'); if (m) m.onsubmit = async e => { e.preventDefault(); const r = await act('msg', { o: num, text: m.text.value }, m.querySelector('.kab-err')); if (r.ok) object(num, tab); };
-    qa('[data-accept]').forEach(b => b.onclick = async () => { if (!confirm('Принять финальный альбом? Это подписание акта сдачи-приёмки проекта (кодом из письма).')) return; const r = await act('accept_album', { o: num, ver: b.dataset.accept }); if (r.ok) object(num, tab); });
+    qa('[data-accept]').forEach(b => b.onclick = async () => { if (!await ask('Принять финальный альбом? Это подписание акта сдачи-приёмки проекта (кодом из письма).')) return; const r = await act('accept_album', { o: num, ver: b.dataset.accept }); if (r.ok) object(num, tab); });
     qa('[data-qf]').forEach(b => b.onclick = () => { qFilter = b.dataset.qf; object(num, 'voprosy'); });
     qa('[data-opt]').forEach(b => b.onclick = () => { qa(`[data-opt="${b.dataset.opt}"]`).forEach(x => x.classList.toggle('on', x === b)); });
     const errOf = el => el.closest('.kab-card').querySelector('.kab-err');
@@ -244,10 +264,17 @@
   async function docsInto(el, num) {
     const j = await api('docs', null, num ? '&o=' + encodeURIComponent(num) : '');
     if (!j.ok) { el.innerHTML = '<p>' + esc(j.error) + '</p>'; return; }
-    const D = j.docs || [];
-    el.innerHTML = (D.length ? '<div class="kab-card"><ul class="kab-list">' + D.map(d => `<li><div><span class="kab-tag">${esc(d.kind)}</span> <b>${esc(d.title)}</b>${num ? '' : ' <span class="kab-mut">· ' + esc(d.o) + '</span>'}<div class="kab-mut">${esc(dt(d.at))}${d.note ? ' · ' + esc(d.note) : ''}</div></div>`
-      + (d.href ? `<a href="${API}kabinet.php?a=${d.href}" target="_blank" rel="noopener">Открыть</a>` : d.ext ? `<a href="${API}${esc(d.ext)}" target="_blank" rel="noopener">Открыть</a>` : '') + '</li>').join('') + '</ul></div>' : '<div class="kab-card"><p class="kab-empty">Документы появятся после оплаты.</p></div>')
-      + (j.consents && j.consents.length ? '<div class="kab-card"><h3>Согласия</h3><ul class="kab-list">' + j.consents.map(c => `<li><div>${esc(c.title)}<div class="kab-mut">ред. ${esc(c.edition)} · ${esc(dt(c.given))}${c.revoked ? ' · <b>отозвано ' + esc(dt(c.revoked)) + '</b>' : ''}</div></div></li>`).join('') + '</ul><p class="kab-mut">Отозвать — в <a href="#/profil">профиле</a>.</p></div>' : '');
+    const D = j.docs || [], C = j.consents || [];
+    const groups = {}; D.forEach(d => { (groups[d.o] = groups[d.o] || []).push(d); });
+    const when = s => !s ? '' : /^\d{4}-\d{2}-\d{2}$/.test(s) ? day(s) : dt(s);
+    const item = d => `<li><div><span class="kab-tag">${esc(d.kind)}</span> <b>${esc(d.title)}</b><div class="kab-mut">${esc(when(d.at))}${d.note ? (d.at ? ' · ' : '') + esc(d.note) : ''}</div></div>`
+      + (d.href ? `<a class="btn ghost sm" href="${API}kabinet.php?a=${d.href}" target="_blank" rel="noopener">Открыть</a>` : d.ext ? `<a class="btn ghost sm" href="${API}${esc(d.ext)}" target="_blank" rel="noopener">Открыть</a>` : '') + '</li>';
+    const cons = o => C.filter(c => (c.order || '') === (o || '')).map(c => `<li><div><span class="kab-tag">Согласие</span> ${esc(c.title)}<div class="kab-mut">редакция ${esc(c.edition)} · дано ${esc(when(c.given))}${c.revoked ? ' · <b>отозвано ' + esc(when(c.revoked)) + '</b>' : ''}</div></div></li>`).join('');
+    const orders = Object.keys(groups).concat([...new Set(C.map(c => c.order).filter(o => o && !groups[o]))]);
+    let h = orders.map(o => `<div class="kab-card">${num ? '' : `<h3>Заказ ${esc(o)}</h3>`}<ul class="kab-list">${(groups[o] || []).map(item).join('')}${cons(o)}</ul></div>`).join('');
+    const general = cons(null);
+    if (general) h += `<div class="kab-card"><h3>Общие согласия</h3><ul class="kab-list">${general}</ul></div>`;
+    el.innerHTML = h || '<div class="kab-card"><p class="kab-empty">Документы появятся по мере работы: счёт, оплата, альбом, протокол решений.</p></div>';
   }
   async function docsPage() { set(top('docs') + '<h1>Документы</h1><div id="kabDocs"><p class="kab-mut">Загружаю…</p></div>'); bindTop(); docsInto(document.getElementById('kabDocs')); }
 
@@ -282,29 +309,31 @@
       <p class="kab-mut">Почта для входа: ${esc(P.email)}. Сменить почту — напишите нам: подтвердим кодом на старую и новую.</p><button class="btn sm" type="submit">Сохранить</button> <span class="kab-ok"></span><p class="kab-err" role="alert"></p></form></div>`;
     h += `<div class="kab-card"><h3>Устройства</h3><ul class="kab-list">${j.devices.map(d => `<li><div>${esc(uaName(d.ua))} <span class="kab-mut">· ${esc(d.ip)}</span>${d.current ? ' <span class="kab-tag ok">это устройство</span>' : ''}<div class="kab-mut">последний вход ${esc(dt(d.last))}</div></div>${d.current ? '' : `<button class="btn ghost sm" type="button" data-dev="${d.id}">Выйти</button>`}</li>`).join('')}</ul>
       <div class="kab-row"><button class="btn ghost sm" type="button" id="kabOutAll">Выйти на всех устройствах</button></div></div>`;
-    h += `<div class="kab-card"><h3>Согласия</h3>${j.consents.length ? '<ul class="kab-list">' + j.consents.map(c => `<li><div>${esc(c.title)}${c.order ? ' <span class="kab-mut">· ' + esc(c.order) + '</span>' : ''}<div class="kab-mut">редакция ${esc(c.edition)} · дано ${esc(dt(c.given))}${c.revoked ? ' · <b>отозвано ' + esc(dt(c.revoked)) + '</b>' : ''}</div></div>${c.revoked ? '' : `<button class="btn ghost sm" type="button" data-rev="${c.id}">Отозвать</button>`}</li>`).join('') + '</ul>' : '<p class="kab-empty">Согласий пока нет.</p>'}<p class="kab-err" id="kabRevErr" role="alert"></p></div>`;
+    h += `<div class="kab-card"><h3>Согласия</h3>${j.consents.length ? '<ul class="kab-list">' + j.consents.map(c => `<li><div>${esc(c.title)}${c.order ? ' <span class="kab-mut">· ' + esc(c.order) + '</span>' : ''}<div class="kab-mut">редакция ${esc(c.edition)} · дано ${esc(dt(c.given))}${c.revoked ? ' · <b>отозвано ' + esc(dt(c.revoked)) + '</b>' : ''}</div></div>${c.revoked ? '' : c.whyNot ? `<div class="kab-mut">${esc(c.whyNot)}</div>` : `<button class="btn ghost sm" type="button" data-rev="${c.id}">Отозвать</button>`}</li>`).join('') + '</ul>' : '<p class="kab-empty">Согласий пока нет.</p>'}<p class="kab-err" id="kabRevErr" role="alert"></p></div>`;
     const blk = j.blockers || [];
-    h += `<div class="kab-card"><h3>Мои данные (152-ФЗ)</h3>
+    h += `<div class="kab-card"><h3>Мои персональные данные</h3>
       <p><b>Выгрузить мои данные.</b> Соберём архив: бриф, ответы, согласия, подписи. Готовим до ${j.pdDays} рабочих дней (обычно быстрее), скачать — здесь.</p><div class="kab-row"><button class="btn ghost sm" type="button" data-pd="export">Запросить выгрузку</button></div>
       <p style="margin-top:18px"><b>Удалить мои данные.</b> Удалим контакты, бриф, фото и переписку. Договоры, чеки, акты и подписи по закону храним ${j.retentionYears} лет — доступ к ним закрыт. Альбом обезличим.</p>
       ${blk.length ? '<p class="kab-guest">Сейчас удалить нельзя: ' + blk.map(esc).join('; ') + '. Удалим после завершения. Остановить обработку для новых целей можно заявкой «Исправить данные».</p>' : ''}
-      <div class="kab-row"><button class="btn ghost sm" type="button" data-pd="delete"${blk.length ? ' disabled' : ''}>Удалить мои данные</button><button class="btn ghost sm" type="button" data-pd="fix">Исправить данные / остановить обработку</button></div><p class="kab-err" id="kabPdErr" role="alert"></p>
+      <div class="kab-row"><button class="btn ghost sm" type="button" data-pd="delete"${blk.length ? ' data-later="1"' : ''}>${blk.length ? 'Подать заявку на удаление после завершения' : 'Удалить мои данные'}</button><button class="btn ghost sm" type="button" data-pd="fix">Исправить данные / остановить обработку</button></div><p class="kab-err" id="kabPdErr" role="alert"></p>
       ${j.pd.length ? '<h3 style="margin-top:16px">Мои заявки</h3><ul class="kab-list">' + j.pd.map(p => `<li><div>${esc(p.title)} · ${esc(dt(p.created))}<div class="kab-mut">${p.status === 'new' ? 'в работе, срок до ' + esc(day(p.due)) : p.status === 'done' ? 'выполнена ' + esc(dt(p.done)) : 'закрыта'}${p.reply ? ' · ' + esc(p.reply) : ''}</div></div>${p.file ? `<a href="${API}kabinet.php?a=file&pd=${p.id}">Скачать</a>` : ''}</li>`).join('') + '</ul>' : ''}</div>`;
     h += '<p><button class="btn ghost sm" type="button" id="kabOut">Выйти</button></p>';
     set(h); bindTop();
     const f = document.getElementById('kabProf');
     f.onsubmit = async e => { e.preventDefault(); const r = await act('profile', { name: f.name.value, phone: f.phone.value }, f.querySelector('.kab-err')); if (r.ok) f.querySelector('.kab-ok').textContent = 'Сохранено'; };
     root.querySelectorAll('[data-dev]').forEach(b => b.onclick = async () => { await api('device_end', { id: +b.dataset.dev }); profile(); });
-    document.getElementById('kabOutAll').onclick = async () => { if (confirm('Выйти на всех устройствах, включая это?')) { await vh('logout', { all: true }); location.hash = '#/'; location.reload(); } };
+    document.getElementById('kabOutAll').onclick = async () => { if (await ask('Выйти на всех устройствах, включая это?')) { await vh('logout', { all: true }); location.hash = '#/'; location.reload(); } };
     document.getElementById('kabOut').onclick = async () => { await vh('logout', {}); location.hash = '#/'; location.reload(); };
-    root.querySelectorAll('[data-rev]').forEach(b => b.onclick = async () => { if (!confirm('Отозвать это согласие? Что произойдёт — покажем в ответе.')) return; const r = await act('consent_revoke', { id: +b.dataset.rev }, document.getElementById('kabRevErr')); if (r.ok) { alert(r.message); profile(); } });
+    root.querySelectorAll('[data-rev]').forEach(b => b.onclick = async () => { if (!await ask('Отозвать это согласие? Что произойдёт — покажем в ответе.')) return; const r = await act('consent_revoke', { id: +b.dataset.rev }, document.getElementById('kabRevErr')); if (r.ok) { await say(r.message); profile(); } });
     root.querySelectorAll('[data-pd]').forEach(b => b.onclick = async () => {
       const k = b.dataset.pd;
-      const note = k === 'fix' ? prompt('Что исправить или остановить?') : '';
+      const note = k === 'fix' ? await askText('Что исправить или остановить?') : '';
       if (note === null) return;
-      if (k === 'delete' && !confirm('Удалить ваши данные? Контакты, бриф и переписку удалим; договоры и подписи — сохраним на срок хранения. Отменить будет нельзя.')) return;
+      const later = !!b.dataset.later;
+      if (k === 'delete' && later) { if (!await ask('Принять заявку: удалить ваши данные, как только закончатся работы по заказу? Напишем на почту, когда выполним.', 'Подать заявку')) return; const r = await act('pd', { kind: 'delete', later: true }, document.getElementById('kabPdErr')); if (r.ok) { await say(r.message); profile(); } return; }
+      if (k === 'delete' && !await ask('Удалить ваши данные? Контакты, бриф и переписку удалим; договоры и подписи — сохраним на срок хранения. Отменить будет нельзя.')) return;
       const r = await act('pd', { kind: k, note }, document.getElementById('kabPdErr'));
-      if (r.ok) { alert(r.message); profile(); }
+      if (r.ok) { await say(r.message); profile(); }
     });
   }
 
@@ -314,6 +343,7 @@
     const tk = hsh.match(/^#t=([0-9a-f]{32})/i);
     if (tk) {   // старая ссылка order.html?t= → кабинет: токен сразу убираем из адреса
       history.replaceState(null, '', location.pathname + '#/');
+      ME = await vh('me');   // ревью В-1: без csrf сессии link отвечал 403 — «ссылка устарела» у всех старых ссылок
       const j = await vh('link', { t: tk[1] });
       if (!j.ok) return loginView('Ссылка устарела — войдите по почте. Код придёт на почту из брифа.');
       ME = j; location.hash = '#/o/' + j.number; return;

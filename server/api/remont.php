@@ -91,7 +91,7 @@ $in = brig_input();
 $a = (string)($_GET['a'] ?? '');
 // значимые действия (выбор, подписи, отметки оплат, приёмка, разногласие, отзыв, отказ) — только после входа кодом на почту заказа
 // не старше fresh_code_hours (спецификация 3.0 п. 6, ревью техники В-5): одной ссылки с токеном мало
-if (in_array($a, ['request', 'choose', 'sign', 'addendum', 'addendum_cancel', 'advance', 'pay', 'pay_contest', 'job_cancel', 'stage_accept', 'stage_return', 'review', 'dispute', 'cancel'], true)) {
+if (in_array($a, ['request', 'invite', 'msg', 'dispute_msg', 'choose', 'sign', 'addendum', 'addendum_cancel', 'advance', 'pay', 'pay_contest', 'job_cancel', 'stage_accept', 'stage_return', 'review', 'dispute', 'cancel'], true)) {
     kab_require_fresh_for_order($o);
 }
 $jf = ($rq = brig_one('SELECT id FROM br_requests WHERE order_id = ?', [$oid])) ? brig_job_for_request((int)$rq['id']) : null;

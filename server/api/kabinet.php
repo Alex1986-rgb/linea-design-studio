@@ -78,14 +78,27 @@ function kb_object(array $o, ?array $c): array
         'lenta' => kb_lenta($o), 'guest' => $c === null, 'fresh' => kab_fresh()];
 }
 
+/** Согласия аккаунта без дублей: по виду + заказу + сделке — последняя запись; с номером заказа и тем, можно ли отозвать сейчас (и почему нет). */
+function kb_consents(array $c): array
+{
+    kab_consents_sync($c);
+    $out = [];
+    foreach (brig_all('SELECT * FROM consents WHERE account_id = ? ORDER BY id', [(int)$c['id']]) as $x) { $out[$x['kind'] . '|' . (int)$x['order_id'] . '|' . (int)$x['job_id']] = $x; }
+    return array_values(array_map(function ($x) use ($c) {
+        $o = $x['order_id'] ? brig_one('SELECT * FROM orders WHERE id = ?', [(int)$x['order_id']]) : null;
+        return ['id' => (int)$x['id'], 'kind' => $x['kind'], 'title' => KAB_LEGAL[$x['kind']]['title'] ?? $x['kind'], 'edition' => $x['edition'], 'given' => $x['given_at'], 'revoked' => $x['revoked_at'],
+            'order' => $o['number'] ?? null, 'object' => $o ? (string)($o['object_type'] ?: '') : '', 'whyNot' => $x['revoked_at'] ? null : kab_consent_why_not($c, $x)];
+    }, $out));
+}
+
 function kb_docs(array $orders): array
 {
     $out = [];
     foreach ($orders as $o) {
         $n = $o['number'];
-        if ($o['consent_at']) { $out[] = ['o' => $n, 'kind' => 'Согласие', 'title' => 'Согласие на обработку персональных данных', 'at' => $o['consent_at'], 'note' => (string)$o['consent_text']]; }
+        if ($o['consent_at']) { $out[] = ['o' => $n, 'kind' => 'Согласие', 'title' => 'На обработку персональных данных', 'at' => $o['consent_at'], 'note' => 'дано при отправке брифа']; }
         if ($o['invoice_at']) { $out[] = ['o' => $n, 'kind' => 'Счёт', 'title' => 'Счёт на оплату проекта', 'at' => $o['invoice_at'], 'note' => 'Отправлен на почту']; }
-        if ($o['paid_at']) { $out[] = ['o' => $n, 'kind' => 'Оплата', 'title' => 'Оплата проекта ' . brig_rub((int)$o['amount_kop']), 'at' => $o['paid_at'], 'note' => 'Чек 54-ФЗ — в письме ЮKassa / у LINEA по запросу']; }
+        if ($o['paid_at']) { $out[] = ['o' => $n, 'kind' => 'Оплата', 'title' => 'Оплата проекта ' . brig_rub((int)$o['amount_kop']), 'at' => $o['paid_at'], 'note' => 'Чек — в письме сервиса онлайн-оплаты, копия — у LINEA по запросу']; }
         foreach (kab_releases($o) as $r) {
             if ($r['hasPdf']) { $out[] = ['o' => $n, 'kind' => 'Альбом', 'title' => 'Альбом ' . ($r['title'] ?? $r['ver']) . ' (PDF)', 'at' => (string)($r['date'] ?? ''), 'href' => 'file&o=' . rawurlencode($n) . '&v=' . rawurlencode($r['ver']) . '&f=album.pdf']; }
         }
@@ -96,7 +109,7 @@ function kb_docs(array $orders): array
         if ($rm['job']) {
             foreach (brig_all('SELECT kind, num, status, client_signed_at, brigade_signed_at, hash FROM br_contracts WHERE job_id = ? ORDER BY id', [(int)$rm['job']['id']]) as $d) {
                 $out[] = ['o' => $n, 'kind' => 'Ремонт', 'title' => ($d['kind'] === 'main' ? 'Договор подряда с бригадой' : 'Допсоглашение № ' . (int)$d['num']) . ($d['client_signed_at'] && $d['brigade_signed_at'] ? ' — подписан обеими сторонами' : ' — не подписан'),
-                    'at' => (string)($d['brigade_signed_at'] ?: $d['client_signed_at']), 'note' => 'SHA-256 ' . substr((string)$d['hash'], 0, 16) . '…', 'ext' => 'remont-dogovor.php?t=' . $o['token']];
+                    'at' => (string)($d['brigade_signed_at'] ?: $d['client_signed_at']), 'note' => 'отпечаток документа ' . substr((string)$d['hash'], 0, 12) . '…', 'ext' => 'remont-dogovor.php?t=' . $o['token']];
             }
         }
     }
@@ -121,24 +134,27 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'GET') {
         case 'docs': {
             $orders = kb_orders($c, $g);
             if (isset($_GET['o'])) { $orders = [kb_order((string)$_GET['o'])]; }
-            linea_json(['ok' => true, 'docs' => kb_docs($orders), 'consents' => $c ? array_map(fn($x) => ['kind' => $x['kind'], 'title' => KAB_LEGAL[$x['kind']]['title'] ?? $x['kind'], 'edition' => $x['edition'], 'given' => $x['given_at'], 'revoked' => $x['revoked_at']],
-                (function () use ($c) { kab_consents_sync($c); return brig_all('SELECT * FROM consents WHERE account_id = ? ORDER BY id', [(int)$c['id']]); })()) : []]);
+            $cons = $c ? kb_consents($c) : [];
+            if (isset($_GET['o'])) { $cons = array_values(array_filter($cons, fn($x) => $x['order'] === null || $x['order'] === $orders[0]['number'])); }
+            linea_json(['ok' => true, 'docs' => kb_docs($orders), 'consents' => $cons]);
         }
         case 'notices': {
             if (!$c) { linea_json(['ok' => true, 'notices' => [], 'guest' => true]); }
             linea_json(['ok' => true, 'notices' => array_map(fn($n) => ['id' => (int)$n['id'], 'grp' => $n['grp'], 'text' => $n['text'], 'link' => $n['link'], 'at' => $n['at'], 'unread' => !$n['read_at']],
-                brig_all('SELECT * FROM notices WHERE account_id = ? ORDER BY id DESC LIMIT 200', [(int)$c['id']])),
+                // одинаковые напоминания (несколько таймеров с тем же текстом) — одной строкой, самой свежей
+                (function ($rows) { $seen = []; return array_values(array_filter($rows, function ($n) use (&$seen) { $k = $n['grp'] . '|' . preg_replace('/\d+/', '#', (string)$n['text']); if (isset($seen[$k])) { return false; } return $seen[$k] = true; })); })(brig_all('SELECT * FROM notices WHERE account_id = ? ORDER BY id DESC LIMIT 200', [(int)$c['id']]))),
                 'prefs' => json_decode((string)$c['prefs'], true) ?: ['groups' => array_fill_keys(array_keys(KAB_GROUPS), ['mail' => true]), 'digest' => 'now'], 'groups' => KAB_GROUPS]);
         }
         case 'profile': {
             if (!$c) { linea_json(['ok' => false, 'needCode' => true, 'error' => 'Профиль — после входа кодом'], 401); }
             kab_consents_sync($c);
             linea_json(['ok' => true, 'profile' => ['name' => (string)$c['name'], 'phone' => (string)$c['phone'], 'email' => (string)$c['email']],
-                'devices' => array_map(fn($d) => ['id' => (int)$d['id'], 'ua' => (string)$d['ua'], 'ip' => (string)$d['ip'], 'created' => $d['created_at'], 'last' => $d['last_at'], 'current' => $d['dev'] === ($_SESSION['dev'] ?? '')],
-                    brig_all('SELECT * FROM acc_devices WHERE account_id = ? AND ended_at IS NULL ORDER BY last_at DESC', [(int)$c['id']])),
-                'consents' => array_map(fn($x) => ['id' => (int)$x['id'], 'kind' => $x['kind'], 'title' => KAB_LEGAL[$x['kind']]['title'] ?? $x['kind'], 'href' => KAB_LEGAL[$x['kind']]['href'] ?? '',
-                    'edition' => $x['edition'], 'given' => $x['given_at'], 'revoked' => $x['revoked_at'], 'order' => $x['order_id'] ? db_val('SELECT number FROM orders WHERE id = ?', [(int)$x['order_id']]) : null],
-                    brig_all('SELECT * FROM consents WHERE account_id = ? ORDER BY id', [(int)$c['id']])),
+                // устройства без дублей: одно и то же устройство (браузер + адрес) — одной строкой, текущее — всегда отдельно
+                'devices' => array_values(array_reduce(brig_all('SELECT * FROM acc_devices WHERE account_id = ? AND ended_at IS NULL ORDER BY last_at DESC', [(int)$c['id']]), function ($acc, $d) {
+                    $cur = $d['dev'] === ($_SESSION['dev'] ?? ''); $k = $cur ? 'cur' : md5((string)$d['ua'] . '|' . (string)$d['ip']);
+                    if (!isset($acc[$k])) { $acc[$k] = ['id' => (int)$d['id'], 'ua' => (string)$d['ua'], 'ip' => (string)$d['ip'], 'created' => $d['created_at'], 'last' => $d['last_at'], 'current' => $cur]; }
+                    return $acc; }, [])),
+                'consents' => kb_consents($c),
                 'pd' => array_map(fn($p) => ['id' => (int)$p['id'], 'kind' => $p['kind'], 'title' => KAB_PD_KINDS[$p['kind']] ?? $p['kind'], 'status' => $p['status'], 'created' => $p['created_at'], 'due' => $p['due_at'],
                     'done' => $p['done_at'], 'reply' => (string)$p['reply'], 'file' => $p['file'] ? true : false], brig_all('SELECT * FROM pd_requests WHERE account_id = ? ORDER BY id DESC', [(int)$c['id']])),
                 'blockers' => kab_pd_blockers($c), 'pdDays' => brig_terms()['pd_days'], 'retentionYears' => brig_terms()['retention_years'], 'fresh' => kab_fresh()]);
@@ -180,8 +196,8 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'GET') {
             echo '<!DOCTYPE html><html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Протокол — ' . $h($o['number']) . '</title>'
                 . '<style>body{font:14px/1.5 sans-serif;max-width:900px;margin:24px auto;padding:0 16px}table{border-collapse:collapse;width:100%;margin:0 0 20px}td,th{border:1px solid #ccc;padding:5px 7px;text-align:left;vertical-align:top}</style></head><body>'
                 . '<h1>Протокол ответов и согласованных решений</h1><p>Заказ ' . $h($o['number']) . ' · сформирован ' . $h(linea_now()) . ' МСК</p>'
-                . '<h2>Ответы и решения</h2><table><tr><th>№</th><th>Ответ</th><th>Когда</th><th>Версия</th><th>Реестр SHA-256</th></tr>' . ($rows ?: '<tr><td colspan="5">Ответов нет</td></tr>') . '</table>'
-                . '<h2>Подписи (вход кодом на почту)</h2><table><tr><th>Документ</th><th>Решение</th><th>Время</th><th>IP</th><th>SHA-256</th><th>Способ</th></tr>' . ($sig ?: '<tr><td colspan="6">Подписей нет</td></tr>') . '</table></body></html>';
+                . '<h2>Ответы и решения</h2><table><tr><th>№</th><th>Ответ</th><th>Когда</th><th>Версия</th><th>Реестр отпечаток документа</th></tr>' . ($rows ?: '<tr><td colspan="5">Ответов нет</td></tr>') . '</table>'
+                . '<h2>Подписи (вход кодом на почту)</h2><table><tr><th>Документ</th><th>Решение</th><th>Время</th><th>IP</th><th>отпечаток документа</th><th>Способ</th></tr>' . ($sig ?: '<tr><td colspan="6">Подписей нет</td></tr>') . '</table></body></html>';
             exit;
         }
     }
@@ -213,7 +229,6 @@ switch ($a) {
         $item = $reg ? (array_values(array_filter($reg['items'], fn($i) => $i['id'] === $id))[0] ?? null) : null;
         if (!$item || $item['closed']) { linea_fail('Вопрос не найден или уже закрыт', 404); }
         $text = linea_str($in['text'] ?? '', 2000);
-        $ans = kab_answers($o);
         $rec = ['at' => linea_now(), 'ver' => $reg['ver'], 'sha' => $reg['sha256'], 'by' => 'client:' . (int)($_SESSION['roles']['client'] ?? 0)];
         if ($a === 'answer') {
             if ($item['kind'] !== 'question' && $item['kind'] !== 'conflict') { linea_fail('Это решение — его согласуют, а не отвечают'); }
@@ -230,8 +245,7 @@ switch ($a) {
             kab_sign('client', (int)($_SESSION['roles']['client'] ?? 0), 'decision', $id, $reg['ver'], $reg['sha256'], $dec, $text, (int)$o['id']);
             linea_event((int)$o['id'], 'client', ($dec === 'agree' ? 'Согласовано решение ' : 'Не согласен с решением ') . $id . ($text !== '' ? ': ' . $text : ''));
         }
-        $ans['items'][$id] = $rec;
-        kab_answers_save($o, $ans);
+        kab_answers_put($o, $id, $rec);
         brig_admin_notify('Клиент ответил: ' . $o['number'], $id . ' — ' . ($a === 'answer' ? 'ответ' : 'решение'), brig_link('api/panel.php?s=order&o=' . rawurlencode($o['number']) . '&tab=voprosy'), (bool)$o['test']);
         linea_json(kb_object(linea_order_by_number($o['number']), $c));
     }
@@ -328,11 +342,18 @@ switch ($a) {
         if (!in_array($kind, ['delete', 'export', 'fix'], true)) { linea_fail('Неизвестная заявка'); }
         if (brig_one("SELECT 1 FROM pd_requests WHERE account_id = ? AND kind = ? AND status = 'new'", [(int)$c['id'], $kind])) { linea_fail('Такая заявка уже принята — мы её выполняем', 409); }
         $blk = $kind === 'delete' ? kab_pd_blockers($c) : [];
+        if ($blk && !empty($in['later'])) {   // заявка на удаление после завершения работ — принимается сразу, выполняется, когда помехи уйдут
+            $id = db_insert('pd_requests', ['account_id' => (int)$c['id'], 'kind' => 'delete', 'status' => 'new', 'note' => 'Удалить после завершения: ' . implode('; ', $blk) . (($n = linea_str($in['note'] ?? '', 500)) !== '' ? '. ' . $n : ''),
+                'blockers' => implode('; ', $blk), 'created_at' => linea_now(), 'due_at' => kab_wd_add(linea_now(), brig_terms()['pd_days'])]);
+            brig_audit('client#' . $c['id'], 'pd-request', 'pd#' . $id, 'delete-later');
+            brig_admin_notify('Заявка: удалить персональные данные после завершения', implode('; ', $blk), brig_link('api/panel.php?s=pd'), (bool)$c['test']);
+            linea_json(['ok' => true, 'message' => 'Заявка принята: удалим данные, как только закончится ' . implode('; ', $blk) . '. Напишем на почту.']);
+        }
         if ($blk) { linea_fail('Удалить данные сейчас нельзя: ' . implode('; ', $blk) . '. Удалим после завершения — или оставьте заявку «Исправить данные», чтобы остановить обработку для новых целей', 409); }
         $id = db_insert('pd_requests', ['account_id' => (int)$c['id'], 'kind' => $kind, 'status' => 'new', 'note' => linea_str($in['note'] ?? '', 1000) ?: null,
             'created_at' => linea_now(), 'due_at' => kab_wd_add(linea_now(), brig_terms()['pd_days'])]);
         brig_audit('client#' . $c['id'], 'pd-request', 'pd#' . $id, $kind);
-        brig_admin_notify('Заявка по ПДн: ' . (KAB_PD_KINDS[$kind] ?? $kind), 'Срок — ' . brig_terms()['pd_days'] . ' рабочих дней', brig_link('api/panel.php?s=pd'), (bool)$c['test']);
+        brig_admin_notify('Заявка по персональным данным: ' . (KAB_PD_KINDS[$kind] ?? $kind), 'Срок — ' . brig_terms()['pd_days'] . ' рабочих дней', brig_link('api/panel.php?s=pd'), (bool)$c['test']);
         linea_json(['ok' => true, 'message' => 'Заявка принята. Выполним до ' . date('d.m.Y', strtotime(kab_wd_add(linea_now(), brig_terms()['pd_days']))) . ' и напишем на почту.']);
     }
 }

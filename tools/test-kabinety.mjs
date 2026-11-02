@@ -81,17 +81,16 @@ const panel = async (fields) => { if (!ACS) ACS = adminCsrf((await admin.req('GE
 const panelMsg = async () => ((await admin.req('GET', '/api/panel.php?s=audit', { raw: true })).text.match(/<p class="msg">([^<]*)<\/p>/) || [])[1] || '';
 
 try {
-  step('1. Бриф → аккаунт клиента создаётся сам, заказ привязан');
+  step('1. Бриф → заказ; аккаунт и привязка — только после подтверждения почты кодом (ревью С-2)');
   const A = actor('clientA'), Bc = actor('clientB'), G = actor('guest'), X = actor('stranger');
   mkBrief('anna@example.test', 'Анна'); mkBrief('boris@example.test', 'Борис');
   const brief = async (who, name) => (await who.req('POST', '/api/brief.php?test=1', { form: { test: 1, json: fs.readFileSync(path.join(FX, name + '.json'), 'utf8'), brief: { file: path.join(FX, name + '.zip'), type: 'application/zip' } } })).j;
   const bA = await brief(A, 'Анна'), bB = await brief(Bc, 'Борис');
   ok(bA?.ok && bB?.ok, 'два брифа приняты', JSON.stringify(bA));
   const NA = bA.number, TA = bA.token, NB = bB.number;
-  const acc = sql("SELECT id, role, pass_hash FROM accounts WHERE email = 'anna@example.test'")[0];
-  ok(acc && acc.role === 'client' && acc.pass_hash === '', 'аккаунт клиента без пароля создан по почте брифа');
-  ok(+sql(`SELECT account_id FROM orders WHERE number = '${NA}'`)[0].account_id === +acc.id, 'заказ привязан к аккаунту (orders.account_id)');
-  ok(+sql(`SELECT COUNT(*) n FROM consents WHERE account_id = ${acc.id}`)[0].n === 2, 'согласия записаны: обработка ПДн и портфолио (с редакцией)');
+  ok(!sql("SELECT 1 x FROM accounts WHERE email = 'anna@example.test'").length && !sql(`SELECT account_id FROM orders WHERE number = '${NA}'`)[0].account_id,
+    'С-2: бриф на почту не создаёт аккаунт и не кладёт заказ в чужой кабинет до подтверждения почты кодом');
+  ok(+sql(`SELECT COUNT(*) n FROM consents c JOIN orders o ON o.id = c.order_id WHERE o.number = '${NA}' AND c.account_id = 0`)[0].n === 2, 'согласия брифа записаны (с редакцией) и ждут подтверждения почты');
 
   step('2. Вход кодом на почту');
   await X.me();
@@ -108,12 +107,24 @@ try {
   const kn2 = await X.req('POST', '/api/vhod.php?a=code', { json: { email: 'anna@example.test' } });
   sql("UPDATE auth_codes SET expires_at = 1 WHERE email = 'anna@example.test' AND used_at IS NULL");
   ok((await X.req('POST', '/api/vhod.php?a=verify', { json: { email: 'anna@example.test', code: kn2.j.devCode } })).code === 400, 'просроченный код → 400');
-  for (let i = 0; i < 4; i++) await X.req('POST', '/api/vhod.php?a=code', { json: { email: 'anna@example.test' } });
+  sql("DELETE FROM auth_codes WHERE email = 'anna@example.test'");
+  const c1 = await X.req('POST', '/api/vhod.php?a=code', { json: { email: 'anna@example.test' } });
+  const c2 = await X.req('POST', '/api/vhod.php?a=code', { json: { email: 'anna@example.test' } });
+  ok(c1.j?.devCode && c2.j?.ok && !c2.j.devCode, 'С-1: повторный запрос в первую минуту не «гасит» код, который уже пришёл');
+  sql(`UPDATE auth_codes SET created_at = '${ts(0.01)}' WHERE email = 'anna@example.test'`);
+  for (let i = 0; i < 5; i++) { sql(`UPDATE auth_codes SET created_at = '${ts(0.01)}' WHERE email = 'anna@example.test'`); await X.req('POST', '/api/vhod.php?a=code', { json: { email: 'anna@example.test' } }); }
   const lim = await X.req('POST', '/api/vhod.php?a=code', { json: { email: 'anna@example.test' } });
-  ok(lim.j?.ok && !lim.j.devCode, 'больше 5 кодов в час на адрес — тот же ответ, кода нет');
+  ok(lim.j?.ok && !lim.j.devCode, 'С-1: больше 5 кодов в час с одного адреса на почту — тот же ответ, кода нет');
+  sql("DELETE FROM auth_codes WHERE email = 'anna@example.test'");
+  for (let i = 0; i < 6; i++) ins('auth_codes', { email: 'anna@example.test', purpose: 'login', code_hash: 'x' + i, expires_at: 1, tries: 0, created_at: ts(0.01), used_at: ts(0.01), ip: '203.0.113.9' });
+  const own = await X.req('POST', '/api/vhod.php?a=code', { json: { email: 'anna@example.test' } });
+  ok(!!own.j?.devCode, 'С-1: чужие запросы с другого IP не лишают владельца почты кода');
   sql("DELETE FROM auth_codes WHERE email = 'anna@example.test'");
   const la = await A.login('anna@example.test');
   ok(la.j?.ok && la.j.go === 'client' && la.j.auth, 'Анна вошла кодом, роль — клиент', la.text);
+  const acc = sql("SELECT id, role, pass_hash FROM accounts WHERE email = 'anna@example.test'")[0];
+  ok(acc && acc.pass_hash === '' && +sql(`SELECT account_id FROM orders WHERE number = '${NA}'`)[0].account_id === +acc.id, 'после кода: аккаунт без пароля создан, заказ привязан');
+  ok(+sql(`SELECT COUNT(*) n FROM consents WHERE account_id = ${acc.id}`)[0].n === 2, 'согласия брифа перешли к аккаунту');
   const objs = await A.req('GET', '/api/kabinet.php?a=objects');
   ok(objs.j?.objects?.length === 1 && objs.j.objects[0].number === NA, '«Мои объекты»: только свой заказ');
   ok(/Оплатите|Проверяем|Сумма/.test(objs.j.objects[0].next.text), '«Сейчас от вас нужно» вычисляется сервером: ' + objs.j.objects[0].next.text);
@@ -175,6 +186,10 @@ try {
   ok(!ob.j.lenta.some(m => /приватно/.test(m.text)), 'приватная заметка админа клиенту не видна');
 
   step('6. Старая ссылка order.html?t= → гостевой кабинет');
+  const G0 = actor('guest-no-me');
+  ok((await G0.req('POST', '/api/vhod.php?a=link', { json: { t: TA } })).code === 403, 'В-1: link без выданного сессией csrf — 403 (поэтому браузер сначала спрашивает me)');
+  const kjs = fs.readFileSync(path.join(ROOT, 'site/js/kabinet.js'), 'utf8'), tkb = kjs.slice(kjs.indexOf('if (tk) {'), kjs.indexOf("vh('link'"));
+  ok(/ME = await vh\('me'\)/.test(tkb), 'В-1: в кабинете старая ссылка сначала получает csrf (vh(me)), потом link — тот же порядок, что в браузере');
   await G.me();
   const gl = await G.req('POST', '/api/vhod.php?a=link', { json: { t: TA } });
   ok(gl.j?.ok && gl.j.number === NA && gl.j.guest?.number === NA && !gl.j.auth, 'ссылка с токеном → гостевая сессия заказа');
@@ -235,6 +250,8 @@ try {
   const reqId = ins('br_requests', { order_id: +sql(`SELECT id FROM orders WHERE number = '${NA}'`)[0].id, status: 'chosen', consent_at: ts(20), consent_text: 'согласие', district: 'zao', works: '[]', object_title: 'Квартира 64 м²', created_at: ts(20), updated_at: ts(20), test: 1 });
   const offId = ins('br_offers', { request_id: reqId, brigade_id: bid, status: 'chosen', items: '[]', total_kop: 100000000, materials: 'client', stages: '[]', days: 30, warranty_months: 24, start_date: ts(20).slice(0, 10), created_at: ts(20), updated_at: ts(20) });
   const jobId = ins('br_jobs', { request_id: reqId, offer_id: offId, brigade_id: bid, status: 'work', contacts_consent_at: ts(20), contacts_open_at: ts(15), client_signed_at: ts(15), brigade_signed_at: ts(15), commission_kop: 10000000, commission_rate: 0.1, commission_at: ts(15), commission_due_at: ts(10), commission_due_why: 'аванс', deal_total_kop: 100000000, created_at: ts(20), updated_at: ts(10) });
+  // данные логичны (QA п. 8): этапы в работе — только при подписанном обеими договоре
+  ins('br_contracts', { job_id: jobId, kind: 'main', num: 1, status: 'signed', body: '<h1>Договор подряда (тест)</h1>', hash: 'a'.repeat(64), total_kop: 100000000, delta_kop: 0, days_add: 0, created_at: ts(16), created_by: 'test', client_signed_at: ts(15), brigade_signed_at: ts(15), needs_admin: 0 });
   const stId = ins('br_stages', { job_id: jobId, idx: 1, name: 'Демонтаж', checklist: 'demontazh', status: 'ready', ready_at: ts(12), plan_start: ts(20).slice(0, 10), plan_end: ts(13).slice(0, 10) });
   const out1 = cron();
   ok(/"silence":1/.test(out1), 'cron: молчание заказчика найдено: ' + out1.trim());
@@ -243,6 +260,12 @@ try {
   ok(sql("SELECT 1 x FROM br_signals WHERE kind = 'stage_silence'").length === 1, 'сигнал в админку');
   const out2 = cron();
   ok(/"silence":0/.test(out2) && sql("SELECT COUNT(*) n FROM br_signals WHERE kind = 'stage_silence'")[0].n == 1, 'повторный прогон cron ничего не дублирует');
+  sql(`UPDATE orders SET account_id = NULL WHERE number = '${NA}'`);   // В-2: заказ без аккаунта (как старые заказы до v4)
+  ins('br_stages', { job_id: jobId, idx: 9, name: 'Штукатурка-В2', checklist: 'shtukaturka', status: 'ready', ready_at: ts(12) });
+  cron(); cron(); cron();
+  const v2 = fs.readFileSync(path.join(PRIV, 'brig-mail.log'), 'utf8').split('\n').filter(l => l.includes('Штукатурка-В2') && /kab_notice/.test(l)).length;
+  ok(v2 === 2, 'В-2: заказ без аккаунта — напоминания (2 и 4 р.дн) по одному письму, три прогона cron их не повторяют: ' + v2);
+  sql(`UPDATE orders SET account_id = ${acc.id} WHERE number = '${NA}'`);
   // заморозка: таймеры на паузе
   const st2 = ins('br_stages', { job_id: jobId, idx: 2, name: 'Электрика', checklist: 'elektrika', status: 'ready', ready_at: ts(12) });
   await panel({ act: 'd_freeze', id: jobId, reason: 'проверка жалобы' });

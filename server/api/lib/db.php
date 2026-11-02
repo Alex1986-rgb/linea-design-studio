@@ -115,16 +115,32 @@ function db_migrate(): void
         ? $common + ['{ID}' => 'BIGINT NOT NULL AUTO_INCREMENT PRIMARY KEY', '{INT}' => 'BIGINT', '{REAL}' => 'DOUBLE', '{INN_TEST}' => "CONCAT(inn, ':test')", '{ENGINE}' => ' ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci']
         : $common + ['{ID}' => 'INTEGER PRIMARY KEY AUTOINCREMENT', '{INT}' => 'INTEGER', '{REAL}' => 'REAL', '{INN_TEST}' => "inn || ':test'", '{ENGINE}' => ''];
     db()->exec('CREATE TABLE IF NOT EXISTS schema_version (name ' . $types['{KEY}'] . ' NOT NULL PRIMARY KEY, version ' . $types['{INT}'] . ' NOT NULL, applied_at ' . $types['{KEY}'] . ' NOT NULL)' . $types['{ENGINE}']);
-    $have = (int)(db_val("SELECT version FROM schema_version WHERE name = 'linea'") ?? 0);
     $steps = require __DIR__ . '/migrations.php';
     ksort($steps);
+    if ((int)(db_val("SELECT version FROM schema_version WHERE name = 'linea'") ?? 0) >= (int)array_key_last($steps)) { return; }
+    // С-5: одновременные первые запросы (cron + сайт при выкладке) не гоняют шаги дважды — блокировка, затем перечитать версию
+    $mysql = db_driver() === 'mysql';
+    $lock = null;
+    if ($mysql) { db_val("SELECT GET_LOCK('linea_migrate', 60)"); }
+    else { $lock = fopen(linea_private() . '/.migrate.lock', 'c'); if ($lock) { flock($lock, LOCK_EX); } }
+    try {
+    $have = (int)(db_val("SELECT version FROM schema_version WHERE name = 'linea'") ?? 0);
     foreach ($steps as $ver => $sqls) {
         if ($ver <= $have) { continue; }
-        foreach ($sqls as $sql) { db()->exec(strtr($sql, $types)); }
+        foreach ($sqls as $sql) {
+            try { db()->exec(strtr($sql, $types)); }
+            catch (PDOException $e) {
+                // шаг, уже применённый прерванным прогоном (DDL в MySQL не откатывается): «уже есть» — пропускаем, остальное — ошибка
+                if (!preg_match('/Duplicate (column|key)|already exists|duplicate column name|1060|1061|1091|Can\'t DROP/i', $e->getMessage())) { throw $e; }
+            }
+        }
         if ($have === 0) {
             try { db_insert('schema_version', ['name' => 'linea', 'version' => $ver, 'applied_at' => linea_now()]); }
             catch (PDOException $e) { db_update('schema_version', ['version' => $ver, 'applied_at' => linea_now()], "name = 'linea'"); }   // параллельный первый запрос
         } else { db_update('schema_version', ['version' => $ver, 'applied_at' => linea_now()], "name = 'linea'"); }
         $have = $ver;
+    }
+    } finally {
+        if ($mysql) { db_val("SELECT RELEASE_LOCK('linea_migrate')"); } elseif ($lock) { flock($lock, LOCK_UN); fclose($lock); }
     }
 }

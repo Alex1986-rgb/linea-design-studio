@@ -555,7 +555,7 @@ function brig_scan_norm(string $text): array
 /** Похоже на номер телефона РФ: 10 цифр с 3/4/8/9 или 11 с 7/8 впереди. */
 function brig_is_phone(string $d): bool
 {
-    return (strlen($d) === 10 && strpos('3489', $d[0]) !== false) || (strlen($d) === 11 && ($d[0] === '7' || $d[0] === '8'));
+    return (strlen($d) === 10 && strpos('3489', $d[0]) !== false) || (strlen($d) === 11 && ($d[0] === '7' || $d[0] === '8')) || (strlen($d) === 12 && ($d[0] === '8' || $d[0] === '7') && $d[1] === '9');
 }
 
 /**
@@ -571,11 +571,11 @@ function brig_contact_scan(string $text): array
 {
     $found = [];
     $msg = '(?:tg|тг|телег\p{L}*|telegram|телеграм\p{L}*|вацап\p{L}*|ватсап\p{L}*|вотсап\p{L}*|whatsapp|вайбер\p{L}*|viber|макс|max|вк|vk|инст\p{L}*|insta\p{L}*)';
-    $dot = '(?:\.|\(\s*dot\s*\)|\[\s*dot\s*\]|\s(?:dot|точка)\s)';
+    $dot = '(?:\.|\(\s*dot\s*\)|\[\s*dot\s*\]|\s(?:dot|точка|дот|тчк)\s)';
     $rx = [
         // ник без @ рядом со словом-мессенджером: «тг ivan_painter», «вайбер: remont77»
         'ник' => '/(?<!\p{L})' . $msg . '(?!\p{L})\s*[:\-—]?\s*(?:это\s+|мой\s+|ник\s+)?@?[A-Za-z][A-Za-z0-9_.]{2,31}/iu',
-        'почта' => '/[\p{L}0-9._%+\-]+\s*(?:@|\(\s*at\s*\)|\[\s*at\s*\]|\{\s*at\s*\}|\s(?:at|собака|собачка)\s)\s*[\p{L}0-9\-]+(?:\s*' . $dot . '\s*[\p{L}0-9\-]+)*?\s*' . $dot . '\s*(?:ru|com|net|org|рф|su|me|io|pro|info|biz|by|kz|ua|ру|ком)(?!\p{L})/iu',
+        'почта' => '/[\p{L}0-9._%+\-]+\s*(?:@|\(\s*at\s*\)|\[\s*at\s*\]|\{\s*at\s*\}|\s(?:at|собака|собачка|гав|эт)\s)\s*[\p{L}0-9\-]+(?:\s*' . $dot . '\s*[\p{L}0-9\-]+)*?\s*' . $dot . '\s*(?:ru|com|net|org|рф|su|me|io|pro|ком|ру|нет|орг|info|biz|by|kz|ua|ру|ком)(?!\p{L})/iu',
         'почта2' => '/[A-Z0-9._%+\-]+@[A-Z0-9.\-]+\.[\p{L}]{2,}/iu',
         'ссылка' => '/(?:\bhttps?:\/\/|\bwww\.)\S+|(?<![\p{L}\d])(?:t|wa)\s*[.,]?\s*me\s*\/\s*[\w@+]+|(?<![\p{L}\d])tme\/[\w@]+|(?<![\p{L}\d])vk\s*[.,]?\s*(?:com|me)(?:\s*\/\s*[\w.]+)?|(?<![\p{L}\d])(?:vk|вк)\s*id\s*\d+'
             . '|\b(?:ok\.ru|max\.ru|instagram\.com|avito\.ru|profi\.ru|youdo\.com)(?:\/\S*)?'
@@ -606,10 +606,10 @@ function brig_contact_scan(string $text): array
     // второй проход: нормализованный текст — контакт виден только после нормализации → текст скрывается целиком
     $n = brig_scan_norm(str_replace(BRIG_MASK, ' ', $text));
     $late = [];
-    if (preg_match_all('/(?<!\d)\d{10,11}(?!\d)/', $n['digits'], $mm)) { foreach ($mm[0] as $d) { if (brig_is_phone($d)) { $late['телефон'] = true; } } }
+    if (preg_match_all('/(?<!\d)\d{10,12}(?!\d)/', $n['digits'], $mm)) { foreach ($mm[0] as $d) { if (brig_is_phone($d)) { $late['телефон'] = true; } } }
     if (preg_match('/(?:telegram|whatsapp|viber|skype|instagram|t\.?me\/|wa\.?me\/|vk\.?com)/u', $n['lat'])) { $late['мессенджер'] = true; }
     if (preg_match('/(?:телеграм|(?<!\p{L})телег[аеиуо]й?(?!\p{L})|вацап|ватсап|вотсап|вайбер|скайп|инстаграм|вконтакте)/u', $n['cyr'])) { $late['мессенджер'] = true; }
-    if (preg_match('/[a-z0-9._%+\-]+(?:@|\(at\)|\[at\]|собака)[a-z0-9\-]+(?:\.|\(dot\)|\[dot\]|точка)(?:ru|com|net|org|рф|ру)/u', preg_replace('/\s+/u', '', $n['lat']) ?? '')) { $late['почта'] = true; }
+    if (preg_match('/[a-z0-9._%+\-]+(?:@|\(at\)|\[at\]|собака|гав)[a-z0-9\-]+(?:\.|\(dot\)|\[dot\]|точка|дот)(?:ru|com|net|org|рф|ру)/u', preg_replace('/\s+/u', '', $n['lat']) ?? '')) { $late['почта'] = true; }
     if ($late) { $found += $late; $text = BRIG_MASK; }
     return [$text, array_keys($found)];
 }

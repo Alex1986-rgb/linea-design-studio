@@ -211,7 +211,7 @@
     if (!j.ok) { body().innerHTML = `<p class="bx-err">${esc(j.error)}</p>`; return; }
     const todo = j.todo.length ? j.todo.map((t, i) => `<li class="${i === 0 ? 'hot' : ''}"><span>${esc(t.text)}</span>${t.btn ? `<a class="btn sm" href="${esc(t.href)}">${esc(t.btn)}</a>` : ''}</li>`).join('')
       : '<li><span>Всё сделано. Новые заказы придут на почту и сюда.</span></li>';
-    body().innerHTML = `<div class="bx-card kab-now"><div class="kab-kick">Сейчас от вас нужно</div><ul class="brg-todo">${todo}</ul></div>
+    body().innerHTML = (S.dict.passReset ? '<p class="bx-note">Почта подтверждена кодом. Прежний пароль и вход на других устройствах сброшены — входите кодом из письма; запасной пароль можно задать через «Забыли пароль».</p>' : '') + `<div class="bx-card kab-now"><div class="kab-kick">Сейчас от вас нужно</div><ul class="brg-todo">${todo}</ul></div>
       <div class="brg-tiles">${j.tiles.map(t => `<a class="brg-tile" href="${esc(t.href)}"><b>${t.n == null ? '—' : esc(t.n)}</b><span>${esc(t.t)}</span></a>`).join('')}</div>`;
     const n = await call('kab.php?a=notices'); const bell = document.getElementById('kabBell');
     if (bell && n.ok) { bell.hidden = !n.unread; bell.textContent = n.unread; }
@@ -370,7 +370,7 @@
       h = `<div class="bx-card"><p>Договор подряда: <a href="${API}remont-dogovor.php?j=${J.id}" target="_blank" rel="noopener">текст с приложениями (печать в PDF)</a> · подписали: заказчик — ${esc(J.clientSigned ? dt(J.clientSigned) : 'нет')}, бригада — ${esc(J.brigadeSigned ? dt(J.brigadeSigned) : 'нет')}</p>
         <p class="bx-note">${esc((J.docs || {}).transparency || '')}</p>
         <ul class="bx-list">${((J.docs || {}).contracts || []).filter(c => c.status !== 'void').map(c => `<li><b>${esc(c.title)}</b> ${st(c.status === 'signed' ? 'done' : 'review', c.status === 'signed' ? 'подписан' : 'ждёт подписи')}${c.kind === 'addendum' ? ` · ${c.delta >= 0 ? '+' : '−'}${esc(rub(Math.abs(c.delta)))}, итого ${esc(rub(c.total))}` : ''}
-          <br><span class="bx-mut">заказчик: ${esc(c.clientSigned ? dt(c.clientSigned) : 'не подписано')} · бригада: ${esc(c.brigadeSigned ? dt(c.brigadeSigned) : 'не подписано')} · SHA-256 ${esc(c.hash.slice(0, 16))}…</span>
+          <br><span class="bx-mut">заказчик: ${esc(c.clientSigned ? dt(c.clientSigned) : 'не подписано')} · бригада: ${esc(c.brigadeSigned ? dt(c.brigadeSigned) : 'не подписано')} · отпечаток ${esc(c.hash.slice(0, 16))}…</span>
           ${c.waitAdmin ? '<br><span class="bx-mut">Цена заметно уменьшается — подписать можно после подтверждения LINEA.</span>' : ''}
           ${c.status === 'draft' && !c.brigadeSigned && !c.waitAdmin ? (J.can.sign ? `<br><button class="btn sm" type="button" data-sign="${c.id}">Подписать кодом</button>` : `<br><button class="btn ghost sm" type="button" data-ask="${c.id}">Попросить владельца подписать</button>`) : ''}
           ${c.status === 'draft' && c.kind === 'addendum' && J.can.sign ? ` <button class="btn ghost sm" type="button" data-adc="${c.id}">Отозвать</button>` : ''}</li>`).join('')}</ul>
@@ -554,7 +554,7 @@
     if (!j.ok) { body().innerHTML = `<p class="bx-err">${esc(j.error)}</p>`; return; }
     body().innerHTML = `<div class="bx-card"><h2>Принятые документы</h2><ul class="bx-list">${j.accepted.map(d => `<li>${d.href ? `<a href="../${esc(d.href)}" target="_blank" rel="noopener">${esc(d.title)}</a>` : esc(d.title)} <span class="bx-mut">ред. ${esc(d.ed)}${d.at ? ' · ' + esc(dt(d.at)) : ''}${d.ip ? ' · IP ' + esc(d.ip) : ''}</span></li>`).join('')}</ul></div>
       ${j.jobs.map(x => `<div class="bx-card"><h2>${esc(x.object)} <span class="bx-mut">${esc(x.status)}</span></h2><ul class="bx-list">
-        ${x.contracts.map(c => `<li><a href="${API}remont-dogovor.php?j=${x.id}" target="_blank" rel="noopener">${c.kind === 'main' ? 'Договор подряда' : 'Допсоглашение № ' + c.num}</a> <span class="bx-mut">${esc(c.status === 'signed' ? 'подписан' : 'ждёт подписи')} · SHA-256 ${esc(String(c.hash).slice(0, 16))}…</span></li>`).join('')}
+        ${x.contracts.map(c => `<li><a href="${API}remont-dogovor.php?j=${x.id}" target="_blank" rel="noopener">${c.kind === 'main' ? 'Договор подряда' : 'Допсоглашение № ' + c.num}</a> <span class="bx-mut">${esc(c.status === 'signed' ? 'подписан' : 'ждёт подписи')} · отпечаток ${esc(String(c.hash).slice(0, 16))}…</span></li>`).join('')}
         ${x.acts.map(a => `<li>Акт этапа ${a.idx} «${esc(a.name)}» <span class="bx-mut">принят ${esc(dt(a.accepted))}</span></li>`).join('')}
         ${x.sheets.map(s => `<li>${s.file ? `<a href="${fileUrl(s.file)}" target="_blank" rel="noopener">Лист: ${esc(s.text)}</a>` : esc(s.text)}</li>`).join('')}</ul></div>`).join('')}
       ${j.invoices.length ? `<div class="bx-card"><h2>Счета LINEA</h2><ul class="bx-list">${j.invoices.map(i => `<li>${esc(i.number)} · ${esc(rub(i.amount))} <span class="bx-mut">${esc(day(i.issued))}${i.paid ? ' · оплачен ' + esc(day(i.paid)) : ' · до ' + esc(day(i.due))}</span></li>`).join('')}</ul></div>` : ''}`;

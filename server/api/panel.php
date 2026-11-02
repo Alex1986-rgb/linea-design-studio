@@ -46,7 +46,8 @@ $now = linea_now();
 $WHO = 'admin';
 $s = (string)($_GET['s'] ?? 'dash');
 
-const ADM_MENU = ['dash' => 'Дашборд', 'orders' => 'Заказы проектов', 'clients' => 'Клиенты', 'pd' => 'Заявки по ПДн', 'deals' => 'Сделки', 'brigades' => 'Бригады', 'requests' => 'Запросы бригадам',
+const ADM_GROUPS = ['dash' => '', 'orders' => 'Заказы', 'deals' => 'Ремонт', 'money' => 'Деньги', 'sheets' => 'Контроль', 'audit' => 'Система'];
+const ADM_MENU = ['dash' => 'Дашборд', 'orders' => 'Заказы проектов', 'clients' => 'Клиенты', 'pd' => 'Заявки по персональным данным', 'deals' => 'Сделки', 'brigades' => 'Бригады', 'requests' => 'Запросы бригадам',
     'contracts' => 'Договоры и подписи', 'disputes' => 'Разногласия', 'money' => 'Деньги и вознаграждение', 'sheets' => 'Листы по запросу', 'signals' => 'Сигналы обхода',
     'audit' => 'Журнал', 'export' => 'Экспорт CSV', 'settings' => 'Настройки'];
 
@@ -57,13 +58,13 @@ function adm_page(string $title, string $body, string $s, string $msg = ''): nev
     $badge = ['dash' => 0, 'pd' => $cnt("SELECT COUNT(*) FROM pd_requests WHERE status = 'new'"), 'disputes' => $cnt("SELECT COUNT(*) FROM br_disputes WHERE status <> 'resolved'"),
         'brigades' => $cnt("SELECT COUNT(*) FROM br_brigades WHERE status = 'review'")];
     $menu = '';
-    foreach (ADM_MENU as $k => $t) { $menu .= '<a href="panel.php?s=' . $k . '"' . ($k === $s ? ' class="on"' : '') . '>' . $h($t) . (!empty($badge[$k]) ? ' <b>' . $badge[$k] . '</b>' : '') . '</a>'; }
+    foreach (ADM_MENU as $k => $t) { if (!empty(ADM_GROUPS[$k])) { $menu .= '<span class="grp">' . ADM_GROUPS[$k] . '</span>'; } $menu .= '<a href="panel.php?s=' . $k . '"' . ($k === $s ? ' class="on"' : '') . '>' . $h($t) . (!empty($badge[$k]) ? ' <b>' . $badge[$k] . '</b>' : '') . '</a>'; }
     echo '<!DOCTYPE html><html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex,nofollow">'
         . '<title>' . $h($title) . ' — LINEA · админка</title><style>'
         . ':root{--bg:#f4f2ee;--ink:#1d1b18;--line:#e3ded4;--mut:#777;--acc:#8a5a12}*{box-sizing:border-box}'
         . 'body{font:15px/1.5 -apple-system,Segoe UI,Roboto,sans-serif;margin:0;background:var(--bg);color:var(--ink)}a{color:var(--acc)}'
         . '.lay{display:grid;grid-template-columns:230px 1fr;min-height:100vh}nav.side{background:#1d1b18;padding:14px 0;position:sticky;top:0;height:100vh;overflow:auto}'
-        . 'nav.side .lg{color:#e8dcc4;font:600 17px/1 Georgia,serif;letter-spacing:4px;padding:6px 18px 16px}nav.side a{display:block;color:#cfc8ba;padding:8px 18px;text-decoration:none;font-size:14px}'
+        . 'nav.side .lg{color:#e8dcc4;font:600 17px/1 Georgia,serif;letter-spacing:4px;padding:6px 18px 16px}nav.side .grp{display:block;color:#8a8170;font-size:11px;letter-spacing:2px;text-transform:uppercase;padding:14px 18px 4px}nav.side a{display:block;color:#cfc8ba;padding:8px 18px;text-decoration:none;font-size:14px}'
         . 'nav.side a.on,nav.side a:hover{background:#2e2a23;color:#fff}nav.side a b{background:#b4462b;color:#fff;border-radius:9px;padding:0 7px;font-size:12px}'
         . 'main{padding:18px 22px;min-width:0}h1{font-size:21px;margin:0 0 12px}h2{font-size:17px;margin:18px 0 8px}'
         . 'table{width:100%;border-collapse:collapse;background:#fff}th,td{padding:7px 9px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top;font-size:14px}th{background:#ebe6dc;font-weight:600}'
@@ -172,10 +173,10 @@ if (($_SERVER['REQUEST_METHOD'] ?? '') === 'POST') {
                 if (!$need($kop > 0 && $kop <= (int)$o['amount_kop'] && $reason !== '', 'Возврат: сумма не больше оплаченной и причина')) { break; }
                 $full = $kop === (int)$o['amount_kop'];
                 if ($full) { $oupd(['status' => 'refunded']); }
-                linea_event((int)$o['id'], 'admin', 'Возврат ' . $rub($kop) . ($full ? ' (полный)' : ' (частичный)') . ': ' . $reason . '. Провести в ЮKassa / банке и выбить чек возврата');
+                linea_event((int)$o['id'], 'admin', 'Возврат ' . $rub($kop) . ($full ? ' (полный)' : ' (частичный)') . ': ' . $reason . '. Провести в онлайн-оплата / банке и выбить чек возврата');
                 kab_notice_order($o, 'dengi', 'Оформлен возврат ' . $rub($kop) . '. Деньги вернутся тем же способом, каким вы платили.');
                 brig_audit($WHO, 'order-refund', 'order ' . $o['number'], $rub($kop) . ': ' . $reason);
-                $msg = 'Возврат отмечен. Деньги — через ЮKassa (личный кабинет) или банк, чек возврата — там же.'; break;
+                $msg = 'Возврат отмечен. Деньги — через кабинет онлайн-оплаты или банк, чек возврата — там же.'; break;
             }
             case 'o_release': {
                 if (!$o) { break; }
@@ -263,7 +264,7 @@ if (($_SERVER['REQUEST_METHOD'] ?? '') === 'POST') {
                 $e = mb_strtolower(trim((string)($_POST['email'] ?? '')));
                 if (!$o || !$need(kab_email_ok($e) && $reason !== '', 'Почта и причина (заявление владельца заказа)')) { break; }
                 $aid = kab_client_account($e, (bool)$o['test']);
-                $oupd(['account_id' => $aid, 'email' => $e]);
+                $oupd(['account_id' => $aid, 'email' => $e, 'token' => bin2hex(random_bytes(16))]);   // старая ссылка у прежнего держателя больше не действует
                 linea_event((int)$o['id'], 'admin', 'Заказ перепривязан к другой почте: ' . $reason);
                 brig_audit($WHO, 'order-rebind', 'order ' . $o['number'], 'account#' . $aid . ': ' . $reason);
                 $msg = 'Заказ перепривязан.'; break;
@@ -330,7 +331,7 @@ if (($_SERVER['REQUEST_METHOD'] ?? '') === 'POST') {
                 if (!$need((bool)$c, 'Нет документа')) { break; }
                 $ok = hash_equals((string)$c['hash'], brig_contract_hash((string)$c['body']));
                 brig_audit($WHO, 'contract-verify', 'job#' . $c['job_id'], 'doc#' . $c['id'] . ': ' . ($ok ? 'совпадает' : 'НЕ совпадает'));
-                $msg = $ok ? 'SHA-256 текста совпадает с подписанной версией.' : 'ВНИМАНИЕ: текст не совпадает с хешем подписанной версии!'; break;
+                $msg = $ok ? 'отпечаток текста совпадает с подписанной версией.' : 'ВНИМАНИЕ: текст не совпадает с хешем подписанной версии!'; break;
             }
             // ── разногласия
             case 'ds_propose': {
@@ -464,7 +465,7 @@ function adm_todo(): array
         if (is_array($r) && empty($r['test']) && empty($r['status']) && !empty($r['order'])) { $add('Новые правки ' . $r['number'] . ' (заказ ' . $r['order'] . ')', 'panel.php?s=order&o=' . rawurlencode((string)$r['order']) . '&tab=pravki', false, 'voprosy'); }
     }
     foreach (brig_all("SELECT * FROM pd_requests WHERE status = 'new' ORDER BY due_at") as $p) {
-        $add('Заявка по ПДн: ' . (KAB_PD_KINDS[$p['kind']] ?? $p['kind']) . ' — срок до ' . date('d.m', strtotime((string)$p['due_at'])), 'panel.php?s=pd', strtotime((string)$p['due_at']) < $now + 3 * 86400, 'pd');
+        $add('Заявка по персональным данным: ' . (KAB_PD_KINDS[$p['kind']] ?? $p['kind']) . ' — срок до ' . date('d.m', strtotime((string)$p['due_at'])), 'panel.php?s=pd', strtotime((string)$p['due_at']) < $now + 3 * 86400, 'pd');
     }
     foreach (brig_all("SELECT id, name FROM br_brigades WHERE status = 'review' AND demo = 0") as $b) { $add('Анкета бригады «' . $b['name'] . '» на проверке', 'admin-brigady.php?b=' . $b['id'], false, 'remont'); }
     foreach (brig_all("SELECT id, object_title FROM br_requests WHERE status = 'new' AND test = 0") as $r) { $add('Запрос на бригаду: ' . $r['object_title'] . ' — собрать пакет и разослать', 'admin-brigady.php?r=' . $r['id'], false, 'remont'); }
@@ -473,7 +474,7 @@ function adm_todo(): array
     }
     foreach (brig_all("SELECT s.*, j.id jid FROM br_stages s JOIN br_jobs j ON j.id = s.job_id JOIN br_requests r ON r.id = j.request_id WHERE s.status = 'ready' AND r.test = 0") as $st) {
         $wd = kab_wd_between((string)$st['ready_at'], $now);
-        if ($wd >= $t['stage_silence_days']) { $add('Этап «' . $st['name'] . '» (сделка #' . $st['jid'] . ') ждёт приёмки ' . $wd . ' р.дн — связаться с заказчиком, предложить рассмотрение разногласий', 'panel.php?s=deals', true, 'remont'); }
+        if ($wd >= $t['stage_silence_days']) { $add('Этап «' . $st['name'] . '» (сделка #' . $st['jid'] . ') ждёт приёмки ' . $wd . ' рабочих дней — связаться с заказчиком, предложить рассмотрение разногласий', 'panel.php?s=deals', true, 'remont'); }
     }
     foreach (brig_all("SELECT * FROM br_disputes WHERE status <> 'resolved'") as $ds) {
         $due = kab_wd_add((string)$ds['created_at'], $t['dispute_reply_days']);
@@ -503,7 +504,7 @@ switch ($s) {
             . $kp($cnt("SELECT COUNT(*) FROM orders WHERE test = 0 AND status = 'awaiting_payment'"), 'ждут оплаты', 'panel.php?s=orders&st=awaiting_payment')
             . $kp($cnt("SELECT COUNT(*) FROM orders WHERE test = 0 AND status = 'paid'"), 'оплачены, в работе', 'panel.php?s=orders&st=paid')
             . $kp($cnt("SELECT COUNT(*) FROM orders WHERE test = 0 AND status = 'delivered' AND delivered_at > ?", [date('Y-m-d H:i:s', time() - 30 * 86400)]), 'выданы за 30 дней', 'panel.php?s=orders&st=delivered')
-            . '</div><h2>Деньги</h2><div class="grid">' . $kp($rub($sum(7)), 'оплачено проектов за 7 дней') . $kp($rub($sum(30)), 'за 30 дней')
+            . '</div>' . (($tn = $cnt("SELECT COUNT(*) FROM orders WHERE test = 1")) ? '<p class="mut">Тестовые заказы (' . $tn . ') в цифрах выше не учитываются: ' . $cnt("SELECT COUNT(*) FROM orders WHERE test = 1 AND status = 'awaiting_payment'") . ' ждут оплаты, ' . $cnt("SELECT COUNT(*) FROM orders WHERE test = 1 AND status IN ('paid','delivered')") . ' оплачены — они в списке заказов с пометкой «тест».</p>' : '') . '<h2>Деньги</h2><div class="grid">' . $kp($rub($sum(7)), 'оплачено проектов за 7 дней') . $kp($rub($sum(30)), 'за 30 дней')
             . $kp($rub($led('accrued') + $led('due') + $led('deferred') + $led('invoiced')), 'вознаграждение начислено, не оплачено', 'panel.php?s=money')
             . $kp($rub($led('deferred')), 'отложено до ИП LINEA', 'panel.php?s=money') . $kp($rub($led('paid')), 'вознаграждение оплачено', 'panel.php?s=money')
             . '</div><h2>Ремонт</h2><div class="grid">'
@@ -525,7 +526,7 @@ switch ($s) {
             $nx = kab_next_action($o); $rm = kab_remont($o);
             $rows .= '<tr><td><a href="panel.php?s=order&o=' . rawurlencode($o['number']) . '">' . $h($o['number']) . '</a>' . ($o['test'] ? ' <span class="test">тест</span>' : '') . '<div class="mut">' . $h(substr((string)$o['created_at'], 0, 16)) . '</div></td>'
                 . '<td>' . $h($o['name']) . '<div class="mut hide-m">' . $h($o['email']) . '</div></td><td class="hide-m">' . $h(LINEA_KINDS[$o['kind']] ?? $o['kind']) . ($o['area'] ? ', ' . $h($o['area']) . ' м²' : '') . '</td>'
-                . '<td>' . $rub($o['amount_kop']) . '</td><td><span class="st">' . $h(LINEA_STATUS[$o['status']] ?? $o['status']) . '</span><div class="mut">ждём: ' . ['client' => 'клиента', 'studio' => 'студию', 'brigade' => 'бригаду', 'none' => '—'][$nx['who']] . '</div></td>'
+                . '<td>' . $rub($o['amount_kop']) . '</td><td><span class="st">' . $h(LINEA_STATUS[$o['status']] ?? $o['status']) . '</span><div class="mut">ждём: ' . ['client' => 'клиента', 'studio' => 'от нас', 'brigade' => 'бригаду', 'none' => '—'][$nx['who']] . '</div></td>'
                 . '<td class="hide-m">' . ($rm['job'] ? 'сделка: ' . $h(BRIG_JOB_STATUS[$rm['job']['status']] ?? '') : ($rm['request'] ? 'подбор' : '—')) . '</td></tr>';
         }
         $flt = '<form method="get" class="inl"><input type="hidden" name="s" value="orders"><select name="st"><option value="">все статусы</option>' . implode('', array_map(fn($k, $t) => '<option value="' . $k . '"' . ($k === $st ? ' selected' : '') . '>' . $h($t) . '</option>', array_keys(LINEA_STATUS), LINEA_STATUS))
@@ -542,7 +543,7 @@ switch ($s) {
         $tabs = '<div class="tabs">' . implode('', array_map(fn($k, $t) => '<a href="panel.php?s=order&o=' . rawurlencode($num) . '&tab=' . $k . '"' . ($k === $tab ? ' class="on"' : '') . '>' . $t . '</a>', array_keys($TABS), $TABS)) . '</div>';
         $nx = kab_next_action($o);
         $head = '<h1>' . $h($num) . ' <span class="st">' . $h(LINEA_STATUS[$o['status']] ?? $o['status']) . '</span>' . ($o['test'] ? ' <span class="test">ТЕСТ</span>' : '') . '</h1>'
-            . '<p class="box">Клиенту сейчас: «' . $h($nx['text']) . '» · ждём: <b>' . ['client' => 'клиента', 'studio' => 'студию', 'brigade' => 'бригаду', 'none' => '—'][$nx['who']] . '</b></p>' . $tabs;
+            . '<p class="box">Клиенту сейчас: «' . $h($nx['text']) . '» · ждём: <b>' . ['client' => 'клиента', 'studio' => 'от нас', 'brigade' => 'бригаду', 'none' => '—'][$nx['who']] . '</b></p>' . $tabs;
         $b = '';
         switch ($tab) {
             case 'obzor': {
@@ -561,10 +562,10 @@ switch ($s) {
             }
             case 'dengi': {
                 $b = '<div class="box"><p>Сумма: <b>' . $rub($o['amount_kop']) . '</b> · подтверждена: ' . $d($o['amount_confirmed_at']) . ' · счёт: ' . $d($o['invoice_at']) . ' · оплачен: ' . $d($o['paid_at']) . ' (' . $h($o['paid_by']) . ')</p>'
-                    . '<p class="mut">Платёж ЮKassa: ' . $h($o['payment_id'] ?: '—') . ' · попыток ' . (int)$o['payment_tries'] . ($o['pay_alert_at'] ? ' · <b>нужна проверка оплаты</b>' : '') . '</p>'
+                    . '<p class="mut">Платёж онлайн-оплаты: ' . $h($o['payment_id'] ?: '—') . ' · попыток ' . (int)$o['payment_tries'] . ($o['pay_alert_at'] ? ' · <b>нужна проверка оплаты</b>' : '') . '</p>'
                     . $form('o_amount', $H, '<input name="rub" size="9" placeholder="сумма, ₽" value="' . ($o['amount_kop'] ? (int)$o['amount_kop'] / 100 : '') . '">', 'Сохранить и подтвердить сумму')
                     . $form('o_invoice', $H, '', 'Счёт выставлен', 'lt')
-                    . (in_array($o['status'], ['paid', 'delivered'], true) ? '<h2>Возврат</h2>' . $form('o_refund', $H, '<input name="rub" size="9" placeholder="сумма, ₽">' . $reasonIn, 'Отметить возврат', 'bad') . '<p class="mut">Сам возврат — в личном кабинете ЮKassa или банком; чек возврата — там же (API возврата ещё не подключён).</p>' : '') . '</div>';
+                    . (in_array($o['status'], ['paid', 'delivered'], true) ? '<h2>Возврат</h2>' . $form('o_refund', $H, '<input name="rub" size="9" placeholder="сумма, ₽">' . $reasonIn, 'Отметить возврат', 'bad') . '<p class="mut">Сам возврат — в личном кабинете онлайн-оплаты или банком; чек возврата — там же (API возврата ещё не подключён).</p>' : '') . '</div>';
                 break;
             }
             case 'vypuski': {
@@ -588,7 +589,7 @@ switch ($s) {
                         . '<td>' . ($a ? $h(($a['decision'] ?? '') === 'agree' ? 'Согласовано' : trim(($a['decision'] ?? '') === 'disagree' ? 'Не согласен: ' . ($a['text'] ?? '') : ($a['option'] ?? '') . ' ' . ($a['text'] ?? ''))) . '<div class="mut">' . $d($a['at']) . ', версия ' . $h($a['ver']) . '</div>' : '—') . '</td>'
                         . '<td>' . ($i['closed'] ? 'учтено' : $form('o_q_close', $H + ['qid' => $i['id']], '<input name="reason" size="14" placeholder="учтено в v2">', 'Учтено', 'lt')) . '</td></tr>';
                 }
-                $b = $reg ? '<p class="mut">Реестр версии ' . $h($reg['ver']) . ' · SHA-256 ' . $h(substr($reg['sha256'], 0, 16)) . '…</p><div class="scroll"><table><tr><th>№</th><th>Вопрос/решение</th><th>Ответ клиента</th><th></th></tr>' . $rows . '</table></div>'
+                $b = $reg ? '<p class="mut">Реестр версии ' . $h($reg['ver']) . ' · отпечаток ' . $h(substr($reg['sha256'], 0, 16)) . '…</p><div class="scroll"><table><tr><th>№</th><th>Вопрос/решение</th><th>Ответ клиента</th><th></th></tr>' . $rows . '</table></div>'
                     . '<p>Ответы для движка: <code>' . $h(kab_order_dir($o) . '/answers.json') . '</code> (перенос в project.json — tools/answers-to-project.mjs в GOST-DRAFT)</p>'
                     : '<p class="box">Реестра нет: опубликуйте версию с registry.json во вкладке «Выпуски».</p>';
                 break;
@@ -610,7 +611,7 @@ switch ($s) {
             case 'docs': {
                 $rows = implode('', array_map(fn($x) => '<tr><td>' . $h($x['doc_kind']) . ' ' . $h($x['doc_id']) . '</td><td>' . $h($x['decision']) . '</td><td>' . $h($x['version']) . '</td><td>' . $d($x['at']) . '</td><td>' . $h($x['ip']) . '</td><td><code>' . $h(substr((string)$x['sha256'], 0, 16)) . '</code></td></tr>',
                     brig_all('SELECT * FROM signatures WHERE order_id = ? ORDER BY id', [(int)$o['id']])));
-                $b = '<p>Согласие при брифе: ' . $d($o['consent_at']) . '<br><span class="mut">' . $h($o['consent_text']) . '</span></p><h2>Подписи кабинета</h2><table><tr><th>Документ</th><th>Решение</th><th>Версия</th><th>Время</th><th>IP</th><th>SHA-256</th></tr>' . ($rows ?: '<tr><td colspan="6">Нет</td></tr>') . '</table>';
+                $b = '<p>Согласие при брифе: ' . $d($o['consent_at']) . '<br><span class="mut">' . $h($o['consent_text']) . '</span></p><h2>Подписи кабинета</h2><table><tr><th>Документ</th><th>Решение</th><th>Версия</th><th>Время</th><th>IP</th><th>отпечаток документа</th></tr>' . ($rows ?: '<tr><td colspan="6">Нет</td></tr>') . '</table>';
                 break;
             }
             case 'remont': {
@@ -656,7 +657,7 @@ switch ($s) {
                 . '<td' . ($late ? ' style="color:#b4462b;font-weight:600"' : '') . '>' . $d($p['due_at']) . '</td><td>' . $h($p['status']) . ($p['reply'] ? '<div class="mut">' . $h($p['reply']) . '</div>' : '') . ($blk ? '<div class="mut">Мешает: ' . $h(implode('; ', $blk)) . '</div>' : '') . '</td>'
                 . '<td>' . ($p['status'] === 'new' ? $form('pd_do', ['id' => $p['id']], '<input name="reply" size="16" placeholder="ответ (необяз.)">', $p['kind'] === 'delete' ? 'Обезличить' : 'Выполнить', $p['kind'] === 'delete' ? 'bad' : '') . $form('pd_reject', ['id' => $p['id']], $reasonIn, 'Отказать частично', 'lt') : '') . '</td></tr>';
         }
-        adm_page('Заявки по ПДн', '<h1>Заявки по ПДн (152-ФЗ)</h1><p class="mut">Наш срок — ' . brig_terms()['pd_days'] . ' рабочих дней (закон — 30 дней). Удаление: контакты, бриф, фото, ответы — удаляются; договоры, подписи, чеки — хранятся ' . brig_terms()['retention_years'] . ' лет с закрытым доступом.</p><div class="scroll"><table><tr><th>#</th><th>Вид</th><th>Клиент</th><th>Срок</th><th>Статус</th><th></th></tr>' . ($rows ?: '<tr><td colspan="6">Заявок нет</td></tr>') . '</table></div>', 'pd', $msg);
+        adm_page('Заявки по персональным данным', '<h1>Заявки по персональным данным</h1><p class="mut">Наш срок — ' . brig_terms()['pd_days'] . ' рабочих дней (закон — 30 дней). Удаление: контакты, бриф, фото, ответы — удаляются; договоры, подписи, чеки — хранятся ' . brig_terms()['retention_years'] . ' лет с закрытым доступом.</p><div class="scroll"><table><tr><th>#</th><th>Вид</th><th>Клиент</th><th>Срок</th><th>Статус</th><th></th></tr>' . ($rows ?: '<tr><td colspan="6">Заявок нет</td></tr>') . '</table></div>', 'pd', $msg);
     }
     case 'deals': {
         $rows = '';
@@ -751,8 +752,8 @@ switch ($s) {
                 . '<td>заказчик: ' . $d($c['client_signed_at']) . ' ' . $h($c['client_ip']) . '<br>бригада: ' . $d($c['brigade_signed_at']) . ' ' . $h($c['brigade_ip']) . '</td><td>' . $form('c_verify', ['id' => $c['id']], '', 'Проверить хеш', 'lt') . '</td></tr>';
         }
         $sig = implode('', array_map(fn($x) => '<tr><td>' . $h($x['doc_kind']) . ' ' . $h($x['doc_id']) . '</td><td>' . $h($x['who_role']) . '#' . (int)$x['who_id'] . '</td><td>' . $d($x['at']) . ' МСК</td><td>' . $h($x['ip']) . '</td><td><code>' . $h(substr((string)$x['sha256'], 0, 16)) . '</code></td><td>' . $h($x['method']) . '</td></tr>', brig_all('SELECT * FROM signatures ORDER BY id DESC LIMIT 300')));
-        adm_page('Договоры и подписи', '<h1>Договоры и подписи</h1><h2>Договоры подряда (ПЭП кодом на почту)</h2><div class="scroll"><table><tr><th>Сделка</th><th>Документ</th><th>SHA-256</th><th>Подписи (время, IP)</th><th></th></tr>' . ($rows ?: '<tr><td colspan="5">Нет</td></tr>') . '</table></div>'
-            . '<h2>Подписи кабинета (решения проекта, принятие альбома)</h2><div class="scroll"><table><tr><th>Документ</th><th>Кто</th><th>Время</th><th>IP</th><th>SHA-256</th><th>Способ</th></tr>' . ($sig ?: '<tr><td colspan="6">Нет</td></tr>') . '</table></div>', 'contracts', $msg);
+        adm_page('Договоры и подписи', '<h1>Договоры и подписи</h1><h2>Договоры подряда (ПЭП кодом на почту)</h2><div class="scroll"><table><tr><th>Сделка</th><th>Документ</th><th>отпечаток документа</th><th>Подписи (время, IP)</th><th></th></tr>' . ($rows ?: '<tr><td colspan="5">Нет</td></tr>') . '</table></div>'
+            . '<h2>Подписи кабинета (решения проекта, принятие альбома)</h2><div class="scroll"><table><tr><th>Документ</th><th>Кто</th><th>Время</th><th>IP</th><th>отпечаток документа</th><th>Способ</th></tr>' . ($sig ?: '<tr><td colspan="6">Нет</td></tr>') . '</table></div>', 'contracts', $msg);
     }
     case 'disputes': {
         $rows = '';
@@ -769,7 +770,7 @@ switch ($s) {
             $rows .= '<tr><td>#' . (int)$ds['id'] . ' · сделка #' . (int)$ds['job_id'] . '<div class="mut">открыл: ' . $h($ds['opened_by']) . ', ' . $d($ds['created_at']) . '</div></td><td>' . $h($ds['subject']) . '</td><td>' . $h($ds['status']) . '<div class="mut">ответ стороны до ' . $d($due) . ($ds['proposal_due_at'] ? '; согласиться с рекомендацией до ' . $d($ds['proposal_due_at']) : '') . '</div></td>'
                 . '<td>' . ($ds['status'] !== 'resolved' ? $form('ds_propose', ['id' => $ds['id']], '<input name="text" size="28" placeholder="рекомендация LINEA">', 'Предложить решение') : $h($ds['resolution'])) . '</td></tr>';
         }
-        adm_page('Разногласия', '<h1>Рассмотрение разногласий</h1><p class="mut">Порядок: ответ второй стороны — ' . brig_terms()['dispute_reply_days'] . ' р.дн; рекомендация LINEA — стороны соглашаются за ' . brig_terms()['dispute_proposal_days'] . ' р.дн. Рекомендация необязательна, право на суд сохраняется. Выезд практика оплачивает сторона, чья позиция не подтвердилась.</p><div class="scroll"><table><tr><th>#</th><th>Тема</th><th>Сроки</th><th></th></tr>' . ($rows ?: '<tr><td colspan="4">Разногласий нет</td></tr>') . '</table></div><h2>Переписка по открытым разногласиям</h2>' . ($thread ?: '<p class="mut">Открытых разногласий нет.</p>'), 'disputes', $msg);
+        adm_page('Разногласия', '<h1>Рассмотрение разногласий</h1><p class="mut">Порядок: ответ второй стороны — ' . brig_terms()['dispute_reply_days'] . ' рабочих дней; рекомендация LINEA — стороны соглашаются за ' . brig_terms()['dispute_proposal_days'] . ' рабочих дней Рекомендация необязательна, право на суд сохраняется. Выезд практика оплачивает сторона, чья позиция не подтвердилась.</p><div class="scroll"><table><tr><th>#</th><th>Тема</th><th>Сроки</th><th></th></tr>' . ($rows ?: '<tr><td colspan="4">Разногласий нет</td></tr>') . '</table></div><h2>Переписка по открытым разногласиям</h2>' . ($thread ?: '<p class="mut">Открытых разногласий нет.</p>'), 'disputes', $msg);
     }
     case 'money': {
         ledger_sync_all();
@@ -810,29 +811,24 @@ switch ($s) {
     }
     case 'settings': {
         $t = brig_terms();
-        $LBL = ['rate' => 'Ставка вознаграждения (доля)', 'pilot' => 'Пилот', 'stage_remind_days' => 'Напоминания о приёмке, р.дн', 'stage_silence_days' => 'Молчание заказчика → сигнал и предложение разногласий, р.дн',
-            'stage_silence_days_hidden' => 'То же для скрытых работ, р.дн', 'stage_autoaccept' => 'Автоприёмка молчанием (нельзя для потребителей — не включается)', 'protect_months' => 'Защита связи заказчик–бригада, мес.',
-            'exit_fee' => '«Работать напрямую» за плату', 'invite_max' => 'Пакет получают бригад', 'offers_show_max' => 'Заказчик видит предложений', 'dispute_reply_days' => 'Ответ в разногласии, р.дн',
-            'dispute_proposal_days' => 'Согласие с рекомендацией, р.дн', 'fee_base' => 'База вознаграждения (works — только работы)', 'npd' => 'Самозанятые бригады', 'retention_years' => 'Хранение договоров, лет (⚠ юрист)',
-            'expert_visit_payer' => 'Выезд практика оплачивает', 'choose_after' => 'Подбор бригады после (final — финальный альбом)', 'bypass_penalty' => 'Неустойка за обход (только бригаде; выкл. до юриста)',
-            'termination_fee_base' => 'Вознаграждение при расторжении — от', 'pd_days' => 'Заявки по ПДн, р.дн', 'fresh_code_hours' => 'Свежесть кода для значимых действий, ч'];
+        $LBL = ['rate' => ['Ставка вознаграждения LINEA', 'доля от цены договора: 0.10 = 10 %'], 'pilot' => ['Пилот: пониженная ставка', 'включён, ставка (доля), бригад, сделок — JSON'], 'commission_due' => ['Когда вознаграждение к оплате', 'first_money — после первых денег бригаде; signed — сразу при подписании'], 'signal_no_money_days' => ['Сигнал «договор подписан, денег нет»', 'дней'], 'contacts_after' => ['Когда открываются контакты сторон', 'signed — договор подписан обеими; chosen — сразу при выборе'], 'sheets_free_limit' => ['Листов по запросу на объект без доплаты', 'штук'], 'sheets_per_day_job' => ['Листов в день по одному объекту', 'штук'], 'sheets_per_day_brigade' => ['Листов в день на бригаду', 'штук'], 'sheets_open_max' => ['Открытых запросов листов на объект', 'штук'], 'sheets_outside_paid' => ['Продавать листы вне сделки', 'да / нет'], 'sheet_price_kop' => ['Цена листа вне сделки', 'копеек: 250000 = 2 500 ₽'], 'signal_unsigned_days' => ['Сигнал «выбрана, договор не подписан»', 'дней'], 'invoice_days' => ['Срок оплаты счёта на вознаграждение', 'дней'], 'safe_deal' => ['Безопасная сделка (онлайн-оплата с удержанием)', 'да / нет — пока не включать'], 'commission_due_after_sign_days' => ['Вознаграждение к оплате через N дней после подписи', 'дней; 0 — правило выключено'], 'advance_confirm_days' => ['Бригада подтверждает отметку аванса', 'дней; молчание — подтверждение'], 'debt_warn_days' => ['Долг по счёту: предупреждение', 'дней просрочки'], 'debt_feed_close_days' => ['Долг по счёту: лента заказов закрывается', 'дней просрочки'], 'addendum_cut_admin_pct' => ['Уменьшение цены допсоглашениями — с подтверждением LINEA', '% от исходной цены договора, накопительно'], 'addendum_max_qty' => ['Допсоглашение: наибольшее количество в позиции', 'единиц'], 'addendum_max_price_kop' => ['Допсоглашение: наибольшая цена позиции', 'копеек'], 'stage_autoaccept' => ['Приёмка этапа молчанием заказчика', 'для потребителей нельзя — не включается'], 'termination_fee_base' => ['Вознаграждение при расторжении — от чего', 'accepted — от принятых этапов; paid — от оплаченного'], 'bypass_penalty' => ['Неустойка за обход площадки', 'только бригаде; выключена до юриста — JSON'], 'files_premoderation' => ['Фото портфолио — в каталог после проверки', 'да / нет'], 'stage_remind_days' => ['Напоминания заказчику о приёмке этапа', 'рабочих дней после сдачи — список, JSON'], 'stage_silence_days' => ['Заказчик молчит по этапу — сигнал LINEA', 'рабочих дней'], 'stage_silence_days_hidden' => ['То же для скрытых работ', 'рабочих дней'], 'protect_months' => ['Защита связи заказчик — бригада', 'месяцев'], 'exit_fee' => ['«Работать напрямую» за плату', 'выключено — JSON'], 'invite_max' => ['Пакет одного запроса получают бригад', 'штук'], 'offers_show_max' => ['Заказчик видит предложений сразу', 'штук'], 'offer_deadline_wd' => ['Срок предложений бригад', 'рабочих дней'], 'choose_days' => ['Срок выбора бригады заказчиком', 'дней'], 'sign_days' => ['Срок подписи договора', 'дней'], 'dispute_reply_days' => ['Ответ второй стороны в разногласии', 'рабочих дней'], 'dispute_proposal_days' => ['Согласие с рекомендацией LINEA', 'рабочих дней'], 'fee_base' => ['База вознаграждения', 'works — только работы; works_materials — с материалами бригады'], 'npd' => ['Самозанятые бригады', 'допуск, без вознаграждения, лимит суммы (копеек), большой объект (м²) — JSON'], 'retention_years' => ['Хранение договоров и подписей', 'лет'], 'expert_visit_payer' => ['Выезд практика при разногласии оплачивает', 'loser — сторона, чья позиция не подтвердилась'], 'choose_after' => ['Подбор бригады открывается после', 'final — финального альбома; first — первого варианта'], 'pd_days' => ['Срок заявки по персональным данным', 'рабочих дней (закон — 30 дней)'], 'fresh_code_hours' => ['Свежесть кода для значимых действий', 'часов']];
         $rows = '';
         foreach (BRIG_TERMS_DEFAULT as $k => $def) {
             $v = $t[$k] ?? $def;
             $inp = is_array($def) ? '<input name="t[' . $k . ']" size="50" value="' . $h(json_encode($v, JSON_UNESCAPED_UNICODE)) . '">'
                 : (is_bool($def) ? '<select name="t[' . $k . ']"' . ($k === 'stage_autoaccept' ? ' disabled' : '') . '><option value="1"' . ($v ? ' selected' : '') . '>да</option><option value="0"' . (!$v ? ' selected' : '') . '>нет</option></select>'
                 : '<input name="t[' . $k . ']" size="14" value="' . $h((string)$v) . '">');
-            $rows .= '<tr><td>' . $h($LBL[$k] ?? $k) . '<div class="mut">' . $h($k) . '</div></td><td>' . $inp . '</td></tr>';
+            $rows .= '<tr><td><b>' . $h($LBL[$k][0] ?? $k) . '</b><div class="mut">' . $h($LBL[$k][1] ?? '') . '</div></td><td>' . $inp . '</td></tr>';
         }
         $req = linea_requisites() ?? (linea_settings('requisites') ?: []);
         $hol = implode(' ', array_map(fn($x) => '<span class="st">' . $h($x['d']) . '</span>', brig_all('SELECT d FROM holidays ORDER BY d')));
         $drift = brig_terms_drift();
         $site = brig_terms_site();
-        $driftHtml = $drift ? '<div class="warn"><b>Условия на сайте устарели.</b> ' . implode('; ', array_map(fn($k, $x) => $h($LBL[$k] ?? $k) . ': на сайте ' . $h($x['site']) . ', на сервере ' . $h($x['server']), array_keys($drift), $drift))
+        $driftHtml = $drift ? '<div class="warn"><b>Условия на сайте устарели.</b> ' . implode('; ', array_map(fn($k, $x) => $h($LBL[$k][0] ?? $k) . ': на сайте ' . $h($x['site']) . ', на сервере ' . $h($x['server']), array_keys($drift), $drift))
             . '. Впишите новые значения в <code>server/api/lib/brig-terms.json</code> (готовый текст ниже), пересоберите страницы (gen-brigady-pages.js и др.) и выложите — до этого страницы показывают старые цифры.'
             . '<details><summary>brig-terms.json для текущих значений</summary><pre>' . $h(json_encode(['_' => 'см. описание в файле'] + array_intersect_key(brig_terms(), $site), JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT | JSON_PRESERVE_ZERO_FRACTION)) . '</pre></details></div>'
             : '<p class="mut">Условия на сайте совпадают с сервером (один источник — server/api/lib/brig-terms.json).</p>';
-        $body = $driftHtml . '<h1>Настройки</h1><p class="warn">Тексты условий на сайте (/brigadam/, /remont/, договоры) берутся из BRIG_TERMS в tools/site-shell.js: после изменения ставки, сроков или правил — пересобрать страницы (node tools/gen-brigady-pages.js) и выложить. Подписанные сделки не меняются: условия зафиксированы в договоре.</p>'
+        $body = $driftHtml . '<h1>Настройки</h1><p class="mut">Изменения действуют для новых сделок; подписанные договоры живут по своим условиям. Если меняете ставку, сроки или лимиты, которые видны на сайте, — плашка выше подскажет, что страницы нужно обновить.</p>'
             . '<form method="post"><input type="hidden" name="csrf" value="' . $csrf . '"><input type="hidden" name="act" value="set_terms"><div class="scroll"><table><tr><th>Параметр</th><th>Значение</th></tr>' . $rows . '</table></div><p><button>Сохранить условия</button></p></form>'
             . '<h2>Реквизиты LINEA (ИП/ООО)</h2><div class="box">' . $form('set_requisites', [], '<input name="name" size="26" placeholder="ИП Фамилия И. О." value="' . $h($req['name'] ?? '') . '"><input name="inn" size="13" placeholder="ИНН" value="' . $h($req['inn'] ?? '') . '"><input name="ogrn" size="15" placeholder="ОГРНИП" value="' . $h($req['ogrn'] ?? '') . '"><input name="bank" size="30" placeholder="банк, р/с, БИК" value="' . $h($req['bank'] ?? '') . '">', 'Сохранить реквизиты')
             . '<p class="mut">Пусто — вознаграждение «отложено до ИП»: начисляется, но счёт не выставляется.</p></div>'

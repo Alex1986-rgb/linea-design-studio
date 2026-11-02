@@ -37,18 +37,19 @@ foreach (brig_all("SELECT s.*, j.frozen_at, j.request_id, j.brigade_id, j.id jid
     $link = '#/o/' . $o['number'] . '/remont';
     foreach ($t['stage_remind_days'] as $day) {
         if ($wd >= $day) {
-            $before = (int)db_val('SELECT COUNT(*) FROM notices WHERE ukey = ?', ['stage-' . $s['id'] . '-r' . $day]);
-            kab_notice_order($o, 'remont', 'Бригада ждёт приёмки этапа «' . $s['name'] . '» уже ' . $wd . ' р.дн. Проверьте по чек-листу и примите — или верните с замечаниями.', $link, 'stage-' . $s['id'] . '-r' . $day);
+            // журнал «уже отправлено» — отдельно от уведомлений: у заказа без аккаунта уведомление не пишется, а письмо уходило каждые 15 минут (ревью В-2)
+            $before = !kab_once('stage-' . $s['id'] . '-r' . $day);
+            if (!$before) { kab_notice_order($o, 'remont', 'Бригада ждёт приёмки этапа «' . $s['name'] . '» уже ' . $wd . ' рабочих дней Проверьте по чек-листу и примите — или верните с замечаниями.', $link, 'stage-' . $s['id'] . '-r' . $day); }
             if (!$before) {
                 $sum['remind']++;
                 if (kab_email_ok((string)$o['email'])) { brig_mail((string)$o['email'], 'kab_notice', ['subject' => 'этап «' . $s['name'] . '» ждёт приёмки', 'text' => 'Бригада сдала этап «' . $s['name'] . '». Проверьте работы по чек-листу в кабинете и примите этап или верните с замечаниями.', 'link' => brig_link('kabinet/' . $link)], (bool)$o['test']); }
             }
         }
     }
-    if ($wd >= $t['stage_silence_days'] && !db_val('SELECT 1 FROM notices WHERE ukey = ?', ['stage-' . $s['id'] . '-silence'])) {
-        kab_notice_order($o, 'remont', 'Этап «' . $s['name'] . '» ждёт вашей приёмки ' . $wd . ' р.дн. Если с работой что-то не так — опишите замечания или попросите LINEA рассмотреть разногласие. Этап не считается принятым без вас.', $link, 'stage-' . $s['id'] . '-silence');
-        brig_signal('stage_silence', 'system', ['job_id' => (int)$s['jid'], 'brigade_id' => (int)$s['brigade_id']], 'Этап #' . $s['id'] . ' без приёмки ' . $wd . ' р.дн');
-        brig_admin_notify('Этап без приёмки ' . $wd . ' р.дн', 'Сделка #' . $s['jid'] . ', этап «' . $s['name'] . '». Связаться с заказчиком; предложить рассмотрение разногласий.', brig_link('api/panel.php?s=deals'), (bool)$o['test']);
+    if ($wd >= $t['stage_silence_days'] && kab_once('stage-' . $s['id'] . '-silence')) {
+        kab_notice_order($o, 'remont', 'Этап «' . $s['name'] . '» ждёт вашей приёмки ' . $wd . ' рабочих дней Если с работой что-то не так — опишите замечания или попросите LINEA рассмотреть разногласие. Этап не считается принятым без вас.', $link, 'stage-' . $s['id'] . '-silence');
+        brig_signal('stage_silence', 'system', ['job_id' => (int)$s['jid'], 'brigade_id' => (int)$s['brigade_id']], 'Этап #' . $s['id'] . ' без приёмки ' . $wd . ' рабочих дней');
+        brig_admin_notify('Этап без приёмки ' . $wd . ' рабочих дней', 'Сделка #' . $s['jid'] . ', этап «' . $s['name'] . '». Связаться с заказчиком; предложить рассмотрение разногласий.', brig_link('api/panel.php?s=deals'), (bool)$o['test']);
         $sum['silence']++;
     }
 }
@@ -59,7 +60,7 @@ foreach (brig_all("SELECT DISTINCT brigade_id FROM br_invoices WHERE paid_at IS 
     if ($d['level'] === 'none') { continue; }
     $b = brig_one('SELECT * FROM br_brigades WHERE id = ?', [(int)$x['brigade_id']]);
     $key = 'debt-' . $b['id'] . '-' . $d['level'] . '-' . date('Ym', $now);
-    if (db_val('SELECT 1 FROM notices WHERE ukey = ?', [$key])) { continue; }
+    if (!kab_once($key)) { continue; }
     kab_notice((int)$b['account_id'], null, 'dengi', $d['text'], 'brigada/', $key);
     brig_mail((string)$b['email'], 'brig_status', ['name' => $b['contact_name'], 'status' => $d['level'] === 'feed_closed' ? 'лента новых заказов закрыта до оплаты' : 'просрочен счёт на вознаграждение', 'reason' => $d['text'], 'link' => brig_link('brigada/')], (bool)$b['test']);
     $sum['debt']++;
@@ -69,18 +70,20 @@ foreach (brig_all("SELECT DISTINCT brigade_id FROM br_invoices WHERE paid_at IS 
 foreach (brig_all("SELECT * FROM pd_requests WHERE status = 'new'") as $p) {
     $left = strtotime((string)$p['due_at']) - $now;
     $key = 'pd-' . $p['id'] . ($left < 0 ? '-late' : '-soon');
-    if ($left > 3 * 86400 || db_val('SELECT 1 FROM notices WHERE ukey = ?', [$key])) { continue; }
+    if ($left > 3 * 86400 || !kab_once($key)) { continue; }
     kab_notice((int)$p['account_id'], null, 'proekt', 'Ваша заявка «' . (KAB_PD_KINDS[$p['kind']] ?? $p['kind']) . '» в работе — выполним до ' . date('d.m.Y', strtotime((string)$p['due_at'])) . '.', '#/profil', $key);
-    brig_admin_notify('ПДн: ' . ($left < 0 ? 'срок заявки прошёл' : 'срок заявки через ' . max(0, (int)ceil($left / 86400)) . ' дн.'), 'Заявка #' . $p['id'] . ' (' . $p['kind'] . ')', brig_link('api/panel.php?s=pd'), false);
+    brig_admin_notify('Персональные данные: ' . ($left < 0 ? 'срок заявки прошёл' : 'срок заявки через ' . max(0, (int)ceil($left / 86400)) . ' дн.'), 'Заявка #' . $p['id'] . ' (' . $p['kind'] . ')', brig_link('api/panel.php?s=pd'), false);
     $sum['pd']++;
 }
 
 // 5. календарь на следующий год
 if ((int)date('n', $now) === 12 && !db_val('SELECT 1 FROM holidays WHERE d LIKE ?', [(date('Y', $now) + 1) . '-%'])) {
-    if (!db_val('SELECT 1 FROM notices WHERE ukey = ?', ['holidays-' . (date('Y', $now) + 1)])) {
+    if (kab_once('holidays-' . (date('Y', $now) + 1))) {   // маркер — в журнале отправленного, не уведомлением в чужой аккаунт
         brig_admin_notify('Заполните праздники ' . (date('Y', $now) + 1), 'Сроки в рабочих днях считаются по таблице праздников: «Настройки» → «Производственный календарь».', brig_link('api/panel.php?s=settings'), false);
-        kab_notice(1, null, 'proekt', 'holidays', '', 'holidays-' . (date('Y', $now) + 1));
     }
 }
+
+// 6. сессии старше 31 дня (запомненные устройства живут 30 дней; где сборщик PHP выключен — каталог чистим сами)
+foreach (glob(linea_private() . '/sessions/sess_*') ?: [] as $f) { if (@filemtime($f) < $now - 31 * 86400) { @unlink($f); } }
 
 echo date('Y-m-d H:i:s', $now) . ' cron: ' . json_encode($sum) . "\n";
