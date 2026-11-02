@@ -28,6 +28,7 @@ ssh "$HOST" "cd ~/dizain-studiya-kvartir/linea-private && cp -p config.php confi
 if (empty(\$c[\"notify_to\"])) { \$c[\"notify_to\"] = \"$ADMIN_EMAIL\"; }
 if (empty(\$c[\"base\"])) { \$c[\"base\"] = \"$SITE\"; } // ссылки в письмах — только от адреса сайта
 if (!isset(\$c[\"allow_test\"])) { \$c[\"allow_test\"] = false; }
+if (!isset(\$c[\"admin_2fa\"])) { \$c[\"admin_2fa\"] = false; }   // второй шаг входа — включить после почты на домене (SPF/DKIM), иначе код уйдёт в спам
 if (empty(\$c[\"monitor_token\"])) { \$c[\"monitor_token\"] = bin2hex(random_bytes(24)); }   // токен для ping.php с подробностями (мониторинг, шаг 6)
 file_put_contents(\$f, \"<?php\\n// правлено tools/vykladka-kabinety.sh $STAMP, прежняя версия — config.php.bak-$STAMP\\nreturn \" . var_export(\$c, true) . \";\\n\");
 \$t = require \$f; echo \"config: brig_mail_enabled=\", var_export(\$t[\"brig_mail_enabled\"], true), \", admin_emails=\", count(\$t[\"admin_emails\"]), \", base задан=\", (\$t[\"base\"] ? \"да\" : \"нет\"), \", monitor_token задан=\", (strlen((string)(\$t[\"monitor_token\"] ?? \"\")) >= 24 ? \"да\" : \"нет\"), PHP_EOL;
