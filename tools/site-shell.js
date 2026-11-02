@@ -36,7 +36,7 @@ const SITE_DEFAULT = 'domain';
 const SITE = process.env.LINEA_SITE || SITE_DEFAULT;
 if (!process.env.LINEA_BASE && !SITE_BASES[SITE]) throw new Error(`LINEA_SITE=${SITE}: нет такого адреса (${Object.keys(SITE_BASES).join('|')})`);
 const BASE = String(process.env.LINEA_BASE || SITE_BASES[SITE]).replace(/\/+$/, '');
-const CSSV = 'v=34';
+const CSSV = 'v=35';
 
 // Разделы сайта в порядке меню. Добавили раздел — правится только здесь.
 // menu: false — раздел живёт в подвале и крошках, но не в шапке (шапка
@@ -80,6 +80,7 @@ function header(u, active) {
     <nav class="links">
 ${links}
     </nav>
+    <a class="nav-in" href="${u}vhod/">Войти</a>
     <a class="btn sm" href="${u}brief.html">Заполнить бриф</a>
     <button class="burger" type="button" aria-label="Меню" aria-expanded="false"><i></i><i></i><i></i></button>
   </div>
@@ -90,6 +91,7 @@ ${MENU.map(x => `    <a href="${x.key === active ? './' : u + x.href}">${x.title
   </nav>
   <div class="mnav-cta">
     <a class="btn" href="${u}brief.html">Заполнить бриф</a>
+    <a class="btn ghost" href="${u}vhod/">Войти в кабинет</a>
     <a class="btn ghost" href="tel:${AUTHOR.tel}">${AUTHOR.phone}</a>
   </div>
 </div>`;
@@ -161,19 +163,25 @@ const TERMS = {
 };
 
 // ── «Ремонт по проекту»: условия бригад — ЕДИНСТВЕННЫЙ источник для страниц сайта ─────────────────────────────────────
-// Серверная копия — server/api/lib/boot.php → BRIG_TERMS_DEFAULT (+ 'brig_terms' в linea-private/config.php): держать одинаковыми.
+// Источник — server/api/lib/brig-terms.json (его же читает сервер); BRIG_TERMS_DEFAULT в boot.php — только запасные значения.
 // Решение Александра 01.11.2026: платы за отклик, лид и допуск нет. Удержание сделки на платформе — сервис «Сделка через LINEA» и листы по запросу
 // под каждую бригаду, доступные только внутри сделки. Решения 01.11.2026: ставка 10 % («10 % с бригады»), пилот — первым 5 бригадам
 // первые 3 сделки по 5 %; листы в сделке бесплатно до 15 на объект; вне сделки 2 500 ₽ за лист, но продажа выключена до ИП.
 // Безопасная сделка ЮKassa и неустойки — не включены. Цифры на страницах — ТОЛЬКО отсюда, руками не вписывать.
+// С 01.11.2026 значения берутся из server/api/lib/brig-terms.json — того же файла, что читает сервер (brig_terms()): один источник.
+// Админка показывает плашку, если на сервере значение изменили, а страницы собраны со старым.
+const BT = (() => { const j = JSON.parse(require('fs').readFileSync(require('path').join(__dirname, '..', 'server', 'api', 'lib', 'brig-terms.json'), 'utf8')); return j; })();
+const pc = x => Math.round(x * 1000) / 10;   // доля → проценты (0.1 → 10)
 const BRIG_TERMS = {
-  rate: 10,                        // % от сметы выбранного предложения (агентское вознаграждение)
-  pilot: { enabled: true, rate: 5, brigades: 5, deals: 3 },   // пилот: первым N допущенным бригадам первые M сделок — по ставке pilot.rate
-  contactsAfter: 'signed',         // 'signed' — контакты сторон открываются, когда договор подтвердили на сайте обе стороны; 'chosen' — при выборе
-  sheetsFreeLimit: 15,             // листов по запросу на объект бесплатно внутри сделки; null — без лимита
-  sheetPrice: 2500,                // ₽ за лист вне сделки — продаётся, только когда sheetsOutsidePaid = true
-  sheetsOutsidePaid: false,        // выключено до ИП и кассы
-  invoiceDays: 10,
+  rate: pc(BT.rate),               // % от сметы выбранного предложения (агентское вознаграждение)
+  pilot: { enabled: !!BT.pilot.enabled, rate: pc(BT.pilot.rate), brigades: BT.pilot.brigades, deals: BT.pilot.deals },   // пилот: первым N допущенным бригадам первые M сделок
+  contactsAfter: BT.contacts_after, // 'signed' — контакты сторон открываются, когда договор подписали на сайте обе стороны; 'chosen' — при выборе
+  sheetsFreeLimit: BT.sheets_free_limit,   // листов по запросу на объект без доплаты внутри сделки; null — без лимита
+  sheetPrice: BT.sheet_price_kop / 100,    // ₽ за лист вне сделки — продаётся, только когда sheetsOutsidePaid = true
+  sheetsOutsidePaid: !!BT.sheets_outside_paid,   // выключено до ИП и кассы
+  invoiceDays: BT.invoice_days,
+  inviteMax: BT.invite_max, offersShowMax: BT.offers_show_max, protectMonths: BT.protect_months,
+  stageSilenceDays: BT.stage_silence_days, disputeReplyDays: BT.dispute_reply_days, advanceConfirmDays: BT.advance_confirm_days,
 };
 const pct = n => `${String(n).replace('.', ',')} %`;
 BRIG_TERMS.rateText = pct(BRIG_TERMS.rate);
@@ -189,7 +197,7 @@ BRIG_TERMS.contactsLine = BRIG_TERMS.contactsAfter === 'chosen'
   : 'телефоны, почта и адрес объекта открываются обеим сторонам, когда условия договора подряда подтвердили на сайте и клиент, и бригада; до этого — переписка в карточке сделки';
 // когда вознаграждение становится к оплате (Александр 01.11.2026: «оплата после первого этапа работ или аванса»):
 // 'first_money' — после первых денег бригаде (клиент отметил аванс или принял первый этап); 'signed' — сразу при подтверждении договора
-BRIG_TERMS.commissionDue = 'first_money';
+BRIG_TERMS.commissionDue = BT.commission_due;
 BRIG_TERMS.dueLine = BRIG_TERMS.commissionDue === 'first_money' ? 'только когда вы получили первые деньги: аванс или оплату первого этапа' : 'после подтверждения договора обеими сторонами';
 BRIG_TERMS.feeLine = BRIG_TERMS.commissionDue === 'first_money'
   ? `${BRIG_TERMS.rateText} от суммы сметы по выбранному предложению — только когда вы получили первые деньги: аванс или оплату первого этапа`

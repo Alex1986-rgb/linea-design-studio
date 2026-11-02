@@ -4,13 +4,13 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Кабинет бригады — LINEA</title>
-<meta name="description" content="Кабинет бригады «Ремонт по проекту»: анкета, запросы, предложения, объекты, этапы, финансы.">
+<meta name="description" content="Кабинет бригады «Ремонт по проекту»: заказы, предложения, объекты и этапы, деньги, команда.">
 <link rel="canonical" href="https://xn-----6kccjicviedfr1b2cbishm8w.xn--p1ai/brigada/">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="LINEA">
 <meta property="og:url" content="https://xn-----6kccjicviedfr1b2cbishm8w.xn--p1ai/brigada/">
-<meta property="og:title" content="Кабинет бригады">
-<meta property="og:description" content="Запросы клиентов с готовым проектом, предложения по позициям сметы, этапы и приёмка, листы по запросу.">
+<meta property="og:title" content="Кабинет бригады — LINEA">
+<meta property="og:description" content="Кабинет бригады «Ремонт по проекту»: заказы, предложения, объекты и этапы, деньги, команда.">
 <meta property="og:image" content="https://xn-----6kccjicviedfr1b2cbishm8w.xn--p1ai/assets/hero.jpg">
 <meta property="og:image:width" content="1920">
 <meta property="og:image:height" content="1280">
@@ -21,13 +21,13 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,500;0,600;1,500&family=Inter:wght@400;600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="../css/main.css?v=34">
-<link rel="stylesheet" href="../css/brigady.css?v=2">
+<link rel="stylesheet" href="../css/main.css?v=35">
 <meta name="robots" content="noindex, nofollow">
 <meta name="referrer" content="no-referrer">
-
+<link rel="stylesheet" href="../css/brigady.css?v=3">
+<link rel="stylesheet" href="../css/kabinet.css?v=2">
 </head>
-<body>
+<body class="kab-body">
 <header class="site">
   <div class="nav">
     <a class="logo" href="../">LINE<i>A</i></a>
@@ -40,6 +40,7 @@
       <a href="../style/">Стили</a>
       <a href="../journal/">Журнал</a>
     </nav>
+    <a class="nav-in" href="../vhod/">Войти</a>
     <a class="btn sm" href="../brief.html">Заполнить бриф</a>
     <button class="burger" type="button" aria-label="Меню" aria-expanded="false"><i></i><i></i><i></i></button>
   </div>
@@ -56,20 +57,36 @@
   </nav>
   <div class="mnav-cta">
     <a class="btn" href="../brief.html">Заполнить бриф</a>
+    <a class="btn ghost" href="../vhod/">Войти в кабинет</a>
     <a class="btn ghost" href="tel:+79257338640">+7 925 733-86-40</a>
   </div>
 </div>
 
-<section class="blk hero-page">
-  <div class="wrap">
-    <div class="kicker">Ремонт по проекту</div>
-    <h1>Кабинет бригады</h1>
-    <p class="lead-page">Запросы клиентов с готовым проектом, предложения по позициям сметы, этапы и приёмка, листы по запросу.</p>
-  </div>
-</section>
+<main class="kab brg" aria-live="polite">
+  <div class="wrap bx-wrap"><noscript><p>Кабинет работает с включённым JavaScript.</p></noscript><div id="bx"><p class="kab-load">Открываем кабинет…</p></div></div>
+</main>
 
-<section class="blk" style="padding-top:20px"><div class="wrap bx-wrap"><noscript><p>Кабинет работает с включённым JavaScript.</p></noscript><div id="bx" aria-live="polite"><p>Загружаю…</p></div></div></section>
-<script src="../js/brigada.js?v=2"></script>
+<nav class="kab-tabbar" id="kabBar" hidden aria-label="Разделы кабинета бригады">
+  <a href="#/" data-r="home"><span aria-hidden="true">⌂</span>Главная</a>
+  <a href="#/zakazy" data-r="zakazy"><span aria-hidden="true">▤</span>Заказы</a>
+  <a href="#/obekty" data-r="obekty"><span aria-hidden="true">▦</span>Объекты<b id="kabBell" hidden></b></a>
+  <a href="#/dengi" data-r="dengi"><span aria-hidden="true">₽</span>Деньги</a>
+  <a href="#/eshche" data-r="eshche"><span aria-hidden="true">≡</span>Ещё</a>
+</nav>
+
+<div class="kab-modal" id="kabCode" hidden role="dialog" aria-modal="true" aria-labelledby="kabCodeH">
+  <div class="kab-modal-in">
+    <h2 id="kabCodeH">Подтвердите кодом из письма</h2>
+    <p id="kabCodeTxt">Это действие юридически значимо — подтвердите, что это вы.</p>
+    <form id="kabCodeF">
+      <label class="kab-f" id="kabCodeMailL" hidden>Почта<input type="email" name="email" autocomplete="email"></label>
+      <div class="kab-row"><button class="btn sm" type="button" id="kabCodeSend">Получить код</button></div>
+      <label class="kab-f">Код из письма<input name="code" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]{6}" maxlength="6" placeholder="6 цифр"></label>
+      <p class="kab-err" role="alert"></p>
+      <div class="kab-row"><button class="btn" type="submit">Подтвердить</button><button class="btn ghost" type="button" id="kabCodeX">Отмена</button></div>
+    </form>
+  </div>
+</div>
 
 <section class="funnel" aria-label="Что дальше">
   <div class="wrap">
@@ -123,5 +140,6 @@
   document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && !m.hidden) b.click(); });
 })();
 </script>
+<script src="../js/brigada.js?v=3"></script>
 </body>
 </html>

@@ -49,10 +49,11 @@ function rm_state(array $o, string $token): array
         'invitedCount' => (int)db_val('SELECT COUNT(*) FROM br_invites WHERE request_id = ? AND sent_at IS NOT NULL', [(int)$r['id']]),
         'packFiles' => array_map(fn($f) => ['id' => (int)$f['id'], 'title' => (string)$f['title'], 'mime' => $f['mime']], brig_all("SELECT id, title, mime FROM br_files WHERE owner_kind = 'pack' AND owner_id = ?", [(int)$r['id']]))];
     // сравнение: предложения показываются, когда их ≥ 1; контактов бригад здесь нет — они открываются после выбора
-    foreach (brig_all("SELECT b.*, o.id oid, o.status ostatus, o.items, o.total_kop, o.days, o.start_date, o.warranty_months owarranty, o.materials, o.materials_note, o.stages, o.comment FROM br_offers o JOIN br_brigades b ON b.id = o.brigade_id WHERE o.request_id = ? AND o.status IN ('submitted','chosen','rejected') ORDER BY o.total_kop", [(int)$r['id']]) as $x) {
+    foreach (brig_all("SELECT b.*, o.id oid, o.status ostatus, o.items, o.total_kop, o.days, o.start_date, o.warranty_months owarranty, o.materials, o.materials_note, o.stages, o.comment, o.mode, o.sections, o.advance_pct FROM br_offers o JOIN br_brigades b ON b.id = o.brigade_id WHERE o.request_id = ? AND o.status IN ('submitted','chosen','rejected') ORDER BY o.total_kop", [(int)$r['id']]) as $x) {
         $out['offers'][] = ['id' => (int)$x['oid'], 'status' => $x['ostatus'], 'brigade' => brig_public_card($x), 'items' => json_decode($x['items'], true) ?: [], 'total' => (int)$x['total_kop'] / 100,
             'days' => (int)$x['days'], 'startDate' => $x['start_date'], 'warrantyMonths' => (int)$x['owarranty'], 'materials' => BRIG_MATERIALS[$x['materials']] ?? $x['materials'],
-            'materialsNote' => (string)$x['materials_note'], 'stages' => json_decode($x['stages'], true) ?: [], 'comment' => (string)$x['comment']];
+            'materialsNote' => (string)$x['materials_note'], 'stages' => json_decode($x['stages'], true) ?: [], 'comment' => (string)$x['comment'],
+            'mode' => $x['mode'] ?: 'items', 'sections' => array_map(fn($k) => $k / 100, json_decode((string)$x['sections'], true) ?: []), 'advancePct' => (int)$x['advance_pct']];
     }
     $j = brig_job_for_request((int)$r['id']);
     if ($j) { brig_commission_due_check((int)$j['id']); $j = brig_one('SELECT * FROM br_jobs WHERE id = ?', [(int)$j['id']]); }
@@ -69,6 +70,7 @@ function rm_state(array $o, string $token): array
             'canCancel' => $j['status'] === 'contract' && !$open,
             'advanceAt' => $j['advance_at'], 'advanceState' => $j['advance_state'], 'canAdvance' => $j['status'] === 'work' && !$j['advance_at'],
             'payments' => brig_pay_list((int)$j['id']), 'paySummary' => brig_pay_summary((int)$j['id']), 'frozen' => $j['frozen_at'] ? (string)$j['frozen_reason'] : null,
+            'stageItems' => array_map(fn($f) => ['id' => (int)$f['id'], 'stage' => (int)$f['owner_id'], 'item' => (int)substr((string)$f['title'], 5)], brig_all("SELECT f.id, f.owner_id, f.title FROM br_files f JOIN br_stages s ON s.id = f.owner_id WHERE f.owner_kind = 'stage' AND f.title LIKE 'item:%' AND s.job_id = ?", [(int)$j['id']])),
             'beforePhotos' => array_map(fn($f) => ['id' => (int)$f['id'], 'stage' => (int)$f['owner_id']], brig_all("SELECT f.id, f.owner_id FROM br_files f JOIN br_stages s ON s.id = f.owner_id WHERE f.owner_kind = 'stage_before' AND s.job_id = ? ORDER BY f.id", [(int)$j['id']])),
             'docs' => brig_deal_docs($j),
             'clientSigned' => $j['client_signed_at'], 'brigadeSigned' => $j['brigade_signed_at'], 'stages' => brig_job_stages((int)$j['id']),

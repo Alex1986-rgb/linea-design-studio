@@ -1,0 +1,17 @@
+{
+  "_": "Условия «Ремонта по проекту», которые видны на страницах сайта — ЕДИНСТВЕННЫЙ источник: его читают tools/site-shell.js (BRIG_TERMS для генераторов страниц) и сервер (lib/boot.php brig_terms() — поверх BRIG_TERMS_DEFAULT, под config и настройками админки). Изменили значение в админке — панель покажет плашку «условия на сайте устарели»: впишите значение сюда, пересоберите страницы и выложите.",
+  "rate": 0.10,
+  "pilot": { "enabled": true, "rate": 0.05, "brigades": 5, "deals": 3 },
+  "contacts_after": "signed",
+  "commission_due": "first_money",
+  "sheets_free_limit": 15,
+  "sheet_price_kop": 250000,
+  "sheets_outside_paid": false,
+  "invoice_days": 10,
+  "invite_max": 6,
+  "offers_show_max": 5,
+  "protect_months": 24,
+  "stage_silence_days": 5,
+  "dispute_reply_days": 5,
+  "advance_confirm_days": 5
+}

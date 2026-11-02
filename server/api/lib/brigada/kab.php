@@ -24,7 +24,7 @@ if ($a === 'me') {
             'can' => array_combine($p = ['feed', 'offer_send', 'sign', 'money', 'team', 'profile', 'msg', 'stage', 'photo', 'sheets'], array_map(fn($x) => brig_can($b, $x), $p)),
             'cardConsent' => $b['card_consent_ed'] !== 'revoked', 'workerMsg' => (bool)$b['worker_msg'],
             'signer' => json_decode((string)$b['signer'], true) ?: null] : null,
-        'specs' => BRIG_SPECS, 'districts' => BRIG_DISTRICTS, 'legal' => BRIG_LEGAL, 'docs' => BRIG_DOCS, 'terms' => brig_terms_public(), 'cardEd' => BRIG_CARD_ED]);
+        'specs' => BRIG_SPECS, 'districts' => BRIG_DISTRICTS, 'legal' => BRIG_LEGAL, 'docs' => BRIG_DOCS, 'terms' => brig_terms_public(), 'npd' => brig_terms()['npd'], 'cardEd' => BRIG_CARD_ED]);
 }
 $b = brig_me();
 $bid = (int)$b['id'];

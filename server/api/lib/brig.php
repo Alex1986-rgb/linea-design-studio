@@ -473,7 +473,7 @@ function brig_terms_public(): array
         'sheetsText' => 'Листы по запросу под вашу бригаду — без доплаты, пока сделка идёт через LINEA (договор подтверждён обеими сторонами на сайте, объект в работе)'
             . ($t['sheets_free_limit'] !== null ? ', до ' . (int)$t['sheets_free_limit'] . ' листов на объект' : '') . '.',
         'sheetPrice' => $t['sheets_outside_paid'] ? $t['sheet_price_kop'] / 100 : null,   // вне сделки лист продаётся, только когда платный режим включён
-        'safeDeal' => (bool)$t['safe_deal'],
+        'safeDeal' => (bool)$t['safe_deal'], 'sheetsFreeLimit' => $t['sheets_free_limit'], 'offersShowMax' => $t['offers_show_max'],
     ];
 }
 

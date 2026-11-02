@@ -97,3 +97,44 @@
   .kab-sticky .btn{width:100%;text-align:center}
   .kab-now p.big{font-size:17px}
 }
+
+/* ── кабинет бригады (site/brigada/): левое меню на компьютере, нижняя панель на телефоне; цели нажатия ≥ 48 px */
+.brg .bx-wrap{max-width:1120px}
+.brg-top{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;margin:0 0 16px}
+.brg-lay{display:grid;grid-template-columns:200px minmax(0,1fr);gap:24px;align-items:start}
+.brg-side{position:sticky;top:12px;display:flex;flex-direction:column;border:1px solid var(--line);border-radius:6px;background:var(--panel);padding:6px}
+.brg-side a{padding:10px 12px;color:var(--mut);border-radius:4px;font-size:14.5px}
+.brg-side a.on,.brg-side a:hover{color:var(--ink);background:#c29a5b1a}
+.brg-main{min-width:0}
+.brg-todo{list-style:none;padding:0;margin:0}
+.brg-todo li{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:10px 0;border-top:1px solid var(--line);font-size:15.5px;line-height:1.45}
+.brg-todo li:first-child{border-top:0}
+.brg-todo li.hot span{font-size:17px}
+.brg-todo .btn{flex:0 0 auto}
+.brg-tiles{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px;margin:0 0 14px}
+.brg-tile{display:block;border:1px solid var(--line);border-radius:6px;background:var(--panel);padding:12px 14px;color:inherit}
+.brg-tile b{display:block;font-size:22px;font-weight:600;line-height:1.2}
+.brg-tile span{color:var(--mut);font-size:13px}
+.brg-more{list-style:none;padding:0;margin:0}
+.brg-more a{display:block;padding:14px 4px;border-top:1px solid var(--line);font-size:16px}
+.brg-wiz{max-width:520px}
+.brg-wiz h2{font-size:19px;line-height:1.35}
+.brg-wiz .btn{min-height:48px}
+@media (max-width:760px){
+  .brg-lay{grid-template-columns:1fr}
+  .brg-side{display:none}
+  .brg-todo li{flex-direction:column;align-items:stretch}
+  .brg-todo .btn{width:100%;min-height:48px;text-align:center}
+  .brg .bx-row .btn{min-height:44px}
+  .brg .bx-tbl-wrap{overflow-x:auto}
+}
+
+/* ── ремонт в кабинете клиента: предложения карточками (на телефоне листаются пальцем) */
+.rm-cards{display:grid;grid-auto-flow:column;grid-auto-columns:minmax(270px,1fr);gap:12px;overflow-x:auto;scroll-snap-type:x mandatory;padding:2px 2px 10px;margin:0 0 10px}
+.rm-card{scroll-snap-align:start;border:1px solid var(--line);border-radius:6px;background:var(--panel);padding:16px;display:flex;flex-direction:column;gap:8px;min-width:0}
+.rm-card.best{border-color:var(--gold)}
+.rm-card .btn{margin-top:auto;min-height:44px}
+.rm-total{font-size:24px;font-weight:600;margin:0}
+.rm-facts{list-style:none;padding:0;margin:0;font-size:14px;line-height:1.55;color:var(--mut)}
+.brg-wiz [aria-pressed="true"]{outline:2px solid var(--gold)}
+@media (max-width:760px){.rm-cards{grid-auto-columns:86%}}

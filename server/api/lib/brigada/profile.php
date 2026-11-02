@@ -21,10 +21,10 @@ function prof_state(array $b): array
 {
     $port = [];
     foreach (brig_all('SELECT * FROM br_portfolio WHERE brigade_id = ? ORDER BY id', [(int)$b['id']]) as $p) {
-        $files = brig_all("SELECT id, kind FROM br_files WHERE owner_kind = 'portfolio' AND owner_id = ? AND brigade_id = ? ORDER BY id", [(int)$p['id'], (int)$b['id']]);
+        $files = brig_all("SELECT id, kind, moderated_at FROM br_files WHERE owner_kind = 'portfolio' AND owner_id = ? AND brigade_id = ? ORDER BY id", [(int)$p['id'], (int)$b['id']]);
         $port[] = ['id' => (int)$p['id'], 'title' => $p['title'], 'district' => (string)$p['district'], 'area' => $p['area'] !== null ? (float)$p['area'] : null,
             'year' => $p['year'] !== null ? (int)$p['year'] : null, 'works' => (string)$p['works'],
-            'photos' => array_map(fn($f) => ['id' => (int)$f['id'], 'kind' => $f['kind']], $files)];
+            'photos' => array_map(fn($f) => ['id' => (int)$f['id'], 'kind' => $f['kind'], 'moderated' => (bool)$f['moderated_at']], $files)];
     }
     $full = array_filter($port, fn($p) => in_array('before', array_column($p['photos'], 'kind'), true) && in_array('after', array_column($p['photos'], 'kind'), true));
     $missing = [];

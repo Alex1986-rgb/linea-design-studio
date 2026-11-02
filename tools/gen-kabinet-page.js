@@ -19,7 +19,7 @@ ${SHELL.head(u, { title, desc: 'Кабинет клиента LINEA: дизай�
 <meta name="robots" content="noindex, nofollow">
 <meta name="referrer" content="no-referrer">
 <link rel="stylesheet" href="${u}css/brigady.css?v=2">
-<link rel="stylesheet" href="${u}css/kabinet.css?v=1">
+<link rel="stylesheet" href="${u}css/kabinet.css?v=2">
 </head>
 <body class="kab-body">
 ${SHELL.header(u, null)}
@@ -51,8 +51,44 @@ ${SHELL.header(u, null)}
 
 ${SHELL.footer(u, null)}
 <script type="application/json" id="kabTerms">${JSON.stringify({ areaRecalc: SHELL.TERMS.areaRecalc, roundsText: SHELL.TERMS.roundsText, rounds: SHELL.TERMS.rounds, wa: 'https://wa.me/79257338640', mail: 'optteem@mail.ru' })}</script>
-<script src="${u}js/remont.js?v=3"></script>
+<script src="${u}js/kabinet-remont.js?v=1"></script>
 <script src="${u}js/kabinet.js?v=1"></script>
+</body>
+</html>
+`;
+}
+
+// Кабинет бригады (site/brigada/): тот же каркас и вход кодом, левое меню на компьютере, нижняя панель из 5 пунктов на телефоне.
+// Логика — js/brigada.js ← api/brigada.php?m=…; окно кода — общее с кабинетом клиента (те же id).
+function brigadaPage(u, canonical) {
+  const codeModal = page(u, canonical, '').match(/<div class="kab-modal" id="kabCode"[\s\S]*?\n<\/div>\n/)[0];
+  return `<!DOCTYPE html>
+<html lang="ru">
+<head>
+${SHELL.head(u, { title: 'Кабинет бригады — LINEA', desc: 'Кабинет бригады «Ремонт по проекту»: заказы, предложения, объекты и этапы, деньги, команда.', canonical })}
+<meta name="robots" content="noindex, nofollow">
+<meta name="referrer" content="no-referrer">
+<link rel="stylesheet" href="${u}css/brigady.css?v=3">
+<link rel="stylesheet" href="${u}css/kabinet.css?v=2">
+</head>
+<body class="kab-body">
+${SHELL.header(u, 'brigadam')}
+
+<main class="kab brg" aria-live="polite">
+  <div class="wrap bx-wrap"><noscript><p>Кабинет работает с включённым JavaScript.</p></noscript><div id="bx"><p class="kab-load">Открываем кабинет…</p></div></div>
+</main>
+
+<nav class="kab-tabbar" id="kabBar" hidden aria-label="Разделы кабинета бригады">
+  <a href="#/" data-r="home"><span aria-hidden="true">⌂</span>Главная</a>
+  <a href="#/zakazy" data-r="zakazy"><span aria-hidden="true">▤</span>Заказы</a>
+  <a href="#/obekty" data-r="obekty"><span aria-hidden="true">▦</span>Объекты<b id="kabBell" hidden></b></a>
+  <a href="#/dengi" data-r="dengi"><span aria-hidden="true">₽</span>Деньги</a>
+  <a href="#/eshche" data-r="eshche"><span aria-hidden="true">≡</span>Ещё</a>
+</nav>
+
+${codeModal}
+${SHELL.footer(u, 'brigadam')}
+<script src="${u}js/brigada.js?v=3"></script>
 </body>
 </html>
 `;
@@ -64,3 +100,6 @@ for (const [dir, title] of [['kabinet', 'Кабинет — LINEA'], ['vhod', '�
   fs.writeFileSync(path.join(root, dir, 'index.html'), page('../', `${SHELL.BASE}/${dir}/`, title));
   console.log(`site/${dir}/index.html — собрано`);
 }
+fs.mkdirSync(path.join(root, 'brigada'), { recursive: true });
+fs.writeFileSync(path.join(root, 'brigada', 'index.html'), brigadaPage('../', `${SHELL.BASE}/brigada/`));
+console.log('site/brigada/index.html — собрано');

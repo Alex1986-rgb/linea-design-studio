@@ -202,6 +202,15 @@ try {
   const rb = await M.req('POST', '/api/vhod.php?a=role', { json: { role: 'brigade' } });
   ok(rb.j?.go === 'brigade' && (await M.req('GET', '/api/brigada.php?m=feed')).code === 200, 'выбрана бригада — кабинет бригады открыт тем же входом');
   ok((await M.req('GET', '/api/kabinet.php?a=objects')).code === 401, 'в роли бригады кабинет клиента закрыт');
+  const bme = (await M.req('GET', '/api/brigada.php?m=kab&a=me')).j;
+  ok(bme?.brigade?.role === 'owner' && bme.brigade.can.money === true && bme.fresh === true, 'кабинет бригады: владелец, все права, вход кодом свежий (значимые действия без повторного кода)');
+  ok(Array.isArray((await M.req('GET', '/api/brigada.php?m=kab&a=home')).j?.tiles), 'главная бригады отвечает: «Сейчас от вас нужно» и плитки');
+  const rbBack = await M.req('POST', '/api/vhod.php?a=role', { json: { role: 'client' } });
+  ok(rbBack.j?.go === 'client' && (await M.req('GET', '/api/brigada.php?m=kab&a=home')).code === 401, 'переключились в клиента без повторного кода — кабинет бригады закрыт');
+  await M.req('POST', '/api/vhod.php?a=role', { json: { role: 'brigade' } });
+  const pg = n => fs.readFileSync(path.join(ROOT, 'site', n), 'utf8');
+  ok(/class="nav-in" href="[^"]*vhod\/"/.test(pg('index.html')) && /class="nav-in" href="\.\.\/vhod\/"/.test(pg('brigadam/index.html')), 'кнопка «Войти» в шапке сайта ведёт на единый вход');
+  ok(/js\/kabinet-remont\.js/.test(pg('kabinet/index.html')) && !/js\/remont\.js/.test(pg('kabinet/index.html')) && /js\/brigada\.js/.test(pg('brigada/index.html')), 'кабинет клиента — модуль ремонта kabinet-remont.js, кабинет бригады — тот же каркас');
   ok((await M.req('POST', '/api/vhod.php?a=role', { json: { role: 'admin' } })).code === 403, 'роль «админ» недоступна почте не из admin_emails');
 
   step('8. Заявки по ПДн и согласия');

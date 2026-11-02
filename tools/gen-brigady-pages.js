@@ -8,7 +8,7 @@
  * site/brigadam/          — бригадам: условия, 7 %, проверка, как получать заказы, регистрация
  * site/brigadam/pravila/  — правила площадки (черновик, noindex)
  * site/brigadam/dogovor/  — агентский договор-оферта для бригад (черновик, noindex)
- * site/brigada/           — кабинет бригады (noindex; логика — js/brigada.js, api — api/brigade/*)
+ * site/brigada/           — кабинет бригады собирает tools/gen-kabinet-page.js (логика — js/brigada.js, api — api/brigada.php)
  * site/brigady/           — заглушка каталога для GitHub Pages (noindex); на Beget /brigady/ рендерит api/katalog.php из базы
  * server/api/brigade/tpl/shell.html — каркас (шапка, подвал, стили) для api/katalog.php
  * Редакции документов — те же, что BRIG_DOCS в server/api/lib/brig.php (ED ниже): поменяли текст — поменяйте дату в обоих местах.
@@ -245,16 +245,7 @@ w('site/brigadam/dogovor/index.html', page({
 </div></section>`,
 }));
 
-// ── кабинет бригады (логика — js/brigada.js)
-w('site/brigada/index.html', page({
-  file: 'brigada/index.html', sec: 'brigadam', noindex: true,
-  title: 'Кабинет бригады — LINEA', desc: 'Кабинет бригады «Ремонт по проекту»: анкета, запросы, предложения, объекты, этапы, финансы.',
-  h1: 'Кабинет бригады', kicker: 'Ремонт по проекту',
-  lead: 'Запросы клиентов с готовым проектом, предложения по позициям сметы, этапы и приёмка, листы по запросу.',
-  extraHead: '<meta name="referrer" content="no-referrer">\n',
-  body: `<section class="blk" style="padding-top:20px"><div class="wrap bx-wrap"><noscript><p>Кабинет работает с включённым JavaScript.</p></noscript><div id="bx" aria-live="polite"><p>Загружаю…</p></div></div></section>
-<script src="../js/brigada.js?v=2"></script>`,
-}));
+// ── кабинет бригады — site/brigada/ собирает tools/gen-kabinet-page.js (общий каркас кабинетов, вход кодом)
 
 // ── каталог: заглушка для GitHub Pages (на Beget перекрывается rewrite → api/katalog.php)
 w('site/brigady/index.html', page({

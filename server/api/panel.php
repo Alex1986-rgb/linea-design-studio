@@ -482,6 +482,7 @@ function adm_todo(): array
     foreach (brig_all("SELECT id, status FROM br_sheet_reqs WHERE status = 'question'") as $x) { $add('Лист по запросу #' . $x['id'] . ' — вопрос без ответа', 'admin-brigady.php?view=sheets', false, 'remont'); }
     foreach (brig_all("SELECT number, due_at FROM br_invoices WHERE paid_at IS NULL AND due_at < ?", [date('Y-m-d')]) as $i) { $add('Счёт ' . $i['number'] . ' просрочен (срок ' . $i['due_at'] . ')', 'panel.php?s=money', true, 'dengi'); }
     $sig = (int)db_val('SELECT COUNT(*) FROM br_signals WHERE at > ?', [date('Y-m-d H:i:s', $now - 7 * 86400)]);
+    if ($dr = brig_terms_drift()) { $add('Условия на сайте устарели (' . implode(', ', array_keys($dr)) . '): пересоберите страницы из brig-terms.json и выложите', 'panel.php?s=settings', true, 'remont'); }
     if ($sig) { $add('Сигналы обхода за неделю: ' . $sig, 'admin-brigady.php?view=signals', $sig >= 5, 'remont'); }
     usort($out, fn($a, $b) => $b['hot'] <=> $a['hot']);
     return $out;
@@ -825,7 +826,13 @@ switch ($s) {
         }
         $req = linea_requisites() ?? (linea_settings('requisites') ?: []);
         $hol = implode(' ', array_map(fn($x) => '<span class="st">' . $h($x['d']) . '</span>', brig_all('SELECT d FROM holidays ORDER BY d')));
-        $body = '<h1>Настройки</h1><p class="warn">Тексты условий на сайте (/brigadam/, /remont/, договоры) берутся из BRIG_TERMS в tools/site-shell.js: после изменения ставки, сроков или правил — пересобрать страницы (node tools/gen-brigady-pages.js) и выложить. Подписанные сделки не меняются: условия зафиксированы в договоре.</p>'
+        $drift = brig_terms_drift();
+        $site = brig_terms_site();
+        $driftHtml = $drift ? '<div class="warn"><b>Условия на сайте устарели.</b> ' . implode('; ', array_map(fn($k, $x) => $h($LBL[$k] ?? $k) . ': на сайте ' . $h($x['site']) . ', на сервере ' . $h($x['server']), array_keys($drift), $drift))
+            . '. Впишите новые значения в <code>server/api/lib/brig-terms.json</code> (готовый текст ниже), пересоберите страницы (gen-brigady-pages.js и др.) и выложите — до этого страницы показывают старые цифры.'
+            . '<details><summary>brig-terms.json для текущих значений</summary><pre>' . $h(json_encode(['_' => 'см. описание в файле'] + array_intersect_key(brig_terms(), $site), JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT | JSON_PRESERVE_ZERO_FRACTION)) . '</pre></details></div>'
+            : '<p class="mut">Условия на сайте совпадают с сервером (один источник — server/api/lib/brig-terms.json).</p>';
+        $body = $driftHtml . '<h1>Настройки</h1><p class="warn">Тексты условий на сайте (/brigadam/, /remont/, договоры) берутся из BRIG_TERMS в tools/site-shell.js: после изменения ставки, сроков или правил — пересобрать страницы (node tools/gen-brigady-pages.js) и выложить. Подписанные сделки не меняются: условия зафиксированы в договоре.</p>'
             . '<form method="post"><input type="hidden" name="csrf" value="' . $csrf . '"><input type="hidden" name="act" value="set_terms"><div class="scroll"><table><tr><th>Параметр</th><th>Значение</th></tr>' . $rows . '</table></div><p><button>Сохранить условия</button></p></form>'
             . '<h2>Реквизиты LINEA (ИП/ООО)</h2><div class="box">' . $form('set_requisites', [], '<input name="name" size="26" placeholder="ИП Фамилия И. О." value="' . $h($req['name'] ?? '') . '"><input name="inn" size="13" placeholder="ИНН" value="' . $h($req['inn'] ?? '') . '"><input name="ogrn" size="15" placeholder="ОГРНИП" value="' . $h($req['ogrn'] ?? '') . '"><input name="bank" size="30" placeholder="банк, р/с, БИК" value="' . $h($req['bank'] ?? '') . '">', 'Сохранить реквизиты')
             . '<p class="mut">Пусто — вознаграждение «отложено до ИП»: начисляется, но счёт не выставляется.</p></div>'

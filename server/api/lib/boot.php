@@ -136,13 +136,36 @@ const BRIG_TERMS_DEFAULT = [
     'fresh_code_hours' => 12,       // значимые действия — после входа кодом не старше N часов
 ];
 
+/**
+ * Условия, видимые на страницах сайта, — один источник lib/brig-terms.json (его же читает tools/site-shell.js при сборке страниц).
+ * Порядок: BRIG_TERMS_DEFAULT ← brig-terms.json ← config 'brig_terms' ← настройки админки.
+ */
+function brig_terms_site(): array
+{
+    static $s = null;
+    if ($s === null) { $s = json_decode((string)@file_get_contents(__DIR__ . '/brig-terms.json'), true) ?: []; unset($s['_']); }
+    return $s;
+}
+
+/** Расхождение «на сайте (страницы собраны из brig-terms.json) ↔ на сервере сейчас» по ключам страниц — для плашки в админке. */
+function brig_terms_drift(): array
+{
+    $t = brig_terms(); $out = [];
+    foreach (brig_terms_site() as $k => $v) {
+        $cur = $t[$k] ?? null;
+        $norm = fn($x) => is_array($x) ? json_encode($x) : (is_bool($x) ? ($x ? 'да' : 'нет') : (is_float($x) || is_int($x) ? (string)(0 + $x) : (string)$x));
+        if ($norm($v) !== $norm($cur)) { $out[$k] = ['site' => $norm($v), 'server' => $norm($cur)]; }
+    }
+    return $out;
+}
+
 /** Условия бригад: значения по умолчанию + config 'brig_terms', с проверкой границ. */
 function brig_terms(bool $fresh = false): array
 {
     static $t = null;
     if ($t !== null && !$fresh) { return $t; }
     if ($fresh) { linea_settings('brig_terms', true); }
-    $t = array_replace(BRIG_TERMS_DEFAULT, is_array(linea_cfg()['brig_terms'] ?? null) ? linea_cfg()['brig_terms'] : [], linea_settings('brig_terms'));
+    $t = array_replace(BRIG_TERMS_DEFAULT, brig_terms_site(), is_array(linea_cfg()['brig_terms'] ?? null) ? linea_cfg()['brig_terms'] : [], linea_settings('brig_terms'));
     $t['rate'] = max(0.0, min(0.5, (float)$t['rate']));
     $p = is_array($t['pilot'] ?? null) ? $t['pilot'] : [];
     $t['pilot'] = ['enabled' => !empty($p['enabled']), 'rate' => max(0.0, min(0.5, (float)($p['rate'] ?? $t['rate']))),
