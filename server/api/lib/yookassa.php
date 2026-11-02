@@ -14,6 +14,8 @@
  *     совпадении суммы и номера заказа в metadata.
  *   · Чек 54-ФЗ: у самозанятого чек формируется в «Мой налог», поэтому receipt по умолчанию не передаём
  *     (config yk_receipt = true включает «Чеки от ЮKassa», ставка — yk_vat_code, по умолчанию 1 «без НДС»).
+ *     С ним же (02.11.2026): второй чек «полный расчёт» при выдаче альбома (yk_full_receipt), возврат из админки через API с чеком
+ *     возврата (yk_refund) и уведомления refund.succeeded / refund.canceled (yk_refund_settle). Журнал операций — таблица pay_ops.
  */
 declare(strict_types=1);
 
@@ -67,30 +69,195 @@ function yk_phone(string $raw): string
     return '';
 }
 
-/**
- * Чек 54-ФЗ (передаётся только при config yk_receipt = true; боевой режим этим не включается).
- * tax_system_code — config yk_tax_system (1 ОСН, 2 УСН «доходы», 3 УСН «доходы − расходы», 6 ПСН): обязателен, если у магазина
- * несколько систем налогообложения. Контакт покупателя — почта и/или телефон 7XXXXXXXXXX: без них чек не уйдёт.
- */
-function yk_receipt(array $o, int $kop): array
+/** Покупатель для чека: почта и/или телефон 7XXXXXXXXXX (без них чек не уйдёт). */
+function yk_customer(array $o): array
 {
-    $c = linea_cfg();
     $customer = [];
     if (filter_var(trim((string)$o['email']), FILTER_VALIDATE_EMAIL)) { $customer['email'] = trim((string)$o['email']); }
     $phone = yk_phone((string)$o['phone']);
     if ($phone !== '') { $customer['phone'] = $phone; }
-    $tax = $c['yk_tax_system'] ?? null;
-    return (in_array((int)$tax, [1, 2, 3, 4, 5, 6], true) ? ['tax_system_code' => (int)$tax] : []) + [
-        'customer' => $customer,
-        'items' => [[
-            'description' => mb_substr((LINEA_KINDS[$o['kind']] ?? 'Дизайн-проект') . ', заказ ' . $o['number'], 0, 128, 'UTF-8'),
-            'quantity' => '1.00',
-            'amount' => yk_money($kop),
-            'vat_code' => (int)$c['yk_vat_code'],
-            'payment_mode' => 'full_prepayment',
-            'payment_subject' => 'service',
-        ]],
+    return $customer;
+}
+
+/** Позиция чека: услуга по заказу; $mode — признак способа расчёта (full_prepayment — предоплата 100 %, full_payment — полный расчёт). */
+function yk_item(array $o, int $kop, string $mode): array
+{
+    return [
+        'description' => mb_substr((LINEA_KINDS[$o['kind']] ?? 'Дизайн-проект') . ', заказ ' . $o['number'], 0, 128, 'UTF-8'),
+        'quantity' => '1.00',
+        'amount' => yk_money($kop),
+        'vat_code' => (int)linea_cfg()['yk_vat_code'],
+        'payment_mode' => $mode,
+        'payment_subject' => 'service',
     ];
+}
+
+/** tax_system_code — config yk_tax_system (1 ОСН, 2 УСН «доходы», 3 УСН «доходы − расходы», 6 ПСН); не задан — не передаём. */
+function yk_tax(): array
+{
+    $tax = linea_cfg()['yk_tax_system'] ?? null;
+    return in_array((int)$tax, [1, 2, 3, 4, 5, 6], true) ? ['tax_system_code' => (int)$tax] : [];
+}
+
+/**
+ * Чек 54-ФЗ к платежу (передаётся только при config yk_receipt = true; боевой режим этим не включается). Деньги за проект приходят до
+ * выдачи альбома — это предоплата 100 % (full_prepayment); при выдаче альбома уходит второй чек «полный расчёт» (yk_full_receipt()).
+ */
+function yk_receipt(array $o, int $kop): array
+{
+    return yk_tax() + ['customer' => yk_customer($o), 'items' => [yk_item($o, $kop, 'full_prepayment')]];
+}
+
+// ───────────────────────── второй чек и возвраты (54-ФЗ). Всё — только при yk_receipt = true (по умолчанию выключено).
+
+/** Чеки и возвраты через API онлайн-кассы включены: онлайн-оплата включена и config yk_receipt = true. */
+function yk_receipts_on(): bool { return yk_ready() && !empty(linea_cfg()['yk_receipt']); }
+
+/** Заказ оплачен через ЮKassa (а не счётом/вручную) — только к такому платежу API даёт чек и возврат. */
+function yk_paid_online(array $o): bool { return str_starts_with((string)($o['paid_by'] ?? ''), 'yookassa ') && (string)($o['payment_id'] ?? '') !== ''; }
+
+/** Операция в журнале pay_ops: новая или обновление по ключу идемпотентности. @return id */
+function yk_op_put(array $o, string $kind, string $idem, int $kop, string $status, string $reason, string $who, ?string $pid = null): int
+{
+    $now = linea_now();
+    $have = db_one('SELECT id FROM pay_ops WHERE idem = ?', [$idem]);
+    if ($have) {
+        db_update('pay_ops', array_filter(['status' => $status, 'provider_id' => $pid, 'updated_at' => $now], fn($v) => $v !== null), 'id = ?', [(int)$have['id']]);
+        return (int)$have['id'];
+    }
+    return db_insert('pay_ops', ['order_id' => (int)$o['id'], 'kind' => $kind, 'provider_id' => $pid, 'idem' => $idem, 'amount_kop' => $kop, 'status' => $status,
+        'reason' => mb_substr($reason, 0, 500), 'by_who' => $who, 'created_at' => $now, 'updated_at' => $now]);
+}
+
+function yk_rub(int $kop): string { return number_format($kop / 100, 0, ',', ' ') . ' ₽'; }
+
+/**
+ * Второй чек «полный расчёт» при выдаче альбома: оказанная услуга закрывает ранее оплаченную предоплату (settlement prepayment).
+ * Один раз на заказ (ключ идемпотентности rcpt2-<номер>); не ушёл — повторит cron. Оплата не через ЮKassa — чек вручную (событие).
+ * @return array{ok:bool, done:bool, why:string}
+ */
+function yk_full_receipt(array $o, string $who = 'system'): array
+{
+    linea_schema();
+    if (!yk_receipts_on()) { return ['ok' => true, 'done' => false, 'why' => 'чеки через онлайн-кассу выключены']; }
+    if (!empty($o['receipt2_id'])) { return ['ok' => true, 'done' => true, 'why' => 'второй чек уже отправлен']; }
+    if ($o['status'] !== 'delivered') { return ['ok' => true, 'done' => false, 'why' => 'альбом ещё не выдан']; }
+    if (!yk_paid_online($o)) {
+        if (!db_val('SELECT 1 FROM events WHERE order_id = ? AND text LIKE ?', [(int)$o['id'], 'Второй чек:%'])) {
+            linea_event((int)$o['id'], $who, 'Второй чек: оплата была не через онлайн-кассу — чек «полный расчёт» выбить вручную');
+        }
+        return ['ok' => true, 'done' => false, 'why' => 'оплата не через онлайн-кассу'];
+    }
+    $kop = (int)$o['amount_kop'] - (int)($o['refunded_kop'] ?? 0);
+    if ($kop <= 0) { return ['ok' => true, 'done' => false, 'why' => 'оплата возвращена полностью — второй чек не нужен']; }
+    $idem = 'rcpt2-' . $o['number'];
+    $body = yk_tax() + ['customer' => yk_customer($o), 'payment_id' => (string)$o['payment_id'], 'type' => 'payment', 'send' => true,
+        'items' => [yk_item($o, $kop, 'full_payment')], 'settlement' => [['type' => 'prepayment', 'amount' => yk_money($kop)]]];
+    $res = yk_call('POST', 'receipts', $body, $idem);
+    if (!$res['ok'] || (string)($res['data']['id'] ?? '') === '') {
+        yk_op_put($o, 'receipt', $idem, $kop, 'failed', 'второй чек: ' . ($res['why'] ?: 'нет id'), $who);
+        linea_log('pay.log', 'receipt2 ' . $o['number'] . ' fail: ' . $res['why']);
+        return ['ok' => false, 'done' => false, 'why' => 'онлайн-касса не приняла чек: ' . ($res['why'] ?: 'нет ответа') . ' — повторим автоматически'];
+    }
+    $rid = (string)$res['data']['id']; $st = (string)($res['data']['status'] ?? 'pending');
+    yk_op_put($o, 'receipt', $idem, $kop, $st, 'чек «полный расчёт» при выдаче альбома', $who, $rid);
+    db_update('orders', ['receipt2_id' => $rid, 'receipt2_at' => linea_now(), 'receipt2_status' => $st, 'updated_at' => linea_now()], 'id = ?', [(int)$o['id']]);
+    linea_event((int)$o['id'], $who, 'Второй чек «полный расчёт» на ' . yk_rub($kop) . ' отправлен (' . $rid . ', ' . $st . ')');
+    linea_log('pay.log', 'receipt2 ' . $o['number'] . ' ' . $rid . ' ' . $st);
+    return ['ok' => true, 'done' => true, 'why' => ''];
+}
+
+/** Сколько ещё можно вернуть: оплачено − уже возвращено (refunded_kop) − возвраты в пути (созданы, но не проведены). */
+function yk_refund_left(array $o): int
+{
+    $way = (int)(db_val("SELECT SUM(amount_kop) FROM pay_ops WHERE order_id = ? AND kind = 'refund' AND status IN ('pending','sent')", [(int)$o['id']]) ?? 0);
+    return max(0, (int)$o['amount_kop'] - (int)($o['refunded_kop'] ?? 0) - $way);
+}
+
+/**
+ * Возврат через API (частичный или полный) с чеком возврата. Признак расчёта в чеке возврата — как у последнего чека прихода:
+ * до второго чека — предоплата 100 %, после — полный расчёт. succeeded — применяется сразу, pending — по уведомлению refund.succeeded.
+ * Повтор после сбоя связи идёт с тем же ключом идемпотентности (ЮKassa вернёт тот же возврат, второго не будет).
+ * @return array{ok:bool, status:string, why:string, id:string}
+ */
+function yk_refund(array $o, int $kop, string $reason, string $who): array
+{
+    linea_schema();
+    $fail = fn(string $w) => ['ok' => false, 'status' => '', 'why' => $w, 'id' => ''];
+    if (!yk_receipts_on()) { return $fail('возврат через API выключен (yk_receipt) — проведите в кабинете онлайн-оплаты и отметьте вручную'); }
+    if (!yk_paid_online($o)) { return $fail('заказ оплачен не через онлайн-кассу — возврат банком, отметьте вручную'); }
+    if (!in_array($o['status'], ['paid', 'delivered'], true)) { return $fail('возврат — только по оплаченному заказу'); }
+    if (trim($reason) === '') { return $fail('укажите причину'); }
+    $left = yk_refund_left($o);
+    if ($kop <= 0 || $kop > $left) { return $fail('сумма возврата — больше нуля и не больше ' . yk_rub(max(0, $left))); }
+    $prev = db_one("SELECT * FROM pay_ops WHERE order_id = ? AND kind = 'refund' AND status = 'failed' AND amount_kop = ? ORDER BY id DESC LIMIT 1", [(int)$o['id'], $kop]);
+    $idem = $prev ? (string)$prev['idem'] : 'rf-' . $o['number'] . '-' . (1 + (int)db_val("SELECT COUNT(*) FROM pay_ops WHERE order_id = ? AND kind = 'refund'", [(int)$o['id']]));
+    $opId = yk_op_put($o, 'refund', $idem, $kop, 'sent', $reason, $who);
+    $body = ['payment_id' => (string)$o['payment_id'], 'amount' => yk_money($kop), 'description' => mb_substr('Возврат по заказу ' . $o['number'], 0, 250, 'UTF-8'),
+        'receipt' => yk_tax() + ['customer' => yk_customer($o), 'items' => [yk_item($o, $kop, !empty($o['receipt2_id']) ? 'full_payment' : 'full_prepayment')]]];
+    $res = yk_call('POST', 'refunds', $body, $idem);
+    $rid = (string)($res['data']['id'] ?? '');
+    if (!$res['ok'] || $rid === '') {
+        db_update('pay_ops', ['status' => 'failed', 'updated_at' => linea_now()], 'id = ?', [$opId]);
+        linea_event((int)$o['id'], $who, 'Возврат ' . yk_rub($kop) . ' не создан: ' . ($res['why'] ?: 'нет ответа'));
+        linea_log('pay.log', 'refund ' . $o['number'] . ' fail: ' . $res['why']);
+        return $fail('онлайн-касса не приняла возврат: ' . ($res['why'] ?: 'нет ответа'));
+    }
+    $st = (string)($res['data']['status'] ?? 'pending');
+    db_update('pay_ops', ['provider_id' => $rid, 'status' => $st === 'succeeded' ? 'pending' : $st, 'updated_at' => linea_now()], 'id = ?', [$opId]);
+    linea_event((int)$o['id'], $who, 'Возврат ' . yk_rub($kop) . ' создан в онлайн-кассе (' . $rid . ', ' . $st . '): ' . $reason . '. Чек возврата — автоматически');
+    linea_log('pay.log', 'refund ' . $o['number'] . ' ' . $rid . ' ' . $st . ' ' . $kop);
+    if ($st === 'succeeded') { yk_refund_apply($opId, $who); }
+    return ['ok' => $st !== 'canceled', 'status' => $st, 'why' => $st === 'canceled' ? 'онлайн-касса отклонила возврат' : '', 'id' => $rid];
+}
+
+/** Возврат проведён: один раз (UPDATE с условием) — сумма возвращённого, полный возврат → статус «Возврат оплаты», событие, письма. */
+function yk_refund_apply(int $opId, string $who = 'yookassa'): bool
+{
+    if (db_exec("UPDATE pay_ops SET status = 'succeeded', updated_at = ? WHERE id = ? AND status <> 'succeeded'", [linea_now(), $opId]) !== 1) { return false; }
+    $op = db_one('SELECT * FROM pay_ops WHERE id = ?', [$opId]);
+    $o = db_one('SELECT * FROM orders WHERE id = ?', [(int)$op['order_id']]);
+    db_exec('UPDATE orders SET refunded_kop = refunded_kop + ?, updated_at = ? WHERE id = ?', [(int)$op['amount_kop'], linea_now(), (int)$o['id']]);
+    $o = db_one('SELECT * FROM orders WHERE id = ?', [(int)$o['id']]);
+    $full = (int)$o['refunded_kop'] >= (int)$o['amount_kop'];
+    if ($full) { db_exec("UPDATE orders SET status = 'refunded', updated_at = ? WHERE id = ? AND status IN ('paid','delivered')", [linea_now(), (int)$o['id']]); }
+    $text = 'Возврат ' . yk_rub((int)$op['amount_kop']) . ' проведён' . ($full ? ' — оплата возвращена полностью' : ' (частичный; всего возвращено ' . yk_rub((int)$o['refunded_kop']) . ')') . '. Чек возврата отправлен онлайн-кассой';
+    linea_event((int)$o['id'], $who, $text);
+    linea_log('pay.log', 'refund-ok ' . $o['number'] . ' ' . $op['provider_id'] . ' ' . $op['amount_kop']);
+    try {
+        require_once __DIR__ . '/kabinet.php';
+        kab_notice_order($o, 'dengi', 'Возврат ' . yk_rub((int)$op['amount_kop']) . ' проведён. Деньги вернутся тем же способом, каким вы платили; чек возврата придёт на почту.');
+    } catch (Throwable $e) { linea_log('error.log', 'refund notice: ' . $e->getMessage()); }
+    require_once __DIR__ . '/notify.php';
+    linea_notify('LINEA: возврат по заказу ' . $o['number'], $text . "\n" . linea_base() . '/api/panel.php?s=order&o=' . rawurlencode((string)$o['number']), (bool)$o['test']);
+    return true;
+}
+
+/** Возврат наш? По своей базе (pay_ops), без запроса в API. */
+function yk_known_refund(string $refundId): bool
+{
+    if (!preg_match('/^[0-9a-f-]{20,64}$/i', $refundId)) { return false; }
+    linea_schema();
+    return (bool)db_val("SELECT 1 FROM pay_ops WHERE kind = 'refund' AND provider_id = ?", [$refundId]);
+}
+
+/** Уведомление refund.succeeded / refund.canceled: статус — только из API (GET /v3/refunds/{id}). @return array{ok:bool, why:string} */
+function yk_refund_settle(string $refundId): array
+{
+    if (!yk_ready() || !yk_known_refund($refundId)) { return ['ok' => true, 'why' => 'не наш возврат']; }
+    $res = yk_call('GET', 'refunds/' . rawurlencode($refundId));
+    if (!$res['ok']) { return $res['code'] === 404 ? ['ok' => true, 'why' => 'возврат не найден'] : ['ok' => false, 'why' => $res['why']]; }
+    $op = db_one("SELECT * FROM pay_ops WHERE kind = 'refund' AND provider_id = ?", [$refundId]);
+    $st = (string)($res['data']['status'] ?? '');
+    $kop = (int)round(((float)($res['data']['amount']['value'] ?? 0)) * 100);
+    if ($kop !== (int)$op['amount_kop']) { linea_log('pay.log', 'refund ' . $refundId . ' сумма не совпала'); return ['ok' => true, 'why' => 'сумма не совпала']; }
+    if ($st === 'succeeded') { yk_refund_apply((int)$op['id']); return ['ok' => true, 'why' => 'succeeded']; }
+    if ($st === 'canceled' && db_exec("UPDATE pay_ops SET status = 'canceled', updated_at = ? WHERE id = ? AND status NOT IN ('canceled','succeeded')", [linea_now(), (int)$op['id']]) === 1) {
+        $o = db_one('SELECT * FROM orders WHERE id = ?', [(int)$op['order_id']]);
+        yk_alert($o, $refundId, 'ВНИМАНИЕ: платёж ' . $refundId . ' — возврат ' . yk_rub($kop) . ' отклонён онлайн-кассой (' . (string)($res['data']['cancellation_details']['reason'] ?? '—') . ') — провести иначе',
+            'LINEA: возврат по заказу ' . $o['number'] . ' отклонён');
+    }
+    return ['ok' => true, 'why' => $st];
 }
 
 /**

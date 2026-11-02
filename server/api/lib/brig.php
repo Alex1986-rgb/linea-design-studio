@@ -742,7 +742,8 @@ function brig_require_no_debt(array $b): void
 /** Действующая (не отменённая) сделка запроса: после мягкой отмены (С-3) по запросу может быть несколько строк br_jobs. */
 function brig_job_for_request(int $requestId): ?array
 {
-    return brig_one("SELECT * FROM br_jobs WHERE request_id = ? AND status <> 'cancelled' ORDER BY id DESC LIMIT 1", [$requestId]);
+    // действующая сделка; расторгнутая соглашением на сайте остаётся видна сторонам (документы, акт, лента); отменённые до договора — нет
+    return brig_one("SELECT * FROM br_jobs WHERE request_id = ? AND (status <> 'cancelled' OR terminated_at IS NOT NULL) ORDER BY id DESC LIMIT 1", [$requestId]);
 }
 
 /** Лента сообщений сделки (клиент ↔ бригада; LINEA видит всё). */
@@ -833,9 +834,76 @@ function brig_stages_clean($v): array
     foreach (array_slice(is_array($v) ? $v : [], 0, 20) as $x) {
         $n = linea_str(is_array($x) ? ($x['name'] ?? '') : '', 80);
         $d = (int)(is_array($x) ? ($x['days'] ?? 0) : 0);
-        if ($n !== '' && $d > 0 && $d <= 365) { $st[] = ['name' => $n, 'days' => $d]; }
+        // стоимость работ этапа (₽) — необязательна; задана у всех этапов — идёт в договор как есть (сумма = цене предложения)
+        $a = is_array($x) && is_numeric($x['amount'] ?? null) && (float)$x['amount'] > 0 ? (int)round((float)$x['amount'] * 100) : null;
+        if ($n !== '' && $d > 0 && $d <= 365) { $st[] = ['name' => $n, 'days' => $d] + ($a !== null ? ['amount' => $a] : []); }
     }
     return $st;
+}
+
+/** Разделы сметы → чек-листы этапов, куда относится их стоимость (договор: суммы по этапам из предложения по разделам/позициям). */
+const BRIG_SPEC_STAGE = [
+    'demontazh' => ['demontazh'], 'elektrika' => ['elektrika'], 'santehnika' => ['santehnika'], 'chernovye' => ['shtukaturka', 'styazhka'],
+    'potolki' => ['potolki'], 'plitka' => ['plitka', 'gidro'], 'malyarka' => ['malyarka'], 'poly' => ['poly'], 'mebel' => ['mebel'],
+];
+
+/**
+ * Стоимость работ по этапам (копейки, сумма = цене предложения), по порядку этапов:
+ *   1) бригада указала стоимость каждого этапа и сумма сошлась с ценой — как указано;
+ *   2) иначе — по разделам сметы: цена раздела (или сумма его позиций) относится к этапу с тем же видом работ; что не легло ни в один этап —
+ *      к последнему (финальная приёмка: деньги в конце защищают заказчика);
+ *   3) не сопоставилось ничего — равными долями.
+ * $stages — [{name, checklist?, amount?}], $totalKop — цена предложения (или договора с допсоглашениями).
+ */
+function brig_stage_amounts(array $offer, array $pack, array $stages, ?int $totalKop = null): array
+{
+    $n = count($stages);
+    if (!$n) { return []; }
+    $total = $totalKop ?? (int)$offer['total_kop'];
+    $given = array_map(fn($s) => isset($s['amount']) ? (int)$s['amount'] : null, array_values($stages));
+    if (!in_array(null, $given, true) && array_sum($given) === $total) { return $given; }
+    $keys = array_map(fn($s) => (string)($s['checklist'] ?? brig_checklist_key((string)$s['name'])), array_values($stages));
+    $bySpec = [];
+    if (($offer['mode'] ?? '') === 'sections') {
+        foreach (json_decode((string)($offer['sections'] ?? ''), true) ?: [] as $spec => $kop) { $bySpec[$spec] = ($bySpec[$spec] ?? 0) + (int)$kop; }
+    } else {
+        $items = json_decode((string)($offer['items'] ?? ''), true) ?: [];
+        foreach ($pack['positions'] ?? [] as $p) {
+            $it = $items[$p['id']] ?? null;
+            if ($it && empty($it['skip'])) { $bySpec[(string)$p['spec']] = ($bySpec[(string)$p['spec']] ?? 0) + (int)$it['sum']; }
+        }
+    }
+    $out = array_fill(0, $n, 0); $mapped = 0;
+    foreach ($bySpec as $spec => $kop) {
+        foreach (BRIG_SPEC_STAGE[$spec] ?? [] as $ck) {
+            $i = array_search($ck, $keys, true);
+            if ($i !== false) { $out[$i] += $kop; $mapped += $kop; continue 2; }
+        }
+    }
+    if ($mapped <= 0) {
+        $per = intdiv($total, $n);
+        return array_map(fn($i) => $i === $n - 1 ? $total - $per * ($n - 1) : $per, range(0, $n - 1));
+    }
+    $sumSpec = array_sum($bySpec);
+    $out[$n - 1] += $sumSpec - $mapped;   // разделы без своего этапа — к последнему
+    if ($sumSpec !== $total && $sumSpec > 0) {   // допсоглашения или округление: масштаб к цене, остаток копеек — последнему этапу
+        $k = $total / $sumSpec;
+        $out = array_map(fn($v) => (int)floor($v * $k), $out);
+    }
+    $out[$n - 1] += $total - array_sum($out);
+    return $out;
+}
+
+/** Суммы этапов сделки: записанные при договоре (br_stages.amount_kop) или пересчёт для сделок до 02.11.2026. @return [stage_id => kop] */
+function brig_job_stage_amounts(int $jobId): array
+{
+    $st = brig_all('SELECT id, name, checklist, amount_kop FROM br_stages WHERE job_id = ? ORDER BY idx', [$jobId]);
+    if (!$st) { return []; }
+    if (!in_array(null, array_column($st, 'amount_kop'), true)) { return array_combine(array_map('intval', array_column($st, 'id')), array_map('intval', array_column($st, 'amount_kop'))); }
+    $j = brig_one('SELECT j.deal_total_kop, j.request_id, o.* FROM br_jobs j JOIN br_offers o ON o.id = j.offer_id WHERE j.id = ?', [$jobId]);
+    $pack = json_decode((string)db_val('SELECT pack FROM br_requests WHERE id = ?', [(int)$j['request_id']]), true) ?: [];
+    $am = brig_stage_amounts($j, $pack, $st, (int)($j['deal_total_kop'] ?: $j['total_kop']));
+    return array_combine(array_map('intval', array_column($st, 'id')), $am);
 }
 
 /** Рейтинг бригады — только по видимым отзывам реальных клиентов завершённых объектов. */
@@ -902,6 +970,7 @@ function brig_job_stages(int $jobId): array
     foreach (brig_all('SELECT * FROM br_stages WHERE job_id = ? ORDER BY idx', [$jobId]) as $s) {
         $out[] = [
             'id' => (int)$s['id'], 'idx' => (int)$s['idx'], 'name' => $s['name'], 'status' => $s['status'], 'statusText' => BRIG_STAGE_STATUS[$s['status']] ?? $s['status'],
+            'amount' => isset($s['amount_kop']) && $s['amount_kop'] !== null ? (int)$s['amount_kop'] / 100 : null,
             'planStart' => $s['plan_start'], 'planEnd' => $s['plan_end'], 'readyAt' => $s['ready_at'], 'acceptedAt' => $s['accepted_at'], 'startedAt' => $s['started_at'] ?? null,
             'checklist' => brig_checklist($s['checklist']), 'checks' => json_decode((string)$s['checks'], true) ?: [],
             'photos' => array_map(fn($f) => (int)$f['id'], brig_all("SELECT id FROM br_files WHERE owner_kind = 'stage' AND owner_id = ? ORDER BY id", [(int)$s['id']])),

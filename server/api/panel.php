@@ -14,6 +14,7 @@ require __DIR__ . '/lib/boot.php';
 require __DIR__ . '/lib/kabinet.php';
 require __DIR__ . '/lib/brigada.php';
 require __DIR__ . '/lib/adm-brigady-act.php';
+require __DIR__ . '/lib/yookassa.php';
 
 header('X-Robots-Tag: noindex, nofollow');
 header('Cache-Control: no-store');
@@ -146,7 +147,13 @@ if (($_SERVER['REQUEST_METHOD'] ?? '') === 'POST') {
                     'cancelled' => 'Заказ отменён: ' . $reason, 'refunded' => 'Оплата возвращена: ' . $reason, 'awaiting_payment' => 'Заказ ждёт оплаты.'][$to] ?? '';
                 kab_notice_order($o, $to === 'refunded' || $to === 'paid' ? 'dengi' : 'proekt', $txt);
                 brig_audit($WHO, 'order-status', 'order ' . $o['number'], $to . ($reason ? ': ' . $reason : ''));
-                $msg = 'Статус изменён.'; break;
+                $msg = 'Статус изменён.';
+                if ($to === 'delivered') {   // 54-ФЗ: второй чек «полный расчёт» (только при yk_receipt; не ушёл — повторит cron)
+                    $rc = yk_full_receipt($o, $WHO);
+                    if ($rc['done']) { brig_audit($WHO, 'order-receipt2', 'order ' . $o['number']); $msg .= ' Второй чек «полный расчёт» отправлен.'; }
+                    elseif (!$rc['ok']) { $msg .= ' Второй чек не ушёл: ' . $rc['why']; }
+                }
+                break;
             }
             case 'o_amount': {
                 if (!$o) { break; }
@@ -170,10 +177,19 @@ if (($_SERVER['REQUEST_METHOD'] ?? '') === 'POST') {
             case 'o_refund': {
                 if (!$o) { break; }
                 $kop = (int)round((float)str_replace([' ', ','], ['', '.'], (string)($_POST['rub'] ?? '')) * 100);
-                if (!$need($kop > 0 && $kop <= (int)$o['amount_kop'] && $reason !== '', 'Возврат: сумма не больше оплаченной и причина')) { break; }
-                $full = $kop === (int)$o['amount_kop'];
-                if ($full) { $oupd(['status' => 'refunded']); }
-                linea_event((int)$o['id'], 'admin', 'Возврат ' . $rub($kop) . ($full ? ' (полный)' : ' (частичный)') . ': ' . $reason . '. Провести в онлайн-оплата / банке и выбить чек возврата');
+                // через API онлайн-кассы (yk_receipt включён и заказ оплачен онлайн): возврат и чек возврата создаёт ЮKassa,
+                // статус «Возврат оплаты» — когда возврат проведён (сразу или по уведомлению refund.succeeded)
+                if (yk_receipts_on() && yk_paid_online($o)) {
+                    $r = yk_refund($o, $kop, $reason, $WHO);
+                    brig_audit($WHO, 'order-refund-api', 'order ' . $o['number'], $rub($kop) . ': ' . $reason . ' → ' . ($r['ok'] ? $r['status'] . ' ' . $r['id'] : 'отказ: ' . $r['why']));
+                    $msg = $r['ok'] ? ($r['status'] === 'succeeded' ? 'Возврат проведён, чек возврата отправлен онлайн-кассой.' : 'Возврат создан и ждёт проведения (' . $r['status'] . ') — статус обновится по уведомлению.') : 'Возврат не создан: ' . $r['why'];
+                    break;
+                }
+                if (!$need($kop > 0 && $kop <= yk_refund_left($o) && $reason !== '', 'Возврат: сумма не больше оплаченной (за вычетом прежних возвратов) и причина')) { break; }
+                $full = $kop + (int)$o['refunded_kop'] >= (int)$o['amount_kop'];
+                $oupd(['refunded_kop' => (int)$o['refunded_kop'] + $kop] + ($full ? ['status' => 'refunded'] : []));
+                yk_op_put($o, 'refund', 'manual-' . $o['number'] . '-' . bin2hex(random_bytes(4)), $kop, 'manual', $reason, $WHO);
+                linea_event((int)$o['id'], 'admin', 'Возврат ' . $rub($kop) . ($full ? ' (полный)' : ' (частичный)') . ': ' . $reason . '. Отмечен вручную — провести в кабинете онлайн-оплаты / банке и выбить чек возврата');
                 kab_notice_order($o, 'dengi', 'Оформлен возврат ' . $rub($kop) . '. Деньги вернутся тем же способом, каким вы платили.');
                 brig_audit($WHO, 'order-refund', 'order ' . $o['number'], $rub($kop) . ': ' . $reason);
                 $msg = 'Возврат отмечен. Деньги — через кабинет онлайн-оплаты или банк, чек возврата — там же.'; break;
@@ -565,7 +581,13 @@ switch ($s) {
                     . '<p class="mut">Платёж онлайн-оплаты: ' . $h($o['payment_id'] ?: '—') . ' · попыток ' . (int)$o['payment_tries'] . ($o['pay_alert_at'] ? ' · <b>нужна проверка оплаты</b>' : '') . '</p>'
                     . $form('o_amount', $H, '<input name="rub" size="9" placeholder="сумма, ₽" value="' . ($o['amount_kop'] ? (int)$o['amount_kop'] / 100 : '') . '">', 'Сохранить и подтвердить сумму')
                     . $form('o_invoice', $H, '', 'Счёт выставлен', 'lt')
-                    . (in_array($o['status'], ['paid', 'delivered'], true) ? '<h2>Возврат</h2>' . $form('o_refund', $H, '<input name="rub" size="9" placeholder="сумма, ₽">' . $reasonIn, 'Отметить возврат', 'bad') . '<p class="mut">Сам возврат — в личном кабинете онлайн-оплаты или банком; чек возврата — там же (API возврата ещё не подключён).</p>' : '') . '</div>';
+                    . '<p class="mut">Второй чек «полный расчёт»: ' . ($o['receipt2_id'] ? $h($o['receipt2_id']) . ' · ' . $d($o['receipt2_at']) . ' · ' . $h($o['receipt2_status']) : (yk_receipts_on() ? 'уйдёт при выдаче альбома' : 'чеки через онлайн-кассу выключены (yk_receipt)')) . ' · возвращено: ' . $rub((int)$o['refunded_kop']) . '</p>'
+                    . (in_array($o['status'], ['paid', 'delivered'], true) ? '<h2>Возврат</h2>' . (yk_receipts_on() && yk_paid_online($o)
+                        ? $form('o_refund', $H, '<input name="rub" size="9" placeholder="сумма, ₽">' . $reasonIn, 'Вернуть через онлайн-кассу', 'bad') . '<p class="mut">Частичный или полный. Возврат и чек возврата создаёт онлайн-касса; доступно к возврату: ' . $rub(yk_refund_left($o)) . '.</p>'
+                        : $form('o_refund', $H, '<input name="rub" size="9" placeholder="сумма, ₽">' . $reasonIn, 'Отметить возврат', 'bad') . '<p class="mut">Сам возврат — в личном кабинете онлайн-оплаты или банком; чек возврата — там же (возврат через API — при оплате онлайн и включённых чеках yk_receipt).</p>') : '')
+                    . (($ops = brig_all('SELECT * FROM pay_ops WHERE order_id = ? ORDER BY id', [(int)$o['id']])) ? '<h2>Операции онлайн-кассы</h2><div class="scroll"><table><tr><th>Когда</th><th>Что</th><th>Сумма</th><th>Статус</th><th>id</th><th>Причина</th><th>Кто</th></tr>'
+                        . implode('', array_map(fn($p) => '<tr><td>' . $d($p['created_at']) . '</td><td>' . ($p['kind'] === 'refund' ? 'возврат' : 'чек') . '</td><td>' . $rub($p['amount_kop']) . '</td><td>' . $h($p['status']) . '</td><td class="mut">' . $h($p['provider_id'] ?: '—') . '</td><td>' . $h($p['reason']) . '</td><td>' . $h($p['by_who']) . '</td></tr>', $ops)) . '</table></div>' : '')
+                    . '</div>';
                 break;
             }
             case 'vypuski': {

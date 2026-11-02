@@ -357,4 +357,28 @@ return [
         "ALTER TABLE accounts ADD COLUMN sess_epoch {INT} NOT NULL DEFAULT 0",
         "UPDATE accounts SET verified_at = last_login_at WHERE role = 'client' AND last_login_at IS NOT NULL",
     ],
+    // 02.11.2026 — деньги и сделка (docs/reports/2026-11-02-dengi-sdelka.md): второй чек «полный расчёт» и возвраты через API ЮKassa
+    // (журнал операций pay_ops), суммы этапов договора подряда и расторжение с актом о принятом объёме, автоудаление ПДн по срокам
+    // (отметка pd_purged_at), второй фактор входа в админку (доверенные устройства adm_devices; коды — в auth_codes с purpose admin2fa).
+    7 => [
+        "ALTER TABLE orders ADD COLUMN receipt2_id {KEY}",
+        "ALTER TABLE orders ADD COLUMN receipt2_at {KEY}",
+        "ALTER TABLE orders ADD COLUMN receipt2_status {SHORT}",
+        "ALTER TABLE orders ADD COLUMN refunded_kop {INT} NOT NULL DEFAULT 0",
+        "ALTER TABLE orders ADD COLUMN pd_purged_at {KEY}",
+        "CREATE TABLE IF NOT EXISTS pay_ops (
+            id {ID}, order_id {INT} NOT NULL, kind {SHORT} NOT NULL, provider_id {KEY}, idem {KEY} NOT NULL UNIQUE, amount_kop {INT} NOT NULL,
+            status {SHORT} NOT NULL, reason {TEXT}, by_who {KEY}, created_at {KEY} NOT NULL, updated_at {KEY} NOT NULL,
+            FOREIGN KEY (order_id) REFERENCES orders(id) ON DELETE CASCADE)
+            {ENGINE}",
+        "CREATE INDEX pay_ops_provider ON pay_ops(provider_id)",
+        "CREATE INDEX pay_ops_order ON pay_ops(order_id)",
+        "ALTER TABLE br_stages ADD COLUMN amount_kop {INT}",
+        "ALTER TABLE br_jobs ADD COLUMN terminated_at {KEY}",
+        "ALTER TABLE br_jobs ADD COLUMN accepted_kop {INT}",
+        "ALTER TABLE br_jobs ADD COLUMN pd_purged_at {KEY}",
+        "CREATE TABLE IF NOT EXISTS adm_devices (
+            id {ID}, token_hash {KEY} NOT NULL UNIQUE, created_at {KEY} NOT NULL, expires_at {INT} NOT NULL, ip {KEY}, ua {KEY}, ended_at {KEY})
+            {ENGINE}",
+    ],
 ];

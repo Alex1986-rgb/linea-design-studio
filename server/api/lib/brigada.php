@@ -84,9 +84,11 @@ function brig_pay_plan(int $jobId): void
     if (db_val("SELECT COUNT(*) FROM br_payments WHERE job_id = ? AND kind = 'stage'", [$jobId])) { return; }
     $j = brig_one('SELECT j.*, o.total_kop, o.advance_pct FROM br_jobs j JOIN br_offers o ON o.id = j.offer_id WHERE j.id = ?', [$jobId]);
     if (!$j) { return; }
-    $plan = brig_pay_plan_calc((int)($j['deal_total_kop'] ?? $j['total_kop']), (int)$j['advance_pct'], brig_all('SELECT id, idx, plan_end FROM br_stages WHERE job_id = ? ORDER BY idx', [$jobId]));
+    $plan = brig_pay_plan_calc((int)($j['deal_total_kop'] ?? $j['total_kop']), (int)$j['advance_pct'],
+        array_map(fn($x) => ['id' => (int)$x['id'], 'plan_end' => $x['plan_end'], 'amount' => $x['amount_kop'] !== null ? (int)$x['amount_kop'] : null], brig_all('SELECT id, idx, plan_end, amount_kop FROM br_stages WHERE job_id = ? ORDER BY idx', [$jobId])));
     $now = linea_now();
     foreach ($plan as $p) {
+        if ($p['kind'] === 'stage' && $p['amount'] <= 0) { continue; }
         if ($p['kind'] === 'advance') {
             $have = brig_one("SELECT * FROM br_payments WHERE job_id = ? AND kind = 'advance' ORDER BY id LIMIT 1", [$jobId]);
             if ($have) { if ((int)$have['amount_kop'] === 0) { db_update('br_payments', ['amount_kop' => $p['amount']], 'id = ?', [(int)$have['id']]); } continue; }
@@ -96,16 +98,26 @@ function brig_pay_plan(int $jobId): void
     }
 }
 
-/** Расчёт плана (для договора и реестра): [{kind, stage, amount, due}]. */
+/**
+ * Расчёт плана (для договора и реестра): [{kind, stage, amount, due}]. Аванс — процент цены (не больше 50 %). Этапы: если у всех есть
+ * стоимость (amount, сумма = цене) — к оплате после приёмки = стоимость этапа за вычетом соразмерной части аванса; иначе — равные доли остатка.
+ */
 function brig_pay_plan_calc(int $totalKop, int $advancePct, array $stages): array
 {
     $adv = $advancePct > 0 ? (int)round($totalKop * min(50, $advancePct) / 100) : 0;
     $out = $adv > 0 ? [['kind' => 'advance', 'stage' => null, 'amount' => $adv, 'due' => null]] : [];
+    $stages = array_values($stages);
     $n = count($stages);
     if (!$n) { return $out; }
-    $rest = $totalKop - $adv; $per = intdiv($rest, $n);
-    foreach (array_values($stages) as $i => $s) {
-        $out[] = ['kind' => 'stage', 'stage' => isset($s['id']) ? (int)$s['id'] : null, 'amount' => $i === $n - 1 ? $rest - $per * ($n - 1) : $per, 'due' => $s['plan_end'] ?? null];
+    $rest = $totalKop - $adv;
+    $amts = array_map(fn($s) => isset($s['amount']) && $s['amount'] !== null ? (int)$s['amount'] : null, $stages);
+    $byAmount = !in_array(null, $amts, true) && array_sum($amts) === $totalKop && $totalKop > 0;
+    $per = intdiv($rest, $n); $acc = 0;
+    foreach ($stages as $i => $s) {
+        $pay = $byAmount ? $amts[$i] - (int)round($adv * $amts[$i] / $totalKop) : $per;
+        if ($i === $n - 1) { $pay = $rest - $acc; }
+        $acc += $pay;
+        $out[] = ['kind' => 'stage', 'stage' => isset($s['id']) ? (int)$s['id'] : null, 'amount' => $pay, 'due' => $s['plan_end'] ?? null];
     }
     return $out;
 }

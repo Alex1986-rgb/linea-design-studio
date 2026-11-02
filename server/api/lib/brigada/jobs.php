@@ -8,6 +8,7 @@
  *                ?a=stage_photo (multipart: stage, file); ?a=stage_ready {stage};
  *                ?a=remark_close {remark, note}; ?a=dispute {j, subject, text}; ?a=dispute_msg {d, text}
  *                ?a=advance {j} — «аванс получен» (сразу «к оплате»); ?a=advance_dispute {j, reason} — оспорить отметку заказчика (В-2);
+ *                ?a=terminate {j, reason, extra?, extraNote?} — предложить расторжение (акт о принятом объёме);
  *                ?a=stage_start {stage} — «Начать работу» по этапу (этап 1 — одна из дат «к оплате», К-1)
  */
 declare(strict_types=1);
@@ -93,10 +94,10 @@ function stage_own(int $sid, int $bid): array
 }
 
 // права людей бригады (спецификация 1.2) и значимые действия — после входа кодом не старше fresh_code_hours (4.0)
-$need = ['sign' => 'sign', 'addendum' => 'sign', 'addendum_cancel' => 'sign', 'cancel' => 'sign', 'advance' => 'money', 'advance_dispute' => 'money', 'pay' => 'money', 'pay_contest' => 'money',
+$need = ['sign' => 'sign', 'addendum' => 'sign', 'terminate' => 'sign', 'addendum_cancel' => 'sign', 'cancel' => 'sign', 'advance' => 'money', 'advance_dispute' => 'money', 'pay' => 'money', 'pay_contest' => 'money',
     'dispute' => 'sign', 'msg' => 'msg', 'stage_photo' => 'photo', 'stage_ready' => 'stage', 'stage_start' => 'stage', 'remark_close' => 'remark', 'sign_ask' => 'sign_ask'];
 if (isset($need[$a])) { brig_need($b, $need[$a]); }
-if (in_array($a, ['addendum', 'advance', 'advance_dispute', 'pay', 'pay_contest', 'dispute', 'stage_ready', 'cancel'], true)) { kab_require_fresh(); }
+if (in_array($a, ['addendum', 'terminate', 'advance', 'advance_dispute', 'pay', 'pay_contest', 'dispute', 'stage_ready', 'cancel'], true)) { kab_require_fresh(); }
 if (isset($in['j']) && !in_array($a, ['msg', 'dispute', 'dispute_msg', 'sign_ask'], true)) { deal_require_not_frozen(job_own((int)$in['j'], $bid)); }
 $WHO = brig_who($b);
 
@@ -127,6 +128,10 @@ switch ($a) {
         $j = job_own((int)($in['j'] ?? 0), $bid);
         $id = brig_addendum_propose($j, $in, $WHO, ['who' => $WHO, 'job_id' => (int)$j['id'], 'brigade_id' => $bid]);
         brig_audit($WHO, 'addendum-propose', 'job#' . $j['id'], 'Подрядчик предложил допсоглашение');
+        linea_json(['ok' => true, 'doc' => $id]);
+    case 'terminate':   // предложить расторжение: соглашение и акт о выполненном и принятом объёме, подпись кодом обеих сторон
+        $j = job_own((int)($in['j'] ?? 0), $bid);
+        $id = brig_termination_propose($j, 'brigade', $in, $WHO, ['who' => $WHO, 'job_id' => (int)$j['id'], 'brigade_id' => $bid]);
         linea_json(['ok' => true, 'doc' => $id]);
     case 'addendum_cancel':
         $j = job_own((int)($in['j'] ?? 0), $bid);

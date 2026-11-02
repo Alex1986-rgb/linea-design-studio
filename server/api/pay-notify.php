@@ -1,6 +1,6 @@
 <?php
 /**
- * Вебхук ЮKassa (payment.succeeded / payment.canceled). Адрес в кабинете ЮKassa: https://<домен>/api/pay-notify.php
+ * Вебхук ЮKassa (payment.succeeded / payment.canceled; refund.succeeded / refund.canceled — возвраты из админки, 02.11.2026). Адрес в кабинете ЮKassa: https://<домен>/api/pay-notify.php
  * ЮKassa шлёт уведомления только на HTTPS — включать после домена и SSL.
  *
  * Телу запроса не верим: берём только object.id и спрашиваем статус у API. Подделка (чужой или выдуманный id) → 200
@@ -18,7 +18,15 @@ if (!linea_rate('yk-notify', max(10, (int)(linea_cfg()['yk_notify_per_hour'] ?? 
 $raw = (string)file_get_contents('php://input', false, null, 0, 65536);
 $in = json_decode($raw, true);
 $id = is_array($in) ? (string)($in['object']['id'] ?? '') : '';
+$event = is_array($in) ? (string)($in['event'] ?? '') : '';
 if ($id === '') { http_response_code(200); exit; }
+// возврат: свой id ищем в журнале операций pay_ops, статус — только из API (GET /v3/refunds/{id})
+if (str_starts_with($event, 'refund.')) {
+    if (!yk_known_refund($id)) { linea_log('pay.log', 'notify: неизвестный возврат — пропущен'); http_response_code(200); exit; }
+    try { $r = yk_refund_settle($id); } catch (Throwable $e) { linea_log('error.log', 'notify refund: ' . $e->getMessage()); http_response_code(500); exit; }
+    linea_log('pay.log', 'notify refund ' . substr(preg_replace('/[^0-9a-f-]/i', '', $id) ?? '', 0, 64) . ' → ' . ($r['ok'] ? $r['why'] : 'error ' . $r['why']));
+    http_response_code($r['ok'] ? 200 : 500); exit;
+}
 // сначала своя база: неизвестный id (не наш текущий и не прежний платёж) — 200 без обращения к API
 if (!yk_known_payment($id)) { linea_log('pay.log', 'notify: неизвестный платёж — пропущен'); http_response_code(200); exit; }
 try {

@@ -11,6 +11,8 @@
  *   POST ?a=sign {doc?, code?, pep:true} — подпись договора/допсоглашения на сайте (ПЭП): без кода — код уходит на почту заказчика,
  *                                 с кодом — подпись (время, IP, хеш версии). Обе подписи договора → контакты, вознаграждение, объект в работе
  *   POST ?a=addendum {items:[{name,unit,qty,price}], daysAdd, note} / ?a=addendum_cancel {doc} — допсоглашение (изменения — только так)
+ *   POST ?a=terminate {reason, extra?, extraNote?} — предложить расторжение: соглашение + акт о выполненном и принятом объёме (подпись кодом,
+ *                                 как договор; ?a=addendum_cancel {doc} — отозвать неподписанное)
  *   POST ?a=msg {text}           — сообщение бригаде в ленте сделки (до открытия контактов контакты в тексте скрываются)
  *   POST ?a=advance              — «аванс бригаде внесён» (первые деньги по сделке: с этого момента вознаграждение LINEA к оплате)
  *   POST ?a=job_cancel {reason}  — отказаться от выбранной бригады до подтверждения договора (сигнал обхода в админке)
@@ -91,7 +93,7 @@ $in = brig_input();
 $a = (string)($_GET['a'] ?? '');
 // значимые действия (выбор, подписи, отметки оплат, приёмка, разногласие, отзыв, отказ) — только после входа кодом на почту заказа
 // не старше fresh_code_hours (спецификация 3.0 п. 6, ревью техники В-5): одной ссылки с токеном мало
-if (in_array($a, ['request', 'invite', 'msg', 'dispute_msg', 'choose', 'sign', 'addendum', 'addendum_cancel', 'advance', 'pay', 'pay_contest', 'job_cancel', 'stage_accept', 'stage_return', 'review', 'dispute', 'cancel'], true)) {
+if (in_array($a, ['request', 'invite', 'msg', 'dispute_msg', 'choose', 'sign', 'addendum', 'addendum_cancel', 'terminate', 'advance', 'pay', 'pay_contest', 'job_cancel', 'stage_accept', 'stage_return', 'review', 'dispute', 'cancel'], true)) {
     kab_require_fresh_for_order($o);
 }
 $jf = ($rq = brig_one('SELECT id FROM br_requests WHERE order_id = ?', [$oid])) ? brig_job_for_request((int)$rq['id']) : null;
@@ -181,6 +183,10 @@ switch ($a) {
         brig_addendum_propose($j, $in, $who, ['who' => $who, 'job_id' => (int)$j['id'], 'brigade_id' => (int)$j['brigade_id']]);
         brig_audit($who, 'addendum-propose', 'job#' . $j['id'], 'Заказчик предложил допсоглашение');
         break;
+    case 'terminate':
+        if (!$j) { linea_fail('Расторжение — по объекту с выбранной бригадой'); }
+        $doc = brig_termination_propose($j, 'client', $in, $who, ['who' => $who, 'job_id' => (int)$j['id'], 'brigade_id' => (int)$j['brigade_id']]);
+        linea_json(['ok' => true, 'doc' => $doc, 'message' => 'Соглашение о расторжении и акт готовы — подпишите кодом; бригада подпишет со своей стороны']);
     case 'addendum_cancel':
         if (!$j) { linea_fail('Нет объекта'); }
         brig_addendum_cancel($j, (int)($in['doc'] ?? 0), $who);

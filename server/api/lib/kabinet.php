@@ -636,7 +636,7 @@ function ledger_sync(int $jobId): ?array
     $t = brig_terms();
     $status = $inv ? ($inv['paid_at'] ? 'paid' : 'invoiced')
         : ($j['legal'] === 'npd' && $t['npd']['no_fee'] ? 'waived'
-        : ($j['status'] === 'cancelled' ? 'void' : ($j['commission_due_at'] ? (linea_requisites() ? 'due' : 'deferred') : 'accrued')));
+        : ($j['status'] === 'cancelled' && (empty($j['terminated_at']) || (int)$j['commission_kop'] <= 0) ? 'void' : ($j['commission_due_at'] ? (linea_requisites() ? 'due' : 'deferred') : 'accrued')));
     $acc = brig_one("SELECT * FROM br_ledger WHERE job_id = ? AND kind = 'accrual'", [$jobId]);
     $kop = (int)$j['commission_kop'];
     if (!$acc) {

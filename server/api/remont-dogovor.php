@@ -21,7 +21,7 @@ header('Referrer-Policy: no-referrer');
 $j = null;
 if (isset($_GET['t'])) {
     $o = linea_order_by_token((string)$_GET['t']);
-    if ($o) { $j = brig_one("SELECT j.* FROM br_jobs j JOIN br_requests r ON r.id = j.request_id WHERE r.order_id = ? AND j.status <> 'cancelled' ORDER BY j.id DESC LIMIT 1", [(int)$o['id']]); }
+    if ($o) { $j = brig_one("SELECT j.* FROM br_jobs j JOIN br_requests r ON r.id = j.request_id WHERE r.order_id = ? AND (j.status <> 'cancelled' OR j.terminated_at IS NOT NULL) ORDER BY j.id DESC LIMIT 1", [(int)$o['id']]); }
 } else {
     $b = brig_me();
     $j = brig_one('SELECT * FROM br_jobs WHERE id = ?', [(int)($_GET['j'] ?? 0)]);

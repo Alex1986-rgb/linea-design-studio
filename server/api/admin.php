@@ -163,7 +163,10 @@ if (($_SERVER['REQUEST_METHOD'] ?? '') === 'POST') {
                 if ($o['status'] !== 'paid' && $o['status'] !== 'delivered') { $msg = 'Выдать можно только оплаченный заказ.'; break; }
                 $upd("status = 'delivered', delivered_at = ?, delivered_url = ?", [$now, $url]);
                 linea_event((int)$o['id'], $who, 'Альбом выдан: ' . $url);
-                $msg = 'Отмечено: выдан.'; break;
+                $msg = 'Отмечено: выдан.';
+                $rc = yk_full_receipt(linea_order_by_number((string)$o['number']), $who);   // 54-ФЗ: чек «полный расчёт» (при yk_receipt)
+                if ($rc['done']) { $msg .= ' Второй чек «полный расчёт» отправлен.'; } elseif (!$rc['ok']) { $msg .= ' Второй чек не ушёл: ' . $rc['why']; }
+                break;
             case 'cancel':
                 $upd("status = 'cancelled'", []);
                 linea_event((int)$o['id'], $who, 'Заказ отменён');

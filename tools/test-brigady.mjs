@@ -705,6 +705,49 @@ try {
       fs.writeFileSync(path.join(PRIV, '_dev.json'), JSON.stringify({ base: BASE, brigade: 'brig2@example.test', foreman: 'foreman2@example.test', client: BRIEF.client.email, order: N3, job: J3, admin: ADMIN_PASS }, null, 2));
       throw STOP;
     }
+    step('19. Договор: суммы и сроки этапов, аванс; расторжение через сайт — акт о принятом объёме, пересчёт вознаграждения');
+    {
+      const dg = await c3.req('GET', `/api/remont-dogovor.php?t=${T3}`, { raw: true });
+      const offT = +sql(`SELECT o.total_kop t FROM br_jobs j JOIN br_offers o ON o.id = j.offer_id WHERE j.id = ${J3}`)[0].t;
+      const stSum = sql(`SELECT SUM(amount_kop) s, COUNT(amount_kop) n FROM br_stages WHERE job_id = ${J3}`)[0];
+      ok(+stSum.s === offT && +stSum.n === stg3.length, `суммы этапов записаны при договоре и сходятся с ценой (${offT / 100} ₽ на ${stSum.n} этапа)`);
+      ok(/Приложение 3\. График этапов и оплаты/.test(dg.text) && /К оплате после приёмки/.test(dg.text) && /8\. Расторжение/.test(dg.text) && /ст\. 717 ГК/.test(dg.text) && !/агентск/i.test(dg.text),
+        'договор: стоимость и срок каждого этапа, оплата после приёмки, раздел «Расторжение» (ст. 717 ГК), без «агентского договора»');
+      const plan = sql(`SELECT SUM(amount_kop) s FROM br_payments WHERE job_id = ${J3} AND kind IN ('stage','advance') AND note = 'по договору'`)[0];
+      ok(+plan.s === offT || +plan.s > 0, 'реестр оплат: план по суммам этапов договора');
+      // чистый расчёт сумм этапов: стоимости этапов → как есть; разделы → по своим этапам; ничего не сопоставилось → поровну
+      const am = JSON.parse(execFileSync('php', ['-r', 'require $argv[1] . "/server/api/lib/boot.php"; require $argv[1] . "/server/api/lib/brig.php"; require $argv[1] . "/server/api/lib/brigada.php"; echo json_encode([' +
+        'brig_stage_amounts(["total_kop"=>100000,"mode"=>"sections","sections"=>json_encode(["elektrika"=>30000,"plitka"=>50000,"poly"=>20000])], [], [["name"=>"Черновая электрика"],["name"=>"Гидроизоляция и плитка"],["name"=>"Финальная приёмка"]]),' +
+        'brig_stage_amounts(["total_kop"=>100000], [], [["name"=>"А","amount"=>70000],["name"=>"Б","amount"=>30000]]),' +
+        'brig_stage_amounts(["total_kop"=>100001,"mode"=>"sections","sections"=>"{}"], [], [["name"=>"А"],["name"=>"Б"],["name"=>"В"]]),' +
+        'brig_pay_plan_calc(100000, 30, [["id"=>1,"amount"=>70000],["id"=>2,"amount"=>30000]])]);', ROOT], { env: { ...process.env, LINEA_PRIVATE: PRIV } }).toString());
+      ok(JSON.stringify(am[0]) === '[30000,50000,20000]' && JSON.stringify(am[1]) === '[70000,30000]' && JSON.stringify(am[2]) === '[33333,33333,33335]',
+        'суммы этапов: разделы → свои этапы, «без этапа» → последний; стоимости этапов → как есть; иначе поровну (копейки — последнему)', JSON.stringify(am));
+      ok(am[3][0].amount === 30000 && am[3][1].amount === 49000 && am[3][2].amount === 21000, 'план оплат: аванс 30 %, этап — стоимость минус соразмерная часть аванса', JSON.stringify(am[3]));
+      for (const d of sql(`SELECT id FROM br_contracts WHERE job_id = ${J3} AND status = 'draft'`)) await B[1].req('POST', '/api/brigada.php?m=jobs&a=addendum_cancel', { json: { j: J3, doc: +d.id } });
+      ok((await c3.req('POST', `/api/remont.php?t=${T3}&a=terminate`, { json: { reason: '' } })).code === 400, 'расторжение без причины — отказ');
+      ok((await B[1].req('POST', '/api/brigada.php?m=jobs&a=terminate', { json: { j: J3, reason: 'Заказчик переносит ремонт', extra: offT, extraNote: 'всё' } })).code === 400, 'работы сверх принятого больше цены договора — отказ');
+      const tp = await B[1].req('POST', '/api/brigada.php?m=jobs&a=terminate', { json: { j: J3, reason: 'Заказчик переносит ремонт на весну', extra: 1000, extraNote: 'Штробление под розетки в кухне начато' } });
+      ok(tp.j?.ok && tp.j.doc, 'бригада (владелец) предложила расторжение: соглашение и акт', tp.text);
+      ok((await c3.req('POST', `/api/remont.php?t=${T3}&a=terminate`, { json: { reason: 'Второе расторжение' } })).code === 400, 'второе неподписанное соглашение — отказ');
+      const acc = +sql(`SELECT amount_kop a FROM br_stages WHERE id = ${stg3[0].id}`)[0].a;
+      const paid = +sql(`SELECT COALESCE(SUM(amount_kop),0) p FROM br_payments WHERE job_id = ${J3} AND status = 'confirmed' AND kind <> 'refund'`)[0].p;
+      const tdoc = sql(`SELECT * FROM br_contracts WHERE id = ${tp.j.doc}`)[0];
+      ok(+tdoc.total_kop === acc + 100000 && +tdoc.delta_kop === acc + 100000 - paid && tdoc.kind === 'termination', `акт: принято ${(acc + 100000) / 100} ₽ (этап 1 + признанные работы), оплачено ${paid / 100} ₽, расчёт ${(acc + 100000 - paid) / 100} ₽`);
+      const dgT = await c3.req('GET', `/api/remont-dogovor.php?t=${T3}`, { raw: true });
+      ok(/Соглашение о расторжении договора подряда/.test(dgT.text) && /Итого принято/.test(dgT.text) && /по инициативе Подрядчика/.test(dgT.text) && dgT.text.includes(tdoc.hash), 'текст соглашения: инициатор, принятые этапы, расчёт, хеш версии');
+      const sb = await B[1].req('POST', '/api/brigada.php?m=jobs&a=sign', { json: { j: J3, doc: tp.j.doc } });
+      await B[1].req('POST', '/api/brigada.php?m=jobs&a=sign', { json: { j: J3, doc: tp.j.doc, code: sb.j?.devCode, pep: true } });
+      ok(sql(`SELECT status FROM br_jobs WHERE id = ${J3}`)[0].status === 'work', 'подписала одна сторона — сделка ещё действует');
+      const sc = await c3.req('POST', `/api/remont.php?t=${T3}&a=sign`, { json: { doc: tp.j.doc } });
+      const fin3 = await c3.req('POST', `/api/remont.php?t=${T3}&a=sign`, { json: { doc: tp.j.doc, code: sc.j?.devCode, pep: true } });
+      const jj = sql(`SELECT * FROM br_jobs WHERE id = ${J3}`)[0];
+      ok(fin3.j?.job?.status === 'cancelled' && jj.terminated_at && +jj.accepted_kop === acc + 100000, 'обе подписи → договор расторгнут, принятый объём записан в сделку', fin3.text);
+      ok(+jj.commission_kop === Math.round((acc + 100000) * +jj.commission_rate) && jj.commission_due_at, `вознаграждение пересчитано от фактически принятого: ${+jj.commission_kop / 100} ₽ (${+jj.commission_rate * 100} % от ${(acc + 100000) / 100} ₽)`);
+      ok(sql(`SELECT status FROM br_ledger WHERE job_id = ${J3} AND kind = 'accrual'`)[0]?.status !== 'void' && sql(`SELECT 1 x FROM br_audit WHERE action = 'deal-cancelled' AND target = 'job#${J3}'`).length > 0
+        && sql(`SELECT 1 x FROM br_messages WHERE job_id = ${J3} AND who = 'system' AND text LIKE '%расторгнут соглашением%'`).length > 0, 'переход — через deal_transition() (лента «Система», журнал); проводка не аннулирована');
+      ok((await B[1].req('POST', '/api/brigada.php?m=jobs&a=stage_ready', { json: { stage: stg3[1].id } })).code >= 400, 'после расторжения этапы закрыты');
+    }
   }
 
   step('16. Журналы и письма');
