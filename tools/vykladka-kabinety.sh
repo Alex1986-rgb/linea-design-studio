@@ -1,7 +1,10 @@
 #!/usr/bin/env bash
 # Выкладка кабинетов (02.11.2026): сайт → настройки боевого config → cron раз в 15 минут → проверка адресов → trusted_proxies.
 # Запускает Александр: ./tools/vykladka-kabinety.sh
-# Боевой config.php перед правкой копируется рядом (config.php.bak-<дата>). Пароли, ключи и токен мониторинга не печатаются.
+# Боевой config.php правится только через tools/config-edit.php (ревью 02.11, С8): ИДЕМПОТЕНТНО — задаются лишь незаданные ключи,
+# правки владельца (свои адреса admin_emails, выключенные письма) повторный запуск не трогает; копия config.php.bak-ГГГГММДД-ЧЧММСС
+# (до секунд, существующая не перезаписывается), запись атомарная (временный файл → php -l → require → rename).
+# Откат — tools/otkat-config.sh (последняя копия; --list, --dry). Пароли, ключи и токен мониторинга не печатаются.
 # Шаг 6: какой REMOTE_ADDR видит PHP за nginx Beget — через api/ping.php с токеном мониторинга (monitor_token в config; временных
 # эндпоинтов не создаём). Если запрос приходит с внутреннего адреса прокси, которого нет в trusted_proxies, — адрес добавляется
 # (с копией config), иначе все клиенты для лимитов частоты выглядят одним адресом.
@@ -11,7 +14,9 @@ cd "$(dirname "$0")/.."
 HOST="${LINEA_SSH_HOST:-beget-en0}"
 ADMIN_EMAIL="aleksandrkyrlan83@gmail.com"
 PHP=/usr/local/bin/php8.2
-STAMP=$(date +%Y%m%d-%H%M)
+STAMP=$(date +%Y%m%d-%H%M%S)
+PRIVR='cd ~/dizain-studiya-kvartir/linea-private && '
+cfg_edit() { ssh "$HOST" "$PRIVR $PHP -- $*" < tools/config-edit.php; }   # скрипт уходит по stdin, на сервере файлов не оставляет
 SITE="https://xn-----6kccjicviedfr1b2cbishm8w.xn--p1ai"
 
 say() { printf '\n▶ %s\n' "$*"; }
@@ -19,20 +24,13 @@ say() { printf '\n▶ %s\n' "$*"; }
 say "1/6 Выкладка сайта"
 ./tools/deploy-beget.sh --site=domain
 
-say "2/6 Настройки боевого config.php (копия: config.php.bak-$STAMP)"
-ssh "$HOST" "cd ~/dizain-studiya-kvartir/linea-private && cp -p config.php config.php.bak-$STAMP && $PHP -r '
-\$f = \"config.php\"; \$c = require \$f;
-\$c[\"brig_mail_enabled\"] = true;                       // письма с кодом входа и уведомления кабинетов
-\$c[\"admin_emails\"] = [\"$ADMIN_EMAIL\"];               // роль «Админка» на экране выбора
-\$c[\"notify_enabled\"] = true;                          // письмо владельцу о новом брифе, оплате, правках
-if (empty(\$c[\"notify_to\"])) { \$c[\"notify_to\"] = \"$ADMIN_EMAIL\"; }
-if (empty(\$c[\"base\"])) { \$c[\"base\"] = \"$SITE\"; } // ссылки в письмах — только от адреса сайта
-if (!isset(\$c[\"allow_test\"])) { \$c[\"allow_test\"] = false; }
-if (!isset(\$c[\"admin_2fa\"])) { \$c[\"admin_2fa\"] = false; }   // второй шаг входа — включить после почты на домене (SPF/DKIM), иначе код уйдёт в спам
-if (empty(\$c[\"monitor_token\"])) { \$c[\"monitor_token\"] = bin2hex(random_bytes(24)); }   // токен для ping.php с подробностями (мониторинг, шаг 6)
-file_put_contents(\$f, \"<?php\\n// правлено tools/vykladka-kabinety.sh $STAMP, прежняя версия — config.php.bak-$STAMP\\nreturn \" . var_export(\$c, true) . \";\\n\");
-\$t = require \$f; echo \"config: brig_mail_enabled=\", var_export(\$t[\"brig_mail_enabled\"], true), \", admin_emails=\", count(\$t[\"admin_emails\"]), \", base задан=\", (\$t[\"base\"] ? \"да\" : \"нет\"), \", monitor_token задан=\", (strlen((string)(\$t[\"monitor_token\"] ?? \"\")) >= 24 ? \"да\" : \"нет\"), PHP_EOL;
-' && chmod 600 config.php"
+say "2/6 Настройки боевого config.php (только незаданные ключи; копия config.php.bak-<время> — если что-то меняется)"
+# brig_mail_enabled / notify_enabled — письма с кодом входа и уведомления; admin_emails — роль «Админка»; base — ссылки в письмах;
+# admin_2fa=false — второй шаг входа включать после почты на домене (SPF/DKIM); monitor_token — подробности ping.php (шаг 6, монитор)
+DEFAULTS=$(python3 -I -c 'import json,sys; e,s=sys.argv[1:3]; print(json.dumps({"brig_mail_enabled":True,"admin_emails":{"if_empty":[e]},"notify_enabled":True,
+ "notify_to":{"if_empty":e},"base":{"if_empty":s},"allow_test":False,"admin_2fa":False,"monitor_token":{"if_short":24,"random_hex":24}}))' "$ADMIN_EMAIL" "$SITE")
+cfg_edit defaults "'$DEFAULTS'"
+ssh "$HOST" "$PRIVR chmod 600 config.php && $PHP -r '\$t = require \"config.php\"; echo \"config: brig_mail_enabled=\", var_export(\$t[\"brig_mail_enabled\"] ?? null, true), \", notify_enabled=\", var_export(\$t[\"notify_enabled\"] ?? null, true), \", admin_emails=\", count((array)(\$t[\"admin_emails\"] ?? [])), \", admin_2fa=\", var_export(\$t[\"admin_2fa\"] ?? null, true), \", monitor_token задан=\", (strlen((string)(\$t[\"monitor_token\"] ?? \"\")) >= 24 ? \"да\" : \"нет\"), PHP_EOL;'"
 
 say "3/6 Cron-скрипт вне веб-корня"
 ssh "$HOST" 'mkdir -p ~/dizain-studiya-kvartir/server-tools && ln -sfn ~/dizain-studiya-kvartir/public_html/api ~/dizain-studiya-kvartir/api'
@@ -53,9 +51,9 @@ for u in "" kabinet/ brigada/ api/ping.php api/vhod.php?a=me api/panel.php briga
   printf '%s  %s\n' "$(curl -s -o /dev/null -w '%{http_code}' --max-time 20 "$SITE/$u")" "/$u"
 done
 say "6/6 trusted_proxies: какой адрес клиента видит PHP (api/ping.php с токеном мониторинга)"
-CFGR='cd ~/dizain-studiya-kvartir/linea-private && '
-MON=$(ssh "$HOST" "$CFGR $PHP -r '\$c = require \"config.php\"; echo \$c[\"monitor_token\"] ?? \"\";'")
-ping_detail() { curl -s --max-time 20 -H "X-Monitor-Token: $MON" "$SITE/api/ping.php"; }
+MON=$(ssh "$HOST" "$PRIVR $PHP -r '\$c = require \"config.php\"; echo \$c[\"monitor_token\"] ?? \"\";'")
+# токен — в заголовке из stdin (-H @-), не в аргументах curl: аргументы видны в ps; в адрес (?token=) — никогда
+ping_detail() { printf 'X-Monitor-Token: %s\n%s' "$MON" "${1:-}" | curl -s --max-time 20 -H @- "$SITE/api/ping.php"; }
 PD=$(ping_detail || true)
 VERDICT=$(printf '%s' "$PD" | python3 -I -c '
 import json, sys, ipaddress
@@ -75,15 +73,19 @@ else: print("WARN внутренний REMOTE_ADDR без X-Real-IP — лими
 printf '%s\n' "$VERDICT" | sed 's/^/  /'
 ADD=$(printf '%s\n' "$VERDICT" | sed -n 's/^ADD //p')
 if [ -n "$ADD" ]; then
-  echo "  добавляю $ADD в trusted_proxies (копия: config.php.bak-$STAMP-proxy)"
-  ssh "$HOST" "$CFGR cp -p config.php config.php.bak-$STAMP-proxy && $PHP -r '
-\$f = \"config.php\"; \$c = require \$f;
-\$c[\"trusted_proxies\"] = array_values(array_unique(array_merge((array)(\$c[\"trusted_proxies\"] ?? [\"127.0.0.1\", \"::1\"]), [\"$ADD\"])));
-file_put_contents(\$f, \"<?php\\n// trusted_proxies дополнен tools/vykladka-kabinety.sh $STAMP\\nreturn \" . var_export(\$c, true) . \";\\n\");
-' && chmod 600 config.php"
+  echo "  добавляю $ADD в trusted_proxies (копия config.php.bak-<время>)"
+  cfg_edit add-proxy "$ADD"
+  ssh "$HOST" "$PRIVR chmod 600 config.php"
   sleep 3   # opcache перечитывает config.php не сразу
   printf '%s' "$(ping_detail)" | python3 -I -c 'import json,sys; p=json.load(sys.stdin)["proxy"]; print("  после правки: linea_ip=%s, X-Real-IP=%s — %s" % (p["linea_ip"], p.get("x_real_ip"), "ок" if p["linea_ip"] == p.get("x_real_ip") else "НЕ совпадает, проверить руками"))' || echo "  повторная проверка не удалась — открыть ping.php с токеном руками"
 fi
+# подделка адреса: клиент сам шлёт X-Real-IP / X-Forwarded-For — nginx Beget обязан их перезаписать, иначе обход лимитов,
+# аварийных IP и admin_ip_allow (ревью 02.11, С6)
+SPOOF=$(ping_detail $'X-Real-IP: 1.2.3.4\nX-Forwarded-For: 1.2.3.4\n' | python3 -I -c 'import json,sys
+try: p = json.load(sys.stdin)["proxy"]
+except Exception: print("ERR нет ответа"); sys.exit()
+print(("ОПАСНО linea_ip=1.2.3.4 — поддельный заголовок принят, НЕ включать admin_ip_allow/аварийные IP" if p.get("linea_ip") == "1.2.3.4" else "OK подделка X-Real-IP не прошла (linea_ip=%s)" % p.get("linea_ip")))' || echo "ERR проверка подделки не удалась")
+printf '  %s\n' "$SPOOF"
 unset MON
 
 echo; echo "Готово. Дальше Claude проверит вход в кабинеты и админку."

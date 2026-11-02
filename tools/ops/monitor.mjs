@@ -6,7 +6,10 @@
 //   node monitor.mjs --test-alert   отправить пробное оповещение по настроенным каналам
 //
 // Проверки: dns (A домена через DoH Google и системный резолвер), home (главная 200), ping (api/ping.php: ok/private/config),
-// kabinet (/kabinet/ 200), ssl (срок сертификата; меньше sslWarnDays — «внимание»), backup (последний удачный бэкап не старше N часов).
+// kabinet (/kabinet/ 200), ssl (срок сертификата; меньше sslWarnDays — «внимание»), backup (последний удачный бэкап не старше N часов),
+// cron (по токену мониторинга: последний прогон server/tools/cron.php не старше cronMaxAgeMin минут, база отвечает — иначе чеки,
+// напоминания и автоудаление ПДн молча стоят). Токен — secrets\monitor.token (или monitorToken в ops.json), только в заголовке
+// X-Monitor-Token: в адресе он попал бы в журналы доступа.
 // Без шума: сбой считается подтверждённым после failConfirmRuns прогонов подряд; одно письмо на все сменившиеся проверки;
 // пока сбой длится — напоминание раз в remindHours; восстановление — сразу.
 import tls from 'node:tls';
@@ -21,11 +24,22 @@ const argv = process.argv.slice(2);
 const UA = 'LINEA-monitor/1 (+SmartApe)';
 const site = C.site.replace(/\/+$/, '');
 
-async function get(url, ms = 20000) {
+async function get(url, ms = 20000, extra = {}) {
   const t0 = Date.now();
-  const r = await fetch(url + (url.includes('?') ? '&' : '?') + 'mon=' + Date.now(), { redirect: 'follow', headers: { 'user-agent': UA, 'cache-control': 'no-cache' }, signal: AbortSignal.timeout(ms) });
+  const r = await fetch(url + (url.includes('?') ? '&' : '?') + 'mon=' + Date.now(), { redirect: 'follow', headers: { 'user-agent': UA, 'cache-control': 'no-cache', ...extra }, signal: AbortSignal.timeout(ms) });
   const body = await r.text();
   return { status: r.status, body, ms: Date.now() - t0 };
+}
+function monitorToken() {
+  try { const t = fs.readFileSync(path.join(P.secrets, 'monitor.token'), 'utf8').trim(); if (t) return t; } catch { }
+  return String(C.monitorToken || '').trim();
+}
+/** Возраст отметки cron.last («ГГГГ-ММ-ДД ЧЧ:ММ:СС», время сервера) в минутах. */
+export function cronAgeMin(s, now = Date.now(), tz = C.serverTz) {
+  const m = /^(\d{4}-\d\d-\d\d) (\d\d:\d\d:\d\d)/.exec(String(s || ''));
+  if (!m) return null;
+  const t = Date.parse(`${m[1]}T${m[2]}${tz || '+03:00'}`);
+  return Number.isFinite(t) ? (now - t) / 60000 : null;
 }
 const errText = e => (e.cause && (e.cause.code || e.cause.message)) || e.code || e.name || e.message;
 
@@ -52,6 +66,19 @@ const CHECKS = {
     const good = r.status === 200 && j && j.ok === true && j.private === true && j.config === true;
     return { status: good ? 'ok' : 'fail', detail: good ? `ok, ${r.ms} мс` : `HTTP ${r.status}; ${j ? `ok=${j.ok} private=${j.private} config=${j.config}` : 'не JSON'}` };
   },
+  async cron() {
+    const tok = monitorToken();
+    if (tok.length < 24) return { status: 'warn', detail: 'токен мониторинга не задан (secrets\\monitor.token) — работа cron на Beget не проверяется' };
+    const r = await get(site + C.pages.ping, 20000, { 'x-monitor-token': tok });
+    let j = null; try { j = JSON.parse(r.body); } catch { }
+    if (r.status === 403) return { status: 'fail', detail: 'ping.php не принял токен мониторинга (сверить secrets\\monitor.token с monitor_token в config)' };
+    if (r.status !== 200 || !j || !('cron_last' in j)) return { status: 'fail', detail: `HTTP ${r.status}; подробностей по токену нет` };
+    if (j.db_error) return { status: 'fail', detail: 'база не отвечает (db_error)' };
+    if (!j.cron_last) return { status: 'fail', detail: 'cron.php ещё ни разу не отработал' };
+    const age = cronAgeMin(j.cron_last);
+    if (age === null) return { status: 'fail', detail: `отметка cron непонятна: ${String(j.cron_last).slice(0, 19)}` };
+    return { status: age <= C.cronMaxAgeMin ? 'ok' : 'fail', detail: `последний прогон cron ${Math.round(age)} мин назад (${j.cron_last}), схема v${(j.db || {}).schema ?? '?'}` };
+  },
   async kabinet() {
     const r = await get(site + C.pages.kabinet);
     return { status: r.status === 200 ? 'ok' : 'fail', detail: `HTTP ${r.status}, ${r.ms} мс` };
@@ -73,14 +100,15 @@ const CHECKS = {
   backup() {
     if (!C.backupMaxAgeHours) return { status: 'ok', detail: 'не проверяется' };
     const ok = readJson(path.join(P.state, 'backup-last-ok.json'), null);
-    if (!ok) return { status: C.expectBackup ? 'fail' : 'ok', detail: C.expectBackup ? 'удачного бэкапа ещё не было' : 'бэкап ещё не включён' };
+    if (!ok) return C.expectBackup ? { status: 'fail', detail: 'удачного бэкапа ещё не было' } : { status: 'warn', detail: 'бэкап не настроен (expectBackup=false): копий нет — включить after-beget-up.sh' };
     const h = (Date.now() - new Date(ok.at)) / 3600e3;
     return { status: h <= C.backupMaxAgeHours ? 'ok' : 'fail', detail: `последний удачный ${h.toFixed(1)} ч назад (${ok.name})` };
   },
 };
-const TITLE = { dns: 'DNS домена', home: 'главная', ping: 'api/ping.php', kabinet: 'кабинет', ssl: 'SSL-сертификат', backup: 'бэкап' };
+const TITLE = { dns: 'DNS домена', home: 'главная', ping: 'api/ping.php', cron: 'cron на Beget', kabinet: 'кабинет', ssl: 'SSL-сертификат', backup: 'бэкап' };
 
 async function main() {
+  if (argv.includes('--cron-age')) { console.log(JSON.stringify(cronAgeMin(argv[argv.indexOf('--cron-age') + 1], Date.parse(argv[argv.indexOf('--cron-age') + 2] || new Date().toISOString())))); return; }
   if (argv.includes('--test-alert')) { console.log(await notify('пробное оповещение', 'Канал работает. Мониторинг LINEA, SmartApe.')); return; }
   const stFile = path.join(P.state, 'monitor.json');
   const prev = readJson(stFile, { checks: {} });

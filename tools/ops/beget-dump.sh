@@ -1,7 +1,12 @@
 #!/usr/bin/env bash
 # LINEA · дамп данных на Beget → один tar.gz в stdout (журнал — в stderr).
 #
-# Запускается НЕ руками на сервере, а через ssh из бэкапера SmartApe:  ssh <beget> 'nice -n 19 bash -s' < beget-dump.sh
+# Лежит на Beget в ~/linea-ops/beget-dump.sh (кладёт tools/ops/after-beget-up.sh) и запускается ПРИНУДИТЕЛЬНОЙ командой ключа
+# бэкапера SmartApe в authorized_keys (command="…/beget-dump.sh",no-pty,…,from="94.198.55.117"): ключ ничего другого не умеет.
+# Режим — слово, которое бэкапер передаёт как «команду» ssh (оно приходит в SSH_ORIGINAL_COMMAND), белый список:
+#   dump (или пусто) — tar.gz в stdout;  check — готовность (php, mysqldump, config) без данных;  version — sha256 этого файла.
+#   Всё остальное — отказ с кодом 64: произвольная команда через этот ключ не выполняется.
+# Макет на маке: LINEA_ROOT=… bash beget-dump.sh [режим]  (или bash -s < beget-dump.sh).
 # Что попадает в архив:
 #   linea-private/…            — заказы, правки, бриги, журналы, config.php (без sessions/, rate/, exports/, блокировок и временных)
 #   _dump/mysql.sql            — дамп MySQL aleks2si_linea (mysqldump; нет его — PHP-дамп через PDO)
@@ -13,6 +18,20 @@
 # Переменные (для макета на маке): LINEA_ROOT (по умолчанию ~/dizain-studiya-kvartir), LINEA_PHP, LINEA_BK_MAXMB (200).
 set -euo pipefail
 export COPYFILE_DISABLE=1   # макет на маке: bsdtar не добавляет ._-файлы
+umask 077
+
+# ---- режим: белый список. SSH_ORIGINAL_COMMAND задан только при вызове через ssh с «командой» ----
+if [ -n "${SSH_ORIGINAL_COMMAND+x}" ]; then MODE="$SSH_ORIGINAL_COMMAND"; MODE="${MODE#"${MODE%%[![:space:]]*}"}"; MODE="${MODE%"${MODE##*[![:space:]]}"}"; else MODE="${1:-dump}"; fi
+[ -z "$MODE" ] && MODE=dump
+case "$MODE" in
+  dump|check|version) ;;
+  *) printf '[beget-dump] отказ: режим не из белого списка (dump|check|version)\n' >&2; exit 64;;
+esac
+if [ "$MODE" = version ]; then
+  SELF="${BASH_SOURCE[0]:-}"
+  if [ -f "$SELF" ]; then printf 'beget-dump %s\n' "$( (sha256sum "$SELF" 2>/dev/null || shasum -a 256 "$SELF") | cut -d' ' -f1)"; else echo "beget-dump stdin"; fi
+  exit 0
+fi
 
 ROOT="${LINEA_ROOT:-$HOME/dizain-studiya-kvartir}"
 PRIV_NAME="linea-private"
@@ -24,14 +43,18 @@ log() { printf '[beget-dump] %s\n' "$*" >&2; }
 [ -n "$PHP" ] || { log "нет php"; exit 3; }
 [ -d "$PRIV" ] || { log "нет папки $PRIV"; exit 3; }
 [ -f "$PRIV/config.php" ] || { log "нет $PRIV/config.php"; exit 3; }
+DUMPER="$(command -v mysqldump || command -v mariadb-dump || true)"
+if [ "$MODE" = check ]; then echo "ok php=$PHP mysqldump=${DUMPER:-нет} config=есть"; exit 0; fi
 
-# временная папка — рядом с linea-private, ВНЕ веб-корня (public_html)
+# временная папка — рядом с linea-private, ВНЕ веб-корня (public_html). Остатки прошлых прогонов, убитых SIGKILL
+# (trap тогда не срабатывает), старше 3 часов удаляются: в них полный дамп с ПДн.
+find "$ROOT" -maxdepth 1 -type d -name '.linea-bk.*' -mmin +180 -exec rm -rf {} + 2>/dev/null || true
 TMP="$(mktemp -d "$ROOT/.linea-bk.XXXXXX")"
 trap 'rm -rf "$TMP"' EXIT
+trap 'exit 130' INT TERM HUP PIPE
 mkdir -p "$TMP/_dump"
 IONICE=""; command -v ionice >/dev/null 2>&1 && IONICE="ionice -c3"
 
-DUMPER="$(command -v mysqldump || command -v mariadb-dump || true)"
 log "php: $PHP; mysqldump: ${DUMPER:-нет}"
 
 # ---- база: PHP читает config.php, сам зовёт mysqldump (пароль — в окружении процесса) и пишет manifest ----
@@ -57,6 +80,9 @@ if (is_array($db) && str_starts_with((string)$db["dsn"], "mysql:")) {
     $kv = []; foreach (explode(";", substr($db["dsn"], 6)) as $part) { if (str_contains($part, "=")) { [$k, $v] = explode("=", $part, 2); $kv[trim($k)] = trim($v); } }
     $pdo = new PDO($db["dsn"], (string)$db["user"], (string)$db["pass"], [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION]);
     $pdo->exec("SET NAMES utf8mb4");
+    // единый снимок для счётчиков и запасного PHP-дампа (InnoDB): числа в manifest и строки дампа — из одного момента
+    $pdo->exec("SET SESSION TRANSACTION ISOLATION LEVEL REPEATABLE READ");
+    $pdo->exec("START TRANSACTION WITH CONSISTENT SNAPSHOT");
     $man["tables"] = $counts($pdo, "mysql");
     $file = $out . "/mysql.sql";
     $ok = false;

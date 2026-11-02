@@ -5,7 +5,8 @@
 #
 # Поднимает временную MariaDB (сокет в <папка>), создаёт базу по настоящим миграциям server/api/lib/migrations.php,
 # кладёт тестовые строки, собирает <папка>/root/dizain-studiya-kvartir/linea-private (config.php с 'db' → эта MariaDB,
-# заказы, журналы, sessions/ для проверки исключений) и прогоняет tools/ops/beget-dump.sh ровно так, как его гоняет ssh:
+# заказы, журналы, sessions/ для проверки исключений) и прогоняет tools/ops/beget-dump.sh так, как его запускает
+# принудительная команда ключа SmartApe (режим в SSH_ORIGINAL_COMMAND):
 # результат — <папка>/mock-backup.tgz. Без --keep MariaDB останавливается в конце.
 set -euo pipefail
 W="${1:?папка для макета}"; KEEP="${2:-}"
@@ -60,8 +61,10 @@ foreach (["orders","events","accounts","consents","settings"] as $t) {
 echo "схема: " . db_val("SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = DATABASE()") . " таблиц\n";
 ' "$REPO"
 
-say "4/4 Прогон beget-dump.sh (как через ssh: bash -s со stdin)"
-LINEA_ROOT="$ROOT" LINEA_PHP="$(command -v php)" bash -s < "$REPO/tools/ops/beget-dump.sh" > "$W/mock-backup.tgz"
+say "4/4 Прогон beget-dump.sh как принудительной команды ключа (ssh … dump → SSH_ORIGINAL_COMMAND=dump)"
+SSH_ORIGINAL_COMMAND=dump LINEA_ROOT="$ROOT" LINEA_PHP="$(command -v php)" bash "$REPO/tools/ops/beget-dump.sh" > "$W/mock-backup.tgz"
+if SSH_ORIGINAL_COMMAND='id; cat ~/.ssh/authorized_keys' LINEA_ROOT="$ROOT" bash "$REPO/tools/ops/beget-dump.sh" >/dev/null 2>&1; then echo "✗ произвольная команда прошла"; exit 1; fi
+echo "   произвольная команда отвергнута (код 64)"
 ls -l "$W/mock-backup.tgz"
 tar -tzf "$W/mock-backup.tgz" | sed 's/^/   /'
 

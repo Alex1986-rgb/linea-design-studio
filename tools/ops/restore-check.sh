@@ -4,7 +4,7 @@
 #   ./tools/ops/restore-check.sh                         последний архив с SmartApe (расшифровывается там, по ssh приходит tar.gz)
 #   ./tools/ops/restore-check.sh --tgz=<файл.tgz>        готовый tar.gz (макет)
 #   ./tools/ops/restore-check.sh --local                 последний архив из LINEA_OPS_HOME на этом маке (макет)
-#   ключи: --remote-home=<папка на SmartApe> (C:\\linea-ops), --work=<папка> (по умолчанию $LINEA_SCRATCH или $TMPDIR), --keep (не удалять), --port=33918
+#   ключи: --remote-home=<папка на SmartApe> (C:\\linea-ops), --work=<папка> (по умолчанию $LINEA_SCRATCH или $TMPDIR), --keep (не удалять: ПДн остаются на диске!), --port=33918
 #
 # Что проверяется:
 #   1. архив читается, есть _dump/manifest.json;
@@ -22,7 +22,8 @@ TGZ=""; LOCAL=0; RHOME="C:\\linea-ops"; KEEP=0; PORT=33918; WORKBASE="${LINEA_SC
 for a in "$@"; do case "$a" in
   --tgz=*) TGZ="${a#*=}";; --remote-home=*) RHOME="${a#*=}";; --local) LOCAL=1;; --keep) KEEP=1;; --port=*) PORT="${a#*=}";; --work=*) WORKBASE="${a#*=}";;
   *) echo "неизвестный ключ $a"; exit 2;; esac; done
-W="$(mktemp -d "$WORKBASE/linea-restore.XXXXXX")"
+W="$(mktemp -d "$WORKBASE/linea-restore.XXXXXX")"; chmod 700 "$W"
+[ "$KEEP" = 1 ] && printf '\033[33m! --keep: временная папка с персональными данными останется на диске — удалить вручную после разбора\033[0m\n'
 ERR=0; WARN=0
 ok()   { printf '  \033[32m✓\033[0m %s\n' "$*"; }
 bad()  { printf '  \033[31m✗\033[0m %s\n' "$*"; ERR=$((ERR+1)); }
@@ -31,7 +32,7 @@ SQL() { mariadb --protocol=tcp -h 127.0.0.1 -P "$PORT" -uroot --skip-ssl "$@"; }
 cleanup() {
   SQL -e 'SHUTDOWN' >/dev/null 2>&1 || true
   sleep 1
-  if [ "$KEEP" = 1 ]; then echo "папка оставлена: $W"; else rm -rf "$W"; fi
+  if [ "$KEEP" = 1 ]; then printf '\033[33m! папка оставлена: %s — в ней ПОЛНЫЙ ДАМП С ПЕРСОНАЛЬНЫМИ ДАННЫМИ.\n  Удалить сразу после разбора: rm -rf "%s"\033[0m\n' "$W" "$W"; else rm -rf "$W"; fi
 }
 trap cleanup EXIT
 

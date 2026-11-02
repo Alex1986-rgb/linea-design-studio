@@ -3,6 +3,7 @@
 //   ops.json            — настройки (адреса, хост Beget, хранение); образец — tools/ops/ops.example.json
 //   secrets\backup.pass — пароль шифрования архивов (создаёт install, в репозиторий не попадает)
 //   secrets\notify.env  — TG_TOKEN=…, TG_CHAT=… (необязательно; нет — только журнал и файл-флаг)
+//   secrets\monitor.token — токен мониторинга ping.php (= monitor_token в config.php на Beget); запасной путь — monitorToken в ops.json
 //   secrets\beget_ed25519, secrets\known_hosts — ключ SSH до Beget
 //   state\*.json, logs\*.log, backups\daily|weekly\*.7z
 import fs from 'node:fs';
@@ -28,8 +29,13 @@ const DEF = {
   sslWarnDays: 14,
   beget: { host: 'gandalf.beget.com', user: 'aleks2si', root: 'dizain-studiya-kvartir' },
   keepDaily: 14, keepWeekly: 8,
+  keepMinGood: 7,                 // ротация (локально и на Диске) никогда не оставляет меньше N хороших копий — независимо от возраста
+  backupDropPct: 40,              // падение строк/заказов/размера к прошлой удачной копии больше N % — копия «подозрительная»
   gdrive: 'gdrive:LINEA/Бэкапы',
   backupMaxAgeHours: 30,          // монитор: свежий удачный бэкап не старше (0 — не проверять)
+  expectBackup: true,             // бэкап обязан быть; false — пока не включён: монитор держит «внимание», а не молчит
+  cronMaxAgeMin: 45,              // монитор: последний прогон cron.php на Beget не старше N минут (нужен токен мониторинга)
+  serverTz: '+03:00',             // часовой пояс отметки cron.last на Beget (МСК)
   failConfirmRuns: 2,             // сбой подтверждается N прогонами подряд (без шума от разовых таймаутов)
   remindHours: 12,                // пока сбой длится — напоминание раз в N часов
 };
