@@ -334,9 +334,10 @@ function brig_file_allowed(array $f, array $ctx): bool
                 return (bool)brig_one('SELECT 1 FROM br_invites i JOIN br_requests r ON r.id = i.request_id WHERE i.request_id = ? AND i.brigade_id = ? AND i.sent_at IS NOT NULL', [(int)$f['owner_id'], $bid]);
             }
             return false;
-        case 'stage':
-            $j = brig_one('SELECT j.brigade_id, r.order_id FROM br_stages s JOIN br_jobs j ON j.id = s.job_id JOIN br_requests r ON r.id = j.request_id WHERE s.id = ?', [(int)$f['owner_id']]);
-            return $j && (($bid && (int)$j['brigade_id'] === $bid) || ($oid && (int)$j['order_id'] === $oid));
+        case 'stage': case 'stage_before':   // фото этапа и фото «до» старта — сторонам сделки (сотруднику бригады — только по своим объектам)
+            $j = brig_one('SELECT j.id, j.brigade_id, r.order_id FROM br_stages s JOIN br_jobs j ON j.id = s.job_id JOIN br_requests r ON r.id = j.request_id WHERE s.id = ?', [(int)$f['owner_id']]);
+            $objs = $ctx['brigade']['_objects'] ?? null;
+            return $j && (($bid && (int)$j['brigade_id'] === $bid && ($objs === null || in_array((int)$j['id'], $objs, true))) || ($oid && (int)$j['order_id'] === $oid));
         case 'sheet':
             $j = brig_one('SELECT j.brigade_id, r.order_id FROM br_sheet_reqs s JOIN br_jobs j ON j.id = s.job_id JOIN br_requests r ON r.id = j.request_id WHERE s.id = ?', [(int)$f['owner_id']]);
             return $j && (($bid && (int)$j['brigade_id'] === $bid) || ($oid && (int)$j['order_id'] === $oid && $f['kind'] === 'result'));

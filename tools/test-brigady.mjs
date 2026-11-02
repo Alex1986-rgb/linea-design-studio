@@ -21,7 +21,7 @@ const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const arg = k => (process.argv.find(a => a.startsWith(`--${k}=`)) || '').split('=').slice(1).join('=');
 const PRIV = path.resolve(arg('private') || path.join(os.tmpdir(), 'linea-brigady-test'));
 const PORT = +(arg('port') || 8143);
-const UNTIL = arg('until');                       // --until=offers — остановиться после двух предложений (для скриншотов)
+const UNTIL = arg('until');                       // --until=offers — после двух предложений; --until=shots — после кабинета бригады (tools/shots-brigada.mjs)
 const KEEP = process.argv.includes('--keep') || !!UNTIL;
 const STOP = new Error('stop');
 // --mysql=<dsn> — та же проверка на MySQL/MariaDB (база должна быть пустой: тест удаляет её таблицы перед прогоном)
@@ -691,6 +691,10 @@ try {
     ok(ex.code === 200 && /text\/csv/.test(ex.headers.get('content-type') || '') && ex.text.includes(`'=HYPERLINK`) && !/;=HYPERLINK/.test(ex.text), 'экспорт CSV из панели: ячейка с «=» выгружается с апострофом');
     ok(sql(`SELECT 1 x FROM br_audit WHERE action = 'csv-export' AND target = 'signals'`).length > 0, 'выгрузка CSV — в журнале');
     ok((await B1.req('GET', '/api/brigada.php?m=kab&a=docs')).j?.jobs?.length >= 1 && (await B1.req('GET', '/api/brigada.php?m=kab&a=rating')).j?.stats, 'документы бригады и показатели рейтинга');
+    if (UNTIL === 'shots') {   // данные для tools/shots-brigada.mjs: бригада с объектом в работе, бригадир, заказчик того же объекта
+      fs.writeFileSync(path.join(PRIV, '_dev.json'), JSON.stringify({ base: BASE, brigade: 'brig2@example.test', foreman: 'foreman2@example.test', client: BRIEF.client.email, order: N3, job: J3, admin: ADMIN_PASS }, null, 2));
+      throw STOP;
+    }
   }
 
   step('16. Журналы и письма');
