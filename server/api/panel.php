@@ -74,7 +74,7 @@ function adm_page(string $title, string $body, string $s, string $msg = ''): nev
         . '.scroll{overflow-x:auto}pre{white-space:pre-wrap;background:#faf8f4;padding:10px;font-size:13px;max-height:420px;overflow:auto}.test{color:#b4462b;font-weight:600}'
         . 'ul.todo{list-style:none;padding:0;margin:0}ul.todo li{background:#fff;border:1px solid var(--line);border-left:4px solid #c29a5b;padding:8px 12px;margin:0 0 6px}ul.todo li.hot{border-left-color:#b4462b}'
         . '@media(max-width:820px){.lay{grid-template-columns:1fr}nav.side{position:static;height:auto;display:flex;overflow-x:auto;white-space:nowrap;padding:6px}nav.side .lg{display:none}nav.side a{padding:8px 10px}'
-        . 'main{padding:12px}.hide-m{display:none}th,td{padding:6px;font-size:13px}}</style></head><body><div class="lay"><nav class="side" aria-label="Разделы админки"><div class="lg">LINEA</div>' . $menu
+        . 'main{padding:12px}main table{display:block;overflow-x:auto}.hide-m{display:none}form.inl{display:flex;width:100%}form.inl input:not([type=checkbox]):not([type=hidden]),form.inl textarea,form.inl select{width:100%}th,td{padding:6px;font-size:13px}}</style></head><body><div class="lay"><nav class="side" aria-label="Разделы админки"><div class="lg">LINEA</div>' . $menu
         . '<a href="admin-brigady.php">Ремонт: модерация и запросы →</a><a href="admin.php">Старый список заказов →</a></nav><main>'
         . ($msg !== '' ? '<p class="msg">' . $h($msg) . '</p>' : '') . $body . '</main></div></body></html>';
     exit;

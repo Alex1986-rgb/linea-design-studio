@@ -123,7 +123,7 @@ function brig_contract_body(array $j, string $kind, int $num, array $add = []): 
     $skipped = array_filter($pack['positions'], fn($p) => !isset($items[$p['id']]) || $items[$p['id']]['skip']);
     $st = ''; $acc = '';
     foreach (brig_all('SELECT * FROM br_stages WHERE job_id = ? ORDER BY idx', [(int)$j['id']]) as $s) {
-        $st .= '<tr><td>' . (int)$s['idx'] . '</td><td>' . $h($s['name']) . '</td><td>' . $h(date('d.m.Y', strtotime((string)$s['plan_start']))) . '</td><td>' . $h(date('d.m.Y', strtotime((string)$s['plan_end']))) . '</td></tr>';
+        $st .= '<tr><td>' . (int)$s['idx'] . '</td><td>' . $h($s['name']) . '</td><td>' . ($s['plan_start'] ? $h(date('d.m.Y', strtotime((string)$s['plan_start']))) : '—') . '</td><td>' . ($s['plan_end'] ? $h(date('d.m.Y', strtotime((string)$s['plan_end']))) : '—') . '</td></tr>';
         $c = brig_checklist((string)$s['checklist']);
         $acc .= '<h4>' . (int)$s['idx'] . '. ' . $h($s['name']) . '</h4><ul>' . implode('', array_map(fn($i) => '<li>' . $h($i['text']) . ' <span class="src">(' . $h($i['src']) . ')</span></li>', $c['items'])) . '</ul>';
     }

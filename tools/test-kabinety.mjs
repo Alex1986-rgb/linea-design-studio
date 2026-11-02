@@ -18,7 +18,8 @@ const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const arg = k => (process.argv.find(a => a.startsWith(`--${k}=`)) || '').split('=').slice(1).join('=');
 const PRIV = path.resolve(arg('private') || path.join(os.tmpdir(), 'linea-kabinety-test'));
 const PORT = +(arg('port') || 8144);
-const KEEP = process.argv.includes('--keep');
+const UNTIL = arg('until');   // --until=shots — остановиться перед удалением данных, оставить сервер и _dev.json для tools/shots-kabinety.mjs
+const KEEP = process.argv.includes('--keep') || !!UNTIL;
 const MYSQL = arg('mysql');
 const MUSER = arg('mysql-user') || process.env.USER;
 const BASE = `http://127.0.0.1:${PORT}`;
@@ -223,9 +224,9 @@ try {
 
   step('9. Сделка (вставлена напрямую): cron — напоминания и молчание, без автоприёмки; заморозка');
   const reqId = ins('br_requests', { order_id: +sql(`SELECT id FROM orders WHERE number = '${NA}'`)[0].id, status: 'chosen', consent_at: ts(20), consent_text: 'согласие', district: 'zao', works: '[]', object_title: 'Квартира 64 м²', created_at: ts(20), updated_at: ts(20), test: 1 });
-  const offId = ins('br_offers', { request_id: reqId, brigade_id: bid, status: 'chosen', items: '[]', total_kop: 100000000, materials: 'client', stages: '[]', days: 30, warranty_months: 24, created_at: ts(20), updated_at: ts(20) });
+  const offId = ins('br_offers', { request_id: reqId, brigade_id: bid, status: 'chosen', items: '[]', total_kop: 100000000, materials: 'client', stages: '[]', days: 30, warranty_months: 24, start_date: ts(20).slice(0, 10), created_at: ts(20), updated_at: ts(20) });
   const jobId = ins('br_jobs', { request_id: reqId, offer_id: offId, brigade_id: bid, status: 'work', contacts_consent_at: ts(20), contacts_open_at: ts(15), client_signed_at: ts(15), brigade_signed_at: ts(15), commission_kop: 10000000, commission_rate: 0.1, commission_at: ts(15), commission_due_at: ts(10), commission_due_why: 'аванс', deal_total_kop: 100000000, created_at: ts(20), updated_at: ts(10) });
-  const stId = ins('br_stages', { job_id: jobId, idx: 1, name: 'Демонтаж', checklist: 'demontazh', status: 'ready', ready_at: ts(12) });
+  const stId = ins('br_stages', { job_id: jobId, idx: 1, name: 'Демонтаж', checklist: 'demontazh', status: 'ready', ready_at: ts(12), plan_start: ts(20).slice(0, 10), plan_end: ts(13).slice(0, 10) });
   const out1 = cron();
   ok(/"silence":1/.test(out1), 'cron: молчание заказчика найдено: ' + out1.trim());
   ok(sql(`SELECT status FROM br_stages WHERE id = ${stId}`)[0].status === 'ready', 'этап НЕ принят молчанием (юрист: ст. 720, 753 ГК, ЗоЗПП)');
@@ -283,6 +284,10 @@ try {
   }
   ok(true, 'все вкладки карточки заказа открываются');
 
+  if (UNTIL) {
+    fs.writeFileSync(path.join(PRIV, '_dev.json'), JSON.stringify({ base: BASE, admin: ADMIN_PASS, email: 'anna@example.test', order: NA }));
+    console.log(`\n--until=${UNTIL}: сервер ${BASE} оставлен, данные — ${PRIV}`); throw 'stop';
+  }
   step('12. Удаление данных после завершения, выход на всех устройствах');
   sql(`UPDATE br_jobs SET status = 'done' WHERE id = ${jobId}`);
   await panel({ act: 'o_status', o: NA, to: 'delivered' });
@@ -303,7 +308,7 @@ try {
   const kp = await X.req('GET', '/kabinet/', { raw: true });
   ok(kp.code === 200 && kp.text.includes('name="linea-api"') && /noindex/.test(kp.text) && kp.text.includes('js/kabinet.js'), 'kabinet/: noindex, приёмник подключён');
   ok(!fs.readFileSync(path.join(ROOT, 'site/sitemap.xml'), 'utf8').includes('kabinet'), 'кабинета нет в sitemap');
-} catch (e) { ok(false, 'исключение: ' + (e.stack || e)); }
+} catch (e) { if (e !== 'stop') ok(false, 'исключение: ' + (e.stack || e)); }
 
 if (srvErr.match(/Fatal|Parse error|Warning|Deprecated/)) console.log('\nПредупреждения PHP:\n' + srvErr.split('\n').filter(l => /Fatal|Parse|Warning|Deprecated/.test(l)).slice(0, 10).join('\n'));
 console.log(`\nИтог: ${pass} ✓, ${fail} ✗`);

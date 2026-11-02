@@ -145,6 +145,17 @@ push без ручного запуска отработал `success`. Стат
 - Демо-бригады: `php server/tools/seed-demo.php --private=… [--purge]` — без значков проверки, рейтинга и отзывов, noindex, вне подбора.
 - Проверка: `node tools/test-brigady.mjs --private=<scratch>` (+ `--mysql=<dsn>`), скриншоты — `tools/shots-brigady.mjs`. Отчёт — `docs/reports/2026-10-31-brigady.md`.
 
+### Кабинеты и админка (с 01.11.2026, блок 0 и I спецификации `docs/brigady/spec-kabinety-adminka.md`)
+- Вход для всех ролей — кодом на почту: `api/vhod.php` (ядро `server/api/lib/kabinet.php`). Коды уходят через `brig_mail` — нужен `brig_mail_enabled`.
+  Роль «Админка» — почта из config `admin_emails` (дальше — пароль admin.php). Старые `order.html?t=` открывают `kabinet/#t=…` (гость, 12 ч).
+- Значимые действия (оплата, ответы и решения, подписи, приёмка, ПДн, всё POST в `remont.php`) — `kab_require_fresh*()`: код не старше `fresh_code_hours`.
+- Кабинет клиента — `site/kabinet/` (`node tools/gen-kabinet-page.js`, `js/kabinet.js`, `css/kabinet.css`) ← `api/kabinet.php`; ремонт — тот же `remont.js` (`window.lineaRemont`).
+- Выпуски альбома для клиента: `linea-private/orders/<номер>/releases/<версия>/{meta.json,album.pdf,registry.json}` — публикуются из админки; ответы К-N → `answers.json`, решения → таблица `signatures`.
+- Админка — `api/panel.php` (дашборд «Требует действия», заказы, клиенты, ПДн, сделки, бригады, договоры, разногласия, деньги, журнал, настройки).
+  Настройки `brig_terms` и реквизиты LINEA — таблица `settings` поверх config. Без реквизитов вознаграждение «отложено до ИП», счёт не выставляется.
+- Автоприёмки этапа молчанием НЕТ (юрист: потребитель) — cron `server/tools/cron.php` только напоминает и сигналит. Сроки в рабочих днях — таблица `holidays`.
+- Проверки: `node tools/test-kabinety.mjs [--mysql=<dsn>]`, скриншоты — `--until=shots` + `tools/shots-kabinety.mjs`. Отчёт — `docs/reports/2026-11-01-kabinety.md`.
+
 ## Канон чертежей
 Правила самих чертежей — `docs/cad-canon.md` (нормативная база СПДС/ЕСКД с пунктами, анатомия листа, чек-листы по каждому типу листа, нормируемые зазоры). Регламент работы — навык `cad-drawings`. Роли: агент `draftsman` (правит движок), `cad-normcontrol` (нормоконтроль), `cad-acceptance` (приёмка перед выдачей).
 

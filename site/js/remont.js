@@ -35,7 +35,7 @@
     let h = '<div class="kicker" style="margin:0 0 6px">Ремонт по проекту · необязательно</div>';
     if (J) h += jobView(J);
     else if (!R || R.status === 'cancelled') {
-      if (!S.eligible) { box.innerHTML = h + '<h2>Ремонт по проекту</h2><p>${S.chooseAfter === 'final' ? 'Когда будет готов финальный альбом' : 'Когда проект будет оплачен и готов первый вариант альбома'}, здесь можно подобрать бригаду (бригады проходят проверку документов): бригады посчитают ремонт по вашей смете. Это необязательно — проект ваш, работать можно с кем угодно. <a href="remont/">Как это работает</a></p>'; return; }
+      if (!S.eligible) { box.innerHTML = h + '<h2>Ремонт по проекту</h2><p>' + (S.chooseAfter === 'final' ? 'Когда будет готов финальный альбом' : 'Когда проект будет оплачен и готов первый вариант альбома') + ', здесь можно подобрать бригаду (бригады проходят проверку документов): бригады посчитают ремонт по вашей смете. Это необязательно — проект ваш, работать можно с кем угодно. <a href="remont/">Как это работает</a></p>'; return; }
       h += `<h2>Подобрать бригаду</h2><p>Бригады вашего района, прошедшие проверку документов, посчитают ремонт по позициям вашей сметы — вы сравните цены построчно и выберете. Для вас — без комиссии: вознаграждение студии платит бригада. Подбор необязателен. <a href="remont/" target="_blank" rel="noopener">Как это работает</a>${R ? '' : ''}</p>
         <form id="rmReq"><div class="bx-grid"><label class="bx-f">Район объекта<select name="district" required><option value="">Выберите</option>${Object.entries(S.districts).map(([k, v]) => `<option value="${k}">${esc(v)}</option>`).join('')}</select></label>
         <label class="bx-f">Когда хотите начать<input name="startWish" maxlength="60" placeholder="например, с 15 ноября"></label></div>
@@ -86,7 +86,7 @@
       ${s.status === 'ready' ? `<p><b>Чек-лист приёмки: ${esc(s.checklist.title)}</b></p><ul class="bx-check">${s.checklist.items.map((i, k) => `<li><input type="checkbox" data-ck="${s.id}" id="ck${s.id}-${k}"><label for="ck${s.id}-${k}">${esc(i.text)} <span class="src">(${esc(i.src)})</span></label></li>`).join('')}</ul>
         <div class="bx-row"><button class="btn sm" type="button" data-acc="${s.id}">Принять этап</button></div>
         <details><summary>Вернуть с замечаниями</summary><textarea class="bx-in" data-rt="${s.id}" rows="3" placeholder="Замечания — по одному в строке"></textarea><div class="bx-row"><button class="btn ghost sm" type="button" data-ret="${s.id}">Вернуть бригаде</button></div></details>` : ''}</div>`).join('');
-    const msgs = (J.messages || []).map(m => `<p class="bx-msg ${esc(m.who)}"><b>${esc({ client: 'Вы', brigade: 'Бригада', admin: 'LINEA' }[m.who] || m.who)}</b> <span class="bx-mut">${esc(dt(m.at))}</span><br>${esc(m.text)}</p>`).join('');
+    const msgs = (J.messages || []).map(m => `<p class="bx-msg ${esc(m.who)}"><b>${esc({ client: 'Вы', brigade: 'Бригада', admin: 'LINEA', system: 'Система' }[m.who] || m.who)}</b> <span class="bx-mut">${esc(dt(m.at))}</span><br>${esc(m.text)}</p>`).join('');
     return `<h2>Ремонт: ${esc(B.name)} ${st(J.status, J.statusText)}</h2>
       <p><b>Бригада:</b> <a href="brigady/${esc(B.slug)}/" target="_blank" rel="noopener">${esc(B.name)}</a>${J.contactsOpen ? ` · ${esc(B.contact)} · <a href="tel:${esc(String(B.phone).replace(/[^\d+]/g, ''))}">${esc(B.phone)}</a> · <a href="mailto:${esc(B.email)}">${esc(B.email)}</a>` : ''}<br><span class="bx-mut">${esc(B.legalFull)}</span></p>
       ${J.contactsOpen ? '' : `<p class="bx-note">${esc(J.contactsText)}</p>`}

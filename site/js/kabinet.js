@@ -14,6 +14,10 @@
   const set = h => { root.innerHTML = '<div class="wrap">' + h + '</div>'; };
   const STEPS = ['Бриф', 'Оплата', 'Работа над проектом', 'Первый вариант', 'Вопросы и правки', 'Финальный альбом', 'Ремонт'];
   let ME = {};
+  // «Айфон, Safari» вместо строки User-Agent
+  const uaName = ua => { ua = String(ua || ''); const os = /iPhone/.test(ua) ? 'iPhone' : /iPad/.test(ua) ? 'iPad' : /Android/.test(ua) ? 'Android' : /Mac OS X/.test(ua) ? 'Mac' : /Windows/.test(ua) ? 'Windows' : /Linux/.test(ua) ? 'Linux' : '';
+    const br = /YaBrowser/.test(ua) ? 'Яндекс Браузер' : /Edg\//.test(ua) ? 'Edge' : /Chrome\//.test(ua) ? 'Chrome' : /Firefox\//.test(ua) ? 'Firefox' : /Safari\//.test(ua) ? 'Safari' : '';
+    return [os, br].filter(Boolean).join(', ') || 'Устройство'; };
 
   if (!API) { set('<h1>Кабинет</h1><div class="kab-card"><p>Кабинет работает на основном сайте студии. Если вы отправили бриф в WhatsApp или письмом — номер заказа и ссылку пришлём туда же.</p><p><a class="btn" href="../brief.html">Заполнить бриф</a></p></div>'); return; }
 
@@ -141,11 +145,12 @@
       + '<nav class="kab-tabs" aria-label="Разделы объекта">' + TABS.map(([k, t]) => `<a href="#/o/${esc(O.number)}/${k}"${k === tab ? ' class="on" aria-current="page"' : ''}>${t}${k === 'voprosy' && openQ ? '<b>' + openQ + '</b>' : ''}</a>`).join('') + '</nav>';
     h += ({ proekt: proekt, voprosy: voprosy, pravki: pravki, remont: remontTab, docs: () => '<div id="kabDocs"><p class="kab-mut">Загружаю…</p></div>' }[tab] || proekt)(j);
     set(h); bindTop(); bindObject(j, tab);
-    const tabOn = root.querySelector('.kab-tabs a.on'); if (tabOn) tabOn.scrollIntoView({ block: 'nearest', inline: 'center' });
+    // активные вкладка и шаг — в видимой зоне ленты (на телефоне ленты прокручиваются вбок); страницу по вертикали не двигаем
+    for (const [box, sel] of [['.kab-tabs', 'a.on'], ['.kab-steps', 'li.on']]) { const b = root.querySelector(box), e = b && b.querySelector(sel); if (e) b.scrollLeft = e.offsetLeft - (b.clientWidth - e.offsetWidth) / 2; }
     // главная кнопка — липкая на телефоне
     const src = root.querySelector('.kab-sticky-src');
     if (src && matchMedia('(max-width:760px)').matches) { const st = document.createElement('div'); st.className = 'kab-sticky'; st.innerHTML = src.innerHTML; src.remove(); root.appendChild(st); bindPay(j); }
-    if (tab === 'remont') { const box = document.getElementById('ordRemont'); if (box && window.lineaRemont && j.remont.eligible) window.lineaRemont(box, j.remont.rt, API); }
+    if (tab === 'remont') { const box = document.getElementById('ordRemont'); if (box && window.lineaRemont && (j.remont.eligible || j.remont.hasRequest)) window.lineaRemont(box, j.remont.rt, API); }
     if (tab === 'docs') docsInto(document.getElementById('kabDocs'), O.number);
   }
 
@@ -275,7 +280,7 @@
     let h = top('pr') + '<h1>Профиль</h1>';
     h += `<div class="kab-card"><h3>Контакты</h3><form id="kabProf"><label class="kab-f">Как к вам обращаться<input name="name" value="${esc(P.name)}" autocomplete="name"></label><label class="kab-f">Телефон<input name="phone" value="${esc(P.phone)}" autocomplete="tel" inputmode="tel"></label>
       <p class="kab-mut">Почта для входа: ${esc(P.email)}. Сменить почту — напишите нам: подтвердим кодом на старую и новую.</p><button class="btn sm" type="submit">Сохранить</button> <span class="kab-ok"></span><p class="kab-err" role="alert"></p></form></div>`;
-    h += `<div class="kab-card"><h3>Устройства</h3><ul class="kab-list">${j.devices.map(d => `<li><div>${esc(d.ua.slice(0, 70) || 'Устройство')}${d.current ? ' <span class="kab-tag ok">это устройство</span>' : ''}<div class="kab-mut">последний вход ${esc(dt(d.last))}</div></div>${d.current ? '' : `<button class="btn ghost sm" type="button" data-dev="${d.id}">Выйти</button>`}</li>`).join('')}</ul>
+    h += `<div class="kab-card"><h3>Устройства</h3><ul class="kab-list">${j.devices.map(d => `<li><div>${esc(uaName(d.ua))} <span class="kab-mut">· ${esc(d.ip)}</span>${d.current ? ' <span class="kab-tag ok">это устройство</span>' : ''}<div class="kab-mut">последний вход ${esc(dt(d.last))}</div></div>${d.current ? '' : `<button class="btn ghost sm" type="button" data-dev="${d.id}">Выйти</button>`}</li>`).join('')}</ul>
       <div class="kab-row"><button class="btn ghost sm" type="button" id="kabOutAll">Выйти на всех устройствах</button></div></div>`;
     h += `<div class="kab-card"><h3>Согласия</h3>${j.consents.length ? '<ul class="kab-list">' + j.consents.map(c => `<li><div>${esc(c.title)}${c.order ? ' <span class="kab-mut">· ' + esc(c.order) + '</span>' : ''}<div class="kab-mut">редакция ${esc(c.edition)} · дано ${esc(dt(c.given))}${c.revoked ? ' · <b>отозвано ' + esc(dt(c.revoked)) + '</b>' : ''}</div></div>${c.revoked ? '' : `<button class="btn ghost sm" type="button" data-rev="${c.id}">Отозвать</button>`}</li>`).join('') + '</ul>' : '<p class="kab-empty">Согласий пока нет.</p>'}<p class="kab-err" id="kabRevErr" role="alert"></p></div>`;
     const blk = j.blockers || [];
@@ -313,7 +318,7 @@
       if (!j.ok) return loginView('Ссылка устарела — войдите по почте. Код придёт на почту из брифа.');
       ME = j; location.hash = '#/o/' + j.number; return;
     }
-    if (!ME.csrf) ME = await vh('me');
+    if (!ME.csrf || !ME.auth) ME = await vh('me');   // не вошли — спросить сервер заново (вход мог случиться в другой вкладке)
     if (!ME.ok) { set('<div class="kab-card"><p>Сервер не ответил. Обновите страницу через минуту.</p></div>'); return; }
     if (hsh === '#/rol' && ME.roles && ME.roles.length > 1) return chooseRole(ME.roles);
     if (!ME.auth && !ME.guest) { document.getElementById('kabBar').hidden = true; return ME.roles && ME.roles.length > 1 && !ME.role ? chooseRole(ME.roles) : loginView(); }
