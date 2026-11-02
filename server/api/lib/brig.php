@@ -189,13 +189,26 @@ function brig_input(): array
     return $in;
 }
 
+/** Бригада текущего запроса (с ролью человека в бригаде) — для проверок прав внутри функций модулей. */
+function brig_ctx(?array $b = null): ?array { static $c = null; if ($b !== null) { $c = $b; } return $c; }
+
 /** Текущая бригада по сессии или 401. */
 function brig_me(bool $required = true): ?array
 {
     brig_session();
     $a = acc_current('brigade');
-    $b = $a ? brig_one('SELECT * FROM br_brigades WHERE account_id = ?', [(int)$a['id']]) : null;
+    $b = null;
+    if ($a) {
+        // владелец — br_brigades.account_id; бригадир и сотрудник — br_members (свой аккаунт, вход кодом; удалённый теряет доступ сразу)
+        $b = brig_one('SELECT * FROM br_brigades WHERE account_id = ?', [(int)$a['id']]);
+        if ($b) { $b += ['_role' => 'owner', '_acc' => (int)$a['id'], '_objects' => null, '_name' => (string)$b['contact_name']]; }
+        elseif ($m = brig_one('SELECT * FROM br_members WHERE account_id = ? AND removed_at IS NULL', [(int)$a['id']])) {
+            $b = brig_one('SELECT * FROM br_brigades WHERE id = ?', [(int)$m['brigade_id']]);
+            if ($b) { $b += ['_role' => (string)$m['role'], '_acc' => (int)$a['id'], '_objects' => $m['objects'] !== null ? array_map('intval', json_decode((string)$m['objects'], true) ?: []) : null, '_name' => (string)$m['name']]; }
+        }
+    }
     if (!$b && $required) { linea_fail('Войдите в кабинет', 401); }
+    if ($b) { brig_ctx($b); }
     if ($b && $b['status'] === 'blocked') { acc_logout(); linea_fail('Аккаунт заблокирован: ' . ($b['status_reason'] ?: 'по правилам площадки'), 403); }
     return $b;
 }
@@ -672,6 +685,9 @@ function brig_commission_due_check(int $jobId, string $who = 'system'): ?string
     $s1 = brig_one('SELECT plan_start, started_at FROM br_stages WHERE job_id = ? ORDER BY idx LIMIT 1', [$jobId]);
     if ($j['contacts_open_at'] && $s1 && $s1['plan_start'] && $s1['plan_start'] . ' 00:00:00' <= $now) { $c['дата начала работ по договору'] = $s1['plan_start'] . ' 00:00:00'; }
     if ($s1 && $s1['started_at']) { $c['бригада начала работу по этапу 1'] = (string)$s1['started_at']; }
+    // реестр оплат: оплата, подтверждённая второй стороной, или отметка «получено» самой бригадой
+    $pm = db_val("SELECT MIN(declared_at) FROM br_payments WHERE job_id = ? AND amount_kop > 0 AND kind <> 'refund' AND (status = 'confirmed' OR (status = 'declared' AND declared_by = 'brigade'))", [$jobId]);
+    if ($pm) { $c['оплата бригаде отмечена в реестре сделки'] = (string)$pm; }
     $acc = db_val("SELECT MIN(accepted_at) FROM br_stages WHERE job_id = ? AND accepted_at IS NOT NULL", [$jobId]);
     if ($acc) { $c['принят первый этап'] = (string)$acc; }
     $n = $t['commission_due_after_sign_days'];
@@ -770,10 +786,11 @@ function brig_job_cancel(array $j, string $by, string $who, string $reason): voi
     $reason = brig_contact_scan(linea_str($reason, 500))[0];
     brig_signal('cancel', $who, ['brigade_id' => (int)$j['brigade_id'], 'request_id' => (int)$j['request_id'], 'job_id' => (int)$j['id'], 'field' => $by],
         'Отказ после выбора (' . ($by === 'client' ? 'заказчик' : 'бригада') . ')' . ($reason !== '' ? ': ' . $reason : ''));
+    require_once __DIR__ . '/kabinet.php';
+    // мягкая отмена (ревью кода С-3): сделка, переписка и версии договора остаются — доказательства для админки; статус — через deal_transition
+    deal_transition((int)$j['id'], 'cancelled', $who, ($by === 'client' ? 'заказчик' : 'бригада') . ' отказался до подписания договора' . ($reason !== '' ? ': ' . $reason : ''), false, ['cancel_by' => $by, 'cancel_reason' => $reason]);
     db_tx(function () use ($j, $by, $reason) {
         $now = linea_now();
-        // мягкая отмена (ревью кода С-3): сделка, переписка и версии договора остаются — доказательства для админки
-        db_update('br_jobs', ['status' => 'cancelled', 'cancelled_at' => $now, 'cancel_by' => $by, 'cancel_reason' => $reason, 'updated_at' => $now], 'id = ?', [(int)$j['id']]);
         db_exec("UPDATE br_contracts SET status = 'void' WHERE job_id = ? AND status = 'draft'", [(int)$j['id']]);
         db_update('br_offers', ['status' => 'withdrawn', 'updated_at' => $now], 'id = ?', [(int)$j['offer_id']]);
         db_update('br_requests', ['status' => 'cancelled', 'chosen_offer_id' => null, 'updated_at' => $now], 'id = ?', [(int)$j['request_id']]);
@@ -902,9 +919,11 @@ function brig_maybe_start(int $jobId, string $who): void
 {
     $j = brig_one('SELECT * FROM br_jobs WHERE id = ?', [$jobId]);
     if (!$j || $j['status'] !== 'contract' || !$j['client_signed_at'] || !$j['brigade_signed_at']) { return; }
+    require_once __DIR__ . '/brigada.php';
     brig_open_contacts($jobId, $who);
-    brig_exec("UPDATE br_jobs SET status = 'work', updated_at = ? WHERE id = ?", [linea_now(), $jobId]);
+    deal_transition($jobId, 'work', $who, 'договор подписан обеими сторонами на сайте, контакты открыты');   // единая точка смены статуса
     brig_exec("UPDATE br_stages SET status = 'work' WHERE job_id = ? AND idx = 1 AND status = 'plan'", [$jobId]);
+    brig_pay_plan($jobId);   // план оплат из договора: аванс и оплата этапов — в реестр br_payments
 }
 
 /** Даты этапов по графику предложения. */
@@ -991,4 +1010,29 @@ function brig_checklist(string $key): array
     ];
     [$title, $items] = $C[$key] ?? $C['final'];
     return ['key' => $key, 'title' => $title, 'items' => array_map(fn($i) => ['text' => $i[0], 'src' => $i[1]], $items)];
+}
+
+/**
+ * Уведомление в кабинет бригады (колокольчик): владельцу и людям бригады, которым видна сделка (сотруднику — только по своим объектам).
+ * $grp — zakazy | obekty | dengi | listy; «dengi» — только владельцу. $ukey — защита от повторов таймеров.
+ */
+function brig_notice(int $brigadeId, ?int $jobId, string $grp, string $text, string $link = '', string $ukey = ''): void
+{
+    $b = brig_one('SELECT account_id FROM br_brigades WHERE id = ?', [$brigadeId]);
+    if (!$b) { return; }
+    $to = [(int)$b['account_id']];
+    if ($grp !== 'dengi') {
+        foreach (brig_all('SELECT account_id, role, objects FROM br_members WHERE brigade_id = ? AND removed_at IS NULL', [$brigadeId]) as $m) {
+            $o = $m['objects'] !== null ? array_map('intval', json_decode((string)$m['objects'], true) ?: []) : null;
+            if ($grp === 'zakazy' && $m['role'] !== 'foreman') { continue; }
+            if ($jobId && $o !== null && !in_array($jobId, $o, true)) { continue; }
+            $to[] = (int)$m['account_id'];
+        }
+    }
+    foreach (array_unique($to) as $acc) {
+        try {
+            db_insert('notices', ['account_id' => $acc, 'order_id' => null, 'grp' => in_array($grp, ['zakazy', 'obekty', 'dengi', 'listy'], true) ? $grp : 'obekty',
+                'text' => mb_substr($text, 0, 1000), 'link' => mb_substr($link, 0, 180) ?: null, 'at' => linea_now(), 'ukey' => $ukey !== '' ? mb_substr($ukey . '|' . $acc, 0, 180) : null]);
+        } catch (PDOException $e) { /* уже есть с этим ukey */ }
+    }
 }

@@ -120,7 +120,15 @@ function brig_contract_body(array $j, string $kind, int $num, array $add = []): 
         $rows .= '<tr><td>' . (++$n) . '</td><td>' . $h($p['name']) . '</td><td>' . $h($p['unit']) . '</td><td class="r">' . ($p['qty'] !== null ? $h($p['qty']) : 'объём работ') . '</td><td class="r">'
             . $rub((int)round($it['price'] * 100)) . '</td><td class="r">' . $rub((int)$it['sum']) . '</td></tr>';
     }
-    $skipped = array_filter($pack['positions'], fn($p) => !isset($items[$p['id']]) || $items[$p['id']]['skip']);
+    $secs = json_decode((string)($of['sections'] ?? ''), true) ?: [];
+    if (($of['mode'] ?? '') === 'sections') {   // предложение «по разделам»: цена за раздел целиком, состав раздела — позиции сметы проекта
+        foreach ($secs as $spec => $kop) {
+            $names = array_map(fn($p) => $p['name'], array_filter($pack['positions'], fn($p) => $p['spec'] === $spec));
+            $rows .= '<tr><td>' . (++$n) . '</td><td>Раздел «' . $h(BRIG_SPECS[$spec] ?? $spec) . '» целиком: ' . $h(implode('; ', $names)) . '</td><td>раздел</td><td class="r">1</td><td class="r">' . $rub((int)$kop) . '</td><td class="r">' . $rub((int)$kop) . '</td></tr>';
+        }
+    }
+    $skipped = ($of['mode'] ?? '') === 'sections' ? array_filter($pack['positions'], fn($p) => !isset($secs[$p['spec']]))
+        : array_filter($pack['positions'], fn($p) => !isset($items[$p['id']]) || $items[$p['id']]['skip']);
     $st = ''; $acc = '';
     foreach (brig_all('SELECT * FROM br_stages WHERE job_id = ? ORDER BY idx', [(int)$j['id']]) as $s) {
         $st .= '<tr><td>' . (int)$s['idx'] . '</td><td>' . $h($s['name']) . '</td><td>' . ($s['plan_start'] ? $h(date('d.m.Y', strtotime((string)$s['plan_start']))) : '—') . '</td><td>' . ($s['plan_end'] ? $h(date('d.m.Y', strtotime((string)$s['plan_end']))) : '—') . '</td></tr>';
@@ -132,7 +140,10 @@ function brig_contract_body(array $j, string $kind, int $num, array $add = []): 
         . '<p>1.2. Позиции, которые Подрядчик не выполняет (' . count($skipped) . '), перечислены в Приложении 2.</p>'
         . '<h2>2. Цена и оплата</h2><p>2.1. Цена работ — <b>' . $rub((int)$of['total_kop']) . '</b> по позициям Приложения 2; цена твёрдая. Изменение объёма, цены или сроков — только дополнительным соглашением, подписанным сторонами на сайте LINEA.</p>'
         . '<p>2.2. Материалы: ' . $h(BRIG_MATERIALS[$of['materials']] ?? '') . ($of['materials_note'] ? ' — ' . $h($of['materials_note']) : '') . '.</p>'
-        . '<p>2.3. Оплата — напрямую Подрядчику: аванс (если стороны договорились) и далее поэтапно после приёмки каждого этапа на сайте. Внесение аванса Заказчик отмечает в карточке сделки.</p>'
+        . '<p>2.3. Оплата — напрямую Подрядчику' . ((int)($of['advance_pct'] ?? 0) > 0
+            ? ': аванс ' . (int)$of['advance_pct'] . ' % — ' . $rub((int)round((int)$of['total_kop'] * min(50, (int)$of['advance_pct']) / 100)) . ', остаток — поэтапно после приёмки каждого этапа на сайте, равными долями по этапам Приложения 3'
+            : ': поэтапно после приёмки каждого этапа на сайте, равными долями по этапам Приложения 3 (аванс — если стороны договорятся допсоглашением)')
+            . '. Каждую оплату одна сторона отмечает в карточке сделки, вторая подтверждает; расхождение рассматривает LINEA.</p>'
         . '<p>2.4. Вознаграждение студии LINEA платит Подрядчик по агентскому договору; в цену для Заказчика отдельной строкой оно не входит.</p>'
         . '<h2>3. Сроки</h2><p>3.1. Начало работ — ' . $h(date('d.m.Y', strtotime((string)$of['start_date']))) . ', продолжительность — ' . (int)$of['days'] . ' календарных дней (Приложение 3).</p>'
         . '<h2>4. Приёмка</h2><p>4.1. Заказчик принимает этап в карточке сделки на сайте, отметив все пункты чек-листа для приёмки (Приложение 4), или возвращает этап с замечаниями. Чек-лист — подсказка для Заказчика; LINEA работы не принимает и строительный контроль не ведёт. Скрытые работы закрываются только после акта освидетельствования (СП 71.13330.2017, п. 4.6).</p>'

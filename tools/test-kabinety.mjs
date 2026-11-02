@@ -200,7 +200,7 @@ try {
   const ml = await M.login('anna@example.test');
   ok(ml.j?.choose?.includes('client') && ml.j.choose.includes('brigade'), 'две роли → экран «Куда войти?»', ml.text);
   const rb = await M.req('POST', '/api/vhod.php?a=role', { json: { role: 'brigade' } });
-  ok(rb.j?.go === 'brigade' && (await M.req('GET', '/api/brigade/feed.php')).code === 200, 'выбрана бригада — кабинет бригады открыт тем же входом');
+  ok(rb.j?.go === 'brigade' && (await M.req('GET', '/api/brigada.php?m=feed')).code === 200, 'выбрана бригада — кабинет бригады открыт тем же входом');
   ok((await M.req('GET', '/api/kabinet.php?a=objects')).code === 401, 'в роли бригады кабинет клиента закрыт');
   ok((await M.req('POST', '/api/vhod.php?a=role', { json: { role: 'admin' } })).code === 403, 'роль «админ» недоступна почте не из admin_emails');
 
@@ -261,7 +261,7 @@ try {
   step('11. Лестница предупреждений, настройки, договоры');
   for (let i = 1; i <= 3; i++) await panel({ act: 'b_warn', id: bid, rule: 'п. 4.2 правил: контакты в сообщении', quote: 'пиши в телегу' });
   ok(+sql(`SELECT MAX(step) s FROM br_warnings WHERE brigade_id = ${bid}`)[0].s === 3, 'три предупреждения — шаг 3');
-  const fd = await M.req('GET', '/api/brigade/feed.php');
+  const fd = await M.req('GET', '/api/brigada.php?m=feed');
   ok(fd.code === 403 && /Лента новых заказов закрыта/.test(fd.j?.error || ''), '3-е предупреждение за 90 дней — лента новых заказов закрыта (403)');
   await panel({ act: 'set_terms', 't[stage_silence_days]': 4, 't[invite_max]': 5 });
   const setv = JSON.parse(sql("SELECT v FROM settings WHERE k = 'brig_terms'")[0].v);

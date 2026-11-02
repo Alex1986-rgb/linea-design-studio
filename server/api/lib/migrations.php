@@ -310,4 +310,40 @@ return [
         "CREATE INDEX br_warnings_b ON br_warnings(brigade_id)",
         "ALTER TABLE br_audit ADD COLUMN ip {KEY}",
     ],
+    // 01.11.2026 — кабинет бригады (блок II): люди бригады (бригадир, сотрудник — свой аккаунт, вход кодом; владелец — br_brigades.account_id),
+    // реестр оплат по сделке (отметка одной стороны → подтверждение второй; поля provider_* — под Безопасную сделку ЮKassa), предложение
+    // «по разделам», аванс и план оплат, подписант ООО, согласие на публичную карточку, ответ бригады на отзыв, кто запросил лист.
+    5 => [
+        "CREATE TABLE IF NOT EXISTS br_members (
+            id {ID}, brigade_id {INT} NOT NULL, account_id {INT} NOT NULL UNIQUE, role {SHORT} NOT NULL, name {KEY}, objects {TEXT},
+            invited_at {KEY} NOT NULL, invited_by {KEY}, removed_at {KEY},
+            FOREIGN KEY (brigade_id) REFERENCES br_brigades(id) ON DELETE CASCADE)
+            {ENGINE}",
+        "CREATE INDEX br_members_b ON br_members(brigade_id)",
+        "CREATE TABLE IF NOT EXISTS br_payments (
+            id {ID}, job_id {INT} NOT NULL, stage_id {INT}, kind {SHORT} NOT NULL, amount_kop {INT} NOT NULL, due_at {KEY},
+            method {SHORT} NOT NULL DEFAULT 'offsite', status {SHORT} NOT NULL DEFAULT 'planned',
+            declared_by {SHORT}, declared_at {KEY}, confirmed_by {SHORT}, confirmed_at {KEY}, contest_note {TEXT},
+            provider_deal_id {KEY}, provider_payment_id {KEY}, provider_payout_id {KEY}, note {TEXT}, created_at {KEY} NOT NULL,
+            FOREIGN KEY (job_id) REFERENCES br_jobs(id) ON DELETE CASCADE)
+            {ENGINE}",
+        "CREATE INDEX br_payments_job ON br_payments(job_id)",
+        "ALTER TABLE br_offers ADD COLUMN mode {SHORT}",
+        "ALTER TABLE br_offers ADD COLUMN sections {TEXT}",
+        "ALTER TABLE br_offers ADD COLUMN advance_pct {INT}",
+        "ALTER TABLE br_offers ADD COLUMN drafted_by {KEY}",
+        "ALTER TABLE br_brigades ADD COLUMN signer {TEXT}",
+        "ALTER TABLE br_brigades ADD COLUMN worker_msg {BOOL} NOT NULL DEFAULT 0",
+        "ALTER TABLE br_brigades ADD COLUMN card_consent_at {KEY}",
+        "ALTER TABLE br_brigades ADD COLUMN card_consent_ed {KEY}",
+        "ALTER TABLE br_brigades ADD COLUMN notify_prefs {TEXT}",
+        "ALTER TABLE br_reviews ADD COLUMN reply {TEXT}",
+        "ALTER TABLE br_reviews ADD COLUMN reply_at {KEY}",
+        "ALTER TABLE br_sheet_reqs ADD COLUMN by_who {KEY}",
+        // аванс, отмеченный до реестра (колонки br_jobs.advance_*), переносится строкой реестра
+        "INSERT INTO br_payments (job_id, kind, amount_kop, method, status, declared_by, declared_at, confirmed_by, confirmed_at, contest_note, note, created_at)
+            SELECT id, 'advance', 0, 'offsite', CASE advance_state WHEN 'confirmed' THEN 'confirmed' WHEN 'disputed' THEN 'contested' ELSE 'declared' END,
+            advance_by, advance_at, CASE advance_state WHEN 'confirmed' THEN 'brigade' ELSE NULL END, CASE advance_state WHEN 'confirmed' THEN advance_at ELSE NULL END,
+            advance_note, 'перенесено из отметки аванса (сумма не указывалась)', advance_at FROM br_jobs WHERE advance_at IS NOT NULL",
+    ],
 ];

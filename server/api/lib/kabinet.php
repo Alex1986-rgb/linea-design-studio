@@ -526,7 +526,7 @@ const DEAL_TRANSITIONS = [
  * Переход сделки или флаг: $to — статус из DEAL_TRANSITIONS либо 'freeze' / 'unfreeze'. Недопустимый — 409.
  * Пишет системную запись в ленту сделки (одинаковую для обеих сторон) и журнал аудита.
  */
-function deal_transition(int $jobId, string $to, string $who, string $why, bool $throw = false): array
+function deal_transition(int $jobId, string $to, string $who, string $why, bool $throw = false, array $extra = []): array
 {
     $fail = function (string $m, int $c = 400) use ($throw) { if ($throw) { throw new DomainException($m); } linea_fail($m, $c); };
     $j = brig_one('SELECT * FROM br_jobs WHERE id = ?', [$jobId]);
@@ -541,13 +541,15 @@ function deal_transition(int $jobId, string $to, string $who, string $why, bool 
         $text = $to === 'freeze' ? 'LINEA приостановила сделку: ' . $why . '. Все действия, кроме ленты и разногласий, на паузе.' : 'LINEA возобновила сделку: ' . $why;
     } else {
         if (!in_array($to, DEAL_TRANSITIONS[$j['status']] ?? [], true)) { $fail('Переход «' . $j['status'] . ' → ' . $to . '» недопустим', 409); }
-        db_update('br_jobs', ['status' => $to, 'updated_at' => $now] + ($to === 'done' ? ['done_at' => $now] : []) + ($to === 'cancelled' ? ['cancelled_at' => $now, 'cancel_by' => $who, 'cancel_reason' => mb_substr($why, 0, 500)] : []), 'id = ?', [$jobId]);
+        db_update('br_jobs', ['status' => $to, 'updated_at' => $now] + ($to === 'done' ? ['done_at' => $now] : []) + ($to === 'cancelled' ? ['cancelled_at' => $now, 'cancel_by' => $who, 'cancel_reason' => mb_substr($why, 0, 500)] : []), 'id = ? AND status = ?', [$jobId, $j['status']]);
+        if ($extra) { db_update('br_jobs', array_intersect_key($extra, array_flip(['cancel_by', 'cancel_reason'])), 'id = ?', [$jobId]); }
         $text = 'Статус сделки: ' . (BRIG_JOB_STATUS[$to] ?? $to) . ($why !== '' ? ' — ' . $why : '');
     }
     db_insert('br_messages', ['job_id' => $jobId, 'who' => 'system', 'text' => $text, 'masked' => 0, 'at' => $now]);
     brig_audit($who, 'deal-' . $to, 'job#' . $jobId, $why);
     $o = db_one('SELECT o.* FROM orders o JOIN br_requests r ON r.order_id = o.id WHERE r.id = ?', [(int)$j['request_id']]);
     if ($o) { kab_notice_order($o, 'remont', $text, '#/o/' . $o['number'] . '/remont'); }
+    brig_notice((int)$j['brigade_id'], $jobId, 'obekty', $text, '#/obekt/' . $jobId);
     return brig_one('SELECT * FROM br_jobs WHERE id = ?', [$jobId]);
 }
 

@@ -33,7 +33,7 @@ function k_out(string $title, string $desc, string $canon, string $body, array $
 if (isset($_GET['sitemap'])) {
     header('Content-Type: application/xml; charset=utf-8');
     echo '<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"><url><loc>' . $h($base . '/brigady/') . '</loc></url>';
-    foreach (brig_all("SELECT slug, updated_at FROM br_brigades WHERE status = 'active' AND test = 0 AND demo = 0 ORDER BY id") as $b) {
+    foreach (brig_all("SELECT slug, updated_at FROM br_brigades WHERE status = 'active' AND (card_consent_ed IS NULL OR card_consent_ed <> 'revoked') AND test = 0 AND demo = 0 ORDER BY id") as $b) {
         echo '<url><loc>' . $h($base . '/brigady/' . $b['slug'] . '/') . '</loc><lastmod>' . $h(substr((string)$b['updated_at'], 0, 10)) . '</lastmod></url>';
     }
     echo '</urlset>';
@@ -58,7 +58,7 @@ $JOIN = '<div class="k-join"><div><h2>Вы бригада?</h2><p>Заказы �
 
 $slug = (string)($_GET['slug'] ?? '');
 if ($slug !== '') {
-    $b = preg_match('/^[a-z0-9-]{3,70}$/', $slug) ? brig_one("SELECT * FROM br_brigades WHERE slug = ? AND status = 'active'", [$slug]) : null;
+    $b = preg_match('/^[a-z0-9-]{3,70}$/', $slug) ? brig_one("SELECT * FROM br_brigades WHERE slug = ? AND status = 'active' AND (card_consent_ed IS NULL OR card_consent_ed <> 'revoked')", [$slug]) : null;
     if (!$b) {
         k_out('Бригада не найдена — LINEA', 'Бригада не найдена или сейчас не принимает заказы.', $base . '/brigady/', '<section class="blk hero-page"><div class="wrap"><h1>Бригада не найдена</h1><p>Бригада не найдена или сейчас не принимает заказы. <a href="/brigady/">Все бригады</a></p></div></section>', [], true, 404);
     }
@@ -125,9 +125,9 @@ $fd = isset(BRIG_DISTRICTS[$_GET['district'] ?? '']) ? (string)$_GET['district']
 $fr = in_array((string)($_GET['rating'] ?? ''), ['3', '4', '4.5'], true) ? (float)$_GET['rating'] : 0.0;
 $fb = max(0, (int)($_GET['budget'] ?? 0));
 $test = isset($_GET['test']) && linea_local() ? 1 : 0;
-$rows = brig_all("SELECT * FROM br_brigades WHERE status = 'active' AND demo = 0 AND test = ? ORDER BY admitted_at", [$test]);
+$rows = brig_all("SELECT * FROM br_brigades WHERE status = 'active' AND (card_consent_ed IS NULL OR card_consent_ed <> 'revoked') AND demo = 0 AND test = ? ORDER BY admitted_at", [$test]);
 $demoMode = !$rows;            // настоящих бригад нет — показываем образцы с плашкой
-if ($demoMode) { $rows = brig_all("SELECT * FROM br_brigades WHERE status = 'active' AND demo = 1 ORDER BY id"); }
+if ($demoMode) { $rows = brig_all("SELECT * FROM br_brigades WHERE status = 'active' AND (card_consent_ed IS NULL OR card_consent_ed <> 'revoked') AND demo = 1 ORDER BY id"); }
 $cards = [];
 foreach ($rows as $b) {
     $specs = json_decode($b['specs'], true) ?: []; $dist = json_decode($b['districts'], true) ?: [];

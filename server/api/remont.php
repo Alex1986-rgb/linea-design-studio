@@ -23,6 +23,7 @@ declare(strict_types=1);
 require __DIR__ . '/lib/boot.php';
 require __DIR__ . '/lib/brig.php';
 require __DIR__ . '/lib/kabinet.php';
+require __DIR__ . '/lib/brigada.php';
 
 brig_https();
 $token = (string)($_GET['t'] ?? '');
@@ -67,6 +68,8 @@ function rm_state(array $o, string $token): array
             'contactsOpen' => $open, 'contactsText' => brig_terms_public()['contactsText'], 'messages' => brig_messages((int)$j['id']),
             'canCancel' => $j['status'] === 'contract' && !$open,
             'advanceAt' => $j['advance_at'], 'advanceState' => $j['advance_state'], 'canAdvance' => $j['status'] === 'work' && !$j['advance_at'],
+            'payments' => brig_pay_list((int)$j['id']), 'paySummary' => brig_pay_summary((int)$j['id']), 'frozen' => $j['frozen_at'] ? (string)$j['frozen_reason'] : null,
+            'beforePhotos' => array_map(fn($f) => ['id' => (int)$f['id'], 'stage' => (int)$f['owner_id']], brig_all("SELECT f.id, f.owner_id FROM br_files f JOIN br_stages s ON s.id = f.owner_id WHERE f.owner_kind = 'stage_before' AND s.job_id = ? ORDER BY f.id", [(int)$j['id']])),
             'docs' => brig_deal_docs($j),
             'clientSigned' => $j['client_signed_at'], 'brigadeSigned' => $j['brigade_signed_at'], 'stages' => brig_job_stages((int)$j['id']),
             'review' => $rev ? ['rating' => (int)$rev['rating'], 'text' => (string)$rev['text'], 'hidden' => (bool)$rev['hidden']] : null,
@@ -86,7 +89,7 @@ $in = brig_input();
 $a = (string)($_GET['a'] ?? '');
 // значимые действия (выбор, подписи, отметки оплат, приёмка, разногласие, отзыв, отказ) — только после входа кодом на почту заказа
 // не старше fresh_code_hours (спецификация 3.0 п. 6, ревью техники В-5): одной ссылки с токеном мало
-if (in_array($a, ['request', 'choose', 'sign', 'addendum', 'addendum_cancel', 'advance', 'job_cancel', 'stage_accept', 'stage_return', 'review', 'dispute', 'cancel'], true)) {
+if (in_array($a, ['request', 'choose', 'sign', 'addendum', 'addendum_cancel', 'advance', 'pay', 'pay_contest', 'job_cancel', 'stage_accept', 'stage_return', 'review', 'dispute', 'cancel'], true)) {
     kab_require_fresh_for_order($o);
 }
 $jf = ($rq = brig_one('SELECT id FROM br_requests WHERE order_id = ?', [$oid])) ? brig_job_for_request((int)$rq['id']) : null;
@@ -184,13 +187,21 @@ switch ($a) {
         if (!$j || $j['status'] === 'cancelled') { linea_fail('Переписка — по объекту с выбранной бригадой'); }
         brig_message_add($j, 'client', (string)($in['text'] ?? ''), ['who' => $who, 'request_id' => (int)$r['id']]);
         break;
-    case 'advance':
+    case 'advance':   // прежняя кнопка «аванс внесён» — теперь строка реестра оплат (аванс по плану или с суммой)
         if (!$j || $j['status'] !== 'work') { linea_fail('Отметить аванс можно, когда договор подтверждён и объект в работе'); }
         if ($j['advance_at']) { linea_fail('Аванс уже отмечен'); }
-        // отметка заказчика — «заявлено»: бригада подтверждает или оспаривает за advance_confirm_days (ревью кода В-2), молчание — подтверждение
-        if (brig_exec("UPDATE br_jobs SET advance_at = ?, advance_by = 'client', advance_state = 'declared', updated_at = ? WHERE id = ? AND advance_at IS NULL", [$now, $now, (int)$j['id']]) !== 1) { linea_fail('Аванс уже отмечен'); }
+        $adv = brig_one("SELECT * FROM br_payments WHERE job_id = ? AND kind = 'advance' AND status = 'planned' ORDER BY id LIMIT 1", [(int)$j['id']]);
+        brig_pay_mark($j, 'client', $adv ? ['p' => (int)$adv['id']] : ['kind' => 'advance', 'amount' => (float)($in['amount'] ?? 0), 'zeroOk' => true], $who);
         brig_audit($who, 'advance', 'job#' . $j['id'], 'Заказчик: аванс бригаде внесён (бригада подтверждает или оспаривает за ' . brig_terms()['advance_confirm_days'] . ' дн.)');
-        $b = $brig(); brig_mail((string)$b['email'], 'brig_advance_declared', ['name' => $b['contact_name'], 'object' => $r['object_title'], 'days' => (string)brig_terms()['advance_confirm_days'], 'link' => brig_link('brigada/')], $test || (bool)$b['test']);
+        $b = $brig(); brig_mail((string)$b['email'], 'brig_advance_declared', ['name' => $b['contact_name'], 'object' => $r['object_title'], 'days' => (string)brig_terms()['advance_confirm_days'], 'link' => brig_link('brigada/#/obekt/' . $j['id'] . '/oplaty')], $test || (bool)$b['test']);
+        break;
+    case 'pay':   // реестр оплат: «я передал» по строке плана (p) или новая отметка {kind, amount, stage}; по отметке бригады — подтверждение
+        if (!$j) { linea_fail('Бригада не выбрана'); }
+        brig_pay_mark($j, 'client', $in, $who);
+        break;
+    case 'pay_contest':
+        if (!$j) { linea_fail('Бригада не выбрана'); }
+        brig_pay_contest($j, 'client', (int)($in['p'] ?? 0), (string)($in['note'] ?? ''), $who);
         break;
     case 'job_cancel':
         if (!$j) { linea_fail('Бригада не выбрана'); }
@@ -209,11 +220,13 @@ switch ($a) {
         db_tx(function () use ($s, $j, $now, $checks) {
             db_update('br_stages', ['status' => 'accepted', 'accepted_at' => $now, 'checks' => json_encode($checks)], 'id = ?', [(int)$s['id']]);
             db_exec("UPDATE br_stages SET status = 'work' WHERE job_id = ? AND idx = ? AND status = 'plan'", [(int)$j['id'], (int)$s['idx'] + 1]);
-            if ((int)db_val("SELECT COUNT(*) FROM br_stages WHERE job_id = ? AND status <> 'accepted'", [(int)$j['id']]) === 0) {
-                db_update('br_jobs', ['status' => 'done', 'done_at' => $now, 'updated_at' => $now], 'id = ?', [(int)$j['id']]);
-            }
         });
         brig_audit($who, 'stage-accept', 'stage#' . $s['id'], $s['name']);
+        db_insert('br_messages', ['job_id' => (int)$j['id'], 'who' => 'system', 'text' => 'Заказчик принял этап ' . (int)$s['idx'] . ' «' . $s['name'] . '» по чек-листу.', 'masked' => 0, 'at' => $now]);
+        brig_notice((int)$j['brigade_id'], (int)$j['id'], 'obekty', 'Заказчик принял этап «' . $s['name'] . '» (' . $r['object_title'] . ')', '#/obekt/' . $j['id'] . '/etapy');
+        if ((int)db_val("SELECT COUNT(*) FROM br_stages WHERE job_id = ? AND status <> 'accepted'", [(int)$j['id']]) === 0) {
+            deal_transition((int)$j['id'], 'done', $who, 'все этапы приняты заказчиком');   // единая точка смены статуса сделки
+        }
         brig_commission_due_check((int)$j['id'], $who);   // первый принятый этап — одна из дат «к оплате»
         $b = $brig(); brig_mail((string)$b['email'], 'brig_stage_accepted', ['name' => $b['contact_name'], 'stage' => $s['name'], 'object' => $r['object_title']], $test || (bool)$b['test']);
         break;
@@ -226,7 +239,9 @@ switch ($a) {
         foreach (array_slice($lines, 0, 30) as $t) { db_insert('br_remarks', ['stage_id' => (int)$s['id'], 'text' => $t, 'created_at' => $now]); }
         db_update('br_stages', ['status' => 'returned'], 'id = ?', [(int)$s['id']]);
         brig_audit($who, 'stage-return', 'stage#' . $s['id'], count($lines) . ' замечаний');
-        $b = $brig(); brig_mail((string)$b['email'], 'brig_stage_returned', ['name' => $b['contact_name'], 'stage' => $s['name'], 'object' => $r['object_title'], 'link' => brig_link('brigada/')], $test || (bool)$b['test']);
+        db_insert('br_messages', ['job_id' => (int)$j['id'], 'who' => 'system', 'text' => 'Заказчик вернул этап ' . (int)$s['idx'] . ' «' . $s['name'] . '» на доработку: замечаний — ' . count($lines) . '.', 'masked' => 0, 'at' => $now]);
+        brig_notice((int)$j['brigade_id'], (int)$j['id'], 'obekty', 'Этап «' . $s['name'] . '» вернули: ' . count($lines) . ' замеч.', '#/obekt/' . $j['id'] . '/etap/' . $s['id']);
+        $b = $brig(); brig_mail((string)$b['email'], 'brig_stage_returned', ['name' => $b['contact_name'], 'stage' => $s['name'], 'object' => $r['object_title'], 'link' => brig_link('brigada/#/obekt/' . $j['id'] . '/etap/' . $s['id'])], $test || (bool)$b['test']);
         break;
     case 'review':
         if (!$j || $j['status'] !== 'done') { linea_fail('Отзыв — после завершения объекта'); }

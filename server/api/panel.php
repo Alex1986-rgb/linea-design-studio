@@ -5,12 +5,15 @@
  * отмена), бригады (лестница предупреждений), договоры и подписи (проверка хешей), разногласия (рекомендация со сроком), вознаграждение
  * (проводки, «отложено до ИП»), листы, сигналы, журнал администратора, настройки (brig_terms, реквизиты, праздники).
  * Вход — как admin.php (пароль admin_hash, сессия linea_adm, только https, CSRF). Каждое действие — в журнал br_audit с IP.
- * Модерация бригад, пакеты запросов, переписка разногласий, отзывы — пока в admin-brigady.php (ссылки из разделов).
+ * Модерация анкет и файлов, пакеты и рассылка запросов (лимит invite_max), переписка и итог разногласий — здесь же (действия общие с
+ * admin-brigady.php: lib/adm-brigady-act.php). CSV-экспорт (сделки, оплаты, проводки, счета, бригады без ПДн клиентов, сигналы) — с защитой от CSV-инъекций.
  * Права — adm_can($action): сейчас вошедший = администратор; роль «модератор» добавляется без переделки.
  */
 declare(strict_types=1);
 require __DIR__ . '/lib/boot.php';
 require __DIR__ . '/lib/kabinet.php';
+require __DIR__ . '/lib/brigada.php';
+require __DIR__ . '/lib/adm-brigady-act.php';
 
 header('X-Robots-Tag: noindex, nofollow');
 header('Cache-Control: no-store');
@@ -43,9 +46,9 @@ $now = linea_now();
 $WHO = 'admin';
 $s = (string)($_GET['s'] ?? 'dash');
 
-const ADM_MENU = ['dash' => 'Дашборд', 'orders' => 'Заказы проектов', 'clients' => 'Клиенты', 'pd' => 'Заявки по ПДн', 'deals' => 'Сделки', 'brigades' => 'Бригады',
+const ADM_MENU = ['dash' => 'Дашборд', 'orders' => 'Заказы проектов', 'clients' => 'Клиенты', 'pd' => 'Заявки по ПДн', 'deals' => 'Сделки', 'brigades' => 'Бригады', 'requests' => 'Запросы бригадам',
     'contracts' => 'Договоры и подписи', 'disputes' => 'Разногласия', 'money' => 'Деньги и вознаграждение', 'sheets' => 'Листы по запросу', 'signals' => 'Сигналы обхода',
-    'audit' => 'Журнал', 'settings' => 'Настройки'];
+    'audit' => 'Журнал', 'export' => 'Экспорт CSV', 'settings' => 'Настройки'];
 
 function adm_page(string $title, string $body, string $s, string $msg = ''): never
 {
@@ -77,6 +80,35 @@ function adm_page(string $title, string $body, string $s, string $msg = ''): nev
         . 'main{padding:12px}main table{display:block;overflow-x:auto}.hide-m{display:none}form.inl{display:flex;width:100%}form.inl input:not([type=checkbox]):not([type=hidden]),form.inl textarea,form.inl select{width:100%}th,td{padding:6px;font-size:13px}}</style></head><body><div class="lay"><nav class="side" aria-label="Разделы админки"><div class="lg">LINEA</div>' . $menu
         . '<a href="admin-brigady.php">Ремонт: модерация и запросы →</a><a href="admin.php">Старый список заказов →</a></nav><main>'
         . ($msg !== '' ? '<p class="msg">' . $h($msg) . '</p>' : '') . $body . '</main></div></body></html>';
+    exit;
+}
+
+// ── файл (анкеты, портфолио, этапы, пакеты — админ видит все файлы сервиса)
+if (isset($_GET['file'])) {
+    $f = brig_one('SELECT * FROM br_files WHERE id = ?', [(int)$_GET['file']]);
+    if (!$f) { http_response_code(404); exit; }
+    brig_send_file($f);
+}
+// ── CSV-экспорт (спецификация 5.12): без паспортных данных и без контактов клиентов; ячейки «= + - @ таб CR» — с префиксом «'» (CSV-инъекции)
+const ADM_CSV = ['deals' => 'Сделки', 'payments' => 'Оплаты по сделкам (реестр)', 'ledger' => 'Проводки вознаграждения', 'invoices' => 'Счета', 'brigades' => 'Бригады', 'signals' => 'Сигналы обхода'];
+function adm_csv_cell($v) { return is_string($v) && $v !== '' && !is_numeric($v) && strpbrk($v[0], "=+-@\t\r") !== false ? "'" . $v : $v; }
+if (isset($_GET['csv']) && isset(ADM_CSV[$_GET['csv']])) {
+    $k = (string)$_GET['csv'];
+    $q = [
+        'deals' => ['SELECT j.id, o.number, r.object_title, b.name brigade, j.status, j.deal_total_kop, j.commission_rate, j.commission_kop, j.contacts_open_at, j.done_at, j.frozen_at, r.test FROM br_jobs j JOIN br_requests r ON r.id = j.request_id JOIN orders o ON o.id = r.order_id JOIN br_brigades b ON b.id = j.brigade_id ORDER BY j.id', ['Сделка', 'Заказ', 'Объект', 'Бригада', 'Статус', 'Сумма, коп', 'Ставка', 'Вознаграждение, коп', 'Договор подписан', 'Завершена', 'Приостановлена', 'Тест']],
+        'payments' => ['SELECT p.id, p.job_id, p.kind, p.amount_kop, p.status, p.declared_by, p.declared_at, p.confirmed_by, p.confirmed_at, p.method, p.contest_note FROM br_payments p ORDER BY p.id', ['#', 'Сделка', 'Вид', 'Сумма, коп', 'Статус', 'Отметил', 'Когда', 'Подтвердил', 'Когда', 'Способ', 'Расхождение']],
+        'ledger' => ['SELECT l.id, l.job_id, b.name, l.kind, l.amount_kop, l.status, l.note, l.at, l.by_who FROM br_ledger l JOIN br_brigades b ON b.id = l.brigade_id ORDER BY l.id', ['#', 'Сделка', 'Бригада', 'Проводка', 'Сумма, коп', 'Статус', 'Пояснение', 'Когда', 'Кто']],
+        'invoices' => ['SELECT i.number, b.name, b.inn, i.job_id, i.amount_kop, i.issued_at, i.due_at, i.paid_at, i.paid_note FROM br_invoices i JOIN br_brigades b ON b.id = i.brigade_id ORDER BY i.id', ['Счёт', 'Бригада', 'ИНН', 'Сделка', 'Сумма, коп', 'Выставлен', 'Срок', 'Оплачен', 'Основание']],
+        'brigades' => ['SELECT id, name, legal, inn, status, specs, districts, admitted_at, pilot_slot, pilot_used, test FROM br_brigades WHERE demo = 0 ORDER BY id', ['#', 'Название', 'Форма', 'ИНН', 'Статус', 'Специализации', 'Районы', 'Допущена', 'Место в пилоте', 'Пилотных сделок', 'Тест']],
+        'signals' => ['SELECT id, at, kind, who, brigade_id, job_id, request_id, field, detail FROM br_signals ORDER BY id', ['#', 'Когда', 'Вид', 'Кто', 'Бригада', 'Сделка', 'Запрос', 'Поле', 'Что']],
+    ][$k];
+    header('Content-Type: text/csv; charset=utf-8');
+    header('Content-Disposition: attachment; filename="linea-' . $k . '-' . date('Y-m-d') . '.csv"');
+    $out = fopen('php://output', 'w');
+    fwrite($out, "\xEF\xBB\xBF");
+    fputcsv($out, $q[1], ';', '"', '');
+    foreach (brig_all($q[0]) as $row) { fputcsv($out, array_map('adm_csv_cell', array_values($row)), ';', '"', ''); }
+    brig_audit('admin', 'csv-export', $k, ADM_CSV[$k]);
     exit;
 }
 
@@ -389,6 +421,14 @@ if (($_SERVER['REQUEST_METHOD'] ?? '') === 'POST') {
                 $msg = 'Календарь обновлён.'; break;
             }
             case 'logout': session_destroy(); header('Location: admin.php'); exit;
+            // модерация ремонта — общие действия с admin-brigady.php (lib/adm-brigady-act.php)
+            case 'b_check': case 'b_npd': case 'b_status': case 'b_inn_release': case 'f_ok': case 'f_del': case 'r_pack': case 'r_file_del': case 'r_send': case 'r_cancel':
+            case 'd_msg': case 'd_resolve': case 'c_approve': case 'c_reject': case 'i_paid': case 'rv_hide': case 'rv_show': case 'j_advance': {
+                if (!adm_can(in_array($act, ['b_check', 'b_npd', 'f_ok', 'f_del'], true) ? 'brigade-check' : ($act === 'd_msg' ? 'dispute-msg' : 'admin'))) { $msg = 'Нет прав на это действие'; break; }
+                [$msg] = adm_brig_act($act, (int)($_POST['id'] ?? 0), $reason, $WHO, 'panel.php');
+                $msg = $msg !== '' ? $msg : 'Готово.';
+                break;
+            }
             default: $msg = 'Неизвестное действие';
         }
     } catch (Throwable $e) {
@@ -631,11 +671,77 @@ switch ($s) {
         $rows = '';
         foreach (brig_all('SELECT * FROM br_brigades WHERE demo = 0 ORDER BY id DESC LIMIT 300') as $b) {
             $ws = brig_all('SELECT * FROM br_warnings WHERE brigade_id = ? ORDER BY id DESC', [(int)$b['id']]);
-            $rows .= '<tr><td><a href="admin-brigady.php?b=' . (int)$b['id'] . '">' . $h($b['name']) . '</a>' . ($b['test'] ? ' <span class="test">тест</span>' : '') . '<div class="mut">' . $h(BRIG_LEGAL[$b['legal']] ?? $b['legal']) . ' · ИНН ' . $h($b['inn']) . '</div></td>'
+            $rows .= '<tr><td><a href="panel.php?s=brigade&id=' . (int)$b['id'] . '">' . $h($b['name']) . '</a>' . ($b['test'] ? ' <span class="test">тест</span>' : '') . '<div class="mut">' . $h(BRIG_LEGAL[$b['legal']] ?? $b['legal']) . ' · ИНН ' . $h($b['inn']) . '</div></td>'
                 . '<td>' . $h(BRIG_STATUS[$b['status']] ?? $b['status']) . '</td><td>' . ($ws ? implode('<br>', array_map(fn($w) => 'шаг ' . (int)$w['step'] . ': ' . $h($w['rule']) . ' <span class="mut">' . $d($w['at']) . ($w['until_at'] ? ', до ' . $d($w['until_at']) : '') . '</span>', array_slice($ws, 0, 3))) : '—') . '</td>'
                 . '<td>' . $form('b_warn', ['id' => $b['id']], '<input name="rule" size="18" placeholder="пункт правил" required><input name="quote" size="18" placeholder="цитата нарушения">', 'Предупредить', 'lt') . '</td></tr>';
         }
         adm_page('Бригады', '<h1>Бригады</h1><p class="mut">Лестница: 1-е — предупреждение; 2-е — ниже в подборе на 14 дней; 3-е за 90 дней — лента новых заказов закрыта на 14 дней; дальше — приостановка или блок решением LINEA (в карточке бригады). Модерация анкет — в «Ремонт: модерация».</p><div class="scroll"><table><tr><th>Бригада</th><th>Статус</th><th>Предупреждения</th><th></th></tr>' . ($rows ?: '<tr><td colspan="4">Нет бригад</td></tr>') . '</table></div>', 'brigades', $msg);
+    }
+    case 'brigade': {   // анкета бригады: модерация (отметки проверки, ФНС, статус), файлы портфолио, команда, оплаты, предупреждения
+        $b = brig_one('SELECT * FROM br_brigades WHERE id = ?', [(int)($_GET['id'] ?? 0)]);
+        if (!$b) { adm_page('Бригада', '<p>Нет такой бригады.</p>', 'brigades'); }
+        $bid = (int)$b['id']; $back = ['s_back' => 'brigade', 'id_back' => $bid];
+        $img = fn(array $f) => '<span style="display:inline-block;margin:0 6px 6px 0;vertical-align:top"><a href="panel.php?file=' . (int)$f['id'] . '" target="_blank" rel="noopener">' . ($f['mime'] === 'image/jpeg' ? '<img src="panel.php?file=' . (int)$f['id'] . '" alt="" style="width:130px;height:96px;object-fit:cover;border:1px solid #ddd">' : 'файл #' . (int)$f['id']) . '</a><br>'
+            . ($f['moderated_at'] ? '<span class="st g">в каталоге</span>' : '<span class="st w">на модерации</span> ' . $form('f_ok', ['id' => $f['id']] + $back, '', 'Одобрить', 'lt')) . $form('f_del', ['id' => $f['id']] + $back, '', 'Удалить', 'bad') . '</span>';
+        $port = '';
+        foreach (brig_all('SELECT * FROM br_portfolio WHERE brigade_id = ? ORDER BY id', [$bid]) as $pf) {
+            $port .= '<div class="box"><b>' . $h($pf['title']) . '</b> <span class="mut">' . $h(BRIG_DISTRICTS[$pf['district']] ?? $pf['district']) . ', ' . $h($pf['area']) . ' м², ' . $h($pf['year']) . '</span><div>'
+                . implode('', array_map($img, brig_all("SELECT * FROM br_files WHERE owner_kind = 'portfolio' AND owner_id = ? ORDER BY id", [(int)$pf['id']]))) . '</div></div>';
+        }
+        $logo = brig_all("SELECT * FROM br_files WHERE owner_kind = 'logo' AND brigade_id = ?", [$bid]);
+        $team = implode('', array_map(fn($m) => '<li>' . $h($m['name']) . ' — ' . $h(BRIG_ROLES[$m['role']] ?? $m['role']) . ($m['removed_at'] ? ' <span class="mut">удалён ' . $d($m['removed_at']) . '</span>' : '') . '</li>', brig_all('SELECT * FROM br_members WHERE brigade_id = ? ORDER BY id', [$bid])));
+        $fields = [['Форма', BRIG_LEGAL[$b['legal']] ?? $b['legal']], ['ИНН', $b['inn'] . (brig_inn_ok((string)$b['inn']) ? ' (контрольная сумма верна)' : ' (контрольная сумма НЕ сходится)')], ['Компания', $b['company']], ['Бригадир', $b['contact_name']],
+            ['Телефон / почта', $b['phone'] . ' · ' . $b['email']], ['Специализации', implode(', ', array_map(fn($k) => BRIG_SPECS[$k] ?? $k, json_decode($b['specs'], true) ?: []))],
+            ['Районы', implode(', ', array_map(fn($k) => BRIG_DISTRICTS[$k] ?? $k, json_decode($b['districts'], true) ?: []))], ['Состав / опыт', $b['team_size'] . ' чел. · ' . $b['experience'] . ' лет'],
+            ['Рекомендатели (видит только LINEA)', $b['referees']], ['О бригаде', $b['about']], ['Гарантия', $b['warranty_months'] . ' мес.'], ['Принятые документы', 'ПДн ' . $b['consent_pd_ed'] . ', правила ' . $b['rules_ed'] . ', агентский ' . $b['agency_ed'] . ' — ' . $d($b['accepted_at']) . ', IP ' . $b['ip_reg']],
+            ['Публичная карточка', $b['card_consent_ed'] === 'revoked' ? 'согласие отозвано — карточка снята' : 'согласие действует'], ['Проверка ФНС', $b['inn_check_note']]];
+        $flds = implode('', array_map(fn($x) => '<tr><th style="width:220px">' . $h($x[0]) . '</th><td>' . nl2br($h($x[1])) . '</td></tr>', $fields));
+        $inn = rawurlencode((string)$b['inn']);
+        $acts = $form('b_check', ['id' => $bid] + $back, '<label><input type="checkbox" name="inn_ok" value="1"' . ($b['inn_checked_at'] ? ' checked' : '') . '> ИНН проверен</label><input name="inn_note" size="24" placeholder="что проверено" value="' . $h($b['inn_check_note']) . '"><label><input type="checkbox" name="call_ok" value="1"' . ($b['call_at'] ? ' checked' : '') . '> видеозвонок проведён</label>', 'Сохранить отметки')
+            . $form('b_npd', ['id' => $bid] + $back, '', 'Статус НПД в ФНС', 'lt')
+            . '<p class="mut">Проверить вручную: <a href="https://egrul.nalog.ru/" target="_blank" rel="noopener">ЕГРЮЛ/ЕГРИП</a> · <a href="https://pb.nalog.ru/search.html#t=' . $inn . '" target="_blank" rel="noopener">Прозрачный бизнес</a> · <a href="https://bankrot.fedresurs.ru/" target="_blank" rel="noopener">Федресурс</a> · <a href="https://fssp.gov.ru/" target="_blank" rel="noopener">ФССП</a></p>'
+            . $form('b_status', ['id' => $bid, 'to' => 'active'] + $back, '', 'Допустить') . $form('b_status', ['id' => $bid, 'to' => 'draft'] + $back, '<input name="reason" size="26" placeholder="что доработать (увидит бригада)" required>', 'Вернуть на доработку', 'lt')
+            . $form('b_status', ['id' => $bid, 'to' => 'suspended'] + $back, $reasonIn, 'Приостановить', 'lt') . $form('b_status', ['id' => $bid, 'to' => 'blocked'] + $back, '<input name="reason" size="26" placeholder="пункт правил и причина" required>', 'Заблокировать', 'bad');
+        $jobs = implode('', array_map(fn($j) => '<tr><td>#' . (int)$j['id'] . '</td><td>' . $h($j['object_title']) . '</td><td>' . $h(BRIG_JOB_STATUS[$j['status']] ?? $j['status']) . '</td><td>' . $h(implode(', ', array_map(fn($p) => (BRIG_PAY_KIND[$p['kind']] ?? $p['kind']) . ' ' . brig_rub((int)$p['amount_kop']) . ' — ' . mb_strtolower(BRIG_PAY_STATUS[$p['status']] ?? $p['status']), brig_all("SELECT * FROM br_payments WHERE job_id = ? AND status <> 'planned'", [(int)$j['id']])))) . '</td></tr>',
+            brig_all('SELECT j.id, j.status, r.object_title FROM br_jobs j JOIN br_requests r ON r.id = j.request_id WHERE j.brigade_id = ? ORDER BY j.id DESC', [$bid])));
+        adm_page('Бригада', '<h1>' . $h($b['name']) . ' <span class="st ' . ($b['status'] === 'active' ? 'g' : ($b['status'] === 'review' ? 'w' : '')) . '">' . $h(BRIG_STATUS[$b['status']] ?? $b['status']) . '</span>' . ($b['test'] ? ' <span class="test">тест</span>' : '') . '</h1>'
+            . ($b['status_reason'] ? '<p class="mut">Причина статуса: ' . $h($b['status_reason']) . '</p>' : '') . '<div class="box">' . $acts . '</div><table>' . $flds . '</table>'
+            . '<h2>Портфолио (новые файлы — в каталоге после одобрения)</h2>' . ($port ?: '<p class="mut">Нет объектов.</p>') . ($logo ? '<h2>Логотип</h2>' . implode('', array_map($img, $logo)) : '')
+            . '<h2>Команда</h2>' . ($team ? '<ul>' . $team . '</ul>' : '<p class="mut">Только владелец.</p>') . '<h2>Сделки и оплаты (реестр)</h2><div class="scroll"><table><tr><th>#</th><th>Объект</th><th>Статус</th><th>Отметки оплат</th></tr>' . ($jobs ?: '<tr><td colspan="4">Нет</td></tr>') . '</table></div>', 'brigades', $msg);
+    }
+    case 'requests': {   // запросы бригадам: пакет проекта, кандидаты, рассылка с лимитом invite_max
+        $rid = (int)($_GET['id'] ?? 0);
+        if ($rid && ($r = brig_one('SELECT r.*, o.number FROM br_requests r JOIN orders o ON o.id = r.order_id WHERE r.id = ?', [$rid]))) {
+            $back = ['s_back' => 'requests', 'id_back' => $rid];
+            $pack = json_decode((string)$r['pack'], true) ?: [];
+            $sent = (int)db_val('SELECT COUNT(*) FROM br_invites WHERE request_id = ? AND sent_at IS NOT NULL', [$rid]);
+            $max = brig_terms()['invite_max'];
+            $cand = '';
+            foreach (candidates($r) as $c) {
+                $inv = brig_one('SELECT * FROM br_invites WHERE request_id = ? AND brigade_id = ?', [$rid, (int)$c['b']['id']]);
+                $cand .= '<li><label><input type="checkbox" name="bid[]" value="' . (int)$c['b']['id'] . '"' . ($inv && $inv['sent_at'] ? ' disabled checked' : '') . '> ' . $h($c['b']['name']) . '</label> <span class="mut">покрытие ' . round($c['cover'] * 100) . ' %, балл ' . $c['score'] . ($inv && $inv['sent_at'] ? ', отправлено ' . $d($inv['sent_at']) : '') . '</span></li>';
+            }
+            foreach (brig_all("SELECT b.id, b.name FROM br_invites i JOIN br_brigades b ON b.id = i.brigade_id WHERE i.request_id = ? AND i.sent_at IS NULL AND i.source = 'client'", [$rid]) as $x) {
+                $cand .= '<li><label><input type="checkbox" name="bid[]" value="' . (int)$x['id'] . '" checked> ' . $h($x['name']) . '</label> <span class="mut">пригласил заказчик</span><input type="hidden" name="src[' . (int)$x['id'] . ']" value="client"></li>';
+            }
+            $files = implode('', array_map(fn($f) => '<li><a href="panel.php?file=' . (int)$f['id'] . '">' . $h($f['title'] ?: 'файл #' . $f['id']) . '</a> ' . $form('r_file_del', ['id' => $f['id']] + $back, '', 'удалить', 'lt') . '</li>', brig_all("SELECT * FROM br_files WHERE owner_kind = 'pack' AND owner_id = ?", [$rid])));
+            $offers = implode('', array_map(fn($o) => '<tr><td>' . $h($o['name']) . '</td><td>' . $h($o['status']) . ($o['mode'] === 'sections' ? ' · по разделам' : '') . '</td><td>' . $rub($o['total_kop']) . '</td><td>' . (int)$o['days'] . ' дн., аванс ' . (int)$o['advance_pct'] . ' %</td></tr>',
+                brig_all('SELECT o.*, b.name FROM br_offers o JOIN br_brigades b ON b.id = o.brigade_id WHERE o.request_id = ? ORDER BY o.total_kop', [$rid])));
+            adm_page('Запрос', '<h1>Запрос #' . $rid . ' · ' . $h($r['object_title']) . '</h1><p class="mut">Заказ <a href="panel.php?s=order&o=' . rawurlencode($r['number']) . '">' . $h($r['number']) . '</a> · ' . $h(BRIG_DISTRICTS[$r['district']] ?? $r['district']) . ' · ' . $h(BRIG_REQ_STATUS[$r['status']] ?? $r['status']) . ($r['deadline_at'] ? ', ответ до ' . $d($r['deadline_at']) : '') . '</p>'
+                . '<div class="box"><h2>Пакет проекта</h2><p>' . (empty($pack['positions']) ? '<b>Пакета нет.</b> Соберите tools/brigady-pack.mjs и загрузите pack.json.' : count($pack['positions']) . ' позиций, ' . count($pack['rooms'] ?? []) . ' помещений') . '</p>'
+                . $form('r_pack', ['id' => $rid] + $back, 'pack.json <input type="file" name="pack" accept=".json"> файлы (PDF/xlsx) <input type="file" name="f1"><input type="file" name="f2">', 'Загрузить', '', true) . ($files ? '<ul>' . $files . '</ul>' : '') . '</div>'
+                . '<div class="box"><h2>Рассылка — отправлено ' . $sent . ' из ' . $max . '</h2><form method="post"><input type="hidden" name="csrf" value="' . $csrf . '"><input type="hidden" name="act" value="r_send"><input type="hidden" name="id" value="' . $rid . '"><input type="hidden" name="s_back" value="requests"><input type="hidden" name="id_back" value="' . $rid . '">'
+                . '<ul style="list-style:none;padding:0">' . ($cand ?: '<li class="mut">Нет допущенных бригад с этим районом и специализациями.</li>') . '</ul>Срок ответа <input type="datetime-local" name="deadline" value="' . $h(date('Y-m-d\TH:i', strtotime(kab_wd_add(linea_now(), brig_terms()['offer_deadline_wd'])))) . '"> <button>Разослать</button></form></div>'
+                . ($offers ? '<h2>Предложения</h2><table><tr><th>Бригада</th><th>Статус</th><th>Сумма</th><th>Срок</th></tr>' . $offers . '</table>' : '')
+                . ($r['status'] !== 'cancelled' && $r['status'] !== 'chosen' ? '<p>' . $form('r_cancel', ['id' => $rid] + $back, $reasonIn, 'Отменить запрос', 'bad') . '</p>' : ''), 'requests', $msg);
+        }
+        $rows = implode('', array_map(fn($r) => '<tr><td><a href="panel.php?s=requests&id=' . (int)$r['id'] . '">#' . (int)$r['id'] . '</a>' . ($r['test'] ? ' <span class="test">тест</span>' : '') . '</td><td>' . $h($r['object_title']) . '</td><td>' . $h(BRIG_DISTRICTS[$r['district']] ?? $r['district']) . '</td><td>' . $h(BRIG_REQ_STATUS[$r['status']] ?? $r['status']) . '</td><td>'
+            . (int)db_val('SELECT COUNT(*) FROM br_invites WHERE request_id = ? AND sent_at IS NOT NULL', [(int)$r['id']]) . ' / ' . (int)db_val("SELECT COUNT(*) FROM br_offers WHERE request_id = ? AND status <> 'draft'", [(int)$r['id']]) . '</td><td>' . $d($r['deadline_at']) . '</td></tr>', brig_all('SELECT * FROM br_requests ORDER BY id DESC LIMIT 200')));
+        adm_page('Запросы бригадам', '<h1>Запросы бригадам</h1><p class="mut">Пакет получают не больше ' . brig_terms()['invite_max'] . ' бригад, заказчик видит не больше ' . brig_terms()['offers_show_max'] . ' предложений.</p><div class="scroll"><table><tr><th>#</th><th>Объект</th><th>Район</th><th>Статус</th><th>Разослано / предложений</th><th>Срок</th></tr>' . ($rows ?: '<tr><td colspan="6">Запросов нет</td></tr>') . '</table></div>', 'requests', $msg);
+    }
+    case 'export': {
+        $l = implode('', array_map(fn($k, $t) => '<li><a href="panel.php?csv=' . $k . '">' . $h($t) . '</a></li>', array_keys(ADM_CSV), ADM_CSV));
+        adm_page('Экспорт', '<h1>Экспорт CSV</h1><p class="mut">Разделитель «;», UTF-8 с BOM (открывается в Excel). Ячейки, начинающиеся с «=», «+», «−», «@», выгружаются с апострофом — Excel не исполнит их как формулу. Контактов и ПДн клиентов в выгрузках нет; каждая выгрузка — в журнале.</p><ul>' . $l . '</ul>', 'export', $msg);
     }
     case 'contracts': {
         $rows = '';
@@ -649,12 +755,20 @@ switch ($s) {
     }
     case 'disputes': {
         $rows = '';
+        $thread = '';
+        foreach (brig_all("SELECT * FROM br_disputes WHERE status <> 'resolved' ORDER BY id DESC LIMIT 30") as $ds) {
+            $ms = implode('', array_map(fn($m) => '<li><b>' . $h(['client' => 'Заказчик', 'brigade' => 'Бригада', 'admin' => 'LINEA'][$m['who']] ?? $m['who']) . '</b> <span class="mut">' . $d($m['at']) . '</span><br>' . nl2br($h($m['text'])) . '</li>',
+                brig_all('SELECT * FROM br_dispute_msgs WHERE dispute_id = ? ORDER BY id', [(int)$ds['id']])));
+            $thread .= '<div class="box"><h2>#' . (int)$ds['id'] . ' · ' . $h($ds['subject']) . ' <span class="mut">сделка #' . (int)$ds['job_id'] . '</span></h2><ul>' . $ms . '</ul>'
+                . $form('d_msg', ['id' => $ds['id'], 's_back' => 'disputes'], '<textarea name="text" rows="2" cols="50" placeholder="сообщение LINEA — видят обе стороны"></textarea>', 'Написать')
+                . $form('d_resolve', ['id' => $ds['id'], 's_back' => 'disputes'], '<input name="reason" size="40" placeholder="итоговая рекомендация (право на суд сохраняется)" required>', 'Закрыть с рекомендацией', 'lt') . '</div>';
+        }
         foreach (brig_all('SELECT * FROM br_disputes ORDER BY status = \'resolved\', id DESC LIMIT 200') as $ds) {
             $due = kab_wd_add((string)$ds['created_at'], brig_terms()['dispute_reply_days']);
             $rows .= '<tr><td>#' . (int)$ds['id'] . ' · сделка #' . (int)$ds['job_id'] . '<div class="mut">открыл: ' . $h($ds['opened_by']) . ', ' . $d($ds['created_at']) . '</div></td><td>' . $h($ds['subject']) . '</td><td>' . $h($ds['status']) . '<div class="mut">ответ стороны до ' . $d($due) . ($ds['proposal_due_at'] ? '; согласиться с рекомендацией до ' . $d($ds['proposal_due_at']) : '') . '</div></td>'
-                . '<td>' . ($ds['status'] !== 'resolved' ? $form('ds_propose', ['id' => $ds['id']], '<input name="text" size="28" placeholder="рекомендация LINEA">', 'Предложить решение') : $h($ds['resolution'])) . ' <a href="admin-brigady.php?view=disputes">переписка и итог →</a></td></tr>';
+                . '<td>' . ($ds['status'] !== 'resolved' ? $form('ds_propose', ['id' => $ds['id']], '<input name="text" size="28" placeholder="рекомендация LINEA">', 'Предложить решение') : $h($ds['resolution'])) . '</td></tr>';
         }
-        adm_page('Разногласия', '<h1>Рассмотрение разногласий</h1><p class="mut">Порядок: ответ второй стороны — ' . brig_terms()['dispute_reply_days'] . ' р.дн; рекомендация LINEA — стороны соглашаются за ' . brig_terms()['dispute_proposal_days'] . ' р.дн. Рекомендация необязательна, право на суд сохраняется. Выезд практика оплачивает сторона, чья позиция не подтвердилась.</p><div class="scroll"><table><tr><th>#</th><th>Тема</th><th>Сроки</th><th></th></tr>' . ($rows ?: '<tr><td colspan="4">Разногласий нет</td></tr>') . '</table></div>', 'disputes', $msg);
+        adm_page('Разногласия', '<h1>Рассмотрение разногласий</h1><p class="mut">Порядок: ответ второй стороны — ' . brig_terms()['dispute_reply_days'] . ' р.дн; рекомендация LINEA — стороны соглашаются за ' . brig_terms()['dispute_proposal_days'] . ' р.дн. Рекомендация необязательна, право на суд сохраняется. Выезд практика оплачивает сторона, чья позиция не подтвердилась.</p><div class="scroll"><table><tr><th>#</th><th>Тема</th><th>Сроки</th><th></th></tr>' . ($rows ?: '<tr><td colspan="4">Разногласий нет</td></tr>') . '</table></div><h2>Переписка по открытым разногласиям</h2>' . ($thread ?: '<p class="mut">Открытых разногласий нет.</p>'), 'disputes', $msg);
     }
     case 'money': {
         ledger_sync_all();

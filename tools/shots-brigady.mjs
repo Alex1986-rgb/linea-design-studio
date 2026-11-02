@@ -51,7 +51,7 @@ async function shot(name, { maxH = 1800, y = 0 } = {}) {
 }
 const topOf = sel => js(`const e=document.querySelector(${JSON.stringify(sel)}); return e ? Math.max(0, Math.round(e.getBoundingClientRect().top + scrollY - 10)) : 0`);
 const click = async (sel, ms = 900) => { await js(`document.querySelector(${JSON.stringify(sel)}).click()`); await sleep(ms); };
-const login = async (email, password) => js(`return (await fetch('/api/brigade/auth.php?a=login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:${JSON.stringify(email)},password:${JSON.stringify(password)}})})).status`);
+const login = async (email, password) => js(`return (await fetch('/api/brigada.php?m=auth&a=login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:${JSON.stringify(email)},password:${JSON.stringify(password)}})})).status`);
 
 // 1. регистрация бригады, телефон
 await go(`${BASE}/brigada/?test=1#register`, 375);
