@@ -21,6 +21,8 @@ ssh "$HOST" "cd ~/dizain-studiya-kvartir/linea-private && cp -p config.php confi
 \$f = \"config.php\"; \$c = require \$f;
 \$c[\"brig_mail_enabled\"] = true;                       // письма с кодом входа и уведомления кабинетов
 \$c[\"admin_emails\"] = [\"$ADMIN_EMAIL\"];               // роль «Админка» на экране выбора
+\$c[\"notify_enabled\"] = true;                          // письмо владельцу о новом брифе, оплате, правках
+if (empty(\$c[\"notify_to\"])) { \$c[\"notify_to\"] = \"$ADMIN_EMAIL\"; }
 if (empty(\$c[\"base\"])) { \$c[\"base\"] = \"$SITE\"; } // ссылки в письмах — только от адреса сайта
 if (!isset(\$c[\"allow_test\"])) { \$c[\"allow_test\"] = false; }
 file_put_contents(\$f, \"<?php\\n// правлено tools/vykladka-kabinety.sh $STAMP, прежняя версия — config.php.bak-$STAMP\\nreturn \" . var_export(\$c, true) . \";\\n\");
