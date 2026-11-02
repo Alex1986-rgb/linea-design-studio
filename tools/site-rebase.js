@@ -99,7 +99,7 @@ let intakeFiles = 0, intakeHits = 0;
 // 2б. Приёмник: страницам с отправкой говорим, где api (brief.js / review.js / order.js без меты работают по-старому — WhatsApp/почта)
 // obmer/ — форма обмера (служебная, noindex): страница в подпапке, поэтому путь к api на уровень выше
 // brigada/ — кабинет бригады; brigady/ (статическая заглушка для GitHub Pages) на Beget перекрывается rewrite на api/katalog.php
-const API_PAGES = ['brief.html', 'review.html', 'order.html', 'obmer/index.html', 'brigada/index.html'];
+const API_PAGES = ['brief.html', 'review.html', 'order.html', 'obmer/index.html', 'brigada/index.html', 'kabinet/index.html', 'vhod/index.html'];
 let apiPages = 0;
 if (withApi) for (const f of API_PAGES) {
   const p = path.join(out, f);

@@ -65,7 +65,7 @@ function kb_object(array $o, ?array $c): array
     $ans = kab_answers($o)['items'];
     $items = $reg ? array_map(fn($i) => $i + ['answer' => $ans[$i['id']] ?? null], $reg['items']) : [];
     $rel = array_map(fn($r) => ['ver' => $r['ver'], 'title' => (string)($r['title'] ?? $r['ver']), 'date' => (string)($r['date'] ?? ''), 'final' => !empty($r['final']),
-        'prelim' => !empty($r['prelim']), 'url' => (string)($r['url'] ?? ''), 'pdf' => $r['hasPdf'], 'changes' => array_values((array)($r['changes'] ?? [])),
+        'prelim' => !empty($r['prelim']), 'url' => (string)($r['url'] ?? ''), 'project' => (string)($r['project'] ?? ''), 'pdf' => $r['hasPdf'], 'changes' => array_values((array)($r['changes'] ?? [])),
         'accepted' => (bool)db_val("SELECT 1 FROM signatures WHERE order_id = ? AND doc_kind = 'album_accept' AND version = ?", [(int)$o['id'], $r['ver']])], kab_releases($o));
     $rv = array_map(fn($r) => array_diff_key($r, ['_f' => 1]), kab_reviews($o));
     $rounds = linea_cfg()['rounds'] ?? null;

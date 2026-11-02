@@ -86,7 +86,7 @@ if (empty($_SESSION['adm'])) {
         elseif (password_verify((string)$_POST['password'], (string)$cfg['admin_hash'])) {
             session_regenerate_id(true);
             $_SESSION['adm'] = 1; $_SESSION['csrf'] = bin2hex(random_bytes(16));
-            header('Location: ' . $self); exit;
+            header('Location: panel.php'); exit;   // после входа — новая админка (дашборд «Требует действия»)
         } else {
             adm_fails(true);
             $g = adm_fails(true, true);

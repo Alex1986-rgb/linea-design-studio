@@ -41,7 +41,8 @@ switch ($a) {
         $g = kab_guest_order();
         $email = mb_strtolower(trim((string)($in['email'] ?? '')));
         $allowUnknown = false;
-        if (!empty($in['guest']) && $g) {
+        if (!empty($in['self']) && !empty($_SESSION['email'])) { $email = (string)$_SESSION['email']; $allowUnknown = true; }   // подтвердить действие: код на почту сессии
+        elseif (!empty($in['guest']) && $g) {
             if (kab_email_ok((string)$g['email'])) { $email = mb_strtolower((string)$g['email']); $allowUnknown = true; }
             elseif (kab_email_ok($email)) { $_SESSION['guest_email'] = $email; $allowUnknown = true; }   // заказ без почты: привязка после кода
         }
@@ -51,7 +52,8 @@ switch ($a) {
     case 'verify': {
         $g = kab_guest_order();
         $email = mb_strtolower(trim((string)($in['email'] ?? '')));
-        if (!empty($in['guest']) && $g) { $email = kab_email_ok((string)$g['email']) ? mb_strtolower((string)$g['email']) : (string)($_SESSION['guest_email'] ?? $email); }
+        if (!empty($in['self']) && !empty($_SESSION['email'])) { $email = (string)$_SESSION['email']; }
+        elseif (!empty($in['guest']) && $g) { $email = kab_email_ok((string)$g['email']) ? mb_strtolower((string)$g['email']) : (string)($_SESSION['guest_email'] ?? $email); }
         if (!kab_email_ok($email)) { linea_fail('Проверьте адрес почты'); }
         $r = kab_code_check($email, (string)($in['code'] ?? ''));
         if ($r !== true) { linea_fail($r, 400); }
@@ -63,7 +65,9 @@ switch ($a) {
         if ($g && mb_strtolower((string)db_val('SELECT email FROM orders WHERE id = ?', [(int)$g['id']])) === $email) { kab_client_account($email, (bool)$g['test'], (string)$g['name'], (string)$g['phone']); }
         $roles = kab_roles_for($email);
         if (!$roles) { linea_fail('Для этой почты нет ни заказов, ни кабинета бригады. Заполните бриф — кабинет появится сам', 404); }
-        kab_login($email, $roles, !empty($in['remember']));
+        $prev = (string)($_SESSION['role'] ?? '');
+        kab_login($email, $roles, !empty($in['remember']) || !empty($_SESSION['remember']));
+        if ($prev !== '' && array_key_exists($prev, $roles)) { kab_set_role($prev); linea_json(vh_state() + ['go' => $prev]); }   // подтверждение действия — роль та же
         brig_audit('client:' . substr(hash('sha256', $email), 0, 10), 'login-code', '', implode(',', array_keys($roles)));
         if (count($roles) === 1) {
             $role = array_key_first($roles);
