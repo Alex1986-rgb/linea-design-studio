@@ -1,0 +1,15 @@
+{
+  "site": "https://xn-----6kccjicviedfr1b2cbishm8w.xn--p1ai",
+  "domain": "xn-----6kccjicviedfr1b2cbishm8w.xn--p1ai",
+  "pages": { "home": "/", "ping": "/api/ping.php", "kabinet": "/kabinet/" },
+  "sslWarnDays": 14,
+  "beget": { "host": "gandalf.beget.com", "user": "aleks2si", "root": "dizain-studiya-kvartir" },
+  "keepDaily": 14,
+  "keepWeekly": 8,
+  "gdrive": "gdrive:LINEA/Бэкапы",
+  "backupMaxAgeHours": 30,
+  "expectBackup": false,
+  "failConfirmRuns": 2,
+  "remindHours": 12,
+  "disable": []
+}
