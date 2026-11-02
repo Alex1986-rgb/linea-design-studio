@@ -10,6 +10,11 @@
  *   3. Долг бригады по счёту: предупреждение и закрытие ленты (brig_debt) — письмо один раз на ступень.
  *   4. Заявки по ПДн: за 3 дня до срока и просрочка — письмо Александру.
  *   5. 1 декабря и позже: нет праздников следующего года — напоминание заполнить календарь.
+ *   6. Сессии старше 31 дня.
+ *   7. Автоудаление ПДн по срокам (kab_pd_retention: сделки после срока хранения договоров, заказы и брифы, аккаунты, заявки «удалить после
+ *      завершения»); --pd-dry — только посчитать. Журнал — аудит админки (pd-retention) и linea-private/pd.log.
+ *   8. Второй чек «полный расчёт» по выданным заказам, если при выдаче онлайн-касса не ответила (только при yk_receipt).
+ *   Отметка последнего прогона — linea-private/cron.last (её видит ping.php с токеном мониторинга).
  * Время для проверок можно сдвинуть: env LINEA_NOW="ГГГГ-ММ-ДД ЧЧ:ММ:СС". Вывод — сводка строкой (для журнала cron).
  */
 declare(strict_types=1);
@@ -86,4 +91,17 @@ if ((int)date('n', $now) === 12 && !db_val('SELECT 1 FROM holidays WHERE d LIKE 
 // 6. сессии старше 31 дня (запомненные устройства живут 30 дней; где сборщик PHP выключен — каталог чистим сами)
 foreach (glob(linea_private() . '/sessions/sess_*') ?: [] as $f) { if (@filemtime($f) < $now - 31 * 86400) { @unlink($f); } }
 
+// 7. автоудаление персональных данных по срокам
+$sum['pd_purge'] = kab_pd_retention($now, in_array('--pd-dry', $argv, true));
+
+// 8. второй чек «полный расчёт», не ушедший при выдаче альбома
+require_once $api . '/lib/yookassa.php';
+$sum['receipt2'] = 0;
+if (yk_receipts_on()) {
+    foreach (brig_all("SELECT * FROM orders WHERE status = 'delivered' AND receipt2_id IS NULL AND paid_by LIKE 'yookassa %'") as $o) {
+        if (yk_full_receipt($o, 'cron')['done']) { $sum['receipt2']++; }
+    }
+}
+
+@file_put_contents(linea_private() . '/cron.last', date('Y-m-d H:i:s') . ' ' . json_encode($sum));
 echo date('Y-m-d H:i:s', $now) . ' cron: ' . json_encode($sum) . "\n";

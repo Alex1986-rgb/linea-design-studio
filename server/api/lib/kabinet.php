@@ -554,6 +554,97 @@ function kab_pd_destroy(array $acc, string $who): array
     return $done;
 }
 
+/** Строка журнала автоудаления: аудит админки (кто — cron) и linea-private/pd.log (без самих данных). */
+function kab_pd_log(string $target, string $detail): void
+{
+    brig_audit('cron', 'pd-retention', $target, $detail);
+    linea_log('pd.log', $target . ' · ' . $detail);
+}
+
+/** Обезличить один заказ проекта: контакты, бриф, ответы; номер, суммы, даты оплаты и события остаются (бухгалтерия, чеки — у онлайн-кассы). */
+function kab_pd_order_purge(array $o, string $why): array
+{
+    $gone = [];
+    foreach (['brief.zip', 'brief.json', 'answers.json'] as $f) { $p = kab_order_dir($o) . '/' . $f; if (is_file($p) && @unlink($p)) { $gone[] = $f; } }
+    db_update('orders', ['name' => 'удалено', 'phone' => null, 'email' => null, 'contact' => null, 'ip' => null, 'pd_purged_at' => linea_now(), 'updated_at' => linea_now()], 'id = ?', [(int)$o['id']]);
+    linea_event((int)$o['id'], 'cron', 'Персональные данные обезличены по сроку хранения (' . $why . ')');
+    kab_pd_log('order ' . $o['number'], $why . '; удалено: контакты' . ($gone ? ', ' . implode(', ', $gone) : ''));
+    return $gone;
+}
+
+/**
+ * Автоудаление ПДн по срокам (cron; brig_terms pd_autopurge, pd_order_months, pd_unpaid_months, retention_years — ⚠ сроки у юриста):
+ *   1. сделки ремонта, закрытые больше retention_years назад: переписка, тексты договоров и актов (остаются номер, даты, хеш), IP подписей,
+ *      коды подписи, фото этапов — удаляются; отметка br_jobs.pd_purged_at. Договоры живут отдельно от заказа — по своему сроку;
+ *   2. заказы проектов: бриф без оплаты — через pd_unpaid_months после создания; выданный / отменённый / с возвратом — через pd_order_months
+ *      после последнего события. Заказ с действующей сделкой или со сделкой в сроке хранения договоров ждёт (реквизиты стороны — часть договора);
+ *   3. аккаунты клиентов без необезличенных заказов и без входа дольше pd_order_months — обезличиваются;
+ *   4. заявки клиента «удалить после завершения» — исполняются, когда работы закончены (kab_pd_blockers пуст); письмо клиенту до удаления.
+ * $dry — только посчитать. @return сводка по видам
+ */
+function kab_pd_retention(int $now, bool $dry = false): array
+{
+    $t = brig_terms();
+    $sum = ['deals' => 0, 'orders' => 0, 'accounts' => 0, 'requests' => 0];
+    if (!$t['pd_autopurge']) { return $sum + ['off' => 1]; }
+    $ago = fn(string $rel) => date('Y-m-d H:i:s', strtotime($rel, $now));
+    $dealCut = $ago('-' . (int)$t['retention_years'] . ' years');
+    // 1. сделки ремонта после срока хранения договоров
+    foreach (brig_all("SELECT * FROM br_jobs WHERE pd_purged_at IS NULL AND status IN ('done','cancelled') AND COALESCE(done_at, cancelled_at, updated_at) < ?", [$dealCut]) as $j) {
+        $sum['deals']++;
+        if ($dry) { continue; }
+        $jid = (int)$j['id'];
+        $files = brig_all("SELECT f.* FROM br_files f JOIN br_stages s ON s.id = f.owner_id WHERE f.owner_kind = 'stage' AND s.job_id = ?", [$jid]);
+        foreach ($files as $f) { @unlink(brig_dir() . '/files/' . $f['stored_path']); db_exec('DELETE FROM br_files WHERE id = ?', [(int)$f['id']]); }
+        db_exec("UPDATE br_messages SET text = '[удалено по сроку хранения]' WHERE job_id = ?", [$jid]);
+        db_exec("UPDATE br_contracts SET body = '<p>Текст документа удалён по истечении срока хранения; хеш версии сохранён.</p>', client_ip = NULL, brigade_ip = NULL WHERE job_id = ?", [$jid]);
+        db_exec('DELETE FROM br_sign_codes WHERE contract_id IN (SELECT id FROM br_contracts WHERE job_id = ?)', [$jid]);
+        db_exec("UPDATE br_dispute_msgs SET text = '[удалено по сроку хранения]' WHERE dispute_id IN (SELECT id FROM br_disputes WHERE job_id = ?)", [$jid]);
+        db_exec("UPDATE br_remarks SET text = '[удалено]', close_note = NULL WHERE stage_id IN (SELECT id FROM br_stages WHERE job_id = ?)", [$jid]);
+        db_update('br_jobs', ['pd_purged_at' => linea_now()], 'id = ?', [$jid]);
+        kab_pd_log('job#' . $jid, 'сделка закрыта больше ' . $t['retention_years'] . ' лет назад: переписка, тексты договоров, IP подписей, фото этапов (' . count($files) . ') удалены');
+    }
+    // 2. заказы проектов
+    $unpaidCut = $ago('-' . (int)$t['pd_unpaid_months'] . ' months');
+    $orderCut = $ago('-' . (int)$t['pd_order_months'] . ' months');
+    $cands = brig_all("SELECT * FROM orders WHERE pd_purged_at IS NULL AND ((status IN ('new','awaiting_payment','cancelled') AND paid_at IS NULL AND created_at < ?)"
+        . " OR (status IN ('delivered','cancelled','refunded') AND COALESCE(delivered_at, updated_at) < ?))", [$unpaidCut, $orderCut]);
+    foreach ($cands as $o) {
+        // сделка ремонта по заказу: действующая или в сроке хранения договоров — заказ ждёт
+        $busy = db_val("SELECT 1 FROM br_jobs j JOIN br_requests r ON r.id = j.request_id WHERE r.order_id = ? AND (j.status IN ('contract','work') OR j.pd_purged_at IS NULL AND j.status IN ('done','cancelled') AND COALESCE(j.done_at, j.cancelled_at, j.updated_at) >= ?)", [(int)$o['id'], $dealCut]);
+        if ($busy) { continue; }
+        $sum['orders']++;
+        if (!$dry) { kab_pd_order_purge($o, $o['paid_at'] ? 'заказ завершён больше ' . $t['pd_order_months'] . ' мес. назад' : 'бриф без оплаты старше ' . $t['pd_unpaid_months'] . ' мес.'); }
+    }
+    // 3. аккаунты клиентов
+    foreach (brig_all("SELECT * FROM accounts WHERE role = 'client' AND status <> 'deleted' AND COALESCE(last_login_at, created_at) < ?", [$orderCut]) as $acc) {
+        if (db_val('SELECT 1 FROM orders WHERE account_id = ? AND pd_purged_at IS NULL', [(int)$acc['id']])) { continue; }
+        $sum['accounts']++;
+        if ($dry) { continue; }
+        db_exec('UPDATE consents SET revoked_at = ? WHERE account_id = ? AND revoked_at IS NULL', [linea_now(), (int)$acc['id']]);
+        db_update('accounts', ['email' => 'deleted-' . (int)$acc['id'] . '@invalid', 'name' => null, 'phone' => null, 'status' => 'deleted', 'prefs' => null], 'id = ?', [(int)$acc['id']]);
+        db_exec('UPDATE acc_devices SET ended_at = ? WHERE account_id = ? AND ended_at IS NULL', [linea_now(), (int)$acc['id']]);
+        db_exec('DELETE FROM notices WHERE account_id = ?', [(int)$acc['id']]);
+        kab_pd_log('account#' . $acc['id'], 'аккаунт без действующих заказов и без входа больше ' . $t['pd_order_months'] . ' мес. — обезличен');
+    }
+    // 4. заявки «удалить после завершения»
+    foreach (brig_all("SELECT * FROM pd_requests WHERE status = 'new' AND kind = 'delete' AND note LIKE ?", ['Удалить после завершения%']) as $p) {
+        $acc = brig_one('SELECT * FROM accounts WHERE id = ?', [(int)$p['account_id']]);
+        if (!$acc || kab_pd_blockers($acc)) { continue; }
+        $sum['requests']++;
+        if ($dry) { continue; }
+        if (kab_email_ok((string)$acc['email'])) {
+            brig_mail((string)$acc['email'], 'kab_notice', ['subject' => 'данные удалены по вашей заявке', 'text' => 'Работы по вашим заказам завершены, и мы выполнили заявку: контакты, брифы и ответы удалены. Договоры, подписи и чеки храним '
+                . $t['retention_years'] . ' лет по закону с закрытым доступом.', 'link' => brig_link('kabinet/')], (bool)$acc['test']);
+        }
+        $gone = kab_pd_destroy($acc, 'cron');
+        db_exec("UPDATE orders SET pd_purged_at = ? WHERE account_id = ? AND pd_purged_at IS NULL", [linea_now(), (int)$acc['id']]);
+        db_update('pd_requests', ['status' => 'done', 'reply' => 'Выполнено после завершения работ: контакты, брифы и ответы удалены; договоры, подписи и чеки хранятся ' . $t['retention_years'] . ' лет.', 'done_at' => linea_now(), 'done_by' => 'cron'], 'id = ?', [(int)$p['id']]);
+        kab_pd_log('pd#' . $p['id'], 'заявка «удалить после завершения» исполнена; удалено: ' . (implode(', ', $gone) ?: 'контакты'));
+    }
+    return $sum;
+}
+
 /** Выгрузка сведений (ст. 14 152-ФЗ): ZIP с брифами, ответами, согласиями, подписями. @return имя файла в linea-private/exports */
 function kab_pd_export(array $acc): string
 {

@@ -2,7 +2,7 @@
 /**
  * api/brigade/auth.php — аккаунт бригады (общий модуль accounts, роль brigade).
  *   GET  ?a=me                     — кто вошёл, статус, CSRF-токен, справочники
- *   POST ?a=register  (JSON)       — анкета + пароль + согласия (ПДн, правила, агентский договор — с редакциями)
+ *   POST ?a=register  (JSON)       — анкета + пароль + согласия (ПДн, правила, договор-оферта студии — с редакциями)
  *   POST ?a=login     (JSON)       — вход {email, password}
  *   POST ?a=logout                 — выход (CSRF)
  *   POST ?a=forgot    (JSON)       — письмо со ссылкой {email}; ответ одинаковый, есть такой адрес или нет
@@ -90,7 +90,7 @@ switch ($a) {
         });
         linea_rate_add('brg-reg');
         acc_start((int)db_val('SELECT account_id FROM br_brigades WHERE id = ?', [$id]), 'brigade');
-        brig_audit('brigade#' . $id, 'register', 'brigade#' . $id, 'Регистрация' . ($test ? ' (тест)' : '') . '; согласия: ПДн, правила, агентский договор — ред. ' . BRIG_DOCS['agency']['ed']);
+        brig_audit('brigade#' . $id, 'register', 'brigade#' . $id, 'Регистрация' . ($test ? ' (тест)' : '') . '; согласия: ПДн, правила, договор-оферта студии — ред. ' . BRIG_DOCS['agency']['ed']);
         brig_mail($email, 'brig_registered', ['name' => $contact, 'link' => brig_link('brigada/')], $test);
         $b = brig_me();
         linea_json(['ok' => true, 'brigade' => brig_public_self($b), 'csrf' => acc_csrf_token()]);

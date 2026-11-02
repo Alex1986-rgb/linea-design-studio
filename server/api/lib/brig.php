@@ -31,10 +31,10 @@ set_exception_handler(function (Throwable $e) {
 
 const BRIG_DOCS = [                    // редакции документов, которые принимает бригада (как редакция согласия у брифа)
     'pd' => ['title' => 'Согласие на обработку персональных данных', 'href' => 'soglasie/', 'ed' => '31.10.2026'],
-    'rules' => ['title' => 'Правила площадки «Ремонт по проекту»', 'href' => 'brigadam/pravila/', 'ed' => '31.10.2026'],
-    'agency' => ['title' => 'Агентский договор (оферта для бригад)', 'href' => 'brigadam/dogovor/', 'ed' => '31.10.2026'],
+    'rules' => ['title' => 'Правила площадки «Ремонт по проекту»', 'href' => 'brigadam/pravila/', 'ed' => '02.11.2026'],
+    'agency' => ['title' => 'Договор-оферта студии с бригадой', 'href' => 'brigadam/dogovor/', 'ed' => '02.11.2026'],
 ];
-const BRIG_CLIENT_TERMS = ['title' => 'Условия сервиса «Ремонт по проекту» для клиентов', 'href' => 'remont/usloviya/', 'ed' => '31.10.2026'];
+const BRIG_CLIENT_TERMS = ['title' => 'Условия сервиса «Ремонт по проекту» для клиентов', 'href' => 'remont/usloviya/', 'ed' => '02.11.2026'];
 
 const BRIG_SPECS = [
     'demontazh' => 'Демонтаж',

@@ -59,10 +59,10 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'GET') {
                     brig_all("SELECT j.id, j.status, r.object_title FROM br_jobs j JOIN br_requests r ON r.id = j.request_id WHERE j.brigade_id = ? AND j.status <> 'cancelled' ORDER BY j.id DESC", [$bid])),
                 'roles' => BRIG_ROLES]);
         case 'docs': {
-            // документы бригады (4.0б): принятые редакции правил и агентского договора, договоры и допсоглашения по объектам, счета, листы
+            // документы бригады (4.0б): принятые редакции правил и договора-оферты студии (бывш. агентского договора, договоры и допсоглашения по объектам, счета, листы
             $acc = [];
             foreach (BRIG_DOCS as $k => $d) { $acc[] = ['title' => $d['title'], 'ed' => $b[['pd' => 'consent_pd_ed', 'rules' => 'rules_ed', 'agency' => 'agency_ed'][$k] ?? ''] ?? $d['ed'], 'at' => $b['accepted_at'], 'ip' => $b['ip_reg'], 'href' => $d['href'] ?? '']; }
-            $acc[] = ['title' => 'Согласие на распространение данных в публичной карточке бригады (ст. 10.1 152-ФЗ)', 'ed' => $b['card_consent_ed'] === 'revoked' ? 'отозвано' : ($b['card_consent_ed'] ?: 'в составе агентского договора, п. 7'), 'at' => $b['card_consent_at'], 'ip' => null, 'href' => ''];
+            $acc[] = ['title' => 'Согласие на распространение данных в публичной карточке бригады (ст. 10.1 152-ФЗ)', 'ed' => $b['card_consent_ed'] === 'revoked' ? 'отозвано' : ($b['card_consent_ed'] ?: 'в составе договора-оферты студии с бригадой'), 'at' => $b['card_consent_at'], 'ip' => null, 'href' => ''];
             $jobs = [];
             foreach (brig_jobs_for($b) as $j) {
                 $jobs[] = ['id' => (int)$j['id'], 'object' => (string)$j['object_title'], 'status' => BRIG_JOB_STATUS[$j['status']] ?? $j['status'],

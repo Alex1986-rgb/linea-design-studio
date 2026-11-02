@@ -133,6 +133,12 @@ const BRIG_TERMS_DEFAULT = [
     'expert_visit_payer' => 'loser',   // выезд практика при разногласии оплачивает сторона, чья позиция не подтвердилась
     'choose_after' => 'final',      // подбор бригады: final — только по финальному альбому (заказ «выдан»); first — с первого варианта
     'pd_days' => 10,                // заявка по ПДн исполняется за N р.дн (закон — 30 дней)
+    // автоудаление ПДн по срокам (cron, 02.11.2026; ⚠ сроки проверить юристом): заказ проекта обезличивается через pd_order_months после
+    // последнего события (выдан, отменён, возврат); бриф без оплаты — через pd_unpaid_months после создания; заказ с действующей или
+    // недавней сделкой ремонта ждёт конца срока хранения договоров (retention_years от закрытия сделки) — договоры хранятся отдельно по своему сроку
+    'pd_autopurge' => true,
+    'pd_order_months' => 36,
+    'pd_unpaid_months' => 12,
     'fresh_code_hours' => 12,       // значимые действия — после входа кодом не старше N часов
 ];
 
@@ -187,11 +193,12 @@ function brig_terms(bool $fresh = false): array
     $bp = is_array($t['bypass_penalty'] ?? null) ? $t['bypass_penalty'] : [];
     $t['bypass_penalty'] = ['enabled' => !empty($bp['enabled']), 'mult' => max(1, min(5, (int)($bp['mult'] ?? 2)))];
     $t['files_premoderation'] = (bool)$t['files_premoderation'];
+    $t['pd_autopurge'] = (bool)$t['pd_autopurge'];
     $rd = array_values(array_filter(array_map('intval', is_array($t['stage_remind_days']) ? $t['stage_remind_days'] : []), fn($d) => $d > 0 && $d < 60));
     $t['stage_remind_days'] = $rd;
     foreach (['stage_silence_days' => [1, 30], 'stage_silence_days_hidden' => [1, 30], 'protect_months' => [0, 60], 'invite_max' => [1, 20], 'offers_show_max' => [1, 20],
         'offer_deadline_wd' => [1, 20], 'choose_days' => [1, 60], 'sign_days' => [1, 30], 'dispute_reply_days' => [1, 30], 'dispute_proposal_days' => [1, 30],
-        'retention_years' => [1, 10], 'pd_days' => [1, 30], 'fresh_code_hours' => [1, 72]] as $k => [$lo, $hi]) { $t[$k] = max($lo, min($hi, (int)$t[$k])); }
+        'retention_years' => [1, 10], 'pd_days' => [1, 30], 'pd_order_months' => [6, 120], 'pd_unpaid_months' => [1, 60], 'fresh_code_hours' => [1, 72]] as $k => [$lo, $hi]) { $t[$k] = max($lo, min($hi, (int)$t[$k])); }
     $ef = is_array($t['exit_fee'] ?? null) ? $t['exit_fee'] : [];
     $t['exit_fee'] = ['enabled' => !empty($ef['enabled']), 'pct' => max(0, min(30, (float)($ef['pct'] ?? 5))), 'min_kop' => max(0, (int)($ef['min_kop'] ?? 0))];
     if (!in_array($t['fee_base'], ['works', 'works_materials'], true)) { $t['fee_base'] = 'works'; }

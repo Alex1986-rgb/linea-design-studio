@@ -103,7 +103,7 @@ const reg = (n, specs, districts) => ({
   name: `Тест-бригада ${n}`, contactName: `Бригадир ${n}`, phone: `+7 900 000-1${n}-0${n}`, email: `brig${n}@example.test`, password: `Pass${n}word77`,
   legal: 'npd', inn: ['500100732259', '771301001701', '390702484982'][n - 1], specs, districts, teamSize: 4, experience: 8, warrantyMonths: 24, priceFrom: 9000 + n * 1000,
   referees: 'Иван, объект на Мосфильмовской', about: 'Тестовая бригада: черновые и чистовые работы по проекту.', publicName: n === 1,
-  consents: { pd: '31.10.2026', rules: '31.10.2026', agency: '31.10.2026' },
+  consents: { pd: '31.10.2026', rules: '02.11.2026', agency: '02.11.2026' },
 });
 const ALL = ['demontazh', 'chernovye', 'elektrika', 'santehnika', 'plitka', 'malyarka', 'poly', 'potolki', 'mebel'];
 const B = [actor('A'), actor('B'), actor('C')];

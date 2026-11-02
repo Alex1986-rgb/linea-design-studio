@@ -131,11 +131,10 @@ https_checks() {   # $1 = strict|pre  (pre — до заливки адреса 
   esac
   local ping; ping=$(curl "${CI[@]}" -s -m 25 "https://$H/api/ping.php" 2>/dev/null || true)
   if printf '%s' "$ping" | python3 -c 'import json,sys; d=json.load(sys.stdin); sys.exit(0 if d.get("ok") else 1)' 2>/dev/null; then
-    local info; info=$(printf '%s' "$ping" | python3 -c 'import json,sys; d=json.load(sys.stdin); print("PHP %s, режим оплаты %s, конфиг %s, папка данных %s" % (d.get("php"), d.get("mode"), "есть" if d.get("config") else "НЕТ", "пишется" if d.get("private") else "НЕ пишется"))')
+    local info; info=$(printf '%s' "$ping" | python3 -c 'import json,sys; d=json.load(sys.stdin); print("PHP %s, конфиг %s, папка данных %s" % (d.get("php"), "есть" if d.get("config") else "НЕТ", "пишется" if d.get("private") else "НЕ пишется"))')
     ok "api/ping.php: $info"
     case "$ping" in *'"config":false'*|*'"private":false'*) warn "нет config.php или папка linea-private не пишется — приём брифа не заработает" ;; esac
-    case "$ping" in *'"mode":"yookassa"'*) ok "в кабинете ЮKassa → Интеграция → HTTP-уведомления: https://$PUNY/api/pay-notify.php (payment.succeeded, payment.canceled)" ;;
-                   *) ok "оплата в режиме manual; когда будет магазин ЮKassa — URL уведомлений https://$PUNY/api/pay-notify.php" ;; esac
+    ok "когда будет магазин ЮKassa — URL уведомлений https://$PUNY/api/pay-notify.php (payment.succeeded, payment.canceled, refund.succeeded, refund.canceled); режим оплаты — в ping.php только с токеном мониторинга"
   else warn "api/ping.php по https не ответил JSON-ом: ${ping:0:120}"; fi
 }
 

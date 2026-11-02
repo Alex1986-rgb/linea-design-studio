@@ -144,7 +144,7 @@ if (isset($_GET['b']) && ($b = brig_one('SELECT * FROM br_brigades WHERE id = ?'
         . '<br>Бригада: ' . (int)$b['team_size'] . ' чел., опыт ' . (int)$b['experience'] . ' лет, гарантия ' . (int)$b['warranty_months'] . ' мес.' . ($b['price_from'] ? ', от ' . (int)$b['price_from'] . ' ₽/м²' : '')
         . '<br>Рейтинг: ' . ($rt['n'] ? $rt['avg'] . ' (' . $rt['n'] . ')' : 'отзывов нет') . ' · объектов по LINEA: ' . brig_jobs_done($bid) . '</p></div>'
         . '<div><p><b>Рекомендатели:</b><br>' . nl2br($h($b['referees'] ?: '—')) . '</p><p><b>О бригаде:</b><br>' . nl2br($h($b['about'] ?: '—')) . '</p>'
-        . '<p class="mut">Регистрация ' . $h($b['created_at']) . ' · на проверку ' . $h($b['submitted_at'] ?: '—') . ' · согласия: ПДн ред. ' . $h($b['consent_pd_ed']) . ', правила ред. ' . $h($b['rules_ed']) . ', агентский договор ред. ' . $h($b['agency_ed']) . ' (' . $h($b['accepted_at']) . ')'
+        . '<p class="mut">Регистрация ' . $h($b['created_at']) . ' · на проверку ' . $h($b['submitted_at'] ?: '—') . ' · согласия: ПДн ред. ' . $h($b['consent_pd_ed']) . ', правила ред. ' . $h($b['rules_ed']) . ', договор-оферта ред. ' . $h($b['agency_ed']) . ' (' . $h($b['accepted_at']) . ')'
         . ' · имя на публичной странице: ' . ($b['public_name'] ? 'да' : 'нет') . ' · <a href="../brigady/' . $h($b['slug']) . '/" target="_blank" rel="noopener">публичная карточка</a></p></div></div></div>'
         . '<div class="box"><h2>Проверка</h2><p>' . $links . '</p>' . ($b['legal'] === 'npd' ? $form('b_npd', $bid, '', 'Проверить НПД через API ФНС', 'lt') : '')
         . ($b['inn_check_note'] ? '<p class="mut">' . $h($b['inn_check_note']) . '</p>' : '')

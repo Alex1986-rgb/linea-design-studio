@@ -50,7 +50,7 @@ fs.writeFileSync(path.join(FX, 'registry.json'), JSON.stringify({ items: [
   { id: 'П-1', proposed: true, client_text: 'Перенести щиток в прихожую', why: 'Короче трассы, проще обслуживание', cost: '+12 400 ₽ к ремонту' },
 ] }));
 
-const srv = spawn('php', ['-S', `127.0.0.1:${PORT}`, '-t', path.join(ROOT, 'site'), path.join(ROOT, 'tools/dev-router.php')],
+const srv = spawn('php', ['-d', 'opcache.enable=0', '-S', `127.0.0.1:${PORT}`, '-t', path.join(ROOT, 'site'), path.join(ROOT, 'tools/dev-router.php')],
   { env: { ...process.env, LINEA_PRIVATE: PRIV, LINEA_MAIL_DRY: '1' }, stdio: ['ignore', 'ignore', KEEP ? fs.openSync(path.join(PRIV, '_server.log'), 'a') : 'pipe'], detached: KEEP });
 let srvErr = ''; if (!KEEP) srv.stderr.on('data', d => { srvErr += d; }); else srv.unref();
 process.on('exit', () => { if (!KEEP) srv.kill(); });
@@ -340,6 +340,99 @@ try {
   const kp = await X.req('GET', '/kabinet/', { raw: true });
   ok(kp.code === 200 && kp.text.includes('name="linea-api"') && /noindex/.test(kp.text) && kp.text.includes('js/kabinet.js'), 'kabinet/: noindex, приёмник подключён');
   ok(!fs.readFileSync(path.join(ROOT, 'site/sitemap.xml'), 'utf8').includes('kabinet'), 'кабинета нет в sitemap');
+
+  step('14. Автоудаление персональных данных по срокам (cron)');
+  {
+    const mkO = (num, row) => ins('orders', { number: num, token: crypto.randomBytes(16).toString('hex'), kind: 'kvartira', name: 'Старый Клиент', phone: '+7 900 111-11-11', email: num.toLowerCase() + '@example.test', test: 1, ...row });
+    const dirOf = num => { const d = path.join(PRIV, 'orders', num); fs.mkdirSync(d, { recursive: true }); fs.writeFileSync(path.join(d, 'brief.json'), '{"client":{"name":"x"}}'); return d; };
+    const oldAcc = ins('accounts', { role: 'client', email: 'old3@example.test', pass_hash: '', status: 'active', fail_n: 0, lock_until: 0, created_at: ts(1300), last_login_at: ts(1200), test: 1, demo: 0 });
+    mkO('LN-OLD-1', { status: 'awaiting_payment', created_at: ts(400), updated_at: ts(400) }); dirOf('LN-OLD-1');
+    mkO('LN-NEW-1', { status: 'awaiting_payment', created_at: ts(30), updated_at: ts(30) });
+    const o2 = mkO('LN-OLD-2', { status: 'delivered', created_at: ts(1300), updated_at: ts(1200), paid_at: ts(1250), delivered_at: ts(1200) });
+    mkO('LN-OLD-3', { status: 'delivered', created_at: ts(1300), updated_at: ts(1200), paid_at: ts(1250), delivered_at: ts(1200), account_id: oldAcc }); dirOf('LN-OLD-3');
+    const o4 = mkO('LN-OLD-4', { status: 'delivered', created_at: ts(2300), updated_at: ts(2200), paid_at: ts(2250), delivered_at: ts(2200) });
+    const deal = (oid, closed) => {
+      const rq = ins('br_requests', { order_id: oid, status: 'chosen', consent_at: ts(closed + 100), consent_text: 'согласие', district: 'zao', works: '[]', object_title: 'Старый объект', created_at: ts(closed + 100), updated_at: ts(closed), test: 1 });
+      const of = ins('br_offers', { request_id: rq, brigade_id: bid, status: 'chosen', items: '[]', total_kop: 100000, materials: 'client', stages: '[]', days: 10, warranty_months: 24, created_at: ts(closed + 100), updated_at: ts(closed) });
+      const jb = ins('br_jobs', { request_id: rq, offer_id: of, brigade_id: bid, status: 'done', contacts_consent_at: ts(closed + 90), created_at: ts(closed + 90), updated_at: ts(closed), done_at: ts(closed) });
+      ins('br_messages', { job_id: jb, who: 'client', text: 'мой адрес: ул. Старая, 5', masked: 0, at: ts(closed + 50) });
+      ins('br_contracts', { job_id: jb, kind: 'main', num: 0, status: 'signed', body: '<h1>Договор</h1><p>старый текст</p>', hash: 'b'.repeat(64), total_kop: 100000, delta_kop: 0, days_add: 0, created_at: ts(closed + 80), created_by: 'test', client_signed_at: ts(closed + 80), client_ip: '10.1.1.1', brigade_signed_at: ts(closed + 80), brigade_ip: '10.2.2.2', needs_admin: 0 });
+      return jb;
+    };
+    const jRecent = deal(o2, 1000);      // сделка закрыта < 5 лет назад — заказ ждёт
+    const jOld = deal(o4, 2000);         // сделка закрыта > 5 лет назад — удаляются и сделка, и заказ
+    // заявка «удалить после завершения»: работы закончены (выдан, сделок нет) — исполняется сама
+    const lateAcc = ins('accounts', { role: 'client', email: 'late@example.test', pass_hash: '', status: 'active', fail_n: 0, lock_until: 0, created_at: ts(60), last_login_at: ts(5), test: 1, demo: 0 });
+    mkO('LN-LATE-1', { status: 'delivered', created_at: ts(60), updated_at: ts(3), paid_at: ts(50), delivered_at: ts(3), account_id: lateAcc }); dirOf('LN-LATE-1');
+    const lateReq = ins('pd_requests', { account_id: lateAcc, kind: 'delete', status: 'new', note: 'Удалить после завершения: идёт работа над оплаченным проектом', created_at: ts(40), due_at: ts(30) });
+    const dry = execFileSync('php', [path.join(ROOT, 'server/tools/cron.php'), '--private=' + PRIV, '--pd-dry'], { env: { ...process.env, LINEA_MAIL_DRY: '1' } }).toString();
+    const dj = JSON.parse((dry.match(/"pd_purge":(\{[^}]*\})/) || [0, '{}'])[1]);
+    ok(dj.deals === 1 && dj.orders === 3 && dj.requests >= 1 && sql("SELECT name FROM orders WHERE number = 'LN-OLD-1'")[0].name === 'Старый Клиент', 'пробный прогон (--pd-dry): посчитано — 1 сделка, 3 заказа, заявки; ничего не изменено: ' + JSON.stringify(dj));
+    const run = cron();
+    const g = n => sql(`SELECT * FROM orders WHERE number = '${n}'`)[0];
+    ok(g('LN-OLD-1').name === 'удалено' && !g('LN-OLD-1').email && g('LN-OLD-1').pd_purged_at && !fs.existsSync(path.join(PRIV, 'orders/LN-OLD-1/brief.json')), 'бриф без оплаты старше срока — обезличен, файл брифа удалён');
+    ok(g('LN-NEW-1').name === 'Старый Клиент', 'свежий бриф без оплаты — не тронут');
+    ok(g('LN-OLD-2').name === 'Старый Клиент' && !g('LN-OLD-2').pd_purged_at, 'заказ со сделкой в сроке хранения договоров — ждёт (реквизиты стороны — часть договора)');
+    ok(g('LN-OLD-3').name === 'удалено' && +g('LN-OLD-3').amount_kop === +sql("SELECT amount_kop FROM orders WHERE number = 'LN-OLD-3'")[0].amount_kop, 'выданный заказ старше срока — контакты и бриф удалены, номер и суммы остались');
+    const jo = sql(`SELECT * FROM br_jobs WHERE id = ${jOld}`)[0], co = sql(`SELECT * FROM br_contracts WHERE job_id = ${jOld}`)[0];
+    ok(jo.pd_purged_at && !co.client_ip && !/старый текст/.test(co.body) && co.hash === 'b'.repeat(64) && !sql(`SELECT 1 x FROM br_messages WHERE job_id = ${jOld} AND text LIKE '%Старая%'`).length,
+      'сделка после срока хранения договоров: переписка, текст договора и IP подписей удалены, хеш версии сохранён');
+    ok(g('LN-OLD-4').name === 'удалено', '…и её заказ обезличен в том же прогоне');
+    ok(sql(`SELECT * FROM br_jobs WHERE id = ${jRecent}`)[0].pd_purged_at === null && /старый текст/.test(sql(`SELECT body FROM br_contracts WHERE job_id = ${jRecent}`)[0].body), 'договор в сроке хранения — не тронут');
+    ok(sql(`SELECT status FROM accounts WHERE id = ${oldAcc}`)[0].status === 'deleted', 'аккаунт без действующих заказов и без входа дольше срока — обезличен');
+    ok(sql(`SELECT status FROM pd_requests WHERE id = ${lateReq}`)[0].status === 'done' && sql(`SELECT status FROM accounts WHERE id = ${lateAcc}`)[0].status === 'deleted' && g('LN-LATE-1').name === 'удалено', 'заявка «удалить после завершения» исполнена cron-ом, когда работы закончились');
+    ok(sql("SELECT COUNT(*) n FROM br_audit WHERE action = 'pd-retention'")[0].n >= 6 && fs.readFileSync(path.join(PRIV, 'pd.log'), 'utf8').includes('LN-OLD-1') && !fs.readFileSync(path.join(PRIV, 'pd.log'), 'utf8').includes('old3@example'), 'журнал: аудит админки и pd.log — без самих данных');
+    ok(/"pd_purge":\{"deals":0,"orders":0,"accounts":0,"requests":0\}/.test(cron()), 'повторный прогон ничего не находит');
+    ok(fs.existsSync(path.join(PRIV, 'cron.last')), 'cron отмечает последний прогон (для мониторинга)');
+  }
+
+  step('15. Второй шаг входа в админку: код на почту, доверенное устройство, аварийный адрес');
+  {
+    const cfgPath = path.join(PRIV, 'config.php'), cfg0 = fs.readFileSync(cfgPath, 'utf8');
+    const MON = crypto.randomBytes(20).toString('hex');
+    // config.php переписывается на лету (сервер теста запущен без opcache)
+    const withCfg = async extra => { fs.writeFileSync(cfgPath, cfg0.replace(/\];\s*$/, `, ${extra}];`)); };
+    await withCfg(`'admin_2fa' => true, 'monitor_token' => '${MON}'`);
+    const Z = actor('admin2fa');
+    const p1 = await Z.req('POST', '/api/admin.php', { form: { password: ADMIN_PASS }, raw: true });
+    ok(p1.code === 302 && /step=code/.test(p1.headers.get('location') || ''), 'верный пароль → второй шаг (код на почту), не в панель');
+    ok((await Z.req('GET', '/api/panel.php', { raw: true })).code === 302, 'до кода панель закрыта');
+    const pg = await Z.req('GET', '/api/admin.php?step=code', { raw: true });
+    const code = (pg.text.match(/id="devcode">[^0-9]*(\d{6})/) || [])[1];
+    ok(!!code && /admin_code/.test(fs.readFileSync(path.join(PRIV, 'brig-mail.log'), 'utf8')), 'код отправлен на admin_emails (в журнале писем — без кода)');
+    ok(!fs.readFileSync(path.join(PRIV, 'brig-mail.log'), 'utf8').includes(code), 'кода нет в журнале');
+    const bad = await Z.req('POST', '/api/admin.php', { form: { code: '000000' }, raw: true });
+    ok(/Неверный код/.test(bad.text), 'неверный код — отказ');
+    const good = await Z.req('POST', '/api/admin.php', { form: { code, trust: 1 }, raw: true });
+    ok(good.code === 302 && /panel\.php/.test(good.headers.get('location') || '') && (await Z.req('GET', '/api/panel.php', { raw: true })).code === 200, 'верный код → панель');
+    ok(sql('SELECT COUNT(*) n FROM adm_devices WHERE ended_at IS NULL')[0].n == 1 && !sql('SELECT token_hash FROM adm_devices')[0].token_hash.includes('linea'), 'устройство запомнено на 30 дней (в базе — только хеш токена)');
+    const sv = await Z.req('GET', '/api/panel.php?s=settings', { raw: true });
+    ok(/второй шаг/.test(sv.text) && /Включён/.test(sv.text) && /Забыть все устройства/.test(sv.text), 'панель: статус второго шага и доверенные устройства');
+    await Z.req('POST', '/api/panel.php', { form: { csrf: adminCsrf(sv.text), act: 'logout' }, raw: true });
+    const p2 = await Z.req('POST', '/api/admin.php', { form: { password: ADMIN_PASS }, raw: true });
+    ok(p2.code === 302 && /panel\.php/.test(p2.headers.get('location') || ''), 'доверенное устройство: следующий вход — только паролем');
+    const Y = actor('admin-other');
+    ok(/step=code/.test((await Y.req('POST', '/api/admin.php', { form: { password: ADMIN_PASS }, raw: true })).headers.get('location') || ''), 'другое устройство — снова код');
+    const sv2 = await Z.req('GET', '/api/panel.php?s=settings', { raw: true });
+    await Z.req('POST', '/api/panel.php', { form: { csrf: adminCsrf(sv2.text), act: 'adm_dev_end', reason: 'тест' }, raw: true });
+    ok(sql('SELECT COUNT(*) n FROM adm_devices WHERE ended_at IS NULL')[0].n == 0 && sql("SELECT 1 x FROM br_audit WHERE action = 'admin-devices'").length, '«Забыть все устройства» — в журнале');
+    for (let i = 0; i < 5; i++) await Y.req('POST', '/api/admin.php', { form: { code: '111111' }, raw: true });
+    ok(/закончились|Начать вход/.test((await Y.req('POST', '/api/admin.php', { form: { code: '111111' }, raw: true })).text), '5 неверных кодов — вход заново');
+    await withCfg(`'admin_2fa' => true, 'monitor_token' => '${MON}', 'admin_emergency_ips' => ['127.0.0.1'], 'admin_ip_allow' => ['127.0.0.1']`);   // неверные коды выше засчитаны в неудачные входы с адреса
+    const E = actor('admin-emerg');
+    const em = await E.req('POST', '/api/admin.php', { form: { password: ADMIN_PASS }, raw: true });
+    ok(/panel\.php/.test(em.headers.get('location') || '') && /аварийный/.test(fs.readFileSync(path.join(PRIV, 'admin.log'), 'utf8')), 'аварийный адрес из admin_emergency_ips — без кода, запись в журнал', em.code + ' ' + (em.headers.get('location') || '') + (em.text.match(/class="msg">([^<]*)/) || [])[1]);
+    await withCfg(`'monitor_token' => '${MON}', 'admin_ip_allow' => ['127.0.0.1']`);
+    ok(/panel\.php/.test((await actor('admin-auto').req('POST', '/api/admin.php', { form: { password: ADMIN_PASS }, raw: true })).headers.get('location') || ''), 'режим auto без писем (brig_mail_enabled = false) — вход паролем, как раньше');
+
+    step('16. ping.php: публично — без режима и TLS; подробности — с токеном мониторинга');
+    const pub = await X.req('GET', '/api/ping.php');
+    ok(pub.j?.ok && !('mode' in pub.j) && !('tls' in pub.j) && !('proxy' in pub.j), 'публичный ответ: только «да/нет», без режима оплаты и признаков TLS');
+    ok((await X.req('GET', '/api/ping.php', { headers: { 'X-Monitor-Token': 'x'.repeat(40) } })).code === 403, 'неверный токен — 403');
+    const det = await X.req('GET', '/api/ping.php', { headers: { 'X-Monitor-Token': MON } });
+    ok(det.j?.mode === 'manual' && det.j.tls && det.j.proxy?.remote_addr === '127.0.0.1' && det.j.proxy.remote_is_trusted === true && det.j.db?.schema >= 7 && det.j.cron_last, 'с токеном: режим, TLS, какой REMOTE_ADDR видит PHP и доверен ли он, версия схемы, последний cron');
+    fs.writeFileSync(cfgPath, cfg0);
+  }
 } catch (e) { if (e !== 'stop') ok(false, 'исключение: ' + (e.stack || e)); }
 
 if (srvErr.match(/Fatal|Parse error|Warning|Deprecated/)) console.log('\nПредупреждения PHP:\n' + srvErr.split('\n').filter(l => /Fatal|Parse|Warning|Deprecated/.test(l)).slice(0, 10).join('\n'));
