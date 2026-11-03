@@ -459,10 +459,57 @@ ${rend}
   }));
 }
 
+/* --- розетки: главная боль заказчиков (разведка 03.11.2026, docs/research/2026-11-03-klienty-kontent.md) --- */
+// Все числа — с листов опубликованного альбома (tools/rozetki-facts.js), руками не пишутся.
+const ROZ = require('./rozetki-facts.js')(SITE);
+// Внешний источник цены переделки — из разведки, проверен 03.11.2026 (фраза есть в статье)
+const ROZ_SRC = { url: 'https://dom-asov.ru/blog/remont-novostrojki-s-nulya-s-chego-nachat-posle-polucheniya-klyuchej/', site: 'dom-asov.ru', date: '05.06.2026', list: 'https://dom-asov.ru/blog/oshibki-pri-remonte-kvartiry-kotorye-stoyat-dorogo/', text: 'исправление ошибок, допущенных без проекта, в квартире 60–70 м² обычно обходится в 100 000–400 000 ₽' };
+const rzAlbum = A.find(f => f.slug === ROZ.slug) || { url: `portfolio/${ROZ.slug}/`, name: ROZ.name };
+const rzLink = (u, s) => `${u}review.html?p=${ROZ.slug}&amp;s=${encodeURIComponent(s.file)}`;
+const rzImg = (u, s, alt) => `<img src="${u}portfolio/${ROZ.slug}/sheets/${encodeURIComponent(s.file)}" alt="${esc(alt)}" width="1587" height="1123" loading="lazy" decoding="async">`;
+const RZ_CSS = `<style>.rz-fig{margin:0}.rz-fig a{display:block;border:1px solid var(--line);border-radius:4px;overflow:hidden;background:#fff}
+.rz-fig img{display:block;width:100%;height:auto}.rz-fig figcaption{color:var(--mut);font-size:13px;line-height:1.5;margin-top:10px}
+.rz-two{display:grid;grid-template-columns:1.25fr .75fr;gap:28px;align-items:start}.rz-two>*{min-width:0}
+.rz-src{color:var(--dim);font-size:12.5px;line-height:1.5;margin-top:10px}
+@media (max-width:900px){.rz-two{grid-template-columns:minmax(0,1fr)}}</style>`;
+const rzH = ROZ.heights, rzKitchenName = ROZ.rooms[ROZ.kitchenRoom] || 'кухня';
+const rzGroupOf = n => (ROZ.groups.find(g => g.n === n) || {}).what || '';
+const rzKitchenRows = ROZ.kitchen.map(p => `      <tr><td>${esc(p.mark)}${p.proposed ? ' <span class="hint">(предложено)</span>' : ''}</td><td>${esc(p.what)}</td><td>${p.h}</td><td>гр. ${p.group}${rzGroupOf(p.group) ? ' — ' + esc(rzGroupOf(p.group)) : ''}</td></tr>`).join('\n');
+const SCH = ROZ.sheets;
+
 /* --- сравнение --- */
 const cmpRows = COMPARE_ROWS.map(r => `      <tr><td>${esc(r[0])}</td><td>${esc(r[1])}</td><td>${esc(r[2])}</td><td>${esc(r[3])}</td><td class="hi">${esc(r[4])}</td></tr>`).join('\n');
 const SHEETS_MAX = Math.max(...A.map(f => f.sheets));
 const SHEETS_RANGE = `${Math.min(...A.map(f => f.sheets))}–${SHEETS_MAX} ${word(SHEETS_MAX, 'лист', 'листа', 'листов')}`;
+
+const VS_ROWS = [
+  ['Размеры', 'нет: картинка показывает вид, а не длины', `цепочки размеров в миллиметрах, масштаб ${ROZ.scale} из ряда ГОСТ`],
+  ['Окна, двери, стены', 'могут сдвинуться, исчезнуть или появиться лишние — модель дорисовывает', 'по вашему плану: проёмы и стены с привязками; что снято со скана, а не замерено, помечено'],
+  ['Розетки и выводы', 'нарисованы для красоты или не нарисованы вовсе', `${plural(ROZ.nSockets, 'марка', 'марки', 'марок')} розеток и ${plural(ROZ.nOutlets, 'вывод', 'вывода', 'выводов')} кабеля: высота от пола, привязка, группа щита`],
+  ['Мокрые зоны', 'не учитываются', 'граница зоны у ванны, влагозащищённые розетки, линии через УЗО — в примечаниях листа'],
+  ['Мебель', 'похожая, размер на глаз', 'на плане — изделия с размерами; встроенная мебель — отдельными чертежами'],
+  ['Что отдать бригаде', 'картинку и фразу «сделайте так»', 'листы, ведомости и смету с объёмами по чертежам'],
+  ['Чем полезна', 'быстро показывает настроение и цвет — хороший старт для разговора', 'по ней работают на объекте после ваших ответов и контрольного обмера'],
+];
+const VS_SECTION = `<section class="blk" id="list-vs-kartinka">
+  <div class="wrap">
+    <div class="kicker">Лист против картинки</div>
+    <h2>Картинка нейросети и лист чертежа — <em>разные вещи</em></h2>
+    <p class="sub">Картинку интерьера сегодня можно получить за минуту, и для настроения она хороша. Строить по ней нельзя: в ней нет размеров, высот и групп щита, а окна и стены модель иногда дорисовывает сама. Ниже — честное сравнение по пунктам, справа — настоящий лист из альбома «${esc(ROZ.name)}».</p>
+    <div class="rz-two">
+      <div class="scroll-x">
+        <table class="tbl cmp">
+          <tr><th>Что смотрим</th><th>Картинка нейросети</th><th class="hi">Лист альбома LINEA</th></tr>
+${VS_ROWS.map(r => `          <tr><td>${esc(r[0])}</td><td>${esc(r[1])}</td><td class="hi">${esc(r[2])}</td></tr>`).join('\n')}
+        </table>
+      </div>
+      <figure class="rz-fig"><a href="${rzLink('../', SCH.sockets)}" rel="nofollow" title="Открыть лист целиком">${rzImg('../', SCH.sockets, `${SCH.sockets.title} — ${ROZ.name}, лист ${SCH.sockets.no}`)}</a>
+        <figcaption>Лист ${SCH.sockets.no} из ${ROZ.total}: «${esc(SCH.sockets.title)}». Мы тоже делаем визуализации — на сайт идут только кадры, сверенные с планом; где кадр и чертёж расходятся, верен чертёж.</figcaption></figure>
+    </div>
+    <div class="cta-row" style="margin-top:26px"><a class="btn ghost" href="../rozetki/">Как читать лист электрики</a></div>
+  </div>
+</section>
+`;
 
 w('compare/index.html', page({
   file: 'compare/index.html',
@@ -472,7 +519,8 @@ w('compare/index.html', page({
   kicker: 'Сравнение', crumb: 'Сравнение', ogType: 'website',
   lead: `Колонки «планировщик», «типовая студия» и «бюро» — обобщение по разбору 13 студий и шести реальных альбомов (август 2026). Последняя — то, что лежит в наших ${A.length} альбомах нового формата. Это демонстрационные проекты; статус выпуска — на странице каждого альбома.`,
   jsonld: [crumbs([['LINEA', BASE + '/'], ['Сравнение', BASE + '/compare/']])],
-  body: `<section class="blk">
+  body: `${RZ_CSS}
+<section class="blk">
   <div class="wrap">
     <div class="kicker">По составу и срокам</div>
     <h2>Что входит и чего не хватает</h2>
@@ -486,6 +534,7 @@ ${cmpRows}
   </div>
 </section>
 
+${VS_SECTION}
 <section class="blk">
   <div class="wrap">
     <div class="kicker">Что вы получаете</div>
@@ -542,6 +591,110 @@ ${cmpRows}
       </div>
     </div>
     <div class="cta-row" style="margin-top:26px"><a class="btn ghost" href="../style/">Стили и их материалы</a></div>
+  </div>
+</section>`,
+}));
+
+
+w('rozetki/index.html', page({
+  file: 'rozetki/index.html',
+  title: 'Розетки там, где нужно: лист электрики в проекте',
+  desc: D(`Мало розеток и выводы не там — самая частая жалоба после ремонта. Настоящий лист альбома: ${plural(ROZ.nSockets, 'розетка', 'розетки', 'розеток')} с высотами, группами и привязками.`, 'rozetki'),
+  h1: 'Розетки там, <em>где нужно</em>',
+  kicker: 'Электрика', crumb: 'Электрика в проекте', ogType: 'article',
+  lead: 'Розеток мало, вывод оказался за холодильником, вилка упирается в шкаф — жалоба, которая звучит после ремонта чаще других. Исправляют её штробой по готовой стене. На листе то же решение стоит несколько минут, пока стены ещё не закрыты.',
+  jsonld: [crumbs([['LINEA', BASE + '/'], ['Розетки там, где нужно', BASE + '/rozetki/']])],
+  body: `${RZ_CSS}
+<section class="proof"><div class="wrap">
+  <div><b>${ROZ.nSockets}</b><span>${word(ROZ.nSockets, 'марка розеток', 'марки розеток', 'марок розеток')} на одном листе плана</span></div>
+  <div><b>${ROZ.nOutlets}</b><span>${word(ROZ.nOutlets, 'вывод', 'вывода', 'выводов')} кабеля под технику</span></div>
+  <div><b>${ROZ.groups.length}</b><span>${word(ROZ.groups.length, 'группа', 'группы', 'групп')} щита — у каждой точки свой номер</span></div>
+  <div><b>${rzH.length}</b><span>${word(rzH.length, 'высота', 'высоты', 'разных высот')} установки: от ${rzH[0]} до ${rzH[rzH.length - 1]} мм</span></div>
+</div></section>
+
+<section class="blk">
+  <div class="wrap">
+    <div class="kicker">Почему это важно</div>
+    <h2>Переделка стоит дороже, <em>чем лист</em></h2>
+    <p class="sub">Розетку, которую забыли, ставят уже по отделке: штроба, кабель, шпаклёвка, покраска стены целиком. По оценке ремонтной компании, ${ROZ_SRC.text}. В её же списке дорогих ошибок первым пунктом стоит ремонт без проекта электрики: проводку закрывают штукатуркой раньше всего.</p>
+    <p class="rz-src">Источники: <a href="${ROZ_SRC.url}" target="_blank" rel="noopener nofollow">${ROZ_SRC.site} — ремонт новостройки с нуля</a> (статья от ${ROZ_SRC.date}) и <a href="${ROZ_SRC.list}" target="_blank" rel="noopener nofollow">там же — 15 самых дорогих ошибок</a>. Цифры — оценка компании, не наша.</p>
+  </div>
+</section>
+
+<section class="blk">
+  <div class="wrap rz-two">
+    <figure class="rz-fig"><a href="${rzLink('../', SCH.sockets)}" rel="nofollow" title="Открыть лист целиком">${rzImg('../', SCH.sockets, `${SCH.sockets.title} — ${ROZ.name}, лист ${SCH.sockets.no} альбома`)}</a>
+      <figcaption>Лист ${SCH.sockets.no} из ${ROZ.total}: «${esc(SCH.sockets.title)}», ${esc(ROZ.name.toLowerCase())}${ROZ.area ? `, ${esc(ROZ.area)}` : ''}, масштаб ${esc(ROZ.scale)}. Нажмите — лист откроется целиком, его можно увеличить.</figcaption></figure>
+    <div>
+      <div class="kicker">Настоящий лист</div>
+      <h2>Что на нём есть</h2>
+      <ul class="checklist">
+        <li><b>Марка у каждой точки</b> — Р1…Р${ROZ.nSockets} для розеток, ЭВ — для выводов кабеля без розетки (варочная, духовой шкаф, вытяжка). По марке точка находится в ведомости и на развёртке стены.</li>
+        <li><b>Высота от чистого пола</b> — «Н=1100» у знака: по ней бригада ставит подрозетник до штукатурки. Где высота не подписана, она одна для всего листа и стоит в примечаниях.</li>
+        <li><b>Привязки</b> — расстояние от чистовой грани стены до оси розетки, в миллиметрах, цепочками размеров.</li>
+        <li><b>Группа щита</b> — «гр.7»: какой автомат кормит эту розетку. Кухонный фартук, посудомойка и духовой шкаф — на разных группах.</li>
+        <li><b>Мокрые зоны</b> — граница зоны у ванны и влагозащищённые розетки${ROZ.hasNotes.uzo ? '; в примечаниях — какие линии идут через УЗО 30 мА' : ''}.</li>
+        <li><b>Честные пометки</b> — ${ROZ.nProposed} ${word(ROZ.nProposed, 'точка помечена', 'точки помечены', 'точек помечены')} «**»: предложено, ждёт вашего решения. Пока вы не ответили, лист выходит с пометкой «ПРЕДВАРИТЕЛЬНО».</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<section class="blk">
+  <div class="wrap">
+    <div class="kicker">${esc(rzKitchenName)}</div>
+    <h2>Кухня: <em>каждая точка под свою технику</em></h2>
+    <p class="sub">Строки ведомости электроточек того же альбома (листы ${SCH.schedule.map(s => s.no).join(', ')}) — как они есть. Высоты — от чистого пола до оси, в миллиметрах.</p>
+    <div class="scroll-x">
+      <table class="tbl">
+        <tr><th>Марка</th><th>Назначение</th><th>Н, мм</th><th>Группа щита</th></tr>
+${rzKitchenRows}
+      </table>
+    </div>
+    <p class="hint" style="margin-top:14px">Выводы кухонной техники на листе даны от осей модулей гарнитура. Перед черновыми работами их сверяют с чертежом кухни от изготовителя — это написано в примечаниях листа, а не спрятано.</p>
+  </div>
+</section>
+
+<section class="blk">
+  <div class="wrap">
+    <div class="kicker">Где ещё это видно</div>
+    <h2>Одна точка — <em>на трёх листах</em></h2>
+    <div class="tiles">
+${[SCH.kitchen, SCH.schedule[0], SCH.panel[0]].filter(Boolean).map(s => `      <a class="tile" href="${rzLink('../', s)}" rel="nofollow">
+        ${rzImg('../', s, `${s.title} — ${ROZ.name}, лист ${s.no}`)}
+        <span class="tile-body"><span class="tag">Лист ${s.no}</span><b>${esc(s.title)}</b><span class="tile-lead">${/elev/.test(s.file) ? 'Розетки фартука на стене: высота от пола и привязка от угла — красными цепочками.' : /schedule/.test(s.file) ? 'Таблица всех точек: марка, помещение, назначение, высота, группа.' : `Щит: ${ROZ.groups.length} ${word(ROZ.groups.length, 'группа', 'группы', 'групп')}, у каждой — автомат, кабель и нагрузка.`}</span></span>
+      </a>`).join('\n')}
+    </div>
+  </div>
+</section>
+
+<section class="blk">
+  <div class="wrap">
+    <div class="kicker">Границы</div>
+    <h2>Что лист делает и чего не делает</h2>
+    <div class="pas-grid">
+      <div class="pas-col good">
+        <h3>Делает</h3>
+        <ul>
+          <li>Даёт бригаде состав, места, высоты и группы до первой штробы</li>
+          <li>Связывает розетки с мебелью: точки стоят от расстановки, а не «по стене через метр»</li>
+          <li>Показывает, что ещё не решено, — вопросы к вам на отдельном листе альбома</li>
+        </ul>
+      </div>
+      <div class="pas-col">
+        <h3>Не делает</h3>
+        <ul>
+          <li>Не заменяет расчёт нагрузок и сечений — это проект ЭОМ организации с допуском, лист так и говорит</li>
+          <li>Не отменяет проверку по месту: размеры сверяют после контрольного обмера</li>
+          <li>Не выбирает за вас технику: выводы кухни пересматриваются по чертежу изготовителя</li>
+        </ul>
+      </div>
+    </div>
+    <div class="cta-row" style="margin-top:26px">
+      <a class="btn" href="../brief.html">Заполнить бриф</a>
+      <a class="btn ghost" href="../${rzAlbum.url}">Весь альбом — ${plural(ROZ.total, 'лист', 'листа', 'листов')}</a>
+      <a class="btn ghost" href="../compare/#list-vs-kartinka">Лист против картинки</a>
+    </div>
   </div>
 </section>`,
 }));
@@ -688,7 +841,7 @@ ${PRACTICE_REVIEW ? `    <div class="kicker">Первая критика</div>
 /* --- sitemap --- */
 const smPath = path.join(SITE, 'sitemap.xml');
 let sm = fs.readFileSync(smPath, 'utf8');
-sm = sm.replace(/\s*<url>\s*<loc>[^<]*\/(cases|compare|stories|reviews)\/[^<]*<\/loc>[\s\S]*?<\/url>/g, '');
+sm = sm.replace(/\s*<url>\s*<loc>[^<]*\/(cases|compare|stories|reviews|rozetki)\/[^<]*<\/loc>[\s\S]*?<\/url>/g, '');
 const add = out.map(rel => {
   const loc = `${BASE}/${rel.replace(/index\.html$/, '')}`;
   const pri = /index\.html$/.test(rel) ? '0.8' : /pochemu-46/.test(rel) ? '0.4' : '0.7';

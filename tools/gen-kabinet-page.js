@@ -50,9 +50,9 @@ ${SHELL.header(u, null)}
 </div>
 
 ${SHELL.footer(u, null)}
-<script type="application/json" id="kabTerms">${JSON.stringify({ areaRecalc: SHELL.TERMS.areaRecalc, roundsText: SHELL.TERMS.roundsText, rounds: SHELL.TERMS.rounds, wa: 'https://wa.me/79257338640', mail: 'optteem@mail.ru' })}</script>
+<script type="application/json" id="kabTerms">${JSON.stringify({ call: SHELL.TERMS.call.title + '. ' + SHELL.TERMS.call.line, areaRecalc: SHELL.TERMS.areaRecalc, roundsText: SHELL.TERMS.roundsText, rounds: SHELL.TERMS.rounds, wa: 'https://wa.me/79257338640', mail: 'optteem@mail.ru' })}</script>
 <script src="${u}js/kabinet-remont.js?v=1"></script>
-<script src="${u}js/kabinet.js?v=2"></script>
+<script src="${u}js/kabinet.js?v=3"></script>
 </body>
 </html>
 `;

@@ -326,6 +326,20 @@ ${PLATES.map(p => {
       </a>`;
   }).join('\n')}
     </div>`);
+  /* --- «Розетки там, где нужно»: главная боль заказчиков (разведка 03.11.2026); числа — с листов альбома --- */
+  const RZ = require('./rozetki-facts.js')(SITE), rzS = RZ.sheets.sockets, rzF = encSheet(rzS.file), rzH = RZ.heights;
+  region('rozetki', `    <div class="h-roz">
+      <a class="plate" href="review.html?p=${RZ.slug}&amp;s=${rzF}">
+        <span class="plate-img"><img src="portfolio/${RZ.slug}/sheets/${rzF}" alt="${esc(`${rzS.title} — ${RZ.name.toLowerCase()}, лист ${rzS.no} альбома`)}" width="1587" height="1123" loading="lazy" decoding="async"></span>
+        <span class="plate-cap"><i>Лист ${rzS.no}</i>${esc(rzS.title)} · ${esc(RZ.name.toLowerCase())}</span>
+      </a>
+      <div>
+        <div class="kicker">Электрика</div>
+        <h2>Розетки там, <em>где нужно</em></h2>
+        <p class="sub">Мало розеток и вывод за холодильником — жалоба, которую чаще всего слышат после ремонта, а исправляют её штробой по готовой стене. На листе у каждой точки — марка, высота от пола, привязка и группа щита: ${RZ.nSockets} ${plural(RZ.nSockets, 'марка', 'марки', 'марок')} розеток и ${RZ.nOutlets} ${plural(RZ.nOutlets, 'вывод', 'вывода', 'выводов')} под технику, высоты от ${rzH[0]} до ${rzH[rzH.length - 1]} мм.</p>
+        <div class="cta-row"><a class="btn ghost" href="rozetki/">Как читать лист электрики</a></div>
+      </div>
+    </div>`);
   const rs = findSheet(REVIEW_SHEET.slug, REVIEW_SHEET.key), rf = encSheet(rs.file);
   region('rv-img', `      <img src="portfolio/${REVIEW_SHEET.slug}/sheets/${rf}" alt="${esc(rs.title)} квартиры 56 м² с метками правок" width="1587" height="1123" loading="lazy" decoding="async">`);
   region('rv-cta', `      <div class="cta-row"><a class="btn ghost" href="review.html?p=${REVIEW_SHEET.slug}&amp;s=${rf}">Поставить правку на демо-листе</a></div>`);

@@ -53,6 +53,7 @@ ${SHELL.header(u, null)}
     </ol>
     <div class="ord-card" id="ordMain" aria-live="polite"><p>Загружаю заказ…</p></div>
     <div class="ord-card" id="ordInfo" hidden></div>
+    <div class="ord-card ord-call"><h2>${SHELL.TERMS.call.title}</h2><p>${SHELL.TERMS.call.line}${SHELL.TERMS.call.channel ? ` <a href="${SHELL.TERMS.call.channel.href}" rel="noopener">${SHELL.TERMS.call.channel.title}</a>` : ''}</p></div>
     <div class="ord-card" id="ordRemont" hidden aria-live="polite"></div>
     <p class="hint">Сохраните эту страницу в закладки — по ссылке всегда виден статус. Вопросы — в WhatsApp
       <a href="https://wa.me/79257338640" target="_blank" rel="noopener">+7 925 733-86-40</a> или на <a href="mailto:optteem@mail.ru">optteem@mail.ru</a>, укажите номер заказа.</p>
@@ -61,7 +62,7 @@ ${SHELL.header(u, null)}
 
 ${SHELL.footer(u, null)}
 <script type="application/json" id="ordTerms">${JSON.stringify({ areaRecalc: SHELL.TERMS.areaRecalc, rate: SHELL.TERMS.packs[0].rate, minArea: SHELL.TERMS.minArea })}</script>
-<script src="js/order.js?v=2"></script>
+<script src="js/order.js?v=3"></script>
 <script src="js/remont.js?v=2"></script>
 </body>
 </html>

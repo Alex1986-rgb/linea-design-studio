@@ -182,6 +182,7 @@
       pay = O.amount ? `<div class="ord-sum" style="font-family:var(--serif);font-size:28px;color:var(--gold)">${rub(O.amount)}</div>${O.area ? `<p class="kab-mut">${String(O.area).replace('.', ',')} м² по брифу</p>` : ''}${O.amountConfirmed === false ? '<p class="kab-mut">' + esc(T.areaRecalc || '') + '</p>' : ''}`
         + (O.canPay ? '<button class="btn" type="button" data-pay>Оплатить картой или СБП</button>' : O.invoiced ? '<p>Счёт отправлен на почту — оплатите по реквизитам из счёта.</p>' : '<p class="kab-mut">Счёт на оплату пришлём на почту.</p>')
         : '<p>Сумму пересчитаем по плану и подтвердим в течение рабочего дня.</p>';
+      if (T.call) pay += '<p class="kab-mut">' + esc(T.call) + '</p>';
     } else if (O.paidAt) pay = `<p><span class="kab-tag ok">Оплачено</span> ${O.amount ? rub(O.amount) : ''} · ${esc(dt(O.paidAt))}</p><p class="kab-mut">Чек об оплате — в письме сервиса онлайн-оплаты; копия — в «Документах».</p>`;
     else pay = `<p>${esc(O.statusText)}</p>`;
     const album = last ? `<p><b>${esc(last.title)}</b> · ${esc(day(last.date))} ${last.prelim ? '<span class="kab-tag g">Предварительный — для обсуждения</span>' : ''}${last.final ? '<span class="kab-tag ok">Финальный — для стройки</span>' : ''}</p>

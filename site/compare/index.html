@@ -70,6 +70,11 @@
   </div>
 </section>
 
+<style>.rz-fig{margin:0}.rz-fig a{display:block;border:1px solid var(--line);border-radius:4px;overflow:hidden;background:#fff}
+.rz-fig img{display:block;width:100%;height:auto}.rz-fig figcaption{color:var(--mut);font-size:13px;line-height:1.5;margin-top:10px}
+.rz-two{display:grid;grid-template-columns:1.25fr .75fr;gap:28px;align-items:start}.rz-two>*{min-width:0}
+.rz-src{color:var(--dim);font-size:12.5px;line-height:1.5;margin-top:10px}
+@media (max-width:900px){.rz-two{grid-template-columns:minmax(0,1fr)}}</style>
 <section class="blk">
   <div class="wrap">
     <div class="kicker">По составу и срокам</div>
@@ -94,6 +99,31 @@
       </table>
     </div>
     <p class="hint" style="margin-top:14px">Цены конкурентов — публичные прайсы на момент разбора рынка (август 2026); актуальные проверяйте у самих исполнителей. Онлайн-планировщик рабочих чертежей не делает, поэтому срок в его колонке не указан.</p>
+  </div>
+</section>
+
+<section class="blk" id="list-vs-kartinka">
+  <div class="wrap">
+    <div class="kicker">Лист против картинки</div>
+    <h2>Картинка нейросети и лист чертежа — <em>разные вещи</em></h2>
+    <p class="sub">Картинку интерьера сегодня можно получить за минуту, и для настроения она хороша. Строить по ней нельзя: в ней нет размеров, высот и групп щита, а окна и стены модель иногда дорисовывает сама. Ниже — честное сравнение по пунктам, справа — настоящий лист из альбома «Трёхкомнатная квартира».</p>
+    <div class="rz-two">
+      <div class="scroll-x">
+        <table class="tbl cmp">
+          <tr><th>Что смотрим</th><th>Картинка нейросети</th><th class="hi">Лист альбома LINEA</th></tr>
+          <tr><td>Размеры</td><td>нет: картинка показывает вид, а не длины</td><td class="hi">цепочки размеров в миллиметрах, масштаб 1:50 из ряда ГОСТ</td></tr>
+          <tr><td>Окна, двери, стены</td><td>могут сдвинуться, исчезнуть или появиться лишние — модель дорисовывает</td><td class="hi">по вашему плану: проёмы и стены с привязками; что снято со скана, а не замерено, помечено</td></tr>
+          <tr><td>Розетки и выводы</td><td>нарисованы для красоты или не нарисованы вовсе</td><td class="hi">34 марки розеток и 7 выводов кабеля: высота от пола, привязка, группа щита</td></tr>
+          <tr><td>Мокрые зоны</td><td>не учитываются</td><td class="hi">граница зоны у ванны, влагозащищённые розетки, линии через УЗО — в примечаниях листа</td></tr>
+          <tr><td>Мебель</td><td>похожая, размер на глаз</td><td class="hi">на плане — изделия с размерами; встроенная мебель — отдельными чертежами</td></tr>
+          <tr><td>Что отдать бригаде</td><td>картинку и фразу «сделайте так»</td><td class="hi">листы, ведомости и смету с объёмами по чертежам</td></tr>
+          <tr><td>Чем полезна</td><td>быстро показывает настроение и цвет — хороший старт для разговора</td><td class="hi">по ней работают на объекте после ваших ответов и контрольного обмера</td></tr>
+        </table>
+      </div>
+      <figure class="rz-fig"><a href="../review.html?p=gost-kv3k&amp;s=29-electrical-engineer-sockets.svg" rel="nofollow" title="Открыть лист целиком"><img src="../portfolio/gost-kv3k/sheets/29-electrical-engineer-sockets.svg" alt="План розеток и электровыводов — Трёхкомнатная квартира, лист 29" width="1587" height="1123" loading="lazy" decoding="async"></a>
+        <figcaption>Лист 29 из 96: «План розеток и электровыводов». Мы тоже делаем визуализации — на сайт идут только кадры, сверенные с планом; где кадр и чертёж расходятся, верен чертёж.</figcaption></figure>
+    </div>
+    <div class="cta-row" style="margin-top:26px"><a class="btn ghost" href="../rozetki/">Как читать лист электрики</a></div>
   </div>
 </section>
 

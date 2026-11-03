@@ -63,6 +63,9 @@
 .h-kit{display:grid;grid-template-columns:repeat(4,1fr);gap:18px}
 .h-kit .card{padding:24px 22px}
 .h-kit .card h3{font-family:var(--serif);font-weight:500;font-size:19px}
+/* «Розетки там, где нужно» (03.11.2026): лист электрики слева, текст справа */
+.h-roz{display:grid;grid-template-columns:1.1fr .9fr;gap:36px;align-items:center}.h-roz>*{min-width:0}.h-roz .plate{display:block}.h-roz .sub{margin-bottom:24px}
+@media (max-width:900px){.h-roz{grid-template-columns:minmax(0,1fr);gap:22px}}
 .h-walls{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-top:44px}
 .h-walls figure{margin:0;position:relative;border-radius:6px;overflow:hidden;border:1px solid var(--line)}
 .h-walls img{display:block;width:100%;height:auto;aspect-ratio:3/2;object-fit:cover}
@@ -543,6 +546,25 @@
       </a>
     </div>
 <!-- /home:plates -->
+  </div>
+</section>
+
+<section class="blk" id="rozetki">
+  <div class="wrap">
+<!-- home:rozetki -->
+    <div class="h-roz">
+      <a class="plate" href="review.html?p=gost-kv3k&amp;s=29-electrical-engineer-sockets.svg">
+        <span class="plate-img"><img src="portfolio/gost-kv3k/sheets/29-electrical-engineer-sockets.svg" alt="План розеток и электровыводов — трёхкомнатная квартира, лист 29 альбома" width="1587" height="1123" loading="lazy" decoding="async"></span>
+        <span class="plate-cap"><i>Лист 29</i>План розеток и электровыводов · трёхкомнатная квартира</span>
+      </a>
+      <div>
+        <div class="kicker">Электрика</div>
+        <h2>Розетки там, <em>где нужно</em></h2>
+        <p class="sub">Мало розеток и вывод за холодильником — жалоба, которую чаще всего слышат после ремонта, а исправляют её штробой по готовой стене. На листе у каждой точки — марка, высота от пола, привязка и группа щита: 34 марки розеток и 7 выводов под технику, высоты от 150 до 2389 мм.</p>
+        <div class="cta-row"><a class="btn ghost" href="rozetki/">Как читать лист электрики</a></div>
+      </div>
+    </div>
+<!-- /home:rozetki -->
   </div>
 </section>
 

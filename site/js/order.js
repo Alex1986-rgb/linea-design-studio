@@ -26,6 +26,8 @@
     $('ordH').innerHTML = 'Заказ № ' + esc(o.number) + (o.test ? '<span class="ord-test">тест</span>' : '');
     document.title = 'Заказ ' + o.number + ' — LINEA';
     steps(o.status);
+    // «Поговорим до оплаты» (TERMS.call) — только пока заказ не оплачен
+    const call = document.querySelector('.ord-call'); if (call) call.hidden = !(o.status === 'awaiting_payment' || o.status === 'new');
     const days = /^dom/.test(o.kind) ? 72 : 48;
     let h = '';
     if (o.status === 'awaiting_payment' || o.status === 'new') {
