@@ -118,6 +118,17 @@ switch ($cmd) {
         save($php, $f, $c, $changed, 'defaults');
         break;
     }
+    case 'set': {   // явная правка владельцем: только булевы флаги из белого списка (пароли/ключи этой командой не задаются)
+        $allow = ['notify_enabled', 'brig_mail_enabled', 'admin_2fa', 'allow_test', 'yk_receipt'];
+        $k = (string)($args[1] ?? ''); $raw = strtolower((string)($args[2] ?? ''));
+        if (!in_array($k, $allow, true)) { fail('set: ключ не из списка (' . implode(', ', $allow) . ')'); }
+        if (!in_array($raw, ['true', 'false'], true)) { fail('set: значение true или false'); }
+        $c = load($f); $v = $raw === 'true';
+        if (array_key_exists($k, $c) && $c[$k] === $v) { out("без изменений: $k уже $raw"); break; }
+        $c[$k] = $v;
+        save($php, $f, $c, [$k], 'set');
+        break;
+    }
     case 'add-proxy': {
         $ip = (string)($args[1] ?? '');
         if (filter_var($ip, FILTER_VALIDATE_IP) === false) { fail('add-proxy: не IP-адрес'); }
