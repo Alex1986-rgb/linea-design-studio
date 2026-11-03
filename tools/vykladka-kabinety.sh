@@ -28,7 +28,7 @@ say "2/6 Настройки боевого config.php (только незада
 # brig_mail_enabled / notify_enabled — письма с кодом входа и уведомления; admin_emails — роль «Админка»; base — ссылки в письмах;
 # admin_2fa=false — второй шаг входа включать после почты на домене (SPF/DKIM); monitor_token — подробности ping.php (шаг 6, монитор)
 DEFAULTS=$(python3 -I -c 'import json,sys; e,s=sys.argv[1:3]; print(json.dumps({"brig_mail_enabled":True,"admin_emails":{"if_empty":[e]},"notify_enabled":True,
- "notify_to":{"if_empty":e},"base":{"if_empty":s},"allow_test":False,"admin_2fa":False,"monitor_token":{"if_short":24,"random_hex":24}}))' "$ADMIN_EMAIL" "$SITE")
+ "notify_to":{"if_empty":e},"base":{"if_empty":s},"allow_test":False,"admin_2fa":False,"rounds":{"if_empty":3},"monitor_token":{"if_short":24,"random_hex":24}}))' "$ADMIN_EMAIL" "$SITE")
 cfg_edit defaults "'$DEFAULTS'"
 ssh "$HOST" "$PRIVR chmod 600 config.php && $PHP -r '\$t = require \"config.php\"; echo \"config: brig_mail_enabled=\", var_export(\$t[\"brig_mail_enabled\"] ?? null, true), \", notify_enabled=\", var_export(\$t[\"notify_enabled\"] ?? null, true), \", admin_emails=\", count((array)(\$t[\"admin_emails\"] ?? [])), \", admin_2fa=\", var_export(\$t[\"admin_2fa\"] ?? null, true), \", monitor_token задан=\", (strlen((string)(\$t[\"monitor_token\"] ?? \"\")) >= 24 ? \"да\" : \"нет\"), PHP_EOL;'"
 
