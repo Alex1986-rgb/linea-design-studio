@@ -51,11 +51,19 @@ CMD="$PHP $RHOME/dizain-studiya-kvartir/server-tools/cron.php --private=$RHOME/d
 echo "пробный прогон:"; ssh "$HOST" "$CMD" | tail -5
 
 say "4/6 Задача в планировщике Beget (раз в 15 минут)"
-if python3 -I tools/beget-api.py cron/getList | grep -q "server-tools/cron.php"; then
+# API Beget после аварии 02–03.11 отвечал 504: шаг не валит выкладку. Добавляем, только если список задач получен
+# и в нём нашей нет — иначе при сбое списка можно задублировать задачу.
+CRON_OK=1
+if ! CRONLIST=$(python3 -I tools/beget-api.py cron/getList 2>&1); then
+  CRON_OK=0; echo "  ! API Beget не отдал список задач ($(printf '%s' "$CRONLIST" | head -c 60 | tr '\n' ' ')…) — шаг пропущен, повторить позже"
+elif printf '%s' "$CRONLIST" | grep -q "server-tools/cron.php"; then
   echo "задача уже есть — не дублирую"
+elif ! python3 -I tools/beget-api.py cron/add "{\"minutes\":\"*/15\",\"hours\":\"*\",\"days\":\"*\",\"months\":\"*\",\"weekdays\":\"*\",\"command\":\"$CMD >/dev/null 2>&1\"}" >/dev/null 2>&1; then
+  CRON_OK=0; echo "  ! API Beget не принял задачу — шаг пропущен, повторить позже"
 else
-  python3 -I tools/beget-api.py cron/add "{\"minutes\":\"*/15\",\"hours\":\"*\",\"days\":\"*\",\"months\":\"*\",\"weekdays\":\"*\",\"command\":\"$CMD >/dev/null 2>&1\"}"
+  echo "задача добавлена: раз в 15 минут"
 fi
+[ "$CRON_OK" = 1 ] || echo "  вручную: панель Beget → Cron → раз в 15 минут, команда: $CMD >/dev/null 2>&1"
 
 say "5/6 Проверка адресов"
 for u in "" kabinet/ brigada/ api/ping.php api/vhod.php?a=me api/panel.php brigady/ remont/; do
