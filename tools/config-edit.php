@@ -28,8 +28,12 @@ $cmd = $args[0] ?? '';
 $f = rtrim($dir, '/') . '/config.php';
 $php = PHP_BINARY ?: 'php';
 
-function out(string $s): void { fwrite(STDOUT, $s . PHP_EOL); }
-function fail(string $s, int $code = 1): never { fwrite(STDERR, 'config-edit: ' . $s . PHP_EOL); exit($code); }
+// Скрипт приходит на сервер через stdin (`php8.2 -- … < config-edit.php`): в этом режиме PHP не определяет STDOUT/STDERR
+// («Undefined constant STDOUT», код 255 — выкладка 03.11 упала на шаге 2). Открываем потоки сами.
+$GLOBALS['CE_OUT'] = defined('STDOUT') ? STDOUT : fopen('php://stdout', 'w');
+$GLOBALS['CE_ERR'] = defined('STDERR') ? STDERR : fopen('php://stderr', 'w');
+function out(string $s): void { fwrite($GLOBALS['CE_OUT'], $s . PHP_EOL); }
+function fail(string $s, int $code = 1): never { fwrite($GLOBALS['CE_ERR'], 'config-edit: ' . $s . PHP_EOL); exit($code); }
 
 /** Проверка файла отдельным процессом: синтаксис и «require возвращает массив». */
 function check_file(string $php, string $file): ?string {
