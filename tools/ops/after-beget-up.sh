@@ -27,6 +27,23 @@ say() { printf '\n\033[1m» %s\033[0m\n' "$*"; }
 die() { printf '\033[31m✗ %s\033[0m\n' "$*"; exit 1; }
 NODE='"C:\Program Files\nodejs\node.exe"'
 
+# После аварии 02–03.11 Beget рвёт частые SSH-подключения («Connection closed by … port 22»). Поэтому к Beget держим ОДНО
+# соединение (ControlMaster) на весь скрипт: открываем его заранее с повторами, все ssh к "$B" идут по нему без новых рукопожатий.
+# Повтор отдельных команд не делаем — часть из них передаёт файл через stdin, и повтор отправил бы пустой файл.
+CM="/tmp/linea-ab-$$"
+# через общее соединение — только команды, где хост (первый аргумент не-опция) — Beget; к SmartApe — обычный ssh
+ssh() { local a host="" skip=0; for a in "$@"; do
+          if [ "$skip" = 1 ]; then skip=0; continue; fi
+          case "$a" in -o|-i|-p|-l|-F|-b) skip=1 ;; -*) ;; *) host="$a"; break ;; esac; done
+        if [ "$host" = "$B" ]; then
+          command ssh -o ControlMaster=auto -o ControlPath="$CM" -o ControlPersist=600 -o ServerAliveInterval=15 "$@"
+        else command ssh "$@"; fi; }
+open_master() { local i; for i in 1 2 3 4 5; do
+    command ssh -o BatchMode=yes -o ConnectTimeout=20 -o ControlMaster=yes -o ControlPath="$CM" -o ControlPersist=600 -fN "$B" && return 0
+    echo "  ! SSH до Beget не открылся (попытка $i), повтор через $((i*15)) с" >&2; sleep $((i*15)); done; return 1; }
+trap 'command ssh -o ControlPath="$CM" -O exit "$B" 2>/dev/null || true' EXIT
+open_master || die "SSH до Beget не открывается — повторить позже"
+
 # beget-dump.sh → ~/linea-ops на Beget: временный файл + mv, затем сверка sha256 с репозиторием
 put_script() {
   local want got
