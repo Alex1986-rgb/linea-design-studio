@@ -16,7 +16,18 @@ ADMIN_EMAIL="aleksandrkyrlan83@gmail.com"
 PHP=/usr/local/bin/php8.2
 STAMP=$(date +%Y%m%d-%H%M%S)
 PRIVR='cd ~/dizain-studiya-kvartir/linea-private && '
-cfg_edit() { ssh "$HOST" "$PRIVR $PHP -- $*" < tools/config-edit.php; }   # скрипт уходит по stdin, на сервере файлов не оставляет
+# Одно SSH-соединение на весь скрипт (ControlMaster) + повтор при обрыве: после аварии 02–03.11 Beget рвёт частые подключения
+# («Connection closed by … port 22» на шаге 2 при запуске 03.11). Код 255 = сбой соединения, другой код — ошибка команды, не повторяем.
+CM="/tmp/linea-vk-$$"
+SSHO=(-o ControlMaster=auto -o ControlPath="$CM" -o ControlPersist=180 -o ConnectTimeout=20 -o ServerAliveInterval=15)
+trap 'command ssh -o ControlPath="$CM" -O exit "$HOST" 2>/dev/null || true' EXIT
+ssh() { local i rc; for i in 1 2 3 4; do rc=0; command ssh "${SSHO[@]}" "$@" || rc=$?; [ "$rc" -ne 255 ] && return "$rc"
+  echo "  ! SSH оборвался (попытка $i), повтор через $((i*15)) с" >&2; sleep $((i*15)); done; return 255; }
+scp() { local i rc; for i in 1 2 3 4; do rc=0; command scp "${SSHO[@]}" "$@" || rc=$?; [ "$rc" -eq 0 ] && return 0
+  echo "  ! scp не прошёл (попытка $i), повтор через $((i*15)) с" >&2; sleep $((i*15)); done; return "$rc"; }
+# скрипт правки уходит по stdin (на сервере файлов не оставляет); при обрыве — повтор с новым stdin
+cfg_edit() { local i rc; for i in 1 2 3 4; do rc=0; command ssh "${SSHO[@]}" "$HOST" "$PRIVR $PHP -- $*" < tools/config-edit.php || rc=$?
+  [ "$rc" -ne 255 ] && return "$rc"; echo "  ! SSH оборвался (попытка $i), повтор через $((i*15)) с" >&2; sleep $((i*15)); done; return 255; }
 SITE="https://xn-----6kccjicviedfr1b2cbishm8w.xn--p1ai"
 
 say() { printf '\n▶ %s\n' "$*"; }
