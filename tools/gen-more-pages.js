@@ -24,9 +24,9 @@ const { AUTHOR, BASE, esc, crumbsLd, TERMS } = SHELL;
 const out = [];
 // выпуски нового движка: число листов и паспорт объекта читаются с самих листов, а не пишутся руками
 // gost-kv65 и gost-kv58 — без разбора реестра (как в gen-gost-pages, explain: false): паспорт — с титула
-const GOST = Object.fromEntries(['gost-proekt2', 'gost-kv3k', 'gost-kv65', 'gost-kv58', 'gost-modern4k', 'gost-retro103', 'gost-dom331', 'gost-lineademo', 'gost-dom120'].map(slug => {
+const GOST = Object.fromEntries(['gost-proekt2', 'gost-kv3k', 'gost-kv65', 'gost-kv58', 'gost-modern4k', 'gost-retro103', 'gost-dom331', 'gost-lineademo', 'gost-dom120', 'gost-elitemodern'].map(slug => {
   const r = OPEN.readRelease(SITE, slug);
-  const facts = ['gost-kv65', 'gost-kv58', 'gost-modern4k', 'gost-retro103', 'gost-dom331', 'gost-lineademo', 'gost-dom120'].includes(slug) ? OPEN.facts(SITE, slug, r).facts : OPEN.read(SITE, slug, r).facts;
+  const facts = ['gost-kv65', 'gost-kv58', 'gost-modern4k', 'gost-retro103', 'gost-dom331', 'gost-lineademo', 'gost-dom120', 'gost-elitemodern'].includes(slug) ? OPEN.facts(SITE, slug, r).facts : OPEN.read(SITE, slug, r).facts;
   return [slug, { total: r.total, blockers: r.blockers, ...facts }];
 }));
 // число правил проверки — из отчёта проверки выпуска (tools/sync-gost-releases.sh → _rules.txt)

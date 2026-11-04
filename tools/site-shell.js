@@ -36,7 +36,7 @@ const SITE_DEFAULT = 'domain';
 const SITE = process.env.LINEA_SITE || SITE_DEFAULT;
 if (!process.env.LINEA_BASE && !SITE_BASES[SITE]) throw new Error(`LINEA_SITE=${SITE}: нет такого адреса (${Object.keys(SITE_BASES).join('|')})`);
 const BASE = String(process.env.LINEA_BASE || SITE_BASES[SITE]).replace(/\/+$/, '');
-const CSSV = 'v=35';
+const CSSV = 'v=36';
 
 // Разделы сайта в порядке меню. Добавили раздел — правится только здесь.
 // menu: false — раздел живёт в подвале и крошках, но не в шапке (шапка
@@ -442,7 +442,7 @@ const crumbsLd = items => ({
 
 // Картинка для превью ссылки: по умолчанию кадр hero; страница может передать
 // свою — { src (абсолютный адрес), w, h }. Размеры пишем, только когда известны.
-const OG_DEFAULT = { src: `${BASE}/assets/hero.jpg`, w: 1920, h: 1280 };
+const OG_DEFAULT = { src: `${BASE}/assets/hero.jpg`, w: 1600, h: 1066 };
 const ogImageTags = img => `<meta property="og:image" content="${img.src}">`
   + (img.w && img.h ? `\n<meta property="og:image:width" content="${img.w}">\n<meta property="og:image:height" content="${img.h}">` : '');
 

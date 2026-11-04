@@ -42,9 +42,10 @@ const OBJ = (() => {
 })();
 
 // порядок карточек на главной: сначала проект с подписанными кадрами, дальше дома и квартиры
-const ORDER = ['gost-modern4k', 'gost-dom331', 'gost-dom120', 'gost-retro103', 'gost-lineademo', 'gost-proekt2', 'gost-kv3k', 'gost-kv65', 'gost-kv58'];
+const ORDER = ['gost-elitemodern', 'gost-modern4k', 'gost-dom331', 'gost-dom120', 'gost-retro103', 'gost-lineademo', 'gost-proekt2', 'gost-kv3k', 'gost-kv65', 'gost-kv58'];
 // короткая подпись стиля/типа на карточке
 const KICK = {
+  'gost-elitemodern': 'Квартира · элитный модерн',
   'gost-modern4k': 'Квартира · модерн', 'gost-dom331': 'Дом · шале', 'gost-dom120': 'Дом · средиземноморье',
   'gost-retro103': 'Квартира · ретро', 'gost-lineademo': 'Квартира · джапанди', 'gost-proekt2': 'Квартира · 4 комнаты',
   'gost-kv3k': 'Квартира · 3 комнаты', 'gost-kv65': 'Квартира · реконструкция', 'gost-kv58': 'Квартира · 2 комнаты',

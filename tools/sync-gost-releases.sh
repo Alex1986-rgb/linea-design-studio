@@ -26,9 +26,11 @@ sync_one() {          # $1 — папка объекта в движке, $2 —
   clean_release "$dst/_release.html"
   # число правил проверки — из отчёта проверки выпуска, руками не пишем
   grep -m1 -o 'правил: [0-9]*' "$src/check.md" | grep -o '[0-9]*$' > "$dst/_rules.txt" || true
-  if [ -n "$PDF" ] && [ -f "$PDF/$1-full.pdf" ]; then cp "$PDF/$1-full.pdf" "$dst/album.pdf"; fi
+  if [ -n "$PDF" ] && [ -f "$PDF/$1-full.pdf" ]; then cp "$PDF/$1-full.pdf" "$dst/album.pdf"
+  elif [ -f "$src/album.pdf" ]; then cp "$src/album.pdf" "$dst/album.pdf"; fi
   local studio=""
   if [ -n "$PDF" ] && [ -f "$PDF/$1-studio.pdf" ]; then studio="$PDF/$1-studio.pdf"
+  elif [ -f "$G/projects/$1/out-work/album.pdf" ]; then studio="$G/projects/$1/out-work/album.pdf"
   else studio="$(ls "$G/projects/$1/"*-pocket.pdf 2>/dev/null | head -1 || true)"; fi
   if [ -n "$studio" ]; then cp "$studio" "$dst/studio.pdf"; fi
   echo "  $2: листов $(ls "$dst/sheets" | wc -l | tr -d ' ')$( [ -f "$dst/album.pdf" ] && echo ', album.pdf')$( [ -f "$dst/studio.pdf" ] && echo ', studio.pdf')"
@@ -43,4 +45,5 @@ sync_one retro-103 gost-retro103
 sync_one dom-331 gost-dom331
 sync_one linea-demo gost-lineademo
 sync_one linea-dom-120 gost-dom120
+sync_one elite-modern gost-elitemodern
 echo "Теперь: node tools/gen-gost-pages.js"
