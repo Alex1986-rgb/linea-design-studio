@@ -41,7 +41,11 @@ const DROP_PCT = +C.backupDropPct > 0 ? +C.backupDropPct : 40;
 const SEVENZIP = C.sevenZip || (IS_WIN ? 'C:\\Program Files\\7-Zip\\7z.exe' : '7z');
 const RCLONE = C.rclone || (IS_WIN ? 'C:\\tools\\rclone\\rclone.exe' : 'rclone');
 const RCLONE_CONF = C.rcloneConfig || (IS_WIN ? 'C:\\Windows\\System32\\config\\systemprofile\\AppData\\Roaming\\rclone\\rclone.conf' : '');
-const SSH = C.ssh || (IS_WIN ? 'C:\\Windows\\System32\\OpenSSH\\ssh.exe' : 'ssh');
+// Windows OpenSSH зависает, если запущен из Node с pipe-ами: удалённая команда отдаёт вывод, но ssh.exe
+// не завершается (проверено 04.11.2026 — version/dump висят до таймаута). Git for Windows ssh работает;
+// свой путь можно задать в ops.json → ssh.
+const GIT_SSH = 'C:\\Program Files\\Git\\usr\\bin\\ssh.exe';
+const SSH = C.ssh || (IS_WIN && fs.existsSync(GIT_SSH) ? GIT_SSH : IS_WIN ? 'C:\\Windows\\System32\\OpenSSH\\ssh.exe' : 'ssh');
 const TAR = IS_WIN ? 'C:\\Windows\\System32\\tar.exe' : 'tar';
 
 function password() {
