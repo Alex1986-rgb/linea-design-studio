@@ -9,16 +9,16 @@
  "area": "147,36 м²",
  "declared": "В брифе демо-дома указано 120 м²; общая площадь по экспликации альбома (сумма помещений) — 147,36 м², она и стоит в названии.",
  "rooms": 13,
- "total": 139,
- "blockers": 0,
- "issues": 210,
+ "total": 175,
+ "blockers": 2,
+ "issues": 251,
  "openQ": {
-  "n": 7,
+  "n": 9,
   "no": "07"
  },
- "preReview": "22.10.2026",
+ "preReview": "",
  "hero": {
-  "src": "portfolio/gost-dom120/sheets/25-interior-designer-furniture-et1.svg",
+  "src": "portfolio/gost-dom120/sheets/27-interior-designer-furniture-et1.svg",
   "alt": "Дом 147 м² в два этажа · средиземноморье — план расстановки мебели · 1-й этаж",
   "w": 1587,
   "h": 1123,
@@ -26,6 +26,6 @@
  },
  "visuals": 0,
  "visualsPrelim": 0,
- "studioSize": "16 МБ",
- "pdfSize": "24 МБ"
+ "studioSize": "10 МБ",
+ "pdfSize": "15 МБ"
 }

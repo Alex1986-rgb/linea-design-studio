@@ -9,13 +9,16 @@
  "area": "55,23 м²",
  "declared": "В исходных данных заказчика — 57,6 м²; по экспликации альбома (сумма помещений) — 55,23 м², она и стоит в названии.",
  "rooms": 6,
- "total": 64,
+ "total": 87,
  "blockers": 0,
- "issues": 56,
- "openQ": null,
- "preReview": "22.10.2026",
+ "issues": 130,
+ "openQ": {
+  "n": 7,
+  "no": "06"
+ },
+ "preReview": "",
  "hero": {
-  "src": "portfolio/gost-kv58/sheets/14-interior-designer-furniture.svg",
+  "src": "portfolio/gost-kv58/sheets/18-interior-designer-furniture.svg",
   "alt": "Квартира 55 м² · кухня-гостиная и спальня — план расстановки мебели",
   "w": 1587,
   "h": 1123,
@@ -23,6 +26,6 @@
  },
  "visuals": 0,
  "visualsPrelim": 0,
- "studioSize": "6 МБ",
- "pdfSize": "9 МБ"
+ "studioSize": "4 МБ",
+ "pdfSize": "5 МБ"
 }

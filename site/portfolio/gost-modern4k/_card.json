@@ -9,26 +9,26 @@
  "area": "127,29 м²",
  "declared": "",
  "rooms": 9,
- "total": 92,
+ "total": 131,
  "blockers": 0,
- "issues": 218,
+ "issues": 232,
  "openQ": {
-  "n": 4,
+  "n": 13,
   "no": "06"
  },
- "preReview": "22.10.2026",
+ "preReview": "",
  "hero": {
   "src": "assets/portfolio/gost-modern4k-hero.jpg",
-  "alt": "Квартира с кабинетом · современный модерн — спальня, визуализация",
+  "alt": "Квартира с кабинетом · современный модерн — кабинет, визуализация",
   "w": 1600,
   "h": 1066,
   "kind": "render",
   "state": "signed",
-  "name": "room-bedroom-wB",
+  "name": "room-study-wA",
   "webp": "assets/portfolio/gost-modern4k-hero.webp"
  },
- "visuals": 13,
- "visualsPrelim": 10,
- "studioSize": "14 МБ",
- "pdfSize": "20 МБ"
+ "visuals": 7,
+ "visualsPrelim": 5,
+ "studioSize": "13 МБ",
+ "pdfSize": "15 МБ"
 }

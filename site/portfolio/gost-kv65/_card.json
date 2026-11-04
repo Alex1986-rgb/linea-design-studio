@@ -9,16 +9,16 @@
  "area": "65,24 м²",
  "declared": "",
  "rooms": 9,
- "total": 79,
- "blockers": 1,
- "issues": 133,
+ "total": 103,
+ "blockers": 3,
+ "issues": 201,
  "openQ": {
-  "n": 4,
-  "no": "05"
+  "n": 11,
+  "no": "06"
  },
- "preReview": "22.10.2026",
+ "preReview": "",
  "hero": {
-  "src": "portfolio/gost-kv65/sheets/15-interior-designer-furniture.svg",
+  "src": "portfolio/gost-kv65/sheets/18-interior-designer-furniture.svg",
   "alt": "Квартира 65 м² после реконструкции — план расстановки мебели",
   "w": 1587,
   "h": 1123,
@@ -26,6 +26,6 @@
  },
  "visuals": 0,
  "visualsPrelim": 0,
- "studioSize": "10 МБ",
- "pdfSize": "15 МБ"
+ "studioSize": "5 МБ",
+ "pdfSize": "7 МБ"
 }

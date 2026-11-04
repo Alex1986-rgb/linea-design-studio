@@ -9,14 +9,14 @@
  "area": "78,95 м²",
  "declared": "",
  "rooms": 8,
- "total": 96,
- "blockers": 0,
- "issues": 47,
+ "total": 122,
+ "blockers": 4,
+ "issues": 91,
  "openQ": {
-  "n": 26,
+  "n": 27,
   "no": "06"
  },
- "preReview": "22.10.2026",
+ "preReview": "",
  "hero": {
   "src": "portfolio/gost-kv3k/sheets/26-interior-designer-furniture.svg",
   "alt": "Трёхкомнатная квартира — план расстановки мебели",
@@ -26,6 +26,6 @@
  },
  "visuals": 0,
  "visualsPrelim": 0,
- "studioSize": "23 МБ",
- "pdfSize": "27 МБ"
+ "studioSize": "6 МБ",
+ "pdfSize": "11 МБ"
 }

@@ -9,16 +9,16 @@
  "area": "102,67 м²",
  "declared": "",
  "rooms": 13,
- "total": 124,
- "blockers": 0,
- "issues": 65,
+ "total": 147,
+ "blockers": 2,
+ "issues": 153,
  "openQ": {
-  "n": 23,
-  "no": "06"
+  "n": 27,
+  "no": "07"
  },
- "preReview": "22.10.2026",
+ "preReview": "",
  "hero": {
-  "src": "portfolio/gost-proekt2/sheets/24-interior-designer-furniture.svg",
+  "src": "portfolio/gost-proekt2/sheets/25-interior-designer-furniture.svg",
   "alt": "Квартира с эркерами, 13 помещений — план расстановки мебели",
   "w": 1587,
   "h": 1123,
@@ -26,6 +26,6 @@
  },
  "visuals": 0,
  "visualsPrelim": 0,
- "studioSize": "15 МБ",
- "pdfSize": "29 МБ"
+ "studioSize": "9 МБ",
+ "pdfSize": "13 МБ"
 }

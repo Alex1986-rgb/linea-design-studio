@@ -1,0 +1,31 @@
+{
+ "slug": "gost-elitemodern",
+ "name": "Квартира 68 м² · элитный модерн",
+ "lead": "Новый проект: семь помещений, элитный модерн — орех, латунь, мрамор с прожилкой, букле; у каждой комнаты свой тёмный акцент. Авторский светлый титул с виньетками и аркой, вид сверху и студийный порядок листов.",
+ "code": "ГД-2026-020-АИ",
+ "house": false,
+ "type": "",
+ "style": "",
+ "area": "68,47 м²",
+ "declared": "",
+ "rooms": 7,
+ "total": 105,
+ "blockers": 1,
+ "issues": 174,
+ "openQ": {
+  "n": 25,
+  "no": "05"
+ },
+ "preReview": "",
+ "hero": {
+  "src": "portfolio/gost-elitemodern/sheets/19-interior-designer-furniture.svg",
+  "alt": "Квартира 68 м² · элитный модерн — план расстановки мебели",
+  "w": 1587,
+  "h": 1123,
+  "kind": "sheet"
+ },
+ "visuals": 0,
+ "visualsPrelim": 0,
+ "studioSize": "6 МБ",
+ "pdfSize": "9 МБ"
+}

@@ -9,16 +9,16 @@
  "area": "270,67 м²",
  "declared": "На картинке плана заказчика заявлено 331 м². Размеры на ней не читаются — их подобрал проектировщик, и общая площадь по экспликации альбома вышла 270,67 м²; она и стоит в названии. Точная площадь — после контрольного обмера.",
  "rooms": 20,
- "total": 162,
+ "total": 216,
  "blockers": 0,
- "issues": 309,
+ "issues": 470,
  "openQ": {
-  "n": 6,
-  "no": "07"
+  "n": 12,
+  "no": "08"
  },
- "preReview": "22.10.2026",
+ "preReview": "",
  "hero": {
-  "src": "portfolio/gost-dom331/sheets/24-interior-designer-furniture-et1.svg",
+  "src": "portfolio/gost-dom331/sheets/30-interior-designer-furniture-et1.svg",
   "alt": "Дом 271 м² с мансардой и гаражом — план расстановки мебели · 1-й этаж",
   "w": 1587,
   "h": 1123,
@@ -26,6 +26,6 @@
  },
  "visuals": 0,
  "visualsPrelim": 0,
- "studioSize": "22 МБ",
- "pdfSize": "31 МБ"
+ "studioSize": "12 МБ",
+ "pdfSize": "18 МБ"
 }

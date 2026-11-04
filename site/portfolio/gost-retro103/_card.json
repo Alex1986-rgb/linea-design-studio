@@ -9,16 +9,16 @@
  "area": "100,72 м²",
  "declared": "По обмерному плану общая площадь двух квартир с тамбуром — 102,98 м²; по экспликации альбома (сумма помещений) — 100,72 м², она и стоит в названии.",
  "rooms": 11,
- "total": 96,
- "blockers": 0,
- "issues": 349,
+ "total": 120,
+ "blockers": 4,
+ "issues": 362,
  "openQ": {
-  "n": 4,
+  "n": 7,
   "no": "06"
  },
- "preReview": "22.10.2026",
+ "preReview": "",
  "hero": {
-  "src": "portfolio/gost-retro103/sheets/16-interior-designer-furniture.svg",
+  "src": "portfolio/gost-retro103/sheets/19-interior-designer-furniture.svg",
   "alt": "Квартира 101 м² · ретро с авторской мебелью — план расстановки мебели",
   "w": 1587,
   "h": 1123,
@@ -26,6 +26,6 @@
  },
  "visuals": 0,
  "visualsPrelim": 0,
- "studioSize": "15 МБ",
- "pdfSize": "21 МБ"
+ "studioSize": "7 МБ",
+ "pdfSize": "10 МБ"
 }
