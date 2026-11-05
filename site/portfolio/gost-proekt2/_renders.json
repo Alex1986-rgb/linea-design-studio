@@ -4,12 +4,149 @@
  "prelim": 0,
  "rejected": 22,
  "accepted": 0,
- "ribbon": [],
+ "ribbon": [
+  {
+   "src": "assets/portfolio/gost-proekt2/room-living1-wB.jpg",
+   "alt": "Квартира с эркерами, 13 помещений — гостиная, визуализация",
+   "w": 1200,
+   "h": 800,
+   "state": "rejected"
+  },
+  {
+   "src": "assets/portfolio/gost-proekt2/room-living2-wA.jpg",
+   "alt": "Квартира с эркерами, 13 помещений — гостиная, визуализация",
+   "w": 1200,
+   "h": 800,
+   "state": "rejected"
+  },
+  {
+   "src": "assets/portfolio/gost-proekt2/room-kitchen-wA.jpg",
+   "alt": "Квартира с эркерами, 13 помещений — кухня-столовая, визуализация",
+   "w": 1200,
+   "h": 800,
+   "state": "rejected"
+  },
+  {
+   "src": "assets/portfolio/gost-proekt2/room-kids1-wC.jpg",
+   "alt": "Квартира с эркерами, 13 помещений — детская, визуализация",
+   "w": 1200,
+   "h": 800,
+   "state": "rejected"
+  },
+  {
+   "src": "assets/portfolio/gost-proekt2/room-kids2-wA.jpg",
+   "alt": "Квартира с эркерами, 13 помещений — детская, визуализация",
+   "w": 1200,
+   "h": 800,
+   "state": "rejected"
+  },
+  {
+   "src": "assets/portfolio/gost-proekt2/room-bath-wB.jpg",
+   "alt": "Квартира с эркерами, 13 помещений — ванная, визуализация",
+   "w": 1200,
+   "h": 800,
+   "state": "rejected"
+  },
+  {
+   "src": "assets/portfolio/gost-proekt2/room-hall-wide.jpg",
+   "alt": "Квартира с эркерами, 13 помещений — прихожая, визуализация",
+   "w": 1200,
+   "h": 800,
+   "state": "rejected"
+  },
+  {
+   "src": "assets/portfolio/gost-proekt2/room-wardrobe1-wide.jpg",
+   "alt": "Квартира с эркерами, 13 помещений — гардеробная, визуализация",
+   "w": 1200,
+   "h": 800,
+   "state": "rejected"
+  },
+  {
+   "src": "assets/portfolio/gost-proekt2/room-wardrobe2-wide.jpg",
+   "alt": "Квартира с эркерами, 13 помещений — гардеробная, визуализация",
+   "w": 1200,
+   "h": 800,
+   "state": "rejected"
+  },
+  {
+   "src": "assets/portfolio/gost-proekt2/room-balcony-wD.jpg",
+   "alt": "Квартира с эркерами, 13 помещений — балкон, визуализация",
+   "w": 1200,
+   "h": 800,
+   "state": "rejected"
+  },
+  {
+   "src": "assets/portfolio/gost-proekt2/room-corridor-wA.jpg",
+   "alt": "Квартира с эркерами, 13 помещений — холл, визуализация",
+   "w": 1200,
+   "h": 800,
+   "state": "rejected"
+  },
+  {
+   "src": "assets/portfolio/gost-proekt2/room-wc-wide.jpg",
+   "alt": "Квартира с эркерами, 13 помещений — санузел, визуализация",
+   "w": 1200,
+   "h": 800,
+   "state": "rejected"
+  },
+  {
+   "src": "assets/portfolio/gost-proekt2/room-storage-wide.jpg",
+   "alt": "Квартира с эркерами, 13 помещений — кладовая, визуализация",
+   "w": 1200,
+   "h": 800,
+   "state": "rejected"
+  },
+  {
+   "src": "assets/portfolio/gost-proekt2/room-living1-wC.jpg",
+   "alt": "Квартира с эркерами, 13 помещений — гостиная, визуализация",
+   "w": 1200,
+   "h": 800,
+   "state": "rejected"
+  },
+  {
+   "src": "assets/portfolio/gost-proekt2/room-living1-wD.jpg",
+   "alt": "Квартира с эркерами, 13 помещений — гостиная, визуализация",
+   "w": 1200,
+   "h": 800,
+   "state": "rejected"
+  },
+  {
+   "src": "assets/portfolio/gost-proekt2/room-living2-wB.jpg",
+   "alt": "Квартира с эркерами, 13 помещений — гостиная, визуализация",
+   "w": 1200,
+   "h": 800,
+   "state": "rejected"
+  },
+  {
+   "src": "assets/portfolio/gost-proekt2/room-kids1-wD.jpg",
+   "alt": "Квартира с эркерами, 13 помещений — детская, визуализация",
+   "w": 1200,
+   "h": 800,
+   "state": "rejected"
+  },
+  {
+   "src": "assets/portfolio/gost-proekt2/room-kids2-wD.jpg",
+   "alt": "Квартира с эркерами, 13 помещений — детская, визуализация",
+   "w": 1200,
+   "h": 800,
+   "state": "rejected"
+  },
+  {
+   "src": "assets/portfolio/gost-proekt2/room-corridor-wC.jpg",
+   "alt": "Квартира с эркерами, 13 помещений — холл, визуализация",
+   "w": 1200,
+   "h": 800,
+   "state": "rejected"
+  }
+ ],
  "hero": {
-  "src": "portfolio/gost-proekt2/sheets/25-interior-designer-furniture.svg",
-  "alt": "Квартира с эркерами, 13 помещений — план расстановки мебели",
-  "w": 1587,
-  "h": 1123,
-  "kind": "sheet"
+  "src": "assets/portfolio/gost-proekt2-hero.jpg",
+  "alt": "Квартира с эркерами, 13 помещений — визуализация интерьера",
+  "w": 1600,
+  "h": 1067,
+  "kind": "render",
+  "state": "illustration",
+  "name": "cover-hero",
+  "webp": "assets/portfolio/gost-proekt2-hero.webp"
  }
 }

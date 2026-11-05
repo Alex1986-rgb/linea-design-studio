@@ -18,11 +18,14 @@
  },
  "preReview": "",
  "hero": {
-  "src": "portfolio/gost-lineademo/sheets/21-interior-designer-furniture.svg",
-  "alt": "Квартира 56 м² · джапанди — план расстановки мебели",
-  "w": 1587,
-  "h": 1123,
-  "kind": "sheet"
+  "src": "assets/portfolio/gost-lineademo-hero.jpg",
+  "alt": "Квартира 56 м² · джапанди — визуализация интерьера",
+  "w": 1600,
+  "h": 1067,
+  "kind": "render",
+  "state": "illustration",
+  "name": "cover-hero",
+  "webp": "assets/portfolio/gost-lineademo-hero.webp"
  },
  "visuals": 0,
  "visualsPrelim": 0,

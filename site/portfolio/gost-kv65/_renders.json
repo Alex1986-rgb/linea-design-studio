@@ -4,12 +4,142 @@
  "prelim": 0,
  "rejected": 24,
  "accepted": 0,
- "ribbon": [],
+ "ribbon": [
+  {
+   "src": "assets/portfolio/gost-kv65/room-living-sofa.jpg",
+   "alt": "Квартира 65 м² после реконструкции — гостиная, визуализация",
+   "w": 1200,
+   "h": 800,
+   "state": "rejected"
+  },
+  {
+   "src": "assets/portfolio/gost-kv65/room-kitchen.jpg",
+   "alt": "Квартира 65 м² после реконструкции — кухня-столовая, визуализация",
+   "w": 1200,
+   "h": 800,
+   "state": "rejected"
+  },
+  {
+   "src": "assets/portfolio/gost-kv65/room-bedroom.jpg",
+   "alt": "Квартира 65 м² после реконструкции — спальня, визуализация",
+   "w": 1200,
+   "h": 800,
+   "state": "rejected"
+  },
+  {
+   "src": "assets/portfolio/gost-kv65/room-kids.jpg",
+   "alt": "Квартира 65 м² после реконструкции — детская, визуализация",
+   "w": 1200,
+   "h": 800,
+   "state": "rejected"
+  },
+  {
+   "src": "assets/portfolio/gost-kv65/room-bath.jpg",
+   "alt": "Квартира 65 м² после реконструкции — ванная, визуализация",
+   "w": 1200,
+   "h": 800,
+   "state": "rejected"
+  },
+  {
+   "src": "assets/portfolio/gost-kv65/room-hall.jpg",
+   "alt": "Квартира 65 м² после реконструкции — прихожая, визуализация",
+   "w": 1200,
+   "h": 800,
+   "state": "rejected"
+  },
+  {
+   "src": "assets/portfolio/gost-kv65/room-wardrobe-wide.jpg",
+   "alt": "Квартира 65 м² после реконструкции — гардеробная, визуализация",
+   "w": 1200,
+   "h": 800,
+   "state": "rejected"
+  },
+  {
+   "src": "assets/portfolio/gost-kv65/room-corridor-wA.jpg",
+   "alt": "Квартира 65 м² после реконструкции — холл, визуализация",
+   "w": 1200,
+   "h": 800,
+   "state": "rejected"
+  },
+  {
+   "src": "assets/portfolio/gost-kv65/room-wc-wC.jpg",
+   "alt": "Квартира 65 м² после реконструкции — санузел, визуализация",
+   "w": 1200,
+   "h": 800,
+   "state": "rejected"
+  },
+  {
+   "src": "assets/portfolio/gost-kv65/room-storage-wide.jpg",
+   "alt": "Квартира 65 м² после реконструкции — кладовая, визуализация",
+   "w": 1200,
+   "h": 800,
+   "state": "rejected"
+  },
+  {
+   "src": "assets/portfolio/gost-kv65/room-living-wB.jpg",
+   "alt": "Квартира 65 м² после реконструкции — гостиная, визуализация",
+   "w": 1200,
+   "h": 800,
+   "state": "rejected"
+  },
+  {
+   "src": "assets/portfolio/gost-kv65/room-bedroom-wD.jpg",
+   "alt": "Квартира 65 м² после реконструкции — спальня, визуализация",
+   "w": 1200,
+   "h": 800,
+   "state": "rejected"
+  },
+  {
+   "src": "assets/portfolio/gost-kv65/room-kids-wA.jpg",
+   "alt": "Квартира 65 м² после реконструкции — детская, визуализация",
+   "w": 1200,
+   "h": 800,
+   "state": "rejected"
+  },
+  {
+   "src": "assets/portfolio/gost-kv65/room-kids-wC.jpg",
+   "alt": "Квартира 65 м² после реконструкции — детская, визуализация",
+   "w": 1200,
+   "h": 800,
+   "state": "rejected"
+  },
+  {
+   "src": "assets/portfolio/gost-kv65/room-kids-wD.jpg",
+   "alt": "Квартира 65 м² после реконструкции — детская, визуализация",
+   "w": 1200,
+   "h": 800,
+   "state": "rejected"
+  },
+  {
+   "src": "assets/portfolio/gost-kv65/room-bath-wB.jpg",
+   "alt": "Квартира 65 м² после реконструкции — ванная, визуализация",
+   "w": 1200,
+   "h": 800,
+   "state": "rejected"
+  },
+  {
+   "src": "assets/portfolio/gost-kv65/room-hall-wB.jpg",
+   "alt": "Квартира 65 м² после реконструкции — прихожая, визуализация",
+   "w": 1200,
+   "h": 800,
+   "state": "rejected"
+  },
+  {
+   "src": "assets/portfolio/gost-kv65/room-corridor-wC.jpg",
+   "alt": "Квартира 65 м² после реконструкции — холл, визуализация",
+   "w": 1200,
+   "h": 800,
+   "state": "rejected"
+  }
+ ],
  "hero": {
-  "src": "portfolio/gost-kv65/sheets/18-interior-designer-furniture.svg",
-  "alt": "Квартира 65 м² после реконструкции — план расстановки мебели",
-  "w": 1587,
-  "h": 1123,
-  "kind": "sheet"
+  "src": "assets/portfolio/gost-kv65-hero.jpg",
+  "alt": "Квартира 65 м² после реконструкции — визуализация интерьера",
+  "w": 1600,
+  "h": 1067,
+  "kind": "render",
+  "state": "illustration",
+  "name": "cover-hero",
+  "webp": "assets/portfolio/gost-kv65-hero.webp"
  }
 }

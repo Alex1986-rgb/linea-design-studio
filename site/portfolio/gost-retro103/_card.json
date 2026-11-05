@@ -18,11 +18,14 @@
  },
  "preReview": "",
  "hero": {
-  "src": "portfolio/gost-retro103/sheets/19-interior-designer-furniture.svg",
-  "alt": "Квартира 101 м² · ретро с авторской мебелью — план расстановки мебели",
-  "w": 1587,
-  "h": 1123,
-  "kind": "sheet"
+  "src": "assets/portfolio/gost-retro103-hero.jpg",
+  "alt": "Квартира 101 м² · ретро с авторской мебелью — визуализация интерьера",
+  "w": 1600,
+  "h": 1067,
+  "kind": "render",
+  "state": "illustration",
+  "name": "cover-hero",
+  "webp": "assets/portfolio/gost-retro103-hero.webp"
  },
  "visuals": 0,
  "visualsPrelim": 0,

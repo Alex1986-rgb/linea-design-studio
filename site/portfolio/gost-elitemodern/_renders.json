@@ -1,15 +1,89 @@
 {
- "hero": {
-  "src": "portfolio/gost-elitemodern/sheets/19-interior-designer-furniture.svg",
-  "alt": "Квартира 68 м² · элитный модерн — план расстановки мебели",
-  "w": 1587,
-  "h": 1123,
-  "kind": "sheet"
- },
- "ribbon": [],
- "signed": 0,
+ "checked": true,
+ "signed": 1,
  "prelim": 0,
- "rejected": 0,
- "accepted": 0,
- "checked": false
+ "rejected": 11,
+ "accepted": 1,
+ "ribbon": [
+  {
+   "src": "assets/portfolio/gost-elitemodern/3d-top.jpg",
+   "alt": "Квартира 68 м² · элитный модерн — вид сверху 3D",
+   "w": 1200,
+   "h": 800,
+   "state": "rejected"
+  },
+  {
+   "src": "assets/portfolio/gost-elitemodern/room-living-m1.jpg",
+   "alt": "Квартира 68 м² · элитный модерн — гостиная, визуализация",
+   "w": 1200,
+   "h": 800,
+   "state": "rejected"
+  },
+  {
+   "src": "assets/portfolio/gost-elitemodern/room-kitchen-m1.jpg",
+   "alt": "Квартира 68 м² · элитный модерн — кухня-столовая, визуализация",
+   "w": 1200,
+   "h": 800,
+   "state": "rejected"
+  },
+  {
+   "src": "assets/portfolio/gost-elitemodern/room-bedroom-m1.jpg",
+   "alt": "Квартира 68 м² · элитный модерн — спальня, визуализация",
+   "w": 1200,
+   "h": 800,
+   "state": "rejected"
+  },
+  {
+   "src": "assets/portfolio/gost-elitemodern/room-study-m1.jpg",
+   "alt": "Квартира 68 м² · элитный модерн — кабинет, визуализация",
+   "w": 1200,
+   "h": 800,
+   "state": "rejected"
+  },
+  {
+   "src": "assets/portfolio/gost-elitemodern/room-bath-s1.jpg",
+   "alt": "Квартира 68 м² · элитный модерн — ванная, визуализация",
+   "w": 1200,
+   "h": 800,
+   "state": "rejected"
+  },
+  {
+   "src": "assets/portfolio/gost-elitemodern/room-hall-s1.jpg",
+   "alt": "Квартира 68 м² · элитный модерн — прихожая, визуализация",
+   "w": 1200,
+   "h": 800,
+   "state": "rejected"
+  },
+  {
+   "src": "assets/portfolio/gost-elitemodern/room-living-s1.jpg",
+   "alt": "Квартира 68 м² · элитный модерн — гостиная, визуализация",
+   "w": 1200,
+   "h": 800,
+   "state": "rejected"
+  },
+  {
+   "src": "assets/portfolio/gost-elitemodern/room-kitchen-m2.jpg",
+   "alt": "Квартира 68 м² · элитный модерн — кухня-столовая, визуализация",
+   "w": 1200,
+   "h": 800,
+   "state": "rejected"
+  },
+  {
+   "src": "assets/portfolio/gost-elitemodern/room-bath-d2.jpg",
+   "alt": "Квартира 68 м² · элитный модерн — ванная, визуализация",
+   "w": 1200,
+   "h": 800,
+   "state": "rejected"
+  }
+ ],
+ "hero": {
+  "src": "assets/portfolio/gost-elitemodern-hero.jpg",
+  "alt": "Квартира 68 м² · элитный модерн — визуализация интерьера",
+  "w": 1600,
+  "h": 1067,
+  "kind": "render",
+  "state": "illustration",
+  "name": "cover-hero",
+  "webp": "assets/portfolio/gost-elitemodern-hero.webp"
+ }
 }

@@ -4,12 +4,177 @@
  "prelim": 0,
  "rejected": 35,
  "accepted": 0,
- "ribbon": [],
+ "ribbon": [
+  {
+   "src": "assets/portfolio/gost-kv3k/room-living-tv.jpg",
+   "alt": "Трёхкомнатная квартира — гостиная, визуализация",
+   "w": 1200,
+   "h": 800,
+   "state": "rejected"
+  },
+  {
+   "src": "assets/portfolio/gost-kv3k/room-kitchen.jpg",
+   "alt": "Трёхкомнатная квартира — кухня-столовая, визуализация",
+   "w": 1200,
+   "h": 800,
+   "state": "rejected"
+  },
+  {
+   "src": "assets/portfolio/gost-kv3k/room-bedroom1.jpg",
+   "alt": "Трёхкомнатная квартира — спальня, визуализация",
+   "w": 1200,
+   "h": 800,
+   "state": "rejected"
+  },
+  {
+   "src": "assets/portfolio/gost-kv3k/room-bedroom2.jpg",
+   "alt": "Трёхкомнатная квартира — спальня, визуализация",
+   "w": 1200,
+   "h": 800,
+   "state": "rejected"
+  },
+  {
+   "src": "assets/portfolio/gost-kv3k/room-bath.jpg",
+   "alt": "Трёхкомнатная квартира — ванная, визуализация",
+   "w": 1200,
+   "h": 800,
+   "state": "rejected"
+  },
+  {
+   "src": "assets/portfolio/gost-kv3k/room-bath1-wB.jpg",
+   "alt": "Трёхкомнатная квартира — ванная, визуализация",
+   "w": 1200,
+   "h": 800,
+   "state": "rejected"
+  },
+  {
+   "src": "assets/portfolio/gost-kv3k/room-bath2-wB.jpg",
+   "alt": "Трёхкомнатная квартира — ванная, визуализация",
+   "w": 1200,
+   "h": 800,
+   "state": "rejected"
+  },
+  {
+   "src": "assets/portfolio/gost-kv3k/room-hall.jpg",
+   "alt": "Трёхкомнатная квартира — прихожая, визуализация",
+   "w": 1200,
+   "h": 800,
+   "state": "rejected"
+  },
+  {
+   "src": "assets/portfolio/gost-kv3k/room-wardrobe-wide.jpg",
+   "alt": "Трёхкомнатная квартира — гардеробная, визуализация",
+   "w": 1200,
+   "h": 800,
+   "state": "rejected"
+  },
+  {
+   "src": "assets/portfolio/gost-kv3k/room-corridor-wA.jpg",
+   "alt": "Трёхкомнатная квартира — холл, визуализация",
+   "w": 1200,
+   "h": 800,
+   "state": "rejected"
+  },
+  {
+   "src": "assets/portfolio/gost-kv3k/room-wc2.jpg",
+   "alt": "Трёхкомнатная квартира — санузел, визуализация",
+   "w": 1200,
+   "h": 800,
+   "state": "rejected"
+  },
+  {
+   "src": "assets/portfolio/gost-kv3k/room-living-wB.jpg",
+   "alt": "Трёхкомнатная квартира — гостиная, визуализация",
+   "w": 1200,
+   "h": 800,
+   "state": "rejected"
+  },
+  {
+   "src": "assets/portfolio/gost-kv3k/room-living-wC.jpg",
+   "alt": "Трёхкомнатная квартира — гостиная, визуализация",
+   "w": 1200,
+   "h": 800,
+   "state": "rejected"
+  },
+  {
+   "src": "assets/portfolio/gost-kv3k/room-living-wD.jpg",
+   "alt": "Трёхкомнатная квартира — гостиная, визуализация",
+   "w": 1200,
+   "h": 800,
+   "state": "rejected"
+  },
+  {
+   "src": "assets/portfolio/gost-kv3k/room-bedroom1-wA.jpg",
+   "alt": "Трёхкомнатная квартира — спальня, визуализация",
+   "w": 1200,
+   "h": 800,
+   "state": "rejected"
+  },
+  {
+   "src": "assets/portfolio/gost-kv3k/room-bedroom1-wB.jpg",
+   "alt": "Трёхкомнатная квартира — спальня, визуализация",
+   "w": 1200,
+   "h": 800,
+   "state": "rejected"
+  },
+  {
+   "src": "assets/portfolio/gost-kv3k/room-bedroom2-wA.jpg",
+   "alt": "Трёхкомнатная квартира — спальня, визуализация",
+   "w": 1200,
+   "h": 800,
+   "state": "rejected"
+  },
+  {
+   "src": "assets/portfolio/gost-kv3k/room-bedroom2-wD.jpg",
+   "alt": "Трёхкомнатная квартира — спальня, визуализация",
+   "w": 1200,
+   "h": 800,
+   "state": "rejected"
+  },
+  {
+   "src": "assets/portfolio/gost-kv3k/room-bath1-wC.jpg",
+   "alt": "Трёхкомнатная квартира — ванная, визуализация",
+   "w": 1200,
+   "h": 800,
+   "state": "rejected"
+  },
+  {
+   "src": "assets/portfolio/gost-kv3k/room-bath1-wD.jpg",
+   "alt": "Трёхкомнатная квартира — ванная, визуализация",
+   "w": 1200,
+   "h": 800,
+   "state": "rejected"
+  },
+  {
+   "src": "assets/portfolio/gost-kv3k/room-bath2-wC.jpg",
+   "alt": "Трёхкомнатная квартира — ванная, визуализация",
+   "w": 1200,
+   "h": 800,
+   "state": "rejected"
+  },
+  {
+   "src": "assets/portfolio/gost-kv3k/room-hall-wC.jpg",
+   "alt": "Трёхкомнатная квартира — прихожая, визуализация",
+   "w": 1200,
+   "h": 800,
+   "state": "rejected"
+  },
+  {
+   "src": "assets/portfolio/gost-kv3k/room-corridor-wC.jpg",
+   "alt": "Трёхкомнатная квартира — холл, визуализация",
+   "w": 1200,
+   "h": 800,
+   "state": "rejected"
+  }
+ ],
  "hero": {
-  "src": "portfolio/gost-kv3k/sheets/26-interior-designer-furniture.svg",
-  "alt": "Трёхкомнатная квартира — план расстановки мебели",
-  "w": 1587,
-  "h": 1123,
-  "kind": "sheet"
+  "src": "assets/portfolio/gost-kv3k-hero.jpg",
+  "alt": "Трёхкомнатная квартира — визуализация интерьера",
+  "w": 1600,
+  "h": 1067,
+  "kind": "render",
+  "state": "illustration",
+  "name": "cover-hero",
+  "webp": "assets/portfolio/gost-kv3k-hero.webp"
  }
 }

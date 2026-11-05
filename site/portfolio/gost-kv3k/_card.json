@@ -18,11 +18,14 @@
  },
  "preReview": "",
  "hero": {
-  "src": "portfolio/gost-kv3k/sheets/26-interior-designer-furniture.svg",
-  "alt": "Трёхкомнатная квартира — план расстановки мебели",
-  "w": 1587,
-  "h": 1123,
-  "kind": "sheet"
+  "src": "assets/portfolio/gost-kv3k-hero.jpg",
+  "alt": "Трёхкомнатная квартира — визуализация интерьера",
+  "w": 1600,
+  "h": 1067,
+  "kind": "render",
+  "state": "illustration",
+  "name": "cover-hero",
+  "webp": "assets/portfolio/gost-kv3k-hero.webp"
  },
  "visuals": 0,
  "visualsPrelim": 0,

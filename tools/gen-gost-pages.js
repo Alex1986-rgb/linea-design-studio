@@ -393,7 +393,8 @@ function renders(a, r) {
   const acc = views.length ? acceptanceOf(OBJ[a.slug]) : null;
   const has = n => fs.existsSync(path.join(dir, `${n}.jpg`));
   const st = v => (acc && acc.get(v.name)) || 'rejected';
-  const shown = views.filter(v => st(v) !== 'rejected' && has(v.name) && /^(room-|3d-top)/.test(v.name));
+  // 04.11.2026 (Александр): показываем все кадры проекта; непринятые идут с честной подписью «иллюстрация».
+  const shown = views.filter(v => has(v.name) && /^(room-|3d-top)/.test(v.name));
   const n = { signed: shown.filter(v => st(v) === 'signed').length, prelim: shown.filter(v => st(v) === 'prelim').length };
   n.rejected = views.length - n.signed - n.prelim;
   const first = (re, state) => shown.find(v => re.test(v.name) && (!state || st(v) === state));
@@ -403,22 +404,31 @@ function renders(a, r) {
   const heroV = first(/^3d-top(-et1)?$/, 'signed') || byRoom('signed') || first(/^3d-top(-et1)?$/) || byRoom('prelim') || shown[0];
   // лента: по одному кадру на помещение в порядке значимости, подписанные первыми, затем вторые кадры — до 8
   const pool = shown.filter(v => v !== heroV);
-  const rank = v => { const k = roomKey(v.name); const i = ROOM_ORDER.indexOf(k); return (st(v) === 'signed' ? 0 : 100) + (k === '3d-top' ? -1 : i < 0 ? 99 : i); };
+  const rank = v => { const k = roomKey(v.name); const i = ROOM_ORDER.indexOf(k); return (st(v) === 'signed' ? 0 : st(v) === 'prelim' ? 50 : 200) + (k === '3d-top' ? -1 : i < 0 ? 99 : i); };
   pool.sort((x, y) => rank(x) - rank(y));
   const pick = [], used = new Set();
   for (const v of pool) { const k = roomKey(v.name) + (v.name.match(/^room-[a-z]+(\d*)/) || [])[1]; if (!used.has(k)) { used.add(k); pick.push(v); } }
-  for (const v of pool) if (pick.length < 8 && !pick.includes(v)) pick.push(v);
-  const ribbonViews = pick.slice(0, 8);
+  for (const v of pool) if (!pick.includes(v)) pick.push(v);
+  const ribbonViews = pick;                    // 04.11.2026: на странице — все кадры проекта, не только первые восемь
   // accepted — только подписанные дизайнером: это число и идёт в карточки и счётчики «визуализаций»
   const out = { checked: !!(n.signed + n.prelim), signed: n.signed, prelim: n.prelim, rejected: n.rejected, accepted: n.signed, ribbon: [] };
-  if (heroV) {
-    const dst = path.join(SITE, 'assets', 'portfolio', `${a.slug}-hero.jpg`);
-    let prev = null;
-    try { prev = JSON.parse(fs.readFileSync(man, 'utf8')).hero.name; } catch { /* первый прогон */ }
-    sips(path.join(dir, `${heroV.name}.jpg`), dst, 1600, prev !== heroV.name);   // кадр сменился — копию перезаписать
-    out.hero = { src: `assets/portfolio/${a.slug}-hero.jpg`, alt: frameAlt(a, heroV.name), ...dims(dst), kind: 'render', state: st(heroV), name: heroV.name };
-    if (webp(dst)) out.hero.webp = `assets/portfolio/${a.slug}-hero.webp`;
+  const coverFile = dir ? path.join(dir, 'cover', 'hero.jpg') : null;
+  const dstHero = path.join(SITE, 'assets', 'portfolio', `${a.slug}-hero.jpg`);
+  let prevHero = null;
+  try { prevHero = JSON.parse(fs.readFileSync(man, 'utf8')).hero.name; } catch { /* первый прогон */ }
+  const acceptedHero = heroV && (st(heroV) === 'signed' || st(heroV) === 'prelim');
+  if (coverFile && fs.existsSync(coverFile)) {
+    // на титуле альбома — 3D-фотография квартиры (04.11.2026); она и идёт заглавной на странице проекта
+    sips(coverFile, dstHero, 1600, prevHero !== 'cover-hero');
+    out.hero = { src: `assets/portfolio/${a.slug}-hero.jpg`, alt: `${a.name} — визуализация интерьера`, ...dims(dstHero), kind: 'render', state: 'illustration', name: 'cover-hero' };
+  } else if (acceptedHero) {
+    sips(path.join(dir, `${heroV.name}.jpg`), dstHero, 1600, prevHero !== heroV.name);   // кадр сменился — копию перезаписать
+    out.hero = { src: `assets/portfolio/${a.slug}-hero.jpg`, alt: frameAlt(a, heroV.name), ...dims(dstHero), kind: 'render', state: st(heroV), name: heroV.name };
+  } else if (heroV) {
+    sips(path.join(dir, `${heroV.name}.jpg`), dstHero, 1600, prevHero !== heroV.name);
+    out.hero = { src: `assets/portfolio/${a.slug}-hero.jpg`, alt: frameAlt(a, heroV.name), ...dims(dstHero), kind: 'render', state: st(heroV), name: heroV.name };
   } else out.hero = coverHero;
+  if (out.hero && /^assets\/portfolio\//.test(out.hero.src || '') && webp(dstHero)) out.hero.webp = `assets/portfolio/${a.slug}-hero.webp`;
   const rdir = path.join(SITE, 'assets', 'portfolio', a.slug);
   const keep = new Set();
   for (const v of ribbonViews) {
@@ -515,6 +525,7 @@ function albumPage(a, r, honesty) {
   // заглавный кадр
   const capOf = { signed: 'Кадр сверен с планом по чек-листу (мебель, двери, сантехника, свет) и подписан дизайнером.',
     prelim: 'Кадр сверен с планом по чек-листу исполнителем; подписи дизайнера пока нет.',
+    illustration: 'Сверка кадра с планом ещё не завершена — где кадр и чертёж расходятся, верен чертёж.',
     sheet: 'Лист альбома. Визуализации этого проекта с планом по чек-листу ещё не сверены — на сайте их не показываем, они есть в альбоме для заказчика.' };
   const hero = R.hero ? `      <figure class="g-hero${R.hero.kind === 'sheet' ? ' sheet' : ''}">
         ${pic(R.hero, '../../', 'fetchpriority="high" decoding="async"')}
@@ -526,8 +537,8 @@ function albumPage(a, r, honesty) {
   const pdf = `      <div class="cta-row" style="margin-top:26px">${has('studio.pdf') ? `<a class="btn" href="studio.pdf" download>Альбом для заказчика · PDF ${a.studioSize}</a>` : ''}
         ${has('album.pdf') ? `<a class="btn ghost" href="album.pdf" download>Полный альбом по ГОСТ · PDF ${a.pdfSize}</a>` : ''}
         <a class="btn ghost" href="${rvAll}" rel="nofollow">🎤 Оставить правку голосом</a>${caseBtn}</div>
-      <p class="g-note">Альбом для заказчика — проект в подаче студии: визуализации стоят перед развёртками своих помещений,
-      у мебели на плане выноски с размерами. ${R.signed && !R.prelim && !R.rejected ? '' : 'Не все кадры в нём сверены с планом и подписаны дизайнером — где кадр и чертёж расходятся, верен чертёж. '}Полный альбом — предварительный комплект для обсуждения: все разделы, ведомости
+      <p class="g-note">Альбом для заказчика — проект в подаче студии: на титуле 3D-фотография квартиры,
+      дальше планы с расстановкой мебели, развёртки и ведомости. Все кадры — в разделе «Визуализации» выше. ${R.signed && !R.prelim && !R.rejected ? '' : 'Не все кадры сверены с планом и подписаны дизайнером — где кадр и чертёж расходятся, верен чертёж. '}Полный альбом — предварительный комплект для обсуждения: все разделы, ведомости
       и смета (что значит пометка «ПРЕДВАРИТЕЛЬНО» — в разделе о проверке на этой странице). Файлы большие — на мобильном интернете лучше качать по Wi-Fi.</p>\n`;
 
   // статус выпуска — до кнопок скачивания, а не в тексте ниже (аудит сайта 04.11.2026, п. 4)
@@ -539,11 +550,11 @@ function albumPage(a, r, honesty) {
     <div class="wrap">
       <div class="kicker">Визуализации</div>
       <h2>Как это будет выглядеть</h2>
-      <p class="sub">Здесь только кадры, сверенные с планом по чек-листу: мебель, двери, сантехника и свет — там же, где на чертежах.
-      ${R.signed ? `${plural(R.signed, 'кадр подписан', 'кадра подписаны', 'кадров подписаны')} дизайнером` : 'Подписанных дизайнером кадров пока нет'}${R.prelim ? `, ${plural(R.prelim, 'кадр сверен', 'кадра сверены', 'кадров сверены')} исполнителем и ждут подписи` : ''}${R.rejected ? `; ${plural(R.rejected, 'кадр не совпал', 'кадра не совпали', 'кадров не совпали')} с планом или ещё не ${R.rejected % 10 === 1 && R.rejected % 100 !== 11 ? 'сверен' : 'сверены'} — на сайте ${R.rejected % 10 === 1 && R.rejected % 100 !== 11 ? 'его' : 'их'} нет` : ''}.
-      Под каждым кадром — его статус.${(R.signed + R.prelim) > R.ribbon.length ? ` В ленте — ${R.ribbon.length} кадров, остальные — в альбоме.` : ''}</p>
+      <p class="sub">Все 3D-кадры проекта. Подписанные дизайнером сверены с планом по чек-листу; остальные — иллюстрации,
+      сверка с планом ещё не завершена: где кадр и чертёж расходятся, верен чертёж. Под каждым кадром — его статус.
+      В ленте — ${plural(R.ribbon.length, 'кадр', 'кадра', 'кадров')}.</p>
       <div class="g-ribbon">
-      ${R.ribbon.map(f => `<a href="../../${f.src}" target="_blank" rel="noopener"><img src="../../${f.src}" alt="${esc(f.alt)}" width="${f.w}" height="${f.h}" loading="lazy" decoding="async"><span>${esc(f.alt.replace(`${a.name} — `, '').replace(', визуализация', ''))} · ${f.state === 'signed' ? 'подписан дизайнером' : 'ждёт подписи дизайнера'}</span></a>`).join('\n      ')}
+      ${R.ribbon.map(f => `<a href="../../${f.src}" target="_blank" rel="noopener"><img src="../../${f.src}" alt="${esc(f.alt)}" width="${f.w}" height="${f.h}" loading="lazy" decoding="async"><span>${esc(f.alt.replace(`${a.name} — `, '').replace(', визуализация', ''))} · ${f.state === 'signed' ? 'подписан дизайнером' : f.state === 'prelim' ? 'ждёт подписи дизайнера' : 'иллюстрация · сверка с планом не завершена'}</span></a>`).join('\n      ')}
       </div>
     </div>
   </section>\n` : '';

@@ -18,11 +18,14 @@
  },
  "preReview": "",
  "hero": {
-  "src": "portfolio/gost-dom120/sheets/27-interior-designer-furniture-et1.svg",
-  "alt": "Дом 147 м² в два этажа · средиземноморье — план расстановки мебели · 1-й этаж",
-  "w": 1587,
-  "h": 1123,
-  "kind": "sheet"
+  "src": "assets/portfolio/gost-dom120-hero.jpg",
+  "alt": "Дом 147 м² в два этажа · средиземноморье — визуализация интерьера",
+  "w": 1600,
+  "h": 1067,
+  "kind": "render",
+  "state": "illustration",
+  "name": "cover-hero",
+  "webp": "assets/portfolio/gost-dom120-hero.webp"
  },
  "visuals": 0,
  "visualsPrelim": 0,

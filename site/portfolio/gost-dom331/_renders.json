@@ -4,12 +4,219 @@
  "prelim": 0,
  "rejected": 46,
  "accepted": 0,
- "ribbon": [],
+ "ribbon": [
+  {
+   "src": "assets/portfolio/gost-dom331/3d-top-et2.jpg",
+   "alt": "Дом 271 м² с мансардой и гаражом — вид сверху 3D, второй этаж",
+   "w": 1200,
+   "h": 800,
+   "state": "rejected"
+  },
+  {
+   "src": "assets/portfolio/gost-dom331/room-living-wA.jpg",
+   "alt": "Дом 271 м² с мансардой и гаражом — гостиная, визуализация",
+   "w": 1200,
+   "h": 800,
+   "state": "rejected"
+  },
+  {
+   "src": "assets/portfolio/gost-dom331/room-kitchen-wA.jpg",
+   "alt": "Дом 271 м² с мансардой и гаражом — кухня-столовая, визуализация",
+   "w": 1200,
+   "h": 800,
+   "state": "rejected"
+  },
+  {
+   "src": "assets/portfolio/gost-dom331/room-bedroom1-wA.jpg",
+   "alt": "Дом 271 м² с мансардой и гаражом — спальня, визуализация",
+   "w": 1200,
+   "h": 800,
+   "state": "rejected"
+  },
+  {
+   "src": "assets/portfolio/gost-dom331/room-bedroom2-wB.jpg",
+   "alt": "Дом 271 м² с мансардой и гаражом — спальня, визуализация",
+   "w": 1200,
+   "h": 800,
+   "state": "rejected"
+  },
+  {
+   "src": "assets/portfolio/gost-dom331/room-kids1-wA.jpg",
+   "alt": "Дом 271 м² с мансардой и гаражом — детская, визуализация",
+   "w": 1200,
+   "h": 800,
+   "state": "rejected"
+  },
+  {
+   "src": "assets/portfolio/gost-dom331/room-kids2-wA.jpg",
+   "alt": "Дом 271 м² с мансардой и гаражом — детская, визуализация",
+   "w": 1200,
+   "h": 800,
+   "state": "rejected"
+  },
+  {
+   "src": "assets/portfolio/gost-dom331/room-study-wA.jpg",
+   "alt": "Дом 271 м² с мансардой и гаражом — кабинет, визуализация",
+   "w": 1200,
+   "h": 800,
+   "state": "rejected"
+  },
+  {
+   "src": "assets/portfolio/gost-dom331/room-bath1-wide.jpg",
+   "alt": "Дом 271 м² с мансардой и гаражом — ванная, визуализация",
+   "w": 1200,
+   "h": 800,
+   "state": "rejected"
+  },
+  {
+   "src": "assets/portfolio/gost-dom331/room-bath2-wide.jpg",
+   "alt": "Дом 271 м² с мансардой и гаражом — ванная, визуализация",
+   "w": 1200,
+   "h": 800,
+   "state": "rejected"
+  },
+  {
+   "src": "assets/portfolio/gost-dom331/room-bath3-wide.jpg",
+   "alt": "Дом 271 м² с мансардой и гаражом — ванная, визуализация",
+   "w": 1200,
+   "h": 800,
+   "state": "rejected"
+  },
+  {
+   "src": "assets/portfolio/gost-dom331/room-hall1-wA.jpg",
+   "alt": "Дом 271 м² с мансардой и гаражом — прихожая, визуализация",
+   "w": 1200,
+   "h": 800,
+   "state": "rejected"
+  },
+  {
+   "src": "assets/portfolio/gost-dom331/room-wardrobe-wide.jpg",
+   "alt": "Дом 271 м² с мансардой и гаражом — гардеробная, визуализация",
+   "w": 1200,
+   "h": 800,
+   "state": "rejected"
+  },
+  {
+   "src": "assets/portfolio/gost-dom331/room-balcony1-wC.jpg",
+   "alt": "Дом 271 м² с мансардой и гаражом — балкон, визуализация",
+   "w": 1200,
+   "h": 800,
+   "state": "rejected"
+  },
+  {
+   "src": "assets/portfolio/gost-dom331/room-balcony2-wide.jpg",
+   "alt": "Дом 271 м² с мансардой и гаражом — балкон, визуализация",
+   "w": 1200,
+   "h": 800,
+   "state": "rejected"
+  },
+  {
+   "src": "assets/portfolio/gost-dom331/room-corridor1-wide.jpg",
+   "alt": "Дом 271 м² с мансардой и гаражом — холл, визуализация",
+   "w": 1200,
+   "h": 800,
+   "state": "rejected"
+  },
+  {
+   "src": "assets/portfolio/gost-dom331/room-corridor2-wide.jpg",
+   "alt": "Дом 271 м² с мансардой и гаражом — холл, визуализация",
+   "w": 1200,
+   "h": 800,
+   "state": "rejected"
+  },
+  {
+   "src": "assets/portfolio/gost-dom331/room-storage1-wide.jpg",
+   "alt": "Дом 271 м² с мансардой и гаражом — кладовая, визуализация",
+   "w": 1200,
+   "h": 800,
+   "state": "rejected"
+  },
+  {
+   "src": "assets/portfolio/gost-dom331/room-storage2-wide.jpg",
+   "alt": "Дом 271 м² с мансардой и гаражом — кладовая, визуализация",
+   "w": 1200,
+   "h": 800,
+   "state": "rejected"
+  },
+  {
+   "src": "assets/portfolio/gost-dom331/room-storage3-wide.jpg",
+   "alt": "Дом 271 м² с мансардой и гаражом — кладовая, визуализация",
+   "w": 1200,
+   "h": 800,
+   "state": "rejected"
+  },
+  {
+   "src": "assets/portfolio/gost-dom331/room-living-wD.jpg",
+   "alt": "Дом 271 м² с мансардой и гаражом — гостиная, визуализация",
+   "w": 1200,
+   "h": 800,
+   "state": "rejected"
+  },
+  {
+   "src": "assets/portfolio/gost-dom331/room-living-wC.jpg",
+   "alt": "Дом 271 м² с мансардой и гаражом — гостиная, визуализация",
+   "w": 1200,
+   "h": 800,
+   "state": "rejected"
+  },
+  {
+   "src": "assets/portfolio/gost-dom331/room-kitchen-wD.jpg",
+   "alt": "Дом 271 м² с мансардой и гаражом — кухня-столовая, визуализация",
+   "w": 1200,
+   "h": 800,
+   "state": "rejected"
+  },
+  {
+   "src": "assets/portfolio/gost-dom331/room-bedroom1-wC.jpg",
+   "alt": "Дом 271 м² с мансардой и гаражом — спальня, визуализация",
+   "w": 1200,
+   "h": 800,
+   "state": "rejected"
+  },
+  {
+   "src": "assets/portfolio/gost-dom331/room-bedroom2-wA.jpg",
+   "alt": "Дом 271 м² с мансардой и гаражом — спальня, визуализация",
+   "w": 1200,
+   "h": 800,
+   "state": "rejected"
+  },
+  {
+   "src": "assets/portfolio/gost-dom331/room-kids1-wC.jpg",
+   "alt": "Дом 271 м² с мансардой и гаражом — детская, визуализация",
+   "w": 1200,
+   "h": 800,
+   "state": "rejected"
+  },
+  {
+   "src": "assets/portfolio/gost-dom331/room-kids2-wC.jpg",
+   "alt": "Дом 271 м² с мансардой и гаражом — детская, визуализация",
+   "w": 1200,
+   "h": 800,
+   "state": "rejected"
+  },
+  {
+   "src": "assets/portfolio/gost-dom331/room-study-wD.jpg",
+   "alt": "Дом 271 м² с мансардой и гаражом — кабинет, визуализация",
+   "w": 1200,
+   "h": 800,
+   "state": "rejected"
+  },
+  {
+   "src": "assets/portfolio/gost-dom331/room-hall1-wB.jpg",
+   "alt": "Дом 271 м² с мансардой и гаражом — прихожая, визуализация",
+   "w": 1200,
+   "h": 800,
+   "state": "rejected"
+  }
+ ],
  "hero": {
-  "src": "portfolio/gost-dom331/sheets/30-interior-designer-furniture-et1.svg",
-  "alt": "Дом 271 м² с мансардой и гаражом — план расстановки мебели · 1-й этаж",
-  "w": 1587,
-  "h": 1123,
-  "kind": "sheet"
+  "src": "assets/portfolio/gost-dom331-hero.jpg",
+  "alt": "Дом 271 м² с мансардой и гаражом — визуализация интерьера",
+  "w": 1600,
+  "h": 1067,
+  "kind": "render",
+  "state": "illustration",
+  "name": "cover-hero",
+  "webp": "assets/portfolio/gost-dom331-hero.webp"
  }
 }
