@@ -4,10 +4,10 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Бриф на дизайн-проект — LINEA | план, картинки, пара слов</title>
-<meta name="description" content="Бриф на дизайн-проект квартиры или дома — три шага, около 5 минут: план, картинки, которые нравятся, и рассказ своими словами. От 2 000 ₽/м², сумму знаете до оплаты.">
+<meta name="description" content="Бриф на дизайн-проект квартиры: три шага, около 5 минут — план, картинки, которые нравятся, и пара слов. От 2 000 ₽/м², сумму знаете до оплаты.">
 <meta property="og:type" content="website">
 <meta property="og:title" content="Бриф на дизайн-проект LINEA">
-<meta property="og:description" content="Три шага, около 5 минут: план, картинки, которые нравятся, и пара слов — можно голосом. От 2 000 ₽/м², сумму знаете до оплаты; квартира — до 48 часов от оплаты и плана, дом — до 72.">
+<meta property="og:description" content="Три шага, около 5 минут: план, картинки и пара слов — можно голосом. От 2 000 ₽/м², сумму знаете до оплаты; первый вариант — до 48 часов.">
 <meta property="og:image" content="https://xn-----6kccjicviedfr1b2cbishm8w.xn--p1ai/assets/og-home.jpg">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
@@ -15,12 +15,13 @@
 <meta property="og:site_name" content="LINEA">
 <meta name="twitter:card" content="summary_large_image">
 <link rel="canonical" href="https://xn-----6kccjicviedfr1b2cbishm8w.xn--p1ai/brief.html">
+<script type="application/ld+json">{"@context":"https://schema.org","@graph":[{"@type":"WebPage","name":"Бриф на дизайн-проект квартиры","url":"https://xn-----6kccjicviedfr1b2cbishm8w.xn--p1ai/brief.html","isPartOf":{"@type":"WebSite","name":"LINEA","url":"https://xn-----6kccjicviedfr1b2cbishm8w.xn--p1ai/"}},{"@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Главная","item":"https://xn-----6kccjicviedfr1b2cbishm8w.xn--p1ai/"},{"@type":"ListItem","position":2,"name":"Бриф","item":"https://xn-----6kccjicviedfr1b2cbishm8w.xn--p1ai/brief.html"}]}]}</script>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><defs><linearGradient id='g' x1='0' y1='0' x2='1' y2='1'><stop offset='0' stop-color='%23EBDCA8'/><stop offset='.5' stop-color='%23C9A45F'/><stop offset='1' stop-color='%238F6B33'/></linearGradient></defs><rect width='100' height='100' fill='%230F0E0C'/><text x='50' y='70' font-size='56' text-anchor='middle' fill='url(%23g)' font-family='Georgia'>L</text><rect x='66' y='62' width='10' height='10' transform='rotate(45 71 67)' fill='%231E6E57' stroke='%23C9A45F' stroke-width='2'/></svg>">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,500;0,600;1,500&family=Inter:wght@400;600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/main.css?v=36">
+<link rel="stylesheet" href="css/main.css?v=37">
 <style>
 /* бриф 31.10.2026: три шага + отправка, каждый — на один экран телефона */
 .bh{padding:34px 0 8px}
@@ -99,7 +100,6 @@ details.more ol{margin:6px 0 10px;padding-left:20px;color:var(--mut);font-size:1
 .chips button:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
 .room-row{display:grid;grid-template-columns:1.4fr .8fr .8fr 48px;gap:6px;margin-bottom:6px;align-items:center}
 .room-row .x{width:48px;height:48px;border:1px solid var(--line);border-radius:6px;background:none;color:var(--mut);cursor:pointer}
-.room-row select.r-level{grid-column:1/-1}
 /* цена и что дальше */
 .price{border:1px solid var(--gold);border-radius:8px;padding:14px 16px;background:#c29a5b10;margin:0 0 16px}
 .price fieldset{border:0;padding:0;margin:0;display:grid;gap:8px}
@@ -201,11 +201,7 @@ details.more ol{margin:6px 0 10px;padding-left:20px;color:var(--mut);font-size:1
   <!-- 1. План -->
   <section class="panel" data-step="0" aria-labelledby="h1s">
     <h2 id="h1s">План квартиры</h2>
-    <fieldset class="seg" id="objKind">
-      <legend class="sr-only">Что проектируем</legend>
-      <label><input type="radio" name="objType" value="квартира" checked><span>Квартира</span></label>
-      <label><input type="radio" name="objType" value="дом"><span>Дом</span></label>
-    </fieldset>
+    <input type="hidden" name="objType" value="квартира">
     <div class="up-wrap">
       <label class="up" id="dropPlan" for="filePlan"><span class="ico" aria-hidden="true">📎</span><b id="planBtnT">Загрузить план</b><small>фото, скан или PDF</small></label>
       <input type="file" id="filePlan" multiple accept="image/*,.heic,.heif,.pdf,.dwg,.dxf" aria-describedby="planHint planErr">
@@ -295,7 +291,7 @@ details.more ol{margin:6px 0 10px;padding-left:20px;color:var(--mut);font-size:1
     <label class="chk"><input type="checkbox" id="cConsent" aria-describedby="consentErr"><span>Даю согласие на обработку персональных данных на условиях <a href="soglasie/" target="_blank" rel="noopener">согласия</a> и <a href="policy/" target="_blank" rel="noopener">политики</a> <b>— обязательно</b></span></label>
     <p class="err" id="consentErr" role="alert"></p>
     <label class="chk"><input type="checkbox" id="cPortfolio"><span>Можно показать проект в портфолио LINEA — без имени, контактов и адреса <span class="hint">(по желанию)</span></span></label>
-    <div class="next3" id="next3"><!-- terms:brief-next --><h3>Что будет дальше</h3><ol><li>Называем сумму по вашей площади и срок — до начала работы</li><li>Вы оплачиваете — после оплаты начинаем работу</li><li>Первый вариант квартиры — до 48 часов, дома — до 72 часов от оплаты и получения плана с размерами</li></ol><p>Бриф уходит в студию одной кнопкой — сразу открывается страница заказа с номером.</p><p class="pre-call"><b>Поговорим до оплаты.</b> Короткий звонок или переписка: обсудим ваш план за 15 минут. Свяжемся по почте или телефону из брифа.</p><!-- /terms:brief-next --></div>
+    <div class="next3" id="next3"><!-- terms:brief-next --><h3>Что будет дальше</h3><ol><li>Называем сумму по вашей площади и срок — до начала работы</li><li>Вы оплачиваете — после оплаты начинаем работу</li><li>Первый вариант проекта квартиры — до 48 часов от оплаты и получения плана с размерами</li></ol><p>Бриф уходит в студию одной кнопкой — сразу открывается страница заказа с номером.</p><p class="pre-call"><b>Поговорим до оплаты.</b> Короткий звонок или переписка: обсудим ваш план за 15 минут. Свяжемся по почте или телефону из брифа.</p><!-- /terms:brief-next --></div>
     <button class="btn send" id="send" type="button">Собрать бриф</button>
     <div id="upBar" hidden style="height:6px;background:rgba(201,164,95,.18);border-radius:3px;overflow:hidden;margin:12px 0 4px"><i style="display:block;height:100%;width:0;background:#C9A45F;transition:width .2s"></i></div>
     <p class="hint" id="upState" role="status" aria-live="polite" hidden></p>
@@ -329,7 +325,7 @@ details.more ol{margin:6px 0 10px;padding-left:20px;color:var(--mut);font-size:1
 <footer class="site"><div class="wrap cols"><div><div class="logo">LINE<i>A</i></div><p>дизайнер-архитектор <b>Кырлан Александр</b><br><a href="tel:+79257338640">+7 925 733-86-40</a> · <a href="mailto:optteem@mail.ru">optteem@mail.ru</a></p></div><div><p><a href="brief.html">Бриф</a> · <a href="portfolio-hub/">Портфолио</a> · <a href="catalog/">Каталог</a> · <a href="gost/">Документация</a> · <a href="cases/">Кейсы</a> · <a href="compare/">Сравнение</a> · <a href="style/">Стили</a> · <a href="journal/">Журнал</a> · <a href="stories/">Истории</a> · <a href="reviews/">Отзывы</a> · <a href="remont/">Ремонт по проекту</a> · <a href="brigadam/">Бригадам</a> · <a href="price/">Условия</a> · <a href="process/">Процесс</a> · <a href="faq/">FAQ</a> · <a href="about/">О студии</a> · <a href="contacts/">Контакты</a> · <a href="checklist/">Чек-лист приёмки</a> · <a href="sitemap/">Карта сайта</a> · <a href="oplata/">Оплата</a> · <a href="policy/">Обработка данных</a> · <a href="soglasie/">Согласие на обработку данных</a></p><p>© LINEA studio, 2026</p></div></div></footer>
 
 <script type="application/json" id="briefTerms">{"packs":[{"key":"proekt","name":"Проект с визуализациями","rate":2000,"min":80000}],"minArea":40,"areaRecalc":"Сумма посчитана по площади из брифа. Если по плану площадь окажется другой, пересчитаем по той же ставке и согласуем разницу с вами до начала работы."}</script>
-<script src="js/brief.js?v=50"></script>
+<script src="js/brief.js?v=51"></script>
 <script>
 (function () {
   var b = document.querySelector('.burger'), m = document.querySelector('.mnav');

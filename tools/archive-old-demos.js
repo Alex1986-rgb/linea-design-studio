@@ -19,7 +19,7 @@ const path = require('path');
 const { TERMS } = require('./site-shell.js');
 
 const SITE = path.join(__dirname, '..', 'site');
-const DIRS = ['portfolio/demo', 'portfolio/dom-120'];
+const DIRS = ['portfolio/demo'];   // portfolio/dom-120 убран 06.11.2026 (на сайте только квартиры)
 const CHECK = process.argv.includes('--check');
 const MARK = '<!--linea-archive-->';
 

@@ -42,8 +42,8 @@ sync_one kv-65 gost-kv65
 sync_one kv-58 gost-kv58
 sync_one modern-4k gost-modern4k
 sync_one retro-103 gost-retro103
-sync_one dom-331 gost-dom331
+# sync_one dom-331 gost-dom331      # дома с 06.11.2026 на сайте не публикуем (site-shell TERMS.houses)
 sync_one linea-demo gost-lineademo
-sync_one linea-dom-120 gost-dom120
+# sync_one linea-dom-120 gost-dom120  # дома с 06.11.2026 на сайте не публикуем
 sync_one elite-modern gost-elitemodern
 echo "Теперь: node tools/gen-gost-pages.js"

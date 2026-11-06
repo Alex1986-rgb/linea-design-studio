@@ -108,7 +108,7 @@ ${MENU.map(x => `    <a href="${x.key === active ? './' : u + x.href}">${x.title
 const REQUISITES = null;   // пример: { status: 'плательщик налога на профессиональный доход (самозанятый)', inn: '000000000000' }
 const ROUNDS = 3;   // решение Александра 03.11.2026
 const rub = n => String(Math.round(n)).replace(/\B(?=(\d{3})+(?!\d))/g, '\u00a0') + '\u00a0₽';
-// Пакет один: ставка ₽/м², минимальный заказ считается как за MIN_AREA м² (дом — та же ставка за м² интерьера)
+// Пакет один: ставка ₽/м², минимальный заказ считается как за MIN_AREA м²
 const MIN_AREA = 40;
 const PACKS = [
   { key: 'proekt', name: 'Проект с визуализациями', rate: 2000 },
@@ -116,7 +116,21 @@ const PACKS = [
 const PACK = Object.fromEntries(PACKS.map(p => [p.key, p]));
 // Выборка рынка — docs/research/2026-10-28-ceny-rynka.md (открытые прайсы студий, снято 28.10.2026)
 const MARKET = { date: '28.10.2026', city: 'Москва', full: '4\u00a0500–5\u00a0000', fullN: 11, techMed: '1\u00a0575', techSheets: '6–25' };
+// Решение Александра 06.11.2026: на сайте ТОЛЬКО дизайн-проекты квартир. Дома, коттеджи и ландшафт не предлагаем.
+// houses: false — генераторы не выпускают страницы домов, не упоминают их в условиях; старые адреса домов → MOVED (заглушки tools/gen-moved-pages.js).
+const HOUSES = false;
+// старые адреса страниц про дома → куда вести (пути от корня site/, без ведущего «/»)
+const MOVED = {
+  'catalog/dizayn-proekt-doma.html': 'catalog/dizayn-proekt-kvartiry.html',
+  'cases/dom-331.html': 'cases/',
+  'cases/dom-120.html': 'cases/',
+  'portfolio/gost-dom331/index.html': 'portfolio-hub/',
+  'portfolio/gost-dom120/index.html': 'portfolio-hub/',
+  'portfolio/dom-120/index.html': 'portfolio-hub/',
+  'portfolio/dom-120/presentation.html': 'portfolio-hub/',
+};
 const TERMS = {
+  houses: HOUSES, moved: MOVED,
   packs: PACKS, pack: PACK, minArea: MIN_AREA, market: MARKET,
   rounds: ROUNDS,
   requisites: REQUISITES,
@@ -127,7 +141,7 @@ const TERMS = {
   rate: key => rub(PACK[key].rate) + '/м²',            // «2 000 ₽/м²»
   minSum: key => rub(PACK[key].min),                    // «80 000 ₽»
   hasPrices: true,
-  // цена одной строкой для услуги: kvartira / dom → «от 2 000 ₽/м², минимальный заказ 80 000 ₽»
+  // цена одной строкой для услуги → «от 2 000 ₽/м², минимальный заказ 80 000 ₽»
   price(kind) {
     const p = PACKS[0];
     return `от ${rub(p.rate)}/м², минимальный заказ ${rub(p.min)}`;
@@ -149,7 +163,7 @@ const TERMS = {
   // площадь в брифе обязательна (01.11.2026): сумма видна сразу на странице заказа; что будет, если план покажет другую площадь
   areaRecalc: 'Сумма посчитана по площади из брифа. Если по плану площадь окажется другой, пересчитаем по той же ставке и согласуем разницу с вами до начала работы.',
   how: 'Вы присылаете бриф — мы называем сумму по вашей площади и срок, вы оплачиваете, после оплаты начинаем работу',
-  term: 'первый вариант квартиры — до 48 часов, дома — до 72 часов от оплаты и получения плана с размерами',
+  term: 'первый вариант проекта квартиры — до 48 часов от оплаты и получения плана с размерами',
   roundsText: ROUNDS ? `${ROUNDS} ${ROUNDS === 1 ? 'круг' : ROUNDS < 5 ? 'круга' : 'кругов'} правок входят в цену` : 'число кругов правок называем до оплаты — оно будет в договоре',
   // что такое пометка «ПРЕДВАРИТЕЛЬНО» — одной фразой (снимается сама, когда закрыт реестр вопросов: gost-draft engine/paper.js → releaseState)
   prelim: 'Комплект выпускается с пометкой «ПРЕДВАРИТЕЛЬНО», пока по объекту открыты вопросы к вам (лист «Открытые вопросы» в начале альбома) и не сделан контрольный обмер. По такому комплекту не строят: после ваших ответов и обмера перевыпускаем его без пометки.',
@@ -158,8 +172,8 @@ const TERMS = {
     'проект перепланировки для жилинспекции и расчёт несущих конструкций — это работа организаций с допуском',
     'авторский надзор и строительные работы на объекте',
     'комплектация: закупка материалов, мебели и техники'],
-  // дом и ландшафт
-  onRequest: 'Дом: интерьер считаем по той же ставке за м². Кровля и конструктив — по запросу. Ландшафт участка — по запросу, скоро.',
+  // дома и ландшафт с 06.11.2026 не предлагаем — строка пустая
+  onRequest: '',
 };
 
 // ── «Ремонт по проекту»: условия бригад — ЕДИНСТВЕННЫЙ источник для страниц сайта ─────────────────────────────────────
@@ -336,14 +350,10 @@ ${FUNNEL.map((f, i) => `    <a class="fstep${i === i0 ? ' on' : ''}${i < i0 ? ' 
 // CTA перед воронкой: текст и второе действие зависят от того, на каком шаге
 // пути человек находится. «Посмотреть» зовёт сравнить, «Сравнить» — вернуться
 // к альбомам или начать; финал везде один — бриф.
-// Срок везде один (решение студии): квартира — до 48 часов, дом — до 72 часов
-// от оплаты и получения плана с размерами; opts.object = 'flat' | 'house' уточняет срок
-// на странице конкретного альбома.
+// Срок везде один (решение студии): проект квартиры — до 48 часов от оплаты и получения плана с размерами.
 function ctaBlock(u, active, opts = {}) {
   const step = FUNNEL.find(f => f.on.includes(active));
-  const term = opts.object === 'house' ? 'Первый вариант проекта дома — до 72 часов от оплаты и получения плана с размерами'
-    : opts.object === 'flat' ? 'Первый вариант проекта квартиры — до 48 часов от оплаты и получения плана с размерами'
-    : 'Первый вариант проекта — до 48 часов от оплаты и получения плана с размерами (дом — до 72)';
+  const term = 'Первый вариант проекта квартиры — до 48 часов от оплаты и получения плана с размерами';
   let kicker = 'Дальше', h = 'Свой проект — с того же места',
     sub = `${TERMS.brief.line}. От ${rub(PACKS[0].rate)}/м², минимальный заказ ${rub(PACKS[0].min)}; работа начинается после оплаты. ${term}.`,
     second = `<a class="btn ghost" href="${u}portfolio-hub/">Посмотреть альбомы</a>`;
@@ -386,7 +396,7 @@ function footer(u, active) {
   <div class="wrap cols">
     <div>
       <div class="logo">LINE<i>A</i></div>
-      <p>Дизайн-проект квартиры или дома по вашему плану:<br>чертежи, визуализации и смета в двух альбомах.<br>Программа чертит, автор проверяет решения.</p>
+      <p>Дизайн-проект квартиры по вашему плану:<br>чертежи, визуализации и смета в двух альбомах.<br>Программа чертит, автор проверяет решения.</p>
       <p>${AUTHOR.role} <b>${AUTHOR.name}</b><br><a href="tel:${AUTHOR.tel}">${AUTHOR.phone}</a> · <a href="mailto:${AUTHOR.email}">${AUTHOR.email}</a></p>
     </div>
     <div>
@@ -466,4 +476,17 @@ ${ogImageTags(ogImage || OG_DEFAULT)}
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,500;0,600;1,500&family=Inter:wght@400;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="${u}css/main.css?${CSSV}">${extra || ''}`;
 
-module.exports = { OFERTA_DRAFT, ofertaRef, TERMS, BRIG_TERMS, INTAKE, intakeOnline, swapIntake, AUTHOR, BASE, SITE, SITE_BASES, SITE_DOMAIN_RU, CSSV, SECTIONS, FOOTER_EXTRA, FUNNEL, funnel, ctaBlock, crumbsBar, crumbsAuto, pic, esc, clamp, header, footer, beta, sticky, crumbsLd, head };
+// страница-переход со старого адреса (дома убраны с сайта 06.11.2026): noindex, canonical и мгновенный переход
+function movedPage(u, toRel, title) {
+  return `<!DOCTYPE html>
+<html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>${title} | LINEA</title><meta name="robots" content="noindex,follow">
+<meta http-equiv="refresh" content="0; url=${u}${toRel}">
+<script>location.replace('${u}${toRel}'+location.hash)</script>
+<style>body{background:#100F0C;color:#E9E2D2;font:16px/1.6 system-ui,sans-serif;display:grid;place-items:center;min-height:100vh;margin:0;padding:16px;text-align:center}a{color:#C9A45F}</style>
+</head><body><p>LINEA делает дизайн-проекты квартир. Страница переехала: <a href="${u}${toRel}">${title}</a>.</p></body></html>
+`;
+}
+
+module.exports = {
+  movedPage, OFERTA_DRAFT, ofertaRef, TERMS, BRIG_TERMS, INTAKE, intakeOnline, swapIntake, AUTHOR, BASE, SITE, SITE_BASES, SITE_DOMAIN_RU, CSSV, SECTIONS, FOOTER_EXTRA, FUNNEL, funnel, ctaBlock, crumbsBar, crumbsAuto, pic, esc, clamp, header, footer, beta, sticky, crumbsLd, head };

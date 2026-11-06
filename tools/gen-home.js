@@ -41,19 +41,19 @@ const OBJ = (() => {
   } catch { return {}; }
 })();
 
-// порядок карточек на главной: сначала проект с подписанными кадрами, дальше дома и квартиры
-const ORDER = ['gost-elitemodern', 'gost-modern4k', 'gost-dom331', 'gost-dom120', 'gost-retro103', 'gost-lineademo', 'gost-proekt2', 'gost-kv3k', 'gost-kv65', 'gost-kv58'];
+// порядок карточек на главной: сначала проект с подписанными кадрами, дальше остальные квартиры
+const ORDER = ['gost-elitemodern', 'gost-modern4k', 'gost-retro103', 'gost-lineademo', 'gost-proekt2', 'gost-kv3k', 'gost-kv65', 'gost-kv58'];
 // короткая подпись стиля/типа на карточке
 const KICK = {
   'gost-elitemodern': 'Квартира · элитный модерн',
-  'gost-modern4k': 'Квартира · модерн', 'gost-dom331': 'Дом · шале', 'gost-dom120': 'Дом · средиземноморье',
+  'gost-modern4k': 'Квартира · модерн',
   'gost-retro103': 'Квартира · ретро', 'gost-lineademo': 'Квартира · джапанди', 'gost-proekt2': 'Квартира · 4 комнаты',
   'gost-kv3k': 'Квартира · 3 комнаты', 'gost-kv65': 'Квартира · реконструкция', 'gost-kv58': 'Квартира · 2 комнаты',
 };
 // плитки «Листы как есть»: альбом + имя листа без номера
 const PLATES = [
-  { slug: 'gost-dom331', key: 'interior-designer-furniture-et1', cap: 'Расстановка мебели · дом 271 м²' },
-  { slug: 'gost-dom331', key: 'architect-stairs-л-1', cap: 'Лестница Л-1 · дом 271 м²' },
+  { slug: 'gost-kv3k', key: 'interior-designer-furniture', cap: 'Расстановка мебели · трёхкомнатная квартира' },
+  { slug: 'gost-kv65', key: 'furniture-maker-furn-plan', cap: 'Встроенная мебель · квартира 65 м²' },
   { slug: 'gost-modern4k', key: 'foreman-open-issues', cap: 'Вопросы к заказчику · квартира с кабинетом' },
   { slug: 'gost-lineademo', key: 'electrical-engineer-panel', cap: 'Однолинейная схема щита · квартира 56 м²' },
   { slug: 'gost-lineademo', key: 'plumbing-engineer-razvodka', cap: 'Разводка воды и канализации · квартира 56 м²' },
@@ -211,7 +211,7 @@ function build() {
 
   /* --- цифры первого экрана --- */
   region('stats', `        <div class="stats">
-          <div><b>48 / 72 ч</b><span>первый вариант: квартира / дом</span></div>
+          <div><b>48 ч</b><span>первый вариант проекта квартиры</span></div>
           <div><b>~5 мин</b><span>бриф: план, картинки, слова</span></div>
           <div><b>${minS}–${maxS}</b><span>листов A3 в альбомах на сайте</span></div>
           <div><b>от ${esc(TERMS.rate('proekt'))}</b><span>минимум ${esc(TERMS.minSum('proekt'))}, сумму знаете до оплаты</span></div>
@@ -237,7 +237,7 @@ function build() {
     </ul>
     <p class="sub" style="margin-top:18px"><b>Для сравнения.</b> Полный проект с визуализациями в ${esc(TERMS.market.city.replace('Москва', 'Москве'))} обычно стоит ${TERMS.market.full} ₽/м² (выборка открытых прайсов на ${TERMS.market.date}, ориентир). Пример: ${EXA.map(a => `${a} м² — ${esc(TERMS.rub(TERMS.sum('proekt', a)))}`).join('; ')}.</p>
     <div class="cta-row" style="margin-top:22px"><a class="btn" href="price/#primer">Рассчитать свою площадь</a><a class="btn ghost" href="price/">Что входит и что не входит</a></div>`);
-  region('scene3', `            <p class="lead">Обмер, демонтаж, мебель, свет и щит, вода и канализация, отопление, потолки, плитка, встроенная мебель, лестницы, ведомости и смета. В альбомах на сайте — от ${minS} до ${maxS} листов A3.</p>`);
+  region('scene3', `            <p class="lead">Обмер, демонтаж, мебель, свет и щит, вода и канализация, отопление, потолки, плитка, встроенная мебель, ведомости и смета. В альбомах на сайте — от ${minS} до ${maxS} листов A3.</p>`);
   region('cta-count', `          <a class="btn ghost" href="#portfolio">Смотреть ${nAlb} ${plural(nAlb, 'проект', 'проекта', 'проектов')}</a>`);
 
   /* --- стены одного помещения: подписанные кадры + лист расстановки мебели --- */
@@ -257,7 +257,7 @@ function build() {
         webp(f.file, path.join(HD, `${base}.webp`), 800, 66);
         return `      <figure><picture><source srcset="assets/portfolio/home/${base}.webp" type="image/webp"><img src="assets/portfolio/home/${base}.jpg" width="800" height="533" loading="lazy" decoding="async" alt="${esc(`${f.roomName}, стена ${WALL_RU[f.wall]} — ${short(a)}, визуализация сверена с планом`)}"></picture><figcaption>${WALL_RU[f.wall]}</figcaption></figure>`;
       });
-      figs.push(`      <figure class="plan"><a href="review.html?p=${a.slug}&amp;s=${encSheet(a.plan.file)}"><img src="portfolio/${a.slug}/sheets/${encSheet(a.plan.file)}" width="1587" height="1123" loading="lazy" decoding="async" alt="${esc(`${a.plan.title} — ${short(a)}, лист ${a.plan.no}`)}"></a><figcaption>План</figcaption></figure>`);
+      figs.push(`      <figure class="plan"><a href="review.html?p=${a.slug}&amp;s=${encSheet(a.plan.file)}" aria-label="${esc(`Открыть лист ${a.plan.no} — план расстановки мебели, ${short(a)}`)}"><img src="portfolio/${a.slug}/sheets/${encSheet(a.plan.file)}" width="1587" height="1123" loading="lazy" decoding="async" alt="${esc(`${a.plan.title} — ${short(a)}, лист ${a.plan.no}`)}"></a><figcaption>План</figcaption></figure>`);
       const letters = walls.map(f => WALL_RU[f.wall]).join(', ');
       region('walls', `    <div class="h-walls">
 ${figs.join('\n')}
@@ -309,11 +309,11 @@ ${cards.join('\n')}
 ${JSON.stringify({ '@context': 'https://schema.org', '@type': 'ItemList', name: 'Проекты LINEA в новом формате', itemListElement: ALB.map((a, i) => ({ '@type': 'ListItem', position: i + 1, name: `${a.card.name.replace(' · ', ', ')} — ${a.total} ${plural(a.total, 'лист', 'листа', 'листов')}`, url: `${B}/portfolio/${a.slug}/` })) })}
 </script>`);
   const org = { '@context': 'https://schema.org', '@type': 'ProfessionalService', name: 'LINEA — студия дизайна интерьера', url: `${B}/`, image: `${B}/assets/og-home.jpg`,
-    description: `Дизайн-проект интерьера квартиры и дома: ${TERMS.brief.short}, альбом рабочей документации по ГОСТ с проверкой по правилам (планы, развёртки, электрика, сантехника, отделка, мебель, потолки, лестницы), визуализации — только сверенные с планом. ${TERMS.how}; ${TERMS.term}.`,
+    description: `Дизайн-проект интерьера квартиры: ${TERMS.brief.short}, альбом рабочей документации по ГОСТ с проверкой по правилам (планы, развёртки, электрика, сантехника, отделка, мебель, потолки), визуализации — только сверенные с планом. ${TERMS.how}; ${TERMS.term}.`,
     areaServed: 'RU', telephone: SHELL.AUTHOR.tel, email: SHELL.AUTHOR.email,
     founder: { '@type': 'Person', name: SHELL.AUTHOR.name, jobTitle: SHELL.AUTHOR.role, telephone: SHELL.AUTHOR.tel, email: SHELL.AUTHOR.email } };
   // Offer: цена «от» = минимальный заказ, ставка за м² — в UnitPriceSpecification (site-shell.js → TERMS.offers)
-  org.makesOffer = ['Дизайн-проект квартиры с альбомом рабочей документации', 'Дизайн-проект дома с альбомом рабочей документации'].flatMap(n => TERMS.offers(n, `${B}/brief.html`));
+  org.makesOffer = ['Дизайн-проект квартиры с альбомом рабочей документации'].flatMap(n => TERMS.offers(n, `${B}/brief.html`));
   region('ld-org', `<script type="application/ld+json">\n${JSON.stringify(org)}\n</script>`);
 
   /* --- плитки листов --- */
@@ -366,7 +366,7 @@ ${PLATES.map(p => {
 
   /* --- FAQ: видимый блок и FAQPage из одного массива --- */
   const FAQ = [
-    ['Сколько стоит и когда платить?', `${TERMS.line}. Сумма — ставка × площадь, не меньше минимального заказа; дом — те же ставки за м² интерьера. Работа начинается после оплаты: по счёту, а когда подключим ЮKassa — онлайн на странице заказа. До начала работы деньги возвращаем полностью.`],
+    ['Сколько стоит и когда платить?', `${TERMS.line}. Сумма — ставка × площадь, не меньше минимального заказа. Работа начинается после оплаты: по счёту, а когда подключим ЮKassa — онлайн на странице заказа. До начала работы деньги возвращаем полностью.`],
     ['Что придёт через 48 часов?', `Первый вариант: ${TERMS.term}. Это предварительный комплект — решения на обсуждение, лист вопросов к вам и задание на контрольный обмер. Финальный выпуск — после ваших ответов, обмера и правок.`],
     ['Это делает ИИ — значит, шаблон?', `Нет. Лист не берётся из библиотеки и не рисуется от руки: он строится из данных вашего объекта в миллиметрах — стены, проёмы, мебель, инженерные точки. Поменялась стена — пересобирается весь альбом и смета. На сайте ${numWord(nAlb)} проектов — ${numWord(nAlb)} разных планировок. Решения смотрит автор, ${SHELL.AUTHOR.name}.`],
     ['Примут ли такие чертежи строители?', `Альбом оформлен как рабочая документация по СПДС: штамп, масштаб, цепочки размеров, отметки, ведомости, узлы. Первый вариант — для обсуждения: после ваших ответов и контрольного обмера выпускаем комплект для стройки. Что значит пометка «ПРЕДВАРИТЕЛЬНО» — на странице каждого альбома.`],

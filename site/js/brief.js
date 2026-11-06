@@ -31,7 +31,7 @@
   const esc = s => String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;');
   const val = id => ($(id) ? $(id).value : '');
   const num = s => { const n = parseFloat(String(s == null ? '' : s).replace(',', '.').replace(/[^\d.]/g, '')); return Number.isFinite(n) && n > 0 ? n : null; };
-  const kind = () => (document.querySelector('input[name="objType"]:checked') || {}).value || 'квартира';
+  const kind = () => 'квартира';   // только квартиры (решение 06.11.2026); поле object.type остаётся для сервера
   const pack = () => T.packs[0].key;   // пакет один (31.10.2026): визуализации входят в цену
 
   let step = 0, ready = false;
@@ -215,19 +215,12 @@
     row.innerHTML = `<select class="r-type" aria-label="Помещение">${ROOM_TYPES.map(t => `<option value="${t[0]}"${t[0] === r.type ? ' selected' : ''}>${t[1]}</option>`).join('')}</select>`
       + `<input type="text" inputmode="decimal" class="r-w" placeholder="шир." aria-label="Ширина, м" value="${esc(r.width || '')}">`
       + `<input type="text" inputmode="decimal" class="r-l" placeholder="дл." aria-label="Длина, м" value="${esc(r.length || '')}">`
-      + `<button class="x" type="button" aria-label="Убрать помещение">✕</button>`
-      + `<select class="r-level" aria-label="Этаж"${kind() === 'дом' ? '' : ' hidden'}><option value="1">1-й этаж</option><option value="2"${r.level == 2 ? ' selected' : ''}>2-й этаж</option><option value="3"${r.level == 3 ? ' selected' : ''}>3-й этаж</option><option value="0"${r.level === 0 ? ' selected' : ''}>цоколь</option></select>`;
+      + `<button class="x" type="button" aria-label="Убрать помещение">✕</button>`;
     row.querySelector('.x').onclick = () => { row.remove(); save(); };
     roomsEl.appendChild(row);
     return row;
   }
   $('addRoom').onclick = () => { addRoom().querySelector('select').focus(); };
-  function kindUI() {
-    roomsEl.querySelectorAll('.r-level').forEach(s => { s.hidden = kind() !== 'дом'; });
-    $('h1s').textContent = NAMES[0] = kind() === 'дом' ? 'План дома' : 'План квартиры';
-    if (step === 0) $('progName').textContent = NAMES[0];
-  }
-  document.querySelectorAll('input[name="objType"]').forEach(i => i.addEventListener('change', kindUI));
 
   // ── цена по площади (ставки из TERMS); сервер считает по своему config.php
   const rubF = n => Math.round(n).toLocaleString('ru-RU').replace(/ |\s/g, ' ') + ' ₽';
@@ -274,11 +267,10 @@
 
   // ── сбор брифа (схема прежняя: meta, client, object, rooms, story, files, style, budget, answers)
   function collect() {
-    const t = story.value.trim(), A = parseStory(t), house = kind() === 'дом';
+    const t = story.value.trim(), A = parseStory(t);
     const rooms = [...roomsEl.querySelectorAll('.room-row')].map(r => {
       const ty = r.querySelector('.r-type');
-      return { name: ty.selectedOptions[0].textContent, type: ty.value, width: num(r.querySelector('.r-w').value), length: num(r.querySelector('.r-l').value),
-        level: house ? +r.querySelector('.r-level').value : undefined };
+      return { name: ty.selectedOptions[0].textContent, type: ty.value, width: num(r.querySelector('.r-w').value), length: num(r.querySelector('.r-l').value) };
     });
     const key = val('stKey') || 'studio', st = STYLES.find(s => s[0] === key);
     return {
@@ -321,7 +313,6 @@
     try { d = JSON.parse(localStorage.getItem(KEY) || 'null'); } catch (e) {}
     if (!d || d.v !== 3) return 0;
     FIELDS.forEach(id => { if ($(id) && d.fields && d.fields[id] != null) $(id).value = d.fields[id]; });
-    const k = document.querySelector(`input[name="objType"][value="${d.kind}"]`); if (k) k.checked = true;
     $('needSurvey').checked = !!d.needSurvey;
     (d.liked || []).forEach(id => liked.add(id));
     (d.rooms || []).forEach(addRoom);
@@ -337,7 +328,6 @@
   const start = restore();
   const want = qs.get('style');
   if (want && STYLES.some(s => s[0] === want) && val('stKey') === 'studio') $('stKey').value = want;
-  kindUI();
   paintChips();
 
   // ── отправка: проверка контактов → архив → приёмник или «Поделиться»

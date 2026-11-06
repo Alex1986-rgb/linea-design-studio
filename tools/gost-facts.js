@@ -77,7 +77,8 @@ function facts(p) {
 
 let CACHE = null;
 function all() {
-  if (!CACHE) CACHE = PROJECTS.filter(p => fs.existsSync(path.join(SITE, 'portfolio', p.slug, 'sheets.json'))).map(facts);
+  // дома с 06.11.2026 на сайте не показываем (site-shell TERMS.houses): get('gost-dom…') бросит ошибку — ссылку надо убрать
+  if (!CACHE) CACHE = PROJECTS.filter(p => (require('./site-shell.js').TERMS.houses || !p.house) && fs.existsSync(path.join(SITE, 'portfolio', p.slug, 'sheets.json'))).map(facts);
   if (!CACHE.length) throw new Error('нет альбомов нового формата в site/portfolio — запустите tools/sync-gost-releases.sh');
   return CACHE;
 }
