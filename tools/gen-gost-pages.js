@@ -19,6 +19,7 @@ const OPEN = require('./gost-open-issues.js');
 const EXPLAINER = require('./gost-explainer.js');
 
 const SITE = path.join(__dirname, '..', 'site');
+const CMP = require('./compare-pairs');
 const { BASE, esc, crumbsLd } = SHELL;
 const out = [];
 const w = (rel, html) => {
@@ -458,7 +459,27 @@ const CSS = `<style>
 .g-steps b{display:block;margin-bottom:6px}.g-steps p{margin:0;color:var(--mut);font-size:14px;line-height:1.55}
 .tile .g-type{display:block;color:var(--dim);font-size:12.5px;margin:-4px 0 10px}
 .tile img.sheet{object-fit:contain;background:#f4f1ea}
-@media (max-width:760px){.g-ribbon{grid-auto-columns:78%}.stats{gap:22px 30px}.cta-row .btn{white-space:normal;text-align:center}}
+.cmp-bar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:0 0 14px}
+.cmp-bar button{font:inherit;font-size:13.5px;color:var(--ink);background:transparent;border:1px solid var(--line);border-radius:999px;padding:7px 14px;cursor:pointer}
+.cmp-bar button:hover{border-color:var(--gold)}.cmp-bar button[aria-selected=true]{background:var(--gold);border-color:var(--gold);color:#14130f}
+.cmp-bar .sp{flex:1}
+.cmp-frame{background:#fff;border:1px solid var(--line);border-radius:4px;overflow:hidden}
+.cmp-stage{position:relative;margin:0;touch-action:pan-y;user-select:none;-webkit-user-select:none;cursor:ew-resize;--p:50%}
+.cmp-stage[hidden]{display:none}
+.cmp-stage img{display:block;width:100%;height:auto;pointer-events:none}
+.cmp-b{position:absolute;inset:0;clip-path:inset(0 calc(100% - var(--p)) 0 0)}
+.cmp-b img{width:100%;height:100%;object-fit:contain}
+.cmp-h{position:absolute;top:0;bottom:0;left:var(--p);width:44px;margin-left:-22px;outline:none;display:flex;justify-content:center}
+.cmp-h::before{content:"";position:absolute;top:0;bottom:0;width:2px;background:var(--gold);box-shadow:0 0 0 1px rgba(20,19,15,.35)}
+.cmp-h i{position:absolute;top:50%;width:40px;height:40px;margin-top:-20px;border-radius:50%;background:var(--gold);color:#14130f;display:flex;align-items:center;justify-content:center;font-style:normal;font-size:17px;box-shadow:0 2px 10px rgba(0,0,0,.35)}
+.cmp-h:focus-visible i{outline:3px solid #fff;outline-offset:2px}
+.cmp-l{position:absolute;top:12px;padding:5px 10px;border-radius:3px;background:rgba(20,19,15,.78);color:#f4f1ea;font-size:12.5px;pointer-events:none}
+.cmp-l.l{left:12px}.cmp-l.r{right:12px}
+.cmp-frame:fullscreen{display:flex;align-items:center;justify-content:center;border:0;border-radius:0}
+.cmp-frame:fullscreen .cmp-stage{width:min(100vw,calc(100vh * var(--ar)))}
+.cmp-cap{color:var(--dim);font-size:13px;line-height:1.5;margin-top:10px}.cmp-cap[hidden]{display:none}
+.cmp-cap a{color:inherit}
+@media (max-width:760px){.cmp-bar{gap:6px}.cmp-bar button{font-size:12.5px;padding:6px 11px}.cmp-bar .sp{flex-basis:100%;height:0}.cmp-l{font-size:11.5px;top:8px}.cmp-l.l{left:8px}.cmp-l.r{right:8px}.g-ribbon{grid-auto-columns:78%}.stats{gap:22px 30px}.cta-row .btn{white-space:normal;text-align:center}}
 </style>`;
 
 function page({ file, title, desc, h1, crumb, lead, body, u, jsonld, object, ogImage, ogDesc }) {
@@ -559,6 +580,37 @@ function albumPage(a, r, honesty) {
     </div>
   </section>\n` : '';
 
+  // «до/после»: обмер → мебель / декор, листы этого выпуска, обрезанные по контуру стен (tools/compare-pairs.js)
+  const pairs = CMP.build(SITE, a.slug, r.sheets);
+  const cmp = pairs.length ? `  <section class="blk" id="do-posle">
+    <div class="wrap">
+      <div class="kicker">До и после</div>
+      <h2>${a.house ? "Дом" : "Квартира"} как есть — и как будет</h2>
+      <p class="sub">Потяните ползунок: слева обмерный план этого объекта, справа — тот же план после проекта. Оба — листы
+      этого альбома, совмещённые по контуру стен.</p>
+      <div class="cmp" data-cmp>
+        <div class="cmp-bar">
+          ${pairs.length > 1 ? pairs.map((p, i) => `<button type="button" class="cmp-tab" aria-selected="${i ? 'false' : 'true'}">${esc(p.tab)}</button>`).join('\n          ') : ''}
+          <span class="sp"></span>
+          <button type="button" data-mode="split">Разделить</button>
+          <button type="button" data-mode="before">Как есть</button>
+          <button type="button" data-mode="after">Как будет</button>
+          <button type="button" data-mode="full">Во весь экран</button>
+        </div>
+        <div class="cmp-frame">
+        ${pairs.map((p, i) => `<figure class="cmp-stage" id="${p.id}"${i ? ' hidden' : ''} style="--ar:${(p.after.w / p.after.h).toFixed(4)}">
+          <img src="${p.after.src}" alt="${esc(a.name)} — ${esc(p.after.cap.toLowerCase())}" width="${p.after.w}" height="${p.after.h}" loading="lazy" decoding="async">
+          <div class="cmp-b"><img src="${p.before.src}" alt="${esc(a.name)} — ${esc(p.before.cap.toLowerCase())}" width="${p.before.w}" height="${p.before.h}" loading="lazy" decoding="async"></div>
+          <div class="cmp-h" role="slider" tabindex="0" aria-label="Сравнение: как есть и как будет" aria-valuemin="0" aria-valuemax="100" aria-valuenow="50"><i aria-hidden="true">⇆</i></div>
+          <span class="cmp-l l">Как есть</span><span class="cmp-l r">Как будет</span>
+        </figure>`).join('\n        ')}
+        </div>
+        ${pairs.map((p, i) => `<p class="cmp-cap"${i ? ' hidden' : ''}>Слева — <a href="${rv(p.before.sheet)}" rel="nofollow">лист ${p.before.no}</a> «${esc(p.before.cap.replace(/^.*— /, ''))}», справа — <a href="${rv(p.after.sheet)}" rel="nofollow">лист ${p.after.no}</a> «${esc(p.after.cap.replace(/^.*— /, ''))}». Стрелки ← → двигают ползунок с клавиатуры.</p>`).join('\n        ')}
+      </div>
+    </div>
+  </section>
+  <script src="../../js/compare.js" defer></script>\n` : '';
+
   const voice = `  <section class="blk" id="pravki">
     <div class="wrap">
       <div class="kicker">Правки</div>
@@ -617,7 +669,7 @@ ${a.preReview ? `      <p class="g-note" style="border-left:3px solid var(--gold
 ${areaNote}${prelim}${pdf}    </div>
   </section>
 
-${ribbon}${voice}${check}${honesty}
+${cmp}${ribbon}${voice}${check}${honesty}
   <section class="blk">
     <div class="wrap">
       <div class="kicker">Состав</div>
