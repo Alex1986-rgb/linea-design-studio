@@ -2,8 +2,9 @@
 #
 # Выкладка сайта LINEA на Beget (аккаунт aleks2si, сайт «dizain-studiya-kvartir»).
 #
-#   ./tools/deploy-beget.sh                    # технический адрес http://linea.aleks2si.beget.tech (закрыт от индекса)
-#   ./tools/deploy-beget.sh --site=domain      # боевой https://дизайн-студия-квартир.рф (после регистрации и SSL)
+#   ./tools/deploy-beget.sh                    # боевой https://дизайн-студия-квартир.рф (по умолчанию с 06.11.2026)
+#   ./tools/deploy-beget.sh --site=preview     # сборка под технический адрес (robots закрыт!) — ОПАСНО: та же папка, что у домена,
+#                                              # домен получит запрет индексации; скрипт требует LINEA_ALLOW_PREVIEW=1
 #   ./tools/deploy-beget.sh --dry-run          # показать, что поедет, ничего не менять
 #   ./tools/deploy-beget.sh --check            # только связь, папка и прозвон живого адреса
 #   ./tools/deploy-beget.sh --prune            # убрать с сайта файлы, которых нет в выпуске (не удаляет: переносит в <docroot>_backup/<дата>/ вне веб-корня)
@@ -32,7 +33,7 @@ DOCROOT="${LINEA_DOCROOT:-dizain-studiya-kvartir/public_html}"
 BATCH_MB="${BATCH_MB:-40}" BATCH_N="${BATCH_N:-300}" BATCH_PAUSE="${BATCH_PAUSE:-3}"
 MARK=".linea-deploy"
 
-SITE=preview DRY=0 ONLY_CHECK=0 PRUNE=0
+SITE=domain DRY=0 ONLY_CHECK=0 PRUNE=0
 for a in "$@"; do
   case "$a" in
     --site=*) SITE="${a#--site=}" ;;
@@ -43,6 +44,9 @@ for a in "$@"; do
     *) echo "Неизвестный ключ: $a (см. --help)" >&2; exit 2 ;;
   esac
 done
+if [ "$SITE" = preview ] && [ "${LINEA_ALLOW_PREVIEW:-0}" != 1 ]; then
+  echo "Сборка preview закрывает сайт от поиска, а папка на Beget общая с доменом. Нужно — LINEA_ALLOW_PREVIEW=1 $0 --site=preview" >&2; exit 2
+fi
 OUT="$ROOT/.deploy/$SITE"
 BASE=$(cd "$ROOT" && LINEA_SITE="$SITE" node -e "process.stdout.write(require('./tools/site-shell.js').BASE)") \
   || { echo "Нет адреса для --site=$SITE (см. SITE_BASES в tools/site-shell.js)" >&2; exit 2; }
