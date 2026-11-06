@@ -26,3 +26,9 @@
 tools/site-shell.js, gost-facts.js, gen-gost-pages.js, gen-catalog.js, gen-more-pages.js, gen-site-pages.js, gen-articles.js,
 gen-info-pages.js, gen-home.js, archive-old-demos.js, sync-gost-releases.sh, новые gen-moved-pages.js и check-links.js;
 site/index.html, brief.html, js/brief.js и пересобранные страницы site/; server/config.example.php; CLAUDE.md.
+
+## Выкладка (06.11.2026)
+- Александр выложил `deploy-beget.sh` без ключа → в общую папку Beget легла сборка preview: домен получил `robots: Disallow /` и canonical на beget.tech.
+  Исправлено перезаливкой `--site=domain` (проверено: robots открыт, canonical на домене, http→https 301, заглушки домов ведут на квартиры, ползунок и звёзды на месте).
+- Скрипт теперь по умолчанию льёт домен; preview — только с `LINEA_ALLOW_PREVIEW=1` (коммит 9a4d4492).
+- На сервере 1376 лишних файлов (в основном альбомы домов) — убрать по желанию: `./tools/deploy-beget.sh --site=domain --prune` (переносит в бэкап вне веб-корня).
