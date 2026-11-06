@@ -21,7 +21,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,500;0,600;1,500&family=Inter:wght@400;600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="../../css/main.css?v=36">
+<link rel="stylesheet" href="../../css/main.css?v=37">
 <style>
 .g-why{color:var(--ink);font-size:15px;line-height:1.55;max-width:760px;margin:-4px 0 10px}.g-why b{color:var(--gold);font-weight:600}
 .g-hero{margin:0}.g-hero img{display:block;width:100%;height:auto;max-height:640px;object-fit:cover;border:1px solid var(--line);border-radius:4px;background:#14130f}
@@ -38,27 +38,53 @@
 .g-steps b{display:block;margin-bottom:6px}.g-steps p{margin:0;color:var(--mut);font-size:14px;line-height:1.55}
 .tile .g-type{display:block;color:var(--dim);font-size:12.5px;margin:-4px 0 10px}
 .tile img.sheet{object-fit:contain;background:#f4f1ea}
-.cmp-bar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:0 0 14px}
-.cmp-bar button{font:inherit;font-size:13.5px;color:var(--ink);background:transparent;border:1px solid var(--line);border-radius:999px;padding:7px 14px;cursor:pointer}
-.cmp-bar button:hover{border-color:var(--gold)}.cmp-bar button[aria-selected=true]{background:var(--gold);border-color:var(--gold);color:#14130f}
-.cmp-bar .sp{flex:1}
-.cmp-frame{background:#fff;border:1px solid var(--line);border-radius:4px;overflow:hidden}
-.cmp-stage{position:relative;margin:0;touch-action:pan-y;user-select:none;-webkit-user-select:none;cursor:ew-resize;--p:50%}
+.cmp{background:var(--panel);border:1px solid var(--line)}
+.cmp-head{padding:30px 34px 22px;border-bottom:1px solid var(--line)}
+.cmp-head .kicker{margin-bottom:10px}
+.cmp-title{font-family:var(--serif);font-weight:400;text-transform:uppercase;letter-spacing:.05em;font-size:clamp(22px,2.6vw,30px);line-height:1.35;margin:0 0 10px}
+.cmp-sub{color:var(--mut);font-size:14.5px;line-height:1.6;max-width:760px;margin:0 0 20px}
+.cmp-floors{display:flex;gap:8px;margin:0 0 14px}
+.cmp-floors button{font:inherit;font-size:13px;letter-spacing:.05em;padding:6px 14px;background:transparent;color:var(--ink);border:1px solid var(--line);border-radius:0;cursor:pointer;transition:.18s}
+.cmp-floors button:hover{border-color:#C9A45F80}
+.cmp-floors button[aria-pressed=true]{background:#F2EEE6;border-color:#F2EEE6;color:#1B1915;font-weight:600}
+.cmp-row{display:flex;flex-wrap:wrap;justify-content:space-between;gap:12px}
+.cmp-seg{display:flex}
+.cmp-seg button{font:inherit;height:36px;padding:0 20px;font-size:11px;letter-spacing:.12em;text-transform:uppercase;background:transparent;color:var(--ink);border:1px solid #F2EEE64D;border-radius:0;margin-right:-1px;cursor:pointer;transition:.2s}
+.cmp-seg button:last-child{margin-right:0}
+.cmp-seg button:hover{background:#F2EEE61A;border-color:#F2EEE680}
+.cmp-seg button[aria-pressed=true]{background:var(--gold);border-color:var(--gold);color:#14130f;font-weight:600;position:relative}
+.cmp-seg button:disabled{opacity:.35;cursor:default}
+.cmp-frame{position:relative;background:#F2EEE6;overflow:hidden}
+.cmp-stage{position:relative;margin:0;width:100%;aspect-ratio:var(--ar);max-height:74vh;touch-action:pan-y;user-select:none;-webkit-user-select:none;cursor:ew-resize;--p:50%}
 .cmp-stage[hidden]{display:none}
-.cmp-stage img{display:block;width:100%;height:auto;pointer-events:none}
-.cmp-b{position:absolute;inset:0;clip-path:inset(0 calc(100% - var(--p)) 0 0)}
-.cmp-b img{width:100%;height:100%;object-fit:contain}
-.cmp-h{position:absolute;top:0;bottom:0;left:var(--p);width:44px;margin-left:-22px;outline:none;display:flex;justify-content:center}
-.cmp-h::before{content:"";position:absolute;top:0;bottom:0;width:2px;background:var(--gold);box-shadow:0 0 0 1px rgba(20,19,15,.35)}
-.cmp-h i{position:absolute;top:50%;width:40px;height:40px;margin-top:-20px;border-radius:50%;background:var(--gold);color:#14130f;display:flex;align-items:center;justify-content:center;font-style:normal;font-size:17px;box-shadow:0 2px 10px rgba(0,0,0,.35)}
-.cmp-h:focus-visible i{outline:3px solid #fff;outline-offset:2px}
-.cmp-l{position:absolute;top:12px;padding:5px 10px;border-radius:3px;background:rgba(20,19,15,.78);color:#f4f1ea;font-size:12.5px;pointer-events:none}
-.cmp-l.l{left:12px}.cmp-l.r{right:12px}
-.cmp-frame:fullscreen{display:flex;align-items:center;justify-content:center;border:0;border-radius:0}
-.cmp-frame:fullscreen .cmp-stage{width:min(100vw,calc(100vh * var(--ar)))}
-.cmp-cap{color:var(--dim);font-size:13px;line-height:1.5;margin-top:10px}.cmp-cap[hidden]{display:none}
-.cmp-cap a{color:inherit}
-@media (max-width:760px){.cmp-bar{gap:6px}.cmp-bar button{font-size:12.5px;padding:6px 11px}.cmp-bar .sp{flex-basis:100%;height:0}.cmp-l{font-size:11.5px;top:8px}.cmp-l.l{left:8px}.cmp-l.r{right:8px}.g-ribbon{grid-auto-columns:78%}.stats{gap:22px 30px}.cta-row .btn{white-space:normal;text-align:center}}
+.cmp-stage img{position:absolute;inset:0;display:block;width:100%;height:100%;object-fit:contain;pointer-events:none}
+.cmp-b{position:absolute;inset:0;clip-path:inset(0 calc(100% - var(--p)) 0 0);background:#F2EEE6}
+.cmp-h{position:absolute;top:0;bottom:0;left:var(--p);width:44px;margin-left:-22px;outline:none;display:flex;justify-content:center;z-index:3}
+.cmp-h::before{content:"";position:absolute;top:0;bottom:0;width:2px;background:#1B1915;transition:width .15s}
+.cmp-h:hover::before{width:3px}
+.cmp-h i{position:absolute;top:50%;width:44px;height:44px;margin-top:-22px;background:#1B1915;border:1px solid var(--gold);display:flex;align-items:center;justify-content:center;gap:7px;box-shadow:0 4px 15px rgba(0,0,0,.4);transition:transform .15s,box-shadow .15s}
+.cmp-h i::before,.cmp-h i::after{content:"";width:1px;height:14px;background:var(--gold)}
+.cmp-h:hover i,.cmp-stage.is-drag .cmp-h i{transform:scale(1.06);box-shadow:0 6px 20px rgba(0,0,0,.5)}
+.cmp-h:focus-visible i{outline:2px solid #fff;outline-offset:3px}
+.cmp-l{position:absolute;top:16px;padding:7px 14px;font-size:11px;letter-spacing:.1em;text-transform:uppercase;pointer-events:none;z-index:2}
+.cmp-l.l{left:16px;background:#1B1915;color:#F2EEE6}.cmp-l.r{right:66px;background:#F2EEE6;color:#1B1915;border:1px solid #1B19151F}
+.cmp-zoom{position:absolute;top:12px;right:12px;width:40px;height:40px;border-radius:50%;background:#1B1915cc;border:1px solid #F2EEE64D;color:#fff;display:flex;align-items:center;justify-content:center;cursor:pointer;z-index:4;transition:.2s}
+.cmp-zoom:hover{background:#1B1915;border-color:var(--gold)}
+.cmp-zoom svg{width:19px;height:19px;stroke:currentColor;stroke-width:2;fill:none}
+.cmp-hint{position:absolute;bottom:20px;left:50%;transform:translateX(-50%);display:flex;align-items:center;gap:8px;padding:10px 20px;border-radius:20px;background:#1B1915e6;color:#fff;font-size:12px;white-space:nowrap;pointer-events:none;z-index:4;opacity:0;animation:cmpIn .5s ease 1s forwards,cmpOut .5s ease 4.5s forwards}
+.cmp-hint svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:2;animation:cmpSwipe 1.5s ease-in-out infinite}
+.cmp.touched .cmp-hint{display:none}
+@keyframes cmpIn{to{opacity:1}}@keyframes cmpOut{from{opacity:1}to{opacity:0}}
+@keyframes cmpSwipe{0%,100%{transform:translateX(-3px)}50%{transform:translateX(3px)}}
+@media (prefers-reduced-motion:reduce){.cmp-hint{animation:none;opacity:1}.cmp-hint svg{animation:none}}
+.cmp-frame:fullscreen{display:flex;align-items:center;justify-content:center}
+.cmp-frame:fullscreen .cmp-stage{max-height:none;height:100vh}
+.cmp-foot{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:14px 24px;padding:20px 34px;border-top:1px solid var(--line)}
+.cmp-cap{color:var(--mut);font-size:13px;line-height:1.6;margin:0}.cmp-cap[hidden]{display:none}
+.cmp-cap b{color:var(--ink);font-weight:500}.cmp-cap a{color:inherit}
+.cmp-cta{display:inline-block;padding:14px 32px;font-size:12px;font-weight:500;letter-spacing:.1em;text-transform:uppercase;color:var(--ink);text-decoration:none;border:1px solid #F2EEE699;transition:.3s;white-space:nowrap}
+.cmp-cta:hover{background:var(--gold);border-color:var(--gold);color:#14130f}
+@media (max-width:760px){.cmp-head{padding:22px 16px 16px}.cmp-long{display:none}.cmp-row{gap:8px}.cmp-row>*{flex:1 1 100%}.cmp-seg button{flex:1;height:34px;padding:0 6px;font-size:10px;letter-spacing:.08em}.cmp-floors button{flex:1}.cmp-stage{max-height:62vh}.cmp-l{font-size:10px;padding:5px 9px;top:10px}.cmp-l.l{left:10px}.cmp-l.r{right:58px}.cmp-zoom{width:36px;height:36px;top:8px;right:8px}.cmp-hint{font-size:11px;padding:8px 16px}.cmp-foot{padding:16px;flex-direction:column;align-items:stretch;text-align:center}.cmp-cta{text-align:center;padding:12px 20px}.g-ribbon{grid-auto-columns:78%}.stats{gap:22px 30px}.cta-row .btn{white-space:normal;text-align:center}}
 </style>
 <script type="application/ld+json">{"@context":"https://schema.org","@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"LINEA","item":"https://xn-----6kccjicviedfr1b2cbishm8w.xn--p1ai/"},{"@type":"ListItem","position":2,"name":"Портфолио","item":"https://xn-----6kccjicviedfr1b2cbishm8w.xn--p1ai/portfolio-hub/"},{"@type":"ListItem","position":3,"name":"Квартира 101 м² · ретро с авторской мебелью","item":"https://xn-----6kccjicviedfr1b2cbishm8w.xn--p1ai/portfolio/gost-retro103/"}]}</script>
 <script type="application/ld+json">{"@context":"https://schema.org","@type":"CreativeWork","name":"Квартира 101 м² · ретро с авторской мебелью","description":"Две соседние квартиры по обмеру объединены в одну: гостиная-столовая с балконом, кабинет-библиотека, мастер-спальня с ванной. Стиль — середина века и ар-деко: орех и тик, латунь, изумрудный бархат, горчичное букле, терраццо.","url":"https://xn-----6kccjicviedfr1b2cbishm8w.xn--p1ai/portfolio/gost-retro103/","inLanguage":"ru","genre":"Дизайн-проект интерьера, рабочая документация","image":"https://xn-----6kccjicviedfr1b2cbishm8w.xn--p1ai/assets/portfolio/gost-retro103-hero.jpg","author":{"@type":"Person","name":"Кырлан Александр"},"publisher":{"@type":"Organization","name":"LINEA","url":"https://xn-----6kccjicviedfr1b2cbishm8w.xn--p1ai/"},"associatedMedia":[{"@type":"ImageObject","contentUrl":"https://xn-----6kccjicviedfr1b2cbishm8w.xn--p1ai/assets/portfolio/gost-retro103/room-living-wA.jpg","caption":"Квартира 101 м² · ретро с авторской мебелью — гостиная, визуализация"},{"@type":"ImageObject","contentUrl":"https://xn-----6kccjicviedfr1b2cbishm8w.xn--p1ai/assets/portfolio/gost-retro103/room-kitchen-wB.jpg","caption":"Квартира 101 м² · ретро с авторской мебелью — кухня-столовая, визуализация"},{"@type":"ImageObject","contentUrl":"https://xn-----6kccjicviedfr1b2cbishm8w.xn--p1ai/assets/portfolio/gost-retro103/room-bedroom1-wD.jpg","caption":"Квартира 101 м² · ретро с авторской мебелью — спальня, визуализация"},{"@type":"ImageObject","contentUrl":"https://xn-----6kccjicviedfr1b2cbishm8w.xn--p1ai/assets/portfolio/gost-retro103/room-bedroom2-wA.jpg","caption":"Квартира 101 м² · ретро с авторской мебелью — спальня, визуализация"},{"@type":"ImageObject","contentUrl":"https://xn-----6kccjicviedfr1b2cbishm8w.xn--p1ai/assets/portfolio/gost-retro103/room-study-wA.jpg","caption":"Квартира 101 м² · ретро с авторской мебелью — кабинет, визуализация"},{"@type":"ImageObject","contentUrl":"https://xn-----6kccjicviedfr1b2cbishm8w.xn--p1ai/assets/portfolio/gost-retro103/room-bath1-wC.jpg","caption":"Квартира 101 м² · ретро с авторской мебелью — ванная, визуализация"},{"@type":"ImageObject","contentUrl":"https://xn-----6kccjicviedfr1b2cbishm8w.xn--p1ai/assets/portfolio/gost-retro103/room-bath2-wide.jpg","caption":"Квартира 101 м² · ретро с авторской мебелью — ванная, визуализация"},{"@type":"ImageObject","contentUrl":"https://xn-----6kccjicviedfr1b2cbishm8w.xn--p1ai/assets/portfolio/gost-retro103/room-hall-wA.jpg","caption":"Квартира 101 м² · ретро с авторской мебелью — прихожая, визуализация"},{"@type":"ImageObject","contentUrl":"https://xn-----6kccjicviedfr1b2cbishm8w.xn--p1ai/assets/portfolio/gost-retro103/room-wardrobe-wide.jpg","caption":"Квартира 101 м² · ретро с авторской мебелью — гардеробная, визуализация"},{"@type":"ImageObject","contentUrl":"https://xn-----6kccjicviedfr1b2cbishm8w.xn--p1ai/assets/portfolio/gost-retro103/room-corridor-wB.jpg","caption":"Квартира 101 м² · ретро с авторской мебелью — холл, визуализация"},{"@type":"ImageObject","contentUrl":"https://xn-----6kccjicviedfr1b2cbishm8w.xn--p1ai/assets/portfolio/gost-retro103/room-storage-wide.jpg","caption":"Квартира 101 м² · ретро с авторской мебелью — кладовая, визуализация"},{"@type":"ImageObject","contentUrl":"https://xn-----6kccjicviedfr1b2cbishm8w.xn--p1ai/assets/portfolio/gost-retro103/room-living-wD.jpg","caption":"Квартира 101 м² · ретро с авторской мебелью — гостиная, визуализация"},{"@type":"ImageObject","contentUrl":"https://xn-----6kccjicviedfr1b2cbishm8w.xn--p1ai/assets/portfolio/gost-retro103/room-living-wC.jpg","caption":"Квартира 101 м² · ретро с авторской мебелью — гостиная, визуализация"},{"@type":"ImageObject","contentUrl":"https://xn-----6kccjicviedfr1b2cbishm8w.xn--p1ai/assets/portfolio/gost-retro103/room-living-wB.jpg","caption":"Квартира 101 м² · ретро с авторской мебелью — гостиная, визуализация"},{"@type":"ImageObject","contentUrl":"https://xn-----6kccjicviedfr1b2cbishm8w.xn--p1ai/assets/portfolio/gost-retro103/room-kitchen-wC.jpg","caption":"Квартира 101 м² · ретро с авторской мебелью — кухня-столовая, визуализация"},{"@type":"ImageObject","contentUrl":"https://xn-----6kccjicviedfr1b2cbishm8w.xn--p1ai/assets/portfolio/gost-retro103/room-bedroom1-wA.jpg","caption":"Квартира 101 м² · ретро с авторской мебелью — спальня, визуализация"},{"@type":"ImageObject","contentUrl":"https://xn-----6kccjicviedfr1b2cbishm8w.xn--p1ai/assets/portfolio/gost-retro103/room-bedroom1-wB.jpg","caption":"Квартира 101 м² · ретро с авторской мебелью — спальня, визуализация"},{"@type":"ImageObject","contentUrl":"https://xn-----6kccjicviedfr1b2cbishm8w.xn--p1ai/assets/portfolio/gost-retro103/room-bedroom2-wD.jpg","caption":"Квартира 101 м² · ретро с авторской мебелью — спальня, визуализация"},{"@type":"ImageObject","contentUrl":"https://xn-----6kccjicviedfr1b2cbishm8w.xn--p1ai/assets/portfolio/gost-retro103/room-bedroom2-wB.jpg","caption":"Квартира 101 м² · ретро с авторской мебелью — спальня, визуализация"},{"@type":"ImageObject","contentUrl":"https://xn-----6kccjicviedfr1b2cbishm8w.xn--p1ai/assets/portfolio/gost-retro103/room-bedroom2-wC.jpg","caption":"Квартира 101 м² · ретро с авторской мебелью — спальня, визуализация"},{"@type":"ImageObject","contentUrl":"https://xn-----6kccjicviedfr1b2cbishm8w.xn--p1ai/assets/portfolio/gost-retro103/room-study-wD.jpg","caption":"Квартира 101 м² · ретро с авторской мебелью — кабинет, визуализация"},{"@type":"ImageObject","contentUrl":"https://xn-----6kccjicviedfr1b2cbishm8w.xn--p1ai/assets/portfolio/gost-retro103/room-study-wB.jpg","caption":"Квартира 101 м² · ретро с авторской мебелью — кабинет, визуализация"},{"@type":"ImageObject","contentUrl":"https://xn-----6kccjicviedfr1b2cbishm8w.xn--p1ai/assets/portfolio/gost-retro103/room-bath1-wD.jpg","caption":"Квартира 101 м² · ретро с авторской мебелью — ванная, визуализация"},{"@type":"ImageObject","contentUrl":"https://xn-----6kccjicviedfr1b2cbishm8w.xn--p1ai/assets/portfolio/gost-retro103/room-bath1-wB.jpg","caption":"Квартира 101 м² · ретро с авторской мебелью — ванная, визуализация"},{"@type":"ImageObject","contentUrl":"https://xn-----6kccjicviedfr1b2cbishm8w.xn--p1ai/assets/portfolio/gost-retro103/room-hall-wB.jpg","caption":"Квартира 101 м² · ретро с авторской мебелью — прихожая, визуализация"}]}</script>
@@ -135,40 +161,45 @@
 
   <section class="blk" id="do-posle">
     <div class="wrap">
-      <div class="kicker">До и после</div>
-      <h2>Квартира как есть — и как будет</h2>
-      <p class="sub">Потяните ползунок: слева обмерный план этого объекта, справа — тот же план после проекта. Оба — листы
-      этого альбома, совмещённые по контуру стен.</p>
       <div class="cmp" data-cmp>
-        <div class="cmp-bar">
-          <button type="button" class="cmp-tab" aria-selected="true">Мебель</button>
-          <button type="button" class="cmp-tab" aria-selected="false">Декор</button>
-          <span class="sp"></span>
-          <button type="button" data-mode="split">Разделить</button>
-          <button type="button" data-mode="before">Как есть</button>
-          <button type="button" data-mode="after">Как будет</button>
-          <button type="button" data-mode="full">Во весь экран</button>
+        <div class="cmp-head">
+          <div class="kicker">До и после</div>
+          <h2 class="cmp-title">Квартира как есть — и как будет</h2>
+          <p class="cmp-sub">Слева обмерный план этого объекта, справа — тот же план после проекта. Оба — листы этого альбома,
+          совмещённые по контуру стен.</p>
+          
+          <div class="cmp-row">
+            <div class="cmp-seg" role="group" aria-label="Что показать после"><button type="button" data-kind="mebel" aria-pressed="true">С мебелью</button><button type="button" data-kind="dekor" aria-pressed="false">С <span class="cmp-long">текстилем и </span>декором</button></div>
+            <div class="cmp-seg" role="group" aria-label="Режим сравнения"><button type="button" data-mode="split" aria-pressed="true">Разделить</button><button type="button" data-mode="before" aria-pressed="false"><span class="cmp-long">Только </span>как есть</button><button type="button" data-mode="after" aria-pressed="false"><span class="cmp-long">Только </span>как будет</button></div>
+          </div>
         </div>
         <div class="cmp-frame">
-        <figure class="cmp-stage" id="cmp-1" style="--ar:1.0724">
+        <figure class="cmp-stage" id="cmp-1" data-floor="" data-kind="mebel" style="--ar:1.0724">
           <img src="compare/mebel.svg" alt="Квартира 101 м² · ретро с авторской мебелью — как будет — расстановка мебели" width="1600" height="1492" loading="lazy" decoding="async">
           <div class="cmp-b"><img src="compare/obmer.svg" alt="Квартира 101 м² · ретро с авторской мебелью — как есть — обмерный план" width="1600" height="1492" loading="lazy" decoding="async"></div>
-          <div class="cmp-h" role="slider" tabindex="0" aria-label="Сравнение: как есть и как будет" aria-valuemin="0" aria-valuemax="100" aria-valuenow="50"><i aria-hidden="true">⇆</i></div>
+          <div class="cmp-h" role="slider" tabindex="0" aria-label="Сравнение: как есть и как будет" aria-valuemin="0" aria-valuemax="100" aria-valuenow="50"><i aria-hidden="true"></i></div>
           <span class="cmp-l l">Как есть</span><span class="cmp-l r">Как будет</span>
         </figure>
-        <figure class="cmp-stage" id="cmp-2" hidden style="--ar:1.0724">
+        <figure class="cmp-stage" id="cmp-2" data-floor="" data-kind="dekor" hidden style="--ar:1.0724">
           <img src="compare/dekor.svg" alt="Квартира 101 м² · ретро с авторской мебелью — как будет — текстиль и декор" width="1600" height="1492" loading="lazy" decoding="async">
           <div class="cmp-b"><img src="compare/obmer.svg" alt="Квартира 101 м² · ретро с авторской мебелью — как есть — обмерный план" width="1600" height="1492" loading="lazy" decoding="async"></div>
-          <div class="cmp-h" role="slider" tabindex="0" aria-label="Сравнение: как есть и как будет" aria-valuemin="0" aria-valuemax="100" aria-valuenow="50"><i aria-hidden="true">⇆</i></div>
+          <div class="cmp-h" role="slider" tabindex="0" aria-label="Сравнение: как есть и как будет" aria-valuemin="0" aria-valuemax="100" aria-valuenow="50"><i aria-hidden="true"></i></div>
           <span class="cmp-l l">Как есть</span><span class="cmp-l r">Как будет</span>
         </figure>
+          <button type="button" class="cmp-zoom" data-mode="full" aria-label="Открыть во весь экран" title="Открыть во весь экран"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35M11 8v6M8 11h6"/></svg></button>
+          <div class="cmp-hint" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M5 12h14M12 5l7 7-7 7"/></svg>Потяните для сравнения</div>
         </div>
-        <p class="cmp-cap">Слева — <a href="../../review.html?p=gost-retro103&amp;s=14-architect-obmer.svg" rel="nofollow">лист 14</a> «обмерный план», справа — <a href="../../review.html?p=gost-retro103&amp;s=19-interior-designer-furniture.svg" rel="nofollow">лист 19</a> «расстановка мебели». Стрелки ← → двигают ползунок с клавиатуры.</p>
-        <p class="cmp-cap" hidden>Слева — <a href="../../review.html?p=gost-retro103&amp;s=14-architect-obmer.svg" rel="nofollow">лист 14</a> «обмерный план», справа — <a href="../../review.html?p=gost-retro103&amp;s=62-decorator-decor-plan.svg" rel="nofollow">лист 62</a> «текстиль и декор». Стрелки ← → двигают ползунок с клавиатуры.</p>
+        <div class="cmp-foot">
+          <div>
+          <p class="cmp-cap"><b>100,72 м² | Квартира 101 м² · ретро с авторской мебелью</b> · Масштаб листов 1:75<br>Слева — <a href="../../review.html?p=gost-retro103&amp;s=14-architect-obmer.svg" rel="nofollow">лист 14</a> «обмерный план», справа — <a href="../../review.html?p=gost-retro103&amp;s=19-interior-designer-furniture.svg" rel="nofollow">лист 19</a> «расстановка мебели»</p>
+          <p class="cmp-cap" hidden><b>100,72 м² | Квартира 101 м² · ретро с авторской мебелью</b> · Масштаб листов 1:75<br>Слева — <a href="../../review.html?p=gost-retro103&amp;s=14-architect-obmer.svg" rel="nofollow">лист 14</a> «обмерный план», справа — <a href="../../review.html?p=gost-retro103&amp;s=62-decorator-decor-plan.svg" rel="nofollow">лист 62</a> «текстиль и декор»</p>
+          </div>
+          <a class="cmp-cta" href="../../brief.html">Обсудить свой проект</a>
+        </div>
       </div>
     </div>
   </section>
-  <script src="../../js/compare.js" defer></script>
+  <script src="../../js/compare.js?v=2" defer></script>
   <section class="blk">
     <div class="wrap">
       <div class="kicker">Визуализации</div>

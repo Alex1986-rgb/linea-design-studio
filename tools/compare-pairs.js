@@ -14,7 +14,8 @@ function meta(svg) {
   const sheet = (head.match(/data-sheet="([^"]*)"/) || [])[1] || '';
   const title = (head.match(/data-title="([^"]*)"/) || [])[1] || '';
   const floor = (title.split(' · ')[1] || '').trim();
-  return { sheet, title, floor };
+  const scale = (head.match(/data-scale="([^"]*)"/) || [])[1] || '';
+  return { sheet, title, floor, scale };
 }
 
 // габарит группы стен в координатах листа, с учётом translate у родительских <g>
@@ -106,12 +107,12 @@ function build(SITE, slug, sheets) {
         keep.add(name);
         it._dim = [c.w, c.h];
       }
-      return { src: `compare/${name}`, cap: KINDS[it.sheet], sheet: it.file, no: it.no, w: it._dim[0], h: it._dim[1] };
+      return { src: `compare/${name}`, cap: KINDS[it.sheet], sheet: it.file, no: it.no, scale: it.scale, w: it._dim[0], h: it._dim[1] };
     };
     const b = side(p.before, 'obmer');
     const a = side(p.after, p.kind === 'furniture' ? 'mebel' : 'dekor');
     return {
-      id: `cmp-${i + 1}`,
+      id: `cmp-${i + 1}`, floor: p.floor, kind: p.kind === 'furniture' ? 'mebel' : 'dekor',
       tab: `${p.kind === 'furniture' ? 'Мебель' : 'Декор'}${p.floor ? ' · ' + p.floor : ''}`,
       before: b, after: a,
     };

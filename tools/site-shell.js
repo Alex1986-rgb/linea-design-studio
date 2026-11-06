@@ -36,7 +36,7 @@ const SITE_DEFAULT = 'domain';
 const SITE = process.env.LINEA_SITE || SITE_DEFAULT;
 if (!process.env.LINEA_BASE && !SITE_BASES[SITE]) throw new Error(`LINEA_SITE=${SITE}: нет такого адреса (${Object.keys(SITE_BASES).join('|')})`);
 const BASE = String(process.env.LINEA_BASE || SITE_BASES[SITE]).replace(/\/+$/, '');
-const CSSV = 'v=36';
+const CSSV = 'v=37';
 
 // Разделы сайта в порядке меню. Добавили раздел — правится только здесь.
 // menu: false — раздел живёт в подвале и крошках, но не в шапке (шапка

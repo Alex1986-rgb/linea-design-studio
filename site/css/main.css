@@ -747,17 +747,13 @@ footer.site::before{
 footer.site{padding-top:96px}
 footer.site::after{top:44px}
 
-/* 5. Изумрудные кабошоны: огранённая вставка перед номерами листов и в шильдиках */
-.plate-cap i::before,.badge::before{
-  content:'';display:inline-block;width:8px;height:8px;margin-right:8px;
-  transform:rotate(45deg);vertical-align:1px;
-  background:linear-gradient(135deg,#2E8A6E 0%,var(--emerald) 45%,var(--emerald-deep) 100%);
-  box-shadow:inset 0 1px 1px #7FD6BC66,0 0 0 1px #C9A45F}
-.badge::before{width:7px;height:7px;margin-right:9px}
-.fstep.on .fnum::after{
-  content:'';display:inline-block;width:7px;height:7px;margin-left:10px;transform:rotate(45deg);
-  background:linear-gradient(135deg,#2E8A6E,var(--emerald-deep));
-  box-shadow:inset 0 1px 1px #7FD6BC66,0 0 0 1px #C9A45F}
+/* 5. Золотые звёзды перед номерами листов, в шильдиках и у активного шага (были ромбики, 06.11.2026) */
+.plate-cap i::before,.badge::before,.fstep.on .fnum::after{
+  content:'';display:inline-block;width:11px;height:11px;margin-right:8px;vertical-align:-1px;
+  clip-path:polygon(50% 0,61.8% 34.5%,98% 34.5%,68.6% 56.5%,79.4% 91%,50% 69.5%,20.6% 91%,31.4% 56.5%,2% 34.5%,38.2% 34.5%);
+  background:linear-gradient(160deg,#F3DC9E 0%,#C9A45F 55%,#8F6C33 100%)}
+.badge::before{width:10px;height:10px;margin-right:9px}
+.fstep.on .fnum::after{width:10px;height:10px;margin:0 0 0 10px}
 
 /* Росчерк на первом экране убран: поверх живых фотографий вензель читался
    не как декор, а как царапина на снимке. Вензеля живут в рамках — у подписи. */
@@ -772,8 +768,8 @@ footer.site::after{top:44px}
   radial-gradient(9px 6px at 46% 82%,#C29A5B0d,transparent 70%),
   linear-gradient(180deg,#14120E,#100F0C)}
 
-/* 9. Крошки: разделитель-ромбик вместо косой черты */
-.crumbs a::after,.crumbs span:not(:last-child)::after{content:'◆';font-size:5px;vertical-align:2px;color:#C9A45F66;margin:0 10px}
+/* 9. Крошки: разделитель-звёздочка вместо косой черты */
+.crumbs a::after,.crumbs span:not(:last-child)::after{content:'★';font-size:8px;vertical-align:1px;color:#C9A45F99;margin:0 10px}
 
 @media (max-width:760px){
   .sig{padding:40px 26px}
