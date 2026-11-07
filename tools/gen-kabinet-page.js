@@ -19,7 +19,7 @@ ${SHELL.head(u, { title, desc: 'Кабинет клиента LINEA: дизай�
 <meta name="robots" content="noindex, nofollow">
 <meta name="referrer" content="no-referrer">
 <link rel="stylesheet" href="${u}css/brigady.css?v=2">
-<link rel="stylesheet" href="${u}css/kabinet.css?v=3">
+<link rel="stylesheet" href="${u}css/kabinet.css?v=4">
 </head>
 <body class="kab-body">
 ${SHELL.header(u, null)}
@@ -69,13 +69,13 @@ ${SHELL.head(u, { title: 'Кабинет бригады — LINEA', desc: 'Ка�
 <meta name="robots" content="noindex, nofollow">
 <meta name="referrer" content="no-referrer">
 <link rel="stylesheet" href="${u}css/brigady.css?v=3">
-<link rel="stylesheet" href="${u}css/kabinet.css?v=3">
+<link rel="stylesheet" href="${u}css/kabinet.css?v=4">
 </head>
 <body class="kab-body">
 ${SHELL.header(u, 'brigadam')}
 
 <main class="kab brg" aria-live="polite">
-  <div class="wrap bx-wrap"><noscript><p>Кабинет работает с включённым JavaScript.</p></noscript><div id="bx"><p class="kab-load">Открываем кабинет…</p></div></div>
+  <div class="wrap bx-wrap"><h1 class="sr-only">Кабинет бригады LINEA</h1><noscript><p>Кабинет работает с включённым JavaScript.</p></noscript><div id="bx"><p class="kab-load">Открываем кабинет…</p></div></div>
 </main>
 
 <nav class="kab-tabbar" id="kabBar" hidden aria-label="Разделы кабинета бригады">
