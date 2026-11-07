@@ -408,7 +408,9 @@ function renders(a, r) {
     .sort((x, y) => (ROOM_ORDER.indexOf(roomKey(x.name)) + 1 || 99) - (ROOM_ORDER.indexOf(roomKey(y.name)) + 1 || 99))[0];
   const heroV = first(/^3d-top(-et1)?$/, 'signed') || byRoom('signed') || first(/^3d-top(-et1)?$/) || byRoom('prelim') || shown[0];
   // лента: по одному кадру на помещение в порядке значимости, подписанные первыми, затем вторые кадры — до 8
-  const pool = shown.filter(v => v !== heroV);
+  // титул альбома идёт заглавным сам — тогда кадр heroV из ленты не убираем, иначе он пропадёт со страницы
+  const hasCover = !!dir && fs.existsSync(path.join(dir, 'cover', 'hero.jpg'));
+  const pool = shown.filter(v => hasCover || v !== heroV);
   const rank = v => { const k = roomKey(v.name); const i = ROOM_ORDER.indexOf(k); return (st(v) === 'signed' ? 0 : st(v) === 'prelim' ? 50 : 200) + (k === '3d-top' ? -1 : i < 0 ? 99 : i); };
   pool.sort((x, y) => rank(x) - rank(y));
   const pick = [], used = new Set();

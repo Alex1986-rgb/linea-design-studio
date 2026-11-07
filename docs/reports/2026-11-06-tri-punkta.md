@@ -32,3 +32,8 @@
 tools/gen-gost-pages.js; site/portfolio/gost-modern4k/*, site/portfolio/gost-elitemodern/*, site/assets/portfolio/gost-modern4k/*,
 site/assets/portfolio/gost-elitemodern/*, site/index.html, site/portfolio-hub/index.html, site/gost/index.html, site/sitemap.xml;
 docs/plans/2026-11-06-tri-punkta.md.
+
+## 07.11.2026 — подпись elite-modern
+- Александр подписал 5 кадров (вид сверху, гостиная ×2, кабинет, прихожая); в движке-своде коммит f5a161f. Итог: подписано 6, не принято 6.
+- Страница проекта и главная пересобраны. Починено в `gen-gost-pages.js`: подписанный вид сверху выпадал из ленты, потому что считался заглавным, хотя заглавным идёт титул альбома (`cover/hero.jpg`). Теперь при титуле кадр остаётся в ленте.
+- check-links: 83 страницы, битых 0. Не залито — нужна выкладка `./tools/deploy-beget.sh --site=domain`.
