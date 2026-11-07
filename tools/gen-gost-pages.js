@@ -384,7 +384,9 @@ function acceptanceOf(obj) {
 }
 function renders(a, r) {
   const man = path.join(SITE, 'portfolio', a.slug, '_renders.json');
-  const dir = OBJ[a.slug] && path.join(GD, 'projects', OBJ[a.slug], 'renders');
+  // GOST_ONLY=slug1,slug2 — брать из движка только эти альбомы, остальные оставить как на сайте (_renders.json)
+  const only = (process.env.GOST_ONLY || '').split(',').filter(Boolean);
+  const dir = OBJ[a.slug] && (!only.length || only.includes(a.slug)) && path.join(GD, 'projects', OBJ[a.slug], 'renders');
   // без визуализации заглавным идёт лист расстановки мебели — по нему сразу видно планировку
   const plan = r.sheets.find(x => /^План расстановки мебели/.test(x.title)) || r.sheets[0];
   const coverHero = { src: `portfolio/${a.slug}/sheets/${plan.file}`, alt: `${a.name} — ${plan.title.replace(/^./, c => c.toLowerCase())}`, w: 1587, h: 1123, kind: 'sheet' };
@@ -438,7 +440,16 @@ function renders(a, r) {
     const dst = path.join(rdir, `${v.name}.jpg`);
     sips(path.join(dir, `${v.name}.jpg`), dst, 1200);
     keep.add(`${v.name}.jpg`);
-    out.ribbon.push({ src: `assets/portfolio/${a.slug}/${v.name}.jpg`, alt: frameAlt(a, v.name), ...dims(dst), state: st(v) });
+    const item = { src: `assets/portfolio/${a.slug}/${v.name}.jpg`, alt: frameAlt(a, v.name), ...dims(dst), state: st(v), name: v.name, wall: v.wall || '' };
+    // «белая модель → визуализация»: глина снята той же камерой, что и кадр, — только у сверенных кадров
+    const clay = path.join(dir, 'clay', `clay-${v.name}.png`);
+    if ((item.state === 'signed' || item.state === 'prelim') && fs.existsSync(clay)) {
+      const cdst = path.join(rdir, `clay-${v.name}.jpg`);
+      sips(clay, cdst, 1200);
+      keep.add(`clay-${v.name}.jpg`);
+      item.clay = { src: `assets/portfolio/${a.slug}/clay-${v.name}.jpg`, ...dims(cdst) };
+    }
+    out.ribbon.push(item);
   }
   if (fs.existsSync(rdir)) for (const f of fs.readdirSync(rdir)) if (!keep.has(f)) fs.unlinkSync(path.join(rdir, f));
   return out;
@@ -466,7 +477,7 @@ const CSS = `<style>
 .cmp-head .kicker{margin-bottom:10px}
 .cmp-title{font-family:var(--serif);font-weight:400;text-transform:uppercase;letter-spacing:.05em;font-size:clamp(22px,2.6vw,30px);line-height:1.35;margin:0 0 10px}
 .cmp-sub{color:var(--mut);font-size:14.5px;line-height:1.6;max-width:760px;margin:0 0 20px}
-.cmp-floors{display:flex;gap:8px;margin:0 0 14px}
+.cmp-floors{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 14px}
 .cmp-floors button{font:inherit;font-size:13px;letter-spacing:.05em;padding:6px 14px;background:transparent;color:var(--ink);border:1px solid var(--line);border-radius:0;cursor:pointer;transition:.18s}
 .cmp-floors button:hover{border-color:#C9A45F80}
 .cmp-floors button[aria-pressed=true]{background:#F2EEE6;border-color:#F2EEE6;color:#1B1915;font-weight:600}
@@ -507,7 +518,7 @@ const CSS = `<style>
 .cmp-cap b{color:var(--ink);font-weight:500}.cmp-cap a{color:inherit}
 .cmp-cta{display:inline-block;padding:14px 32px;font-size:12px;font-weight:500;letter-spacing:.1em;text-transform:uppercase;color:var(--ink);text-decoration:none;border:1px solid #F2EEE699;transition:.3s;white-space:nowrap}
 .cmp-cta:hover{background:var(--gold);border-color:var(--gold);color:#14130f}
-@media (max-width:760px){.cmp-head{padding:22px 16px 16px}.cmp-long{display:none}.cmp-row{gap:8px}.cmp-row>*{flex:1 1 100%}.cmp-seg button{flex:1;height:34px;padding:0 6px;font-size:10px;letter-spacing:.08em}.cmp-floors button{flex:1}.cmp-stage{max-height:62vh}.cmp-l{font-size:10px;padding:5px 9px;top:10px}.cmp-l.l{left:10px}.cmp-l.r{right:58px}.cmp-zoom{width:36px;height:36px;top:8px;right:8px}.cmp-hint{font-size:11px;padding:8px 16px}.cmp-foot{padding:16px;flex-direction:column;align-items:stretch;text-align:center}.cmp-cta{text-align:center;padding:12px 20px}.g-ribbon{grid-auto-columns:78%}.stats{gap:22px 30px}.cta-row .btn{white-space:normal;text-align:center}}
+@media (max-width:760px){.cmp-head{padding:22px 16px 16px}.cmp-long{display:none}.cmp-row{gap:8px}.cmp-row>*{flex:1 1 100%}.cmp-seg button{flex:1;height:34px;padding:0 6px;font-size:10px;letter-spacing:.08em}.cmp-floors button{flex:1 1 auto}.cmp-stage{max-height:62vh}.cmp-l{font-size:10px;padding:5px 9px;top:10px}.cmp-l.l{left:10px}.cmp-l.r{right:58px}.cmp-zoom{width:36px;height:36px;top:8px;right:8px}.cmp-hint{font-size:11px;padding:8px 16px}.cmp-foot{padding:16px;flex-direction:column;align-items:stretch;text-align:center}.cmp-cta{text-align:center;padding:12px 20px}.g-ribbon{grid-auto-columns:78%}.stats{gap:22px 30px}.cta-row .btn{white-space:normal;text-align:center}}
 </style>`;
 
 function page({ file, title, desc, h1, crumb, lead, body, u, jsonld, object, ogImage, ogDesc }) {
@@ -645,8 +656,50 @@ function albumPage(a, r, honesty) {
         </div>
       </div>
     </div>
-  </section>
-  <script src="../../js/compare.js?v=2" defer></script>\n` : '';
+  </section>\n` : '';
+
+  // «модель → визуализация»: белая модель по чертежам и кадр той же камерой (только сверенные с планом кадры)
+  const LET = { A: 'А', B: 'Б', C: 'В', D: 'Г' };
+  const elevOf = f => {
+    const m = /^r(\d+):([ABCD])$/.exec(f.wall || '');
+    return m && r.sheets.find(x => new RegExp(`^Развёртка стены ${LET[m[2]]}\\. .*\\(пом\\. ${m[1]}\\)`).test(x.title));
+  };
+  const mp = (R.ribbon || []).filter(f => f.clay && /^room-/.test(f.name || ''));
+  const roomOf = f => f.alt.replace(`${a.name} — `, '').replace(', визуализация', '').replace(/^./, c => c.toUpperCase());
+  const rooms = [...new Set(mp.map(roomOf))];
+  const mcmp = mp.length ? `  <section class="blk" id="model">
+    <div class="wrap">
+      <div class="cmp" data-cmp>
+        <div class="cmp-head">
+          <div class="kicker">Чертёж и картинка</div>
+          <h2 class="cmp-title">Модель по чертежам — и визуализация</h2>
+          <p class="cmp-sub">Слева белая модель, собранная из листов альбома: стены, проёмы, мебель на своих местах. Справа визуализация
+          той же камерой. Под кадром — ссылка на развёртку этой стены.</p>
+          ${rooms.length > 1 ? `<div class="cmp-floors" role="group" aria-label="Помещение">${rooms.map((f, i) => `<button type="button" data-floor="${esc(f)}" aria-pressed="${i ? 'false' : 'true'}">${esc(f)}</button>`).join('')}</div>` : ''}
+          <div class="cmp-row"><span></span>
+            <div class="cmp-seg" role="group" aria-label="Режим сравнения"><button type="button" data-mode="split" aria-pressed="true">Разделить</button><button type="button" data-mode="before" aria-pressed="false"><span class="cmp-long">Только </span>модель</button><button type="button" data-mode="after" aria-pressed="false"><span class="cmp-long">Только </span>визуализация</button></div>
+          </div>
+        </div>
+        <div class="cmp-frame">
+        ${mp.map((f, i) => `<figure class="cmp-stage" id="m-${esc(f.name)}" data-floor="${esc(rooms.length > 1 ? roomOf(f) : '')}" data-kind="v"${i ? ' hidden' : ''} style="--ar:${(f.w / f.h).toFixed(4)}">
+          <img src="../../${f.src}" alt="${esc(f.alt)}" width="${f.w}" height="${f.h}" loading="lazy" decoding="async">
+          <div class="cmp-b"><img src="../../${f.clay.src}" alt="${esc(a.name)} — ${esc(roomOf(f))}, белая модель по чертежам" width="${f.clay.w}" height="${f.clay.h}" loading="lazy" decoding="async"></div>
+          <div class="cmp-h" role="slider" tabindex="0" aria-label="Сравнение: модель и визуализация" aria-valuemin="0" aria-valuemax="100" aria-valuenow="50"><i aria-hidden="true"></i></div>
+          <span class="cmp-l l">Модель</span><span class="cmp-l r">Визуализация</span>
+        </figure>`).join('\n        ')}
+          <button type="button" class="cmp-zoom" data-mode="full" aria-label="Открыть во весь экран" title="Открыть во весь экран"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35M11 8v6M8 11h6"/></svg></button>
+          <div class="cmp-hint" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M5 12h14M12 5l7 7-7 7"/></svg>Потяните для сравнения</div>
+        </div>
+        <div class="cmp-foot">
+          <div>
+          ${mp.map((f, i) => { const e = elevOf(f); return `<p class="cmp-cap"${i ? ' hidden' : ''}><b>${esc(roomOf(f))}</b> · ${f.state === 'signed' ? 'кадр подписан дизайнером' : 'кадр сверен с планом, ждёт подписи дизайнера'}${e ? `<br>Эта стена на чертеже — <a href="${rv(e.file)}" rel="nofollow">лист ${e.no || parseInt(e.file, 10)}</a> «${esc(e.title)}»` : ''}</p>`; }).join('\n          ')}
+          </div>
+          <a class="cmp-cta" href="../../brief.html">Обсудить свой проект</a>
+        </div>
+      </div>
+    </div>
+  </section>\n` : '';
+  const cmpJs = cmp || mcmp ? `  <script src="../../js/compare.js?v=2" defer></script>\n` : '';
 
   const voice = `  <section class="blk" id="pravki">
     <div class="wrap">
@@ -706,7 +759,7 @@ ${a.preReview ? `      <p class="g-note" style="border-left:3px solid var(--gold
 ${areaNote}${prelim}${pdf}    </div>
   </section>
 
-${cmp}${ribbon}${voice}${check}${honesty}
+${cmp}${mcmp}${cmpJs}${ribbon}${voice}${check}${honesty}
   <section class="blk">
     <div class="wrap">
       <div class="kicker">Состав</div>

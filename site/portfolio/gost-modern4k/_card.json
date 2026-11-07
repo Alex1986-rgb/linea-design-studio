@@ -19,16 +19,16 @@
  "preReview": "",
  "hero": {
   "src": "assets/portfolio/gost-modern4k-hero.jpg",
-  "alt": "Квартира с кабинетом · современный модерн — визуализация интерьера",
+  "alt": "Квартира с кабинетом · современный модерн — кабинет, визуализация",
   "w": 1600,
-  "h": 1067,
+  "h": 1066,
   "kind": "render",
-  "state": "illustration",
-  "name": "cover-hero",
+  "state": "signed",
+  "name": "room-study-wA",
   "webp": "assets/portfolio/gost-modern4k-hero.webp"
  },
- "visuals": 24,
- "visualsPrelim": 0,
+ "visuals": 7,
+ "visualsPrelim": 5,
  "studioSize": "13 МБ",
  "pdfSize": "15 МБ"
 }

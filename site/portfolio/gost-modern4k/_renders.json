@@ -1,180 +1,281 @@
 {
  "checked": true,
- "signed": 24,
- "prelim": 0,
- "rejected": 0,
- "accepted": 24,
+ "signed": 7,
+ "prelim": 5,
+ "rejected": 12,
+ "accepted": 7,
  "ribbon": [
   {
-   "src": "assets/portfolio/gost-modern4k/room-living-wB.jpg",
-   "alt": "Квартира с кабинетом · современный модерн — гостиная, визуализация",
-   "w": 1200,
-   "h": 800,
-   "state": "signed"
-  },
-  {
-   "src": "assets/portfolio/gost-modern4k/room-bedroom-wB.jpg",
-   "alt": "Квартира с кабинетом · современный модерн — спальня, визуализация",
-   "w": 1200,
-   "h": 801,
-   "state": "signed"
-  },
-  {
-   "src": "assets/portfolio/gost-modern4k/room-kids-wB.jpg",
-   "alt": "Квартира с кабинетом · современный модерн — детская, визуализация",
-   "w": 1200,
-   "h": 800,
-   "state": "signed"
-  },
-  {
-   "src": "assets/portfolio/gost-modern4k/room-study-wD.jpg",
+   "src": "assets/portfolio/gost-modern4k/room-study-wB.jpg",
    "alt": "Квартира с кабинетом · современный модерн — кабинет, визуализация",
    "w": 1200,
    "h": 800,
-   "state": "signed"
-  },
-  {
-   "src": "assets/portfolio/gost-modern4k/room-bath1-wC.jpg",
-   "alt": "Квартира с кабинетом · современный модерн — ванная, визуализация",
-   "w": 1200,
-   "h": 800,
-   "state": "signed"
-  },
-  {
-   "src": "assets/portfolio/gost-modern4k/room-bath2-wide.jpg",
-   "alt": "Квартира с кабинетом · современный модерн — ванная, визуализация",
-   "w": 1200,
-   "h": 800,
-   "state": "signed"
+   "state": "signed",
+   "name": "room-study-wB",
+   "wall": "r3:B",
+   "clay": {
+    "src": "assets/portfolio/gost-modern4k/clay-room-study-wB.jpg",
+    "w": 1200,
+    "h": 800
+   }
   },
   {
    "src": "assets/portfolio/gost-modern4k/room-hall-wD.jpg",
    "alt": "Квартира с кабинетом · современный модерн — прихожая, визуализация",
    "w": 1200,
    "h": 800,
-   "state": "signed"
+   "state": "signed",
+   "name": "room-hall-wD",
+   "wall": "r8:D",
+   "clay": {
+    "src": "assets/portfolio/gost-modern4k/clay-room-hall-wD.jpg",
+    "w": 1200,
+    "h": 800
+   }
   },
   {
    "src": "assets/portfolio/gost-modern4k/room-wardrobe-wide.jpg",
    "alt": "Квартира с кабинетом · современный модерн — гардеробная, визуализация",
    "w": 1200,
    "h": 800,
-   "state": "signed"
+   "state": "signed",
+   "name": "room-wardrobe-wide",
+   "wall": "r2:room",
+   "clay": {
+    "src": "assets/portfolio/gost-modern4k/clay-room-wardrobe-wide.jpg",
+    "w": 1200,
+    "h": 800
+   }
   },
   {
    "src": "assets/portfolio/gost-modern4k/room-corridor-wC.jpg",
    "alt": "Квартира с кабинетом · современный модерн — холл, визуализация",
    "w": 1200,
    "h": 800,
-   "state": "signed"
-  },
-  {
-   "src": "assets/portfolio/gost-modern4k/room-living-wC.jpg",
-   "alt": "Квартира с кабинетом · современный модерн — гостиная, визуализация",
-   "w": 1200,
-   "h": 800,
-   "state": "signed"
+   "state": "signed",
+   "name": "room-corridor-wC",
+   "wall": "r5:C",
+   "clay": {
+    "src": "assets/portfolio/gost-modern4k/clay-room-corridor-wC.jpg",
+    "w": 1200,
+    "h": 800
+   }
   },
   {
    "src": "assets/portfolio/gost-modern4k/room-living-wD.jpg",
    "alt": "Квартира с кабинетом · современный модерн — гостиная, визуализация",
    "w": 1200,
    "h": 800,
-   "state": "signed"
+   "state": "prelim",
+   "name": "room-living-wD",
+   "wall": "r4:D",
+   "clay": {
+    "src": "assets/portfolio/gost-modern4k/clay-room-living-wD.jpg",
+    "w": 1200,
+    "h": 800
+   }
   },
   {
-   "src": "assets/portfolio/gost-modern4k/room-living-wA.jpg",
-   "alt": "Квартира с кабинетом · современный модерн — гостиная, визуализация",
-   "w": 1200,
-   "h": 800,
-   "state": "signed"
-  },
-  {
-   "src": "assets/portfolio/gost-modern4k/room-bedroom-wA.jpg",
-   "alt": "Квартира с кабинетом · современный модерн — спальня, визуализация",
-   "w": 1200,
-   "h": 800,
-   "state": "signed"
-  },
-  {
-   "src": "assets/portfolio/gost-modern4k/room-bedroom-wD.jpg",
-   "alt": "Квартира с кабинетом · современный модерн — спальня, визуализация",
-   "w": 1200,
-   "h": 800,
-   "state": "signed"
-  },
-  {
-   "src": "assets/portfolio/gost-modern4k/room-kids-wA.jpg",
+   "src": "assets/portfolio/gost-modern4k/room-kids-wB.jpg",
    "alt": "Квартира с кабинетом · современный модерн — детская, визуализация",
    "w": 1200,
    "h": 800,
-   "state": "signed"
-  },
-  {
-   "src": "assets/portfolio/gost-modern4k/room-kids-wD.jpg",
-   "alt": "Квартира с кабинетом · современный модерн — детская, визуализация",
-   "w": 1200,
-   "h": 800,
-   "state": "signed"
-  },
-  {
-   "src": "assets/portfolio/gost-modern4k/room-study-wA.jpg",
-   "alt": "Квартира с кабинетом · современный модерн — кабинет, визуализация",
-   "w": 1200,
-   "h": 800,
-   "state": "signed"
-  },
-  {
-   "src": "assets/portfolio/gost-modern4k/room-study-wB.jpg",
-   "alt": "Квартира с кабинетом · современный модерн — кабинет, визуализация",
-   "w": 1200,
-   "h": 800,
-   "state": "signed"
-  },
-  {
-   "src": "assets/portfolio/gost-modern4k/room-bath1-wB.jpg",
-   "alt": "Квартира с кабинетом · современный модерн — ванная, визуализация",
-   "w": 1200,
-   "h": 800,
-   "state": "signed"
-  },
-  {
-   "src": "assets/portfolio/gost-modern4k/room-bath1-wD.jpg",
-   "alt": "Квартира с кабинетом · современный модерн — ванная, визуализация",
-   "w": 1200,
-   "h": 800,
-   "state": "signed"
+   "state": "prelim",
+   "name": "room-kids-wB",
+   "wall": "r6:B",
+   "clay": {
+    "src": "assets/portfolio/gost-modern4k/clay-room-kids-wB.jpg",
+    "w": 1200,
+    "h": 800
+   }
   },
   {
    "src": "assets/portfolio/gost-modern4k/room-bath2-wC.jpg",
    "alt": "Квартира с кабинетом · современный модерн — ванная, визуализация",
    "w": 1200,
    "h": 800,
-   "state": "signed"
+   "state": "prelim",
+   "name": "room-bath2-wC",
+   "wall": "r9:C",
+   "clay": {
+    "src": "assets/portfolio/gost-modern4k/clay-room-bath2-wC.jpg",
+    "w": 1200,
+    "h": 800
+   }
+  },
+  {
+   "src": "assets/portfolio/gost-modern4k/3d-top.jpg",
+   "alt": "Квартира с кабинетом · современный модерн — вид сверху 3D",
+   "w": 1200,
+   "h": 800,
+   "state": "rejected",
+   "name": "3d-top",
+   "wall": "top"
+  },
+  {
+   "src": "assets/portfolio/gost-modern4k/room-bedroom-wB.jpg",
+   "alt": "Квартира с кабинетом · современный модерн — спальня, визуализация",
+   "w": 1200,
+   "h": 801,
+   "state": "rejected",
+   "name": "room-bedroom-wB",
+   "wall": "r1:B"
+  },
+  {
+   "src": "assets/portfolio/gost-modern4k/room-bath1-wC.jpg",
+   "alt": "Квартира с кабинетом · современный модерн — ванная, визуализация",
+   "w": 1200,
+   "h": 800,
+   "state": "rejected",
+   "name": "room-bath1-wC",
+   "wall": "r7:C"
   },
   {
    "src": "assets/portfolio/gost-modern4k/room-hall-wC.jpg",
    "alt": "Квартира с кабинетом · современный модерн — прихожая, визуализация",
    "w": 1200,
    "h": 800,
-   "state": "signed"
+   "state": "signed",
+   "name": "room-hall-wC",
+   "wall": "r8:C",
+   "clay": {
+    "src": "assets/portfolio/gost-modern4k/clay-room-hall-wC.jpg",
+    "w": 1200,
+    "h": 800
+   }
   },
   {
    "src": "assets/portfolio/gost-modern4k/room-hall-wB.jpg",
    "alt": "Квартира с кабинетом · современный модерн — прихожая, визуализация",
    "w": 1200,
    "h": 800,
-   "state": "signed"
+   "state": "signed",
+   "name": "room-hall-wB",
+   "wall": "r8:B",
+   "clay": {
+    "src": "assets/portfolio/gost-modern4k/clay-room-hall-wB.jpg",
+    "w": 1200,
+    "h": 800
+   }
+  },
+  {
+   "src": "assets/portfolio/gost-modern4k/room-kids-wA.jpg",
+   "alt": "Квартира с кабинетом · современный модерн — детская, визуализация",
+   "w": 1200,
+   "h": 800,
+   "state": "prelim",
+   "name": "room-kids-wA",
+   "wall": "r6:A",
+   "clay": {
+    "src": "assets/portfolio/gost-modern4k/clay-room-kids-wA.jpg",
+    "w": 1200,
+    "h": 800
+   }
+  },
+  {
+   "src": "assets/portfolio/gost-modern4k/room-kids-wD.jpg",
+   "alt": "Квартира с кабинетом · современный модерн — детская, визуализация",
+   "w": 1200,
+   "h": 800,
+   "state": "prelim",
+   "name": "room-kids-wD",
+   "wall": "r6:D",
+   "clay": {
+    "src": "assets/portfolio/gost-modern4k/clay-room-kids-wD.jpg",
+    "w": 1200,
+    "h": 800
+   }
+  },
+  {
+   "src": "assets/portfolio/gost-modern4k/room-living-wB.jpg",
+   "alt": "Квартира с кабинетом · современный модерн — гостиная, визуализация",
+   "w": 1200,
+   "h": 800,
+   "state": "rejected",
+   "name": "room-living-wB",
+   "wall": "r4:B"
+  },
+  {
+   "src": "assets/portfolio/gost-modern4k/room-living-wC.jpg",
+   "alt": "Квартира с кабинетом · современный модерн — гостиная, визуализация",
+   "w": 1200,
+   "h": 800,
+   "state": "rejected",
+   "name": "room-living-wC",
+   "wall": "r4:C"
+  },
+  {
+   "src": "assets/portfolio/gost-modern4k/room-living-wA.jpg",
+   "alt": "Квартира с кабинетом · современный модерн — гостиная, визуализация",
+   "w": 1200,
+   "h": 800,
+   "state": "rejected",
+   "name": "room-living-wA",
+   "wall": "r4:A"
+  },
+  {
+   "src": "assets/portfolio/gost-modern4k/room-bedroom-wA.jpg",
+   "alt": "Квартира с кабинетом · современный модерн — спальня, визуализация",
+   "w": 1200,
+   "h": 800,
+   "state": "rejected",
+   "name": "room-bedroom-wA",
+   "wall": "r1:A"
+  },
+  {
+   "src": "assets/portfolio/gost-modern4k/room-bedroom-wD.jpg",
+   "alt": "Квартира с кабинетом · современный модерн — спальня, визуализация",
+   "w": 1200,
+   "h": 800,
+   "state": "rejected",
+   "name": "room-bedroom-wD",
+   "wall": "r1:D"
+  },
+  {
+   "src": "assets/portfolio/gost-modern4k/room-study-wD.jpg",
+   "alt": "Квартира с кабинетом · современный модерн — кабинет, визуализация",
+   "w": 1200,
+   "h": 800,
+   "state": "rejected",
+   "name": "room-study-wD",
+   "wall": "r3:D"
+  },
+  {
+   "src": "assets/portfolio/gost-modern4k/room-bath1-wB.jpg",
+   "alt": "Квартира с кабинетом · современный модерн — ванная, визуализация",
+   "w": 1200,
+   "h": 800,
+   "state": "rejected",
+   "name": "room-bath1-wB",
+   "wall": "r7:B"
+  },
+  {
+   "src": "assets/portfolio/gost-modern4k/room-bath1-wD.jpg",
+   "alt": "Квартира с кабинетом · современный модерн — ванная, визуализация",
+   "w": 1200,
+   "h": 800,
+   "state": "rejected",
+   "name": "room-bath1-wD",
+   "wall": "r7:D"
+  },
+  {
+   "src": "assets/portfolio/gost-modern4k/room-bath2-wide.jpg",
+   "alt": "Квартира с кабинетом · современный модерн — ванная, визуализация",
+   "w": 1200,
+   "h": 800,
+   "state": "rejected",
+   "name": "room-bath2-wide",
+   "wall": "r9:room"
   }
  ],
  "hero": {
   "src": "assets/portfolio/gost-modern4k-hero.jpg",
-  "alt": "Квартира с кабинетом · современный модерн — визуализация интерьера",
+  "alt": "Квартира с кабинетом · современный модерн — кабинет, визуализация",
   "w": 1600,
-  "h": 1067,
+  "h": 1066,
   "kind": "render",
-  "state": "illustration",
-  "name": "cover-hero",
+  "state": "signed",
+  "name": "room-study-wA",
   "webp": "assets/portfolio/gost-modern4k-hero.webp"
  }
 }
