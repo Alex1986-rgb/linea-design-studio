@@ -17,8 +17,9 @@
   const SECURE = location.protocol === 'https:' || /^(localhost|127\.0\.0\.1|\[::1\])$/.test(location.hostname);
   const API = (SECURE || TEST) ? ((document.querySelector('meta[name="linea-api"]') || {}).content || '') : '';
   const MAX_MB = 100;
-  const NAMES = ['План квартиры', 'Что нравится', 'Расскажите словами', 'Куда прислать проект'];
-  const SEND = 3, DONE = 4;
+  const NAMES = ['План квартиры', 'Что нравится', 'Жизнь в квартире', 'Расскажите словами', 'Куда прислать проект'];
+  const LIFE = 2, STORY = 3, SEND = 4, DONE = 5;   // шаг LIFE необязателен (08.11.2026): вопросы, о которых забывают до ремонта — js/brief-life.js
+  const L = window.LineaLife;
   // ставки — из TERMS (sync-static-nav.js пишет <script id="briefTerms">); запасные значения — на случай старой копии страницы
   let T = { packs: [{ key: 'proekt', name: 'Проект с визуализациями', rate: 2000, min: 80000 }], minArea: 40 };
   try { const el = $('briefTerms'); if (el) T = JSON.parse(el.textContent); } catch (e) {}
@@ -43,17 +44,17 @@
   function show(n, focus) {
     step = n;
     document.querySelectorAll('#wiz .panel').forEach(p => { p.hidden = +p.dataset.step !== step; });
-    $('progStep').textContent = step < SEND ? `Шаг ${step + 1} из 3` : step === SEND ? 'Последний шаг' : 'Готово';
-    $('progName').textContent = NAMES[step] || 'Отправка';
-    $('progBar').style.width = Math.round(((step + 1) / 4) * 100) + '%';
+    $('progStep').textContent = step === LIFE ? 'Дополнительно' : step < LIFE ? `Шаг ${step + 1} из 3` : step < SEND ? 'Шаг 3 из 3' : step === SEND ? 'Последний шаг' : 'Готово';
+    $('progName').textContent = (NAMES[step] || 'Отправка') + (step === LIFE ? ' · можно пропустить' : '');
+    $('progBar').style.width = Math.round(((step + 1) / 5) * 100) + '%';
     $('stepLive').textContent = $('progStep').textContent + ': ' + $('progName').textContent;
     $('nav').hidden = step === DONE;
     $('nav').classList.toggle('last', step === SEND);
     $('prev').hidden = step === 0;
     document.body.classList.toggle('stepped', step > 0);
     $('next').hidden = step >= SEND;
-    $('next').textContent = step === 2 ? 'К отправке →' : 'Дальше →';
-    $('skipNote').textContent = step === 1 ? 'Ничего не подходит — просто нажмите «Дальше».' : step === 2 ? 'Можно коротко: пара фраз уже помогает.' : '';
+    $('next').textContent = step === STORY ? 'К отправке →' : 'Дальше →';
+    $('skipNote').textContent = step === 1 ? 'Ничего не подходит — просто нажмите «Дальше».' : step === LIFE ? 'Можно ответить на часть вопросов или нажать «Пропустить шаг».' : step === STORY ? 'Можно коротко: пара фраз уже помогает.' : '';
     if (step === SEND) price();
     if (focus) {
       const h = document.querySelector(`.panel[data-step="${step}"] h2`);
@@ -142,6 +143,13 @@
     hid.slice(0, 9).forEach(b => { b.hidden = false; });
     if (hid.length <= 9) $('galMore').hidden = true;
   };
+
+  // ── «Жизнь в квартире»: группы чипов из js/brief-life.js; «Пропустить» помечает шаг пропущенным
+  let lifeSkipped = false;
+  if (L) {
+    L.mount($('lifeBox'), () => { lifeSkipped = false; save(); });
+    $('skipLife').onclick = () => { lifeSkipped = !L.answered(); show(STORY, true); };
+  } else { $('lifeBox').hidden = true; $('skipLife').textContent = 'Дальше'; $('skipLife').onclick = () => show(STORY, true); }
 
   // ── рассказ: чипы-заготовки («Кто живёт: …» отдельной строкой)
   const story = $('story');
@@ -258,6 +266,13 @@
       notes: ''
     };
   }
+  // ответы шага «Жизнь в квартире» дополняют answers.* там, где клиент сам ничего не написал (старые читатели брифа получают их без правок)
+  function mergeLife(A) {
+    if (!L || !L.answered()) return A;
+    const X = L.answers();
+    for (const k of Object.keys(X)) if (!A[k] || (Array.isArray(A[k]) && !A[k].length)) A[k] = X[k];
+    return A;
+  }
   function budgetClass(text) {
     if (val('qBudget')) return val('qBudget');
     if (/эконом|недорог|скромн|бюджетн/i.test(text)) return 'econom';
@@ -267,7 +282,7 @@
 
   // ── сбор брифа (схема прежняя: meta, client, object, rooms, story, files, style, budget, answers)
   function collect() {
-    const t = story.value.trim(), A = parseStory(t);
+    const t = story.value.trim(), A = mergeLife(parseStory(t));
     const rooms = [...roomsEl.querySelectorAll('.room-row')].map(r => {
       const ty = r.querySelector('.r-type');
       return { name: ty.selectedOptions[0].textContent, type: ty.value, width: num(r.querySelector('.r-w').value), length: num(r.querySelector('.r-l').value) };
@@ -286,7 +301,8 @@
       style: { key, title: st ? st[1] : key, byStudio: key === 'studio', colors: '', avoidColors: '', liked: [...liked], disliked: [],
         links: val('stRefs').split(/[\s,]+/).map(s => s.trim()).filter(s => /^https?:\/\//.test(s)) },
       budget: budgetClass(A.budget),
-      answers: A
+      answers: A,
+      life: L ? L.out(lifeSkipped) : undefined
     };
   }
 
@@ -298,7 +314,7 @@
     clearTimeout(saveT);
     saveT = setTimeout(() => {
       const b = collect();
-      const d = { v: 3, fields: {}, kind: kind(), pack: pack(), needSurvey: $('needSurvey').checked, liked: [...liked], rooms: b.rooms, step: Math.min(step, SEND), files: b.files };
+      const d = { v: 3, fields: {}, kind: kind(), pack: pack(), needSurvey: $('needSurvey').checked, liked: [...liked], rooms: b.rooms, step: Math.min(step, SEND), ds: 2, life: L ? L.out(false) : null, lifeSkipped, files: b.files };
       FIELDS.forEach(id => { d.fields[id] = val(id); });
       try {
         localStorage.setItem(KEY, JSON.stringify(d));
@@ -314,6 +330,10 @@
     if (!d || d.v !== 3) return 0;
     FIELDS.forEach(id => { if ($(id) && d.fields && d.fields[id] != null) $(id).value = d.fields[id]; });
     $('needSurvey').checked = !!d.needSurvey;
+    if (L && d.life) L.restore(d.life);
+    lifeSkipped = !!d.lifeSkipped;
+    // черновик до появления шага «Жизнь в квартире» (без ds) хранил номера шагов на единицу меньше, начиная с «словами»
+    if (d.ds !== 2 && d.step >= 2) d.step += 1;
     (d.liked || []).forEach(id => liked.add(id));
     (d.rooms || []).forEach(addRoom);
     if ((d.rooms || []).length || d.fields.objH || d.fields.objState || d.fields.objAddr) $('more').open = true;
@@ -353,6 +373,7 @@
     if (o.ceilingHeight) L.push('Потолки: ' + o.ceilingHeight + ' м');
     if (b.rooms.length) L.push('Помещения: ' + b.rooms.map(r => r.name + (r.width && r.length ? ' ' + r.width + '×' + r.length + ' м' : '') + (r.level != null ? ' (' + r.level + ' эт.)' : '')).join('; '));
     if (b.story) L.push('Своими словами: ' + b.story.replace(/\n+/g, ' / '));
+    if (b.life && b.life.text && b.life.text.length) { L.push('Жизнь в квартире:'); b.life.text.forEach(x => L.push('· ' + x)); }
     if (!b.style.byStudio) L.push('Стиль: ' + b.style.title);
     if (b.style.liked.length) L.push('Кадры галереи: нравится ' + b.style.liked.length);
     if (b.style.links.length) L.push('Ссылки: ' + b.style.links.join(' '));

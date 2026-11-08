@@ -1,0 +1,185 @@
+{
+  "meta": {
+    "created": "2026-10-31",
+    "source": "example-life",
+    "version": 3,
+    "package": "proekt",
+    "test": true
+  },
+  "client": {
+    "name": "Тест",
+    "phone": "",
+    "email": "",
+    "contact": "",
+    "consent": {
+      "personalData": true,
+      "portfolio": false,
+      "edition": "27.10.2026"
+    }
+  },
+  "object": {
+    "type": "Квартира",
+    "address": "",
+    "area": 79,
+    "ceilingHeight": null,
+    "state": "",
+    "needSurvey": false
+  },
+  "rooms": [],
+  "story": "Живём вдвоём с мужем, весной родится ребёнок, нужна детская. Есть кот, нужен лоток в санузле или постирочной. Муж работает из дома три дня в неделю, нужен кабинет или хотя бы рабочее место с дверью. Готовлю много, хочу остров и без верхних шкафов, только полки. Сейчас бесит, что некуда деть пылесос и коляску. Обязательно гардеробная и вторая раковина в ванной. Бюджет средний, хотим заехать к лету.",
+  "files": {
+    "plans": [
+      "plan.png"
+    ],
+    "photos": []
+  },
+  "style": {
+    "key": "",
+    "title": "",
+    "byStudio": false,
+    "colors": "",
+    "avoidColors": "",
+    "liked": [],
+    "disliked": [],
+    "links": []
+  },
+  "budget": "",
+  "answers": {
+    "household": "",
+    "pets": "",
+    "wfh": "",
+    "storage": "",
+    "kitchen": "",
+    "sport": "",
+    "dislikes": "",
+    "timeline": "",
+    "notes": "",
+    "must": "",
+    "budget": ""
+  },
+  "life": {
+    "version": 1,
+    "skipped": false,
+    "answered": 54,
+    "unknown": [
+      "kitchen.hood",
+      "tv.projector",
+      "climate.acOutdoor"
+    ],
+    "household": {
+      "people": "3",
+      "kids": [
+        "school"
+      ],
+      "pets": [
+        "cat"
+      ],
+      "guests": "sometimes"
+    },
+    "kitchen": {
+      "hob": "induction",
+      "oven": "column",
+      "micro": "built",
+      "dish": "60",
+      "fridge": "sbs",
+      "coffee": "built",
+      "sink": [
+        "filter",
+        "grinder"
+      ],
+      "hood": "unknown",
+      "island": "island",
+      "seats": "6"
+    },
+    "tv": {
+      "rooms": [
+        "living",
+        "bedroom"
+      ],
+      "size": "65",
+      "mount": "wall",
+      "sound": [
+        "soundbar"
+      ],
+      "projector": "unknown",
+      "gaming": [
+        "console"
+      ],
+      "note": "ТВ в спальне на кронштейне"
+    },
+    "climate": {
+      "ac": [
+        "living",
+        "bedroom"
+      ],
+      "acType": "split",
+      "acOutdoor": "unknown",
+      "floorHeat": [
+        "bath",
+        "hall"
+      ],
+      "floorKind": "electric",
+      "air": [
+        "breezer"
+      ],
+      "radiators": "screen"
+    },
+    "loggia": {
+      "has": "loggia",
+      "glass": "warm",
+      "plan": "join",
+      "use": [
+        "cabinet",
+        "rest"
+      ],
+      "power": "yes"
+    },
+    "storage": {
+      "wardrobe": "room",
+      "pantry": "need",
+      "bulky": [
+        "bikes",
+        "stroller"
+      ],
+      "vacuum": [
+        "robot"
+      ],
+      "ironing": "built"
+    },
+    "bath": {
+      "kind": "both",
+      "wc": "install",
+      "hygiene": [
+        "shower"
+      ],
+      "washer": "tower",
+      "washerPlace": "bath",
+      "towel": "electric"
+    },
+    "work": {
+      "place": "corner",
+      "seats": "1",
+      "calls": "daily",
+      "sound": [
+        "cabinet"
+      ]
+    },
+    "smart": {
+      "control": "mixed",
+      "curtains": "motor"
+    },
+    "security": {
+      "leak": "yes",
+      "intercom": "video"
+    },
+    "special": {
+      "items": [
+        "piano"
+      ],
+      "heavy": "no"
+    },
+    "text": [
+      "(выжимка собирается сайтом)"
+    ]
+  }
+}
