@@ -35,7 +35,7 @@
 set -uo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-TARGET_DEFAULT=beget                       # ← после переключения DNS домена на VPS поставить vps
+TARGET_DEFAULT=vps                         # ← после переключения DNS домена на VPS поставить vps
 TARGET="${DEPLOY_TARGET:-$TARGET_DEFAULT}"
 BATCH_MB="${BATCH_MB:-40}" BATCH_N="${BATCH_N:-300}" BATCH_PAUSE="${BATCH_PAUSE:-3}"
 MARK=".linea-deploy"
