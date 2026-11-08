@@ -26,7 +26,7 @@ import path from 'node:path';
 import { spawn, spawnSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import { fileURLToPath } from 'node:url';
-import { OPS_HOME, P, IS_WIN, cfg, stamp, logger, readJson, writeJson, notify } from './lib.mjs';
+import { OPS_HOME, P, IS_WIN, cfg, dumpSource, stamp, logger, readJson, writeJson, notify } from './lib.mjs';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const log = logger('backup');
@@ -64,10 +64,12 @@ const rcloneArgs = a => (RCLONE_CONF && fs.existsSync(RCLONE_CONF) ? ['--config'
 const list = dir => fs.readdirSync(dir).filter(f => NAME_RE.test(f)).sort();
 const latest = () => { const all = [...list(DAILY).map(f => path.join(DAILY, f)), ...list(WEEKLY).map(f => path.join(WEEKLY, f))]; all.sort((a, b) => path.basename(a).localeCompare(path.basename(b))); return all.at(-1); };
 
-/** Команда до источника: ssh с режимом (на Beget его принимает принудительная команда ключа) или локальный beget-dump.sh. */
+/** Команда до источника: ssh с режимом (на Beget/VPS его принимает принудительная команда ключа) или локальный beget-dump.sh.
+ *  Источник — ops.json → source: beget (аккаунт aleks2si) или vps (SmartApe, тот же ключ и та же схема forced-command). */
+const SRC = dumpSource(C);
 function source(mode) {
   if (args['local-root']) return { cmd: 'bash', a: [path.join(HERE, 'beget-dump.sh'), mode], env: { ...process.env, LINEA_ROOT: path.resolve(args['local-root']), LINEA_PHP: C.localPhp || 'php' } };
-  const b = C.beget;
+  const b = SRC;
   const key = path.join(P.secrets, 'beget_ed25519'), kh = path.join(P.secrets, 'known_hosts');
   const a = ['-i', key, '-o', `UserKnownHostsFile=${kh}`, '-o', 'StrictHostKeyChecking=yes', '-o', 'BatchMode=yes', '-o', 'IdentitiesOnly=yes',
        '-o', 'ConnectTimeout=30', '-o', 'ServerAliveInterval=30', '-o', 'ServerAliveCountMax=6', '-T'];
@@ -76,14 +78,15 @@ function source(mode) {
   return { cmd: SSH, a, env: process.env };
 }
 function sha256(f) { return createHash('sha256').update(fs.readFileSync(f)).digest('hex'); }
-/** Сверка версии скрипта на Beget с нашим: расхождение — предупреждение, не отказ. */
+/** Сверка версии скрипта на источнике с нашим: расхождение — предупреждение, не отказ. */
 function checkRemoteVersion() {
   if (args['from-file'] || args['local-root']) return null;
   const s = source('version');
   const r = spawnSync(s.cmd, s.a, { env: s.env, encoding: 'utf8', timeout: 60000, windowsHide: true });
   const m = (r.stdout || '').match(/beget-dump ([0-9a-f]{64})/);
-  if (r.status !== 0 || !m) return `версию beget-dump.sh на Beget узнать не удалось (код ${r.status}) — ключ без принудительной команды или скрипт не выложен`;
-  return m[1] === sha256(path.join(HERE, 'beget-dump.sh')) ? null : 'beget-dump.sh на Beget отличается от версии в репозитории — обновить: tools/ops/after-beget-up.sh --only-script';
+  const upd = SRC.name === 'VPS' ? 'tools/ops/after-beget-up.sh --target=vps --only-script' : 'tools/ops/after-beget-up.sh --only-script';
+  if (r.status !== 0 || !m) return `версию beget-dump.sh на ${SRC.name} узнать не удалось (код ${r.status}) — ключ без принудительной команды или скрипт не выложен (${upd})`;
+  return m[1] === sha256(path.join(HERE, 'beget-dump.sh')) ? null : `beget-dump.sh на ${SRC.name} отличается от версии в репозитории — обновить: ${upd}`;
 }
 
 /** Поток tar.gz от источника → файл. */
@@ -102,7 +105,7 @@ function fetchDump(out) {
     ch.on('close', async code => {
       clearTimeout(timer);
       await written;
-      if (code === 0) resolve(args['local-root'] ? 'локальный beget-dump.sh' : `ssh ${C.beget.user}@${C.beget.host}`);
+      if (code === 0) resolve(args['local-root'] ? 'локальный beget-dump.sh' : `ssh ${SRC.user}@${SRC.host} (${SRC.name})`);
       else reject(new Error(`источник завершился с кодом ${code}: ${err.trim().split('\n').slice(-3).join(' / ').slice(0, 400)}`));
     });
   });

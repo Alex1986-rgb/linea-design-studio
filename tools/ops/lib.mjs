@@ -27,7 +27,12 @@ const DEF = {
   domain: 'xn-----6kccjicviedfr1b2cbishm8w.xn--p1ai',
   pages: { home: '/', ping: '/api/ping.php', kabinet: '/kabinet/' },
   sslWarnDays: 14,
+  // Источник дампа: 'beget' — аккаунт aleks2si (пока DNS и данные там), 'vps' — VPS SmartApe после переезда
+  // (копия той же раскладки в /srv/beget, ключ бэкапера с принудительной командой в /root/.ssh/authorized_keys —
+  // ставит after-beget-up.sh --target=vps). Меняется в ops.json: "source": "vps".
+  source: 'beget',
   beget: { host: 'gandalf.beget.com', user: 'aleks2si', root: 'dizain-studiya-kvartir' },
+  vps: { host: '45.154.185.168', user: 'root', root: '/srv/beget/dizain-studiya-kvartir' },
   keepDaily: 14, keepWeekly: 8,
   keepMinGood: 7,                 // ротация (локально и на Диске) никогда не оставляет меньше N хороших копий — независимо от возраста
   backupDropPct: 40,              // падение строк/заказов/размера к прошлой удачной копии больше N % — копия «подозрительная»
@@ -42,7 +47,11 @@ const DEF = {
 export function cfg() {
   let c = {};
   try { c = JSON.parse(fs.readFileSync(P.cfg, 'utf8')); } catch { /* нет файла — значения по умолчанию */ }
-  return { ...DEF, ...c, pages: { ...DEF.pages, ...(c.pages || {}) }, beget: { ...DEF.beget, ...(c.beget || {}) } };
+  return { ...DEF, ...c, pages: { ...DEF.pages, ...(c.pages || {}) }, beget: { ...DEF.beget, ...(c.beget || {}) }, vps: { ...DEF.vps, ...(c.vps || {}) } };
+}
+/** Откуда снимать дамп по ops.json: {host, user, root, name} — Beget или VPS. */
+export function dumpSource(c = cfg()) {
+  return c.source === 'vps' ? { ...c.vps, name: 'VPS' } : { ...c.beget, name: 'Beget' };
 }
 
 export function stamp(d = new Date()) {

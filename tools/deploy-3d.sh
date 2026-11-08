@@ -7,6 +7,10 @@
 #   ./tools/deploy-3d.sh --src <локальная папка с <токен>/ и <токен>.info.json> --all   # то же из локальной папки
 #   ./tools/deploy-3d.sh … --go                                                         # реально залить (после «да» Александра)
 #   ./tools/deploy-3d.sh --check                                                        # только связь и прозвон адреса
+#   ./tools/deploy-3d.sh … --target=vps                                                 # цель — VPS SmartApe (ssh sm-vps → /srv/beget/3d-linea/public_html),
+#                                                                                       # файлы → www-data, прозвон по IP VPS; то же: DEPLOY_TARGET=vps
+#
+# Цель по умолчанию — TARGET_DEFAULT ниже (Beget, пока DNS поддомена там); после переключения DNS поменять на vps.
 #
 # Что делает (по образцу tools/deploy-beget.sh):
 #   1. Берёт готовую папку заказчика (её собирает scripts/client-viewer/make-client-bundle.mjs на SmartApe: токен 32 знака,
@@ -24,13 +28,14 @@
 #
 # Переменные: LINEA_SSH_HOST (beget-en0), LINEA_3D_DOCROOT (3d-linea/public_html — каталог сайта поддомена; создаётся в панели/API
 #             Beget: site/add + привязка поддомена, это мутация аккаунта — только после «да»), LINEA_3D_HOST (3d.<punycode домена>),
-#             SMARTAPE_HOST (smartape-win), BATCH_MB=40 BATCH_N=300 BATCH_PAUSE=3, BEGET_BIND=en0.
+#             SMARTAPE_HOST (smartape-win), BATCH_MB=40 BATCH_N=300 BATCH_PAUSE=3, BEGET_BIND=en0;
+#             для VPS: DEPLOY_TARGET=vps, VPS_SSH_HOST (sm-vps), VPS_ROOT (/srv/beget), VPS_IP (45.154.185.168).
 
 set -uo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-HOST="${LINEA_SSH_HOST:-beget-en0}"
-DOCROOT="${LINEA_3D_DOCROOT:-3d-linea/public_html}"
+TARGET_DEFAULT=beget                       # ← после переключения DNS поддомена на VPS поставить vps
+TARGET="${DEPLOY_TARGET:-$TARGET_DEFAULT}"
 WEB_HOST="${LINEA_3D_HOST:-$(node -e "process.stdout.write(require('url').domainToASCII('3d.дизайн-студия-квартир.рф'))")}"
 SMARTAPE="${SMARTAPE_HOST:-smartape-win}"
 BATCH_MB="${BATCH_MB:-40}" BATCH_N="${BATCH_N:-300}" BATCH_PAUSE="${BATCH_PAUSE:-3}"
@@ -42,6 +47,7 @@ while [ $# -gt 0 ]; do
   case "$1" in
     --go) GO=1 ;;
     --dry-run) GO=0 ;;
+    --target=*) TARGET="${1#--target=}" ;;
     --check) CHECK=1 ;;
     --all) ALL=1 ;;
     --allow-test) ALLOW_TEST=1 ;;
@@ -56,6 +62,14 @@ while [ $# -gt 0 ]; do
   esac
   shift
 done
+# Куда лить: на Beget путь относительно домашней папки аккаунта, на VPS — абсолютный в /srv/beget (та же раскладка,
+# ssh заходит root-ом); на VPS файлы должны принадлежать www-data (под ним работают Apache и PHP-fpm).
+case "$TARGET" in
+  beget) HOST="${LINEA_SSH_HOST:-beget-en0}"; RBASE=""; WEB_OWNER=""; VPS_IP="" ;;
+  vps)   HOST="${VPS_SSH_HOST:-sm-vps}"; RBASE="${VPS_ROOT:-/srv/beget}/"; WEB_OWNER="www-data:www-data"; VPS_IP="${VPS_IP:-45.154.185.168}" ;;
+  *) echo "Неизвестная цель --target=$TARGET (знаю beget и vps)" >&2; exit 2 ;;
+esac
+DOCROOT="${RBASE}${LINEA_3D_DOCROOT:-3d-linea/public_html}"
 
 say()  { printf '\n\033[1m%s\033[0m\n' "$*"; }
 ok()   { printf '  \033[32m✓\033[0m %s\n' "$*"; }
@@ -71,12 +85,12 @@ BIP="" BIF=""
 cleanup() { command ssh -o "ControlPath=$CM" -O exit "$HOST" 2>/dev/null; rm -rf "$TMP" "$CM"; }
 trap cleanup EXIT
 
-if [ "$GO" = 1 ]; then say "РЕЖИМ: БОЕВОЙ (--go)"; else say "РЕЖИМ: пробный прогон (на Beget ничего не меняется; для заливки — --go)"; fi
-echo "  поддомен:  https://$WEB_HOST/"
-echo "  сервер:    ssh $HOST → ~/$DOCROOT"
+if [ "$GO" = 1 ]; then say "РЕЖИМ: БОЕВОЙ (--go)"; else say "РЕЖИМ: пробный прогон (на сервере ничего не меняется; для заливки — --go)"; fi
+echo "  поддомен:  https://$WEB_HOST/${VPS_IP:+  (прозвон по IP VPS $VPS_IP, сертификат не проверяется)}"
+echo "  сервер:    $TARGET — ssh $HOST → ${RBASE:-~/}${DOCROOT#"$RBASE"}"
 
 # ─────────────────────────────────────────────── 1. Связь (только чтение)
-say "1. Связь с Beget"
+say "1. Связь с сервером ($TARGET)"
 IFACE=$(route -n get default 2>/dev/null | awk '/interface:/{print $2}')
 case "$IFACE" in
   utun*|ppp*|ipsec*|tun*)
@@ -87,15 +101,21 @@ case "$IFACE" in
 esac
 [ -n "$BIP" ] && SSH_OPTS+=(-b "$BIP")
 rssh()  { command ssh "${SSH_OPTS[@]}" "$HOST" "$@"; }
-ccurl() { if [ -n "$BIP" ]; then command curl --interface "$BIF" "$@"; else command curl "$@"; fi; }
+# VPS: поддомен прозванивается по IP сервера (DNS ещё на Beget), без проверки сертификата — он на VPS может быть не выпущен.
+CURL_VPS=(); [ -n "$VPS_IP" ] && CURL_VPS=(-k --resolve "$WEB_HOST:443:$VPS_IP" --resolve "$WEB_HOST:80:$VPS_IP")
+ccurl() { if [ -n "$BIP" ]; then command curl --interface "$BIF" "${CURL_VPS[@]}" "$@"; else command curl "${CURL_VPS[@]}" "$@"; fi; }
+# Владелец файлов после заливки (только VPS): от root файлы остались бы root-у, а Apache/PHP-fpm там — www-data.
+fix_owner() { [ -n "$WEB_OWNER" ] || return 0; rssh "chown -R $WEB_OWNER '$1'" && ok "владелец $1 → $WEB_OWNER" || warn "chown $WEB_OWNER на $1 не прошёл"; }
 
 REMOTE_OK=0
 if rssh true 2>/dev/null; then
   ok "SSH до $HOST работает"; REMOTE_OK=1
-  if rssh "test -d '$DOCROOT'"; then ok "каталог ~/$DOCROOT на месте"; DOCROOT_OK=1
+  if rssh "test -d '$DOCROOT'"; then ok "каталог ${RBASE:-~/}${DOCROOT#"$RBASE"} на месте"; DOCROOT_OK=1
   else
-    DOCROOT_OK=0; warn "каталога ~/$DOCROOT на сервере ещё нет: поддомен не создан (site/add + привязка 3d.…) — это мутация аккаунта, нужно «да»"
-    [ "$GO" = 1 ] && die "нет каталога ~/$DOCROOT — боевой запуск невозможен"
+    DOCROOT_OK=0
+    if [ "$TARGET" = vps ]; then warn "каталога $DOCROOT на VPS нет: копия Beget без папки 3d-linea (поднять копию, vhost Apache для $WEB_HOST)"
+    else warn "каталога ~/$DOCROOT на сервере ещё нет: поддомен не создан (site/add + привязка 3d.…) — это мутация аккаунта, нужно «да»"; fi
+    [ "$GO" = 1 ] && die "нет каталога $DOCROOT — боевой запуск невозможен"
   fi
 else
   DOCROOT_OK=0
@@ -203,7 +223,7 @@ echo "  корень поддомена: .htaccess (301 на https, без ли�
 echo "  ссылки заказчикам:"; for t in "${PASS[@]}"; do echo "    https://$WEB_HOST/$t/"; done
 
 if [ "$GO" = 0 ]; then
-  say "Пробный прогон закончен. На Beget ничего не отправлено и не изменено."
+  say "Пробный прогон закончен. На сервере ($TARGET) ничего не отправлено и не изменено."
   echo "  боевой запуск: $0 $(printf '%q ' "${ORIG_ARGS[@]}" | sed 's/--dry-run //') --go"
   exit 0
 fi
@@ -232,6 +252,7 @@ for lst in "$TMP"/batch-*.lst; do
   ok "партия $k/$BATCHES: $cnt файлов"
   [ "$k" -lt "$BATCHES" ] && sleep "$BATCH_PAUSE"
 done
+fix_owner "$DOCROOT"
 
 # ─────────────────────────────────────────────── 6. Сверка и прозвон
 say "6. Сверка размеров"

@@ -7,6 +7,10 @@
 #   dump (или пусто) — tar.gz в stdout;  check — готовность (php, mysqldump, config) без данных;  version — sha256 этого файла.
 #   Всё остальное — отказ с кодом 64: произвольная команда через этот ключ не выполняется.
 # Макет на маке: LINEA_ROOT=… bash beget-dump.sh [режим]  (или bash -s < beget-dump.sh).
+# VPS SmartApe (переезд с Beget, ноябрь 2026): тот же скрипт, копия лежит в /srv/beget/dizain-studiya-kvartir — папка берётся
+#   сама, если ~/dizain-studiya-kvartir нет; php — системный 8.3. Под root дамп базы aleks2si_linea идёт mysqldump-ом через
+#   unix-сокет MariaDB без пароля (LINEA_DUMP_ROOT_SOCKET=auto: включается, когда uid=0 и сокет отвечает; 0 — выключить,
+#   тогда как на Beget: пароль из config.php). С мака одной командой — tools/ops/vps-dump.sh.
 # Что попадает в архив:
 #   linea-private/…            — заказы, правки, бриги, журналы, config.php (без sessions/, rate/, exports/, блокировок и временных)
 #   _dump/mysql.sql            — дамп MySQL aleks2si_linea (mysqldump; нет его — PHP-дамп через PDO)
@@ -34,6 +38,8 @@ if [ "$MODE" = version ]; then
 fi
 
 ROOT="${LINEA_ROOT:-$HOME/dizain-studiya-kvartir}"
+# VPS: домашней папки aleks2si нет, копия Beget лежит в /srv/beget (та же раскладка)
+[ -d "$ROOT" ] || { [ -d /srv/beget/dizain-studiya-kvartir ] && ROOT=/srv/beget/dizain-studiya-kvartir; }
 PRIV_NAME="linea-private"
 PRIV="$ROOT/$PRIV_NAME"
 MAXMB="${LINEA_BK_MAXMB:-200}"
@@ -44,7 +50,13 @@ log() { printf '[beget-dump] %s\n' "$*" >&2; }
 [ -d "$PRIV" ] || { log "нет папки $PRIV"; exit 3; }
 [ -f "$PRIV/config.php" ] || { log "нет $PRIV/config.php"; exit 3; }
 DUMPER="$(command -v mysqldump || command -v mariadb-dump || true)"
-if [ "$MODE" = check ]; then echo "ok php=$PHP mysqldump=${DUMPER:-нет} config=есть"; exit 0; fi
+# Дамп под root через сокет (VPS): без пароля и без -h — MariaDB пускает root по unix_socket. На Beget uid не 0 — ветка молчит.
+ROOT_SOCKET=0
+case "${LINEA_DUMP_ROOT_SOCKET:-auto}" in
+  0|no) ;;
+  *) if [ "$(id -u 2>/dev/null)" = 0 ] && [ -n "$DUMPER" ] && command -v mysql >/dev/null 2>&1 && mysql --protocol=socket -N -e 'SELECT 1' >/dev/null 2>&1; then ROOT_SOCKET=1; fi ;;
+esac
+if [ "$MODE" = check ]; then echo "ok php=$PHP mysqldump=${DUMPER:-нет} config=есть root_socket=$ROOT_SOCKET root=$ROOT"; exit 0; fi
 
 # временная папка — рядом с linea-private, ВНЕ веб-корня (public_html). Остатки прошлых прогонов, убитых SIGKILL
 # (trap тогда не срабатывает), старше 3 часов удаляются: в них полный дамп с ПДн.
@@ -55,11 +67,11 @@ trap 'exit 130' INT TERM HUP PIPE
 mkdir -p "$TMP/_dump"
 IONICE=""; command -v ionice >/dev/null 2>&1 && IONICE="ionice -c3"
 
-log "php: $PHP; mysqldump: ${DUMPER:-нет}"
+log "php: $PHP; mysqldump: ${DUMPER:-нет}; корень: $ROOT$([ "$ROOT_SOCKET" = 1 ] && printf '; дамп под root через сокет')"
 
 # ---- база: PHP читает config.php, сам зовёт mysqldump (пароль — в окружении процесса) и пишет manifest ----
-LINEA_PRIV="$PRIV" LINEA_OUT="$TMP/_dump" LINEA_DUMPER="$DUMPER" $IONICE "$PHP" -d display_errors=stderr -r '
-$priv = getenv("LINEA_PRIV"); $out = getenv("LINEA_OUT"); $dumper = getenv("LINEA_DUMPER");
+LINEA_PRIV="$PRIV" LINEA_OUT="$TMP/_dump" LINEA_DUMPER="$DUMPER" LINEA_ROOT_SOCKET="$ROOT_SOCKET" $IONICE "$PHP" -d display_errors=stderr -r '
+$priv = getenv("LINEA_PRIV"); $out = getenv("LINEA_OUT"); $dumper = getenv("LINEA_DUMPER"); $rootSocket = getenv("LINEA_ROOT_SOCKET") === "1";
 $cfg = include $priv . "/config.php";
 if (!is_array($cfg)) { fwrite(STDERR, "config.php не вернул массив\n"); exit(4); }
 $db = $cfg["db"] ?? null;
@@ -88,16 +100,23 @@ if (is_array($db) && str_starts_with((string)$db["dsn"], "mysql:")) {
     $ok = false;
     if ($dumper !== "") {
         $cmd = [$dumper, "--single-transaction", "--quick", "--no-tablespaces", "--skip-lock-tables", "--hex-blob",
-                "--default-character-set=utf8mb4", "--skip-comments", "-u", (string)$db["user"]];
-        if (isset($kv["host"]))   { $cmd[] = "-h"; $cmd[] = $kv["host"]; }
-        if (isset($kv["port"]))   { $cmd[] = "-P"; $cmd[] = $kv["port"]; }
-        if (isset($kv["unix_socket"])) { $cmd[] = "-S"; $cmd[] = $kv["unix_socket"]; }
+                "--default-character-set=utf8mb4", "--skip-comments"];
+        $env = getenv();
+        if ($rootSocket) {
+            // VPS под root: unix_socket-авторизация MariaDB, без пользователя и пароля сайта; имя базы — из DSN (aleks2si_linea)
+            $cmd[] = "--protocol=socket";
+        } else {
+            $cmd[] = "-u"; $cmd[] = (string)$db["user"];
+            if (isset($kv["host"]))   { $cmd[] = "-h"; $cmd[] = $kv["host"]; }
+            if (isset($kv["port"]))   { $cmd[] = "-P"; $cmd[] = $kv["port"]; }
+            if (isset($kv["unix_socket"])) { $cmd[] = "-S"; $cmd[] = $kv["unix_socket"]; }
+            $env["MYSQL_PWD"] = (string)$db["pass"];
+        }
         $cmd[] = $kv["dbname"];
-        $env = getenv(); $env["MYSQL_PWD"] = (string)$db["pass"];
         $pr = proc_open($cmd, [0 => ["file", "/dev/null", "r"], 1 => ["file", $file, "w"], 2 => ["pipe", "w"]], $pipes, null, $env);
         $err = stream_get_contents($pipes[2]); fclose($pipes[2]);
         $rc = proc_close($pr);
-        if ($rc === 0 && filesize($file) > 0) { $ok = true; $man["method"] = "mysqldump"; }
+        if ($rc === 0 && filesize($file) > 0) { $ok = true; $man["method"] = $rootSocket ? "mysqldump-root-socket" : "mysqldump"; }
         else { fwrite(STDERR, "mysqldump код $rc: " . substr(preg_replace("/\s+/", " ", $err), 0, 300) . " — перехожу на PHP-дамп\n"); }
     }
     if (!$ok) {

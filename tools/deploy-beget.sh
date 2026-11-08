@@ -8,6 +8,12 @@
 #   ./tools/deploy-beget.sh --dry-run          # показать, что поедет, ничего не менять
 #   ./tools/deploy-beget.sh --check            # только связь, папка и прозвон живого адреса
 #   ./tools/deploy-beget.sh --prune            # убрать с сайта файлы, которых нет в выпуске (не удаляет: переносит в <docroot>_backup/<дата>/ вне веб-корня)
+#   ./tools/deploy-beget.sh --target=vps       # лить на VPS SmartApe (ssh sm-vps → /srv/beget/dizain-studiya-kvartir/public_html):
+#                                              # та же раскладка, что домашняя папка Beget; файлы → www-data; прозвон домена идёт
+#                                              # по IP VPS (--resolve, без проверки сертификата), пока DNS ещё на Beget. То же: DEPLOY_TARGET=vps.
+#
+# Цель выкладки (переезд с Beget на VPS, ноябрь 2026): по умолчанию TARGET_DEFAULT ниже — Beget, пока домен смотрит туда.
+# После переключения DNS достаточно поменять TARGET_DEFAULT на vps (или задать DEPLOY_TARGET=vps в окружении).
 #
 # Как устроено:
 #   1. tools/site-rebase.js собирает копию site/ под нужный адрес в .deploy/<site>/ (canonical, sitemap, robots,
@@ -23,13 +29,14 @@
 #   ни заливка, ни --prune туда не заходят; config.php там правится руками (образец — server/config.example.php).
 #
 # Переменные: LINEA_SSH_HOST (beget-en0), LINEA_DOCROOT (dizain-studiya-kvartir/public_html),
-#             BATCH_MB=40 BATCH_N=300 BATCH_PAUSE=3, BEGET_BIND=en0.
+#             BATCH_MB=40 BATCH_N=300 BATCH_PAUSE=3, BEGET_BIND=en0;
+#             для VPS: DEPLOY_TARGET=vps, VPS_SSH_HOST (sm-vps), VPS_ROOT (/srv/beget), VPS_IP (45.154.185.168).
 
 set -uo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-HOST="${LINEA_SSH_HOST:-beget-en0}"
-DOCROOT="${LINEA_DOCROOT:-dizain-studiya-kvartir/public_html}"
+TARGET_DEFAULT=beget                       # ← после переключения DNS домена на VPS поставить vps
+TARGET="${DEPLOY_TARGET:-$TARGET_DEFAULT}"
 BATCH_MB="${BATCH_MB:-40}" BATCH_N="${BATCH_N:-300}" BATCH_PAUSE="${BATCH_PAUSE:-3}"
 MARK=".linea-deploy"
 
@@ -37,6 +44,7 @@ SITE=domain DRY=0 ONLY_CHECK=0 PRUNE=0
 for a in "$@"; do
   case "$a" in
     --site=*) SITE="${a#--site=}" ;;
+    --target=*) TARGET="${a#--target=}" ;;
     --dry-run) DRY=1 ;;
     --check) ONLY_CHECK=1 ;;
     --prune) PRUNE=1 ;;
@@ -44,6 +52,16 @@ for a in "$@"; do
     *) echo "Неизвестный ключ: $a (см. --help)" >&2; exit 2 ;;
   esac
 done
+# Куда лить. Пути на сервере: на Beget — относительно домашней папки аккаунта (ssh заходит в неё), на VPS — абсолютные
+# в /srv/beget (копия домашней папки Beget той же раскладки; ssh заходит root-ом, «~» там — /root). WEB_OWNER — кому
+# должны принадлежать файлы сайта (на VPS nginx→Apache→PHP-fpm работают от www-data; rsync от root оставил бы файлы
+# root-у). VPS_IP — прозвон домена по IP, пока DNS ещё смотрит на Beget.
+case "$TARGET" in
+  beget) HOST="${LINEA_SSH_HOST:-beget-en0}"; RBASE=""; WEB_OWNER=""; VPS_IP="" ;;
+  vps)   HOST="${VPS_SSH_HOST:-sm-vps}"; RBASE="${VPS_ROOT:-/srv/beget}/"; WEB_OWNER="www-data:www-data"; VPS_IP="${VPS_IP:-45.154.185.168}" ;;
+  *) echo "Неизвестная цель --target=$TARGET (знаю beget и vps)" >&2; exit 2 ;;
+esac
+DOCROOT="${RBASE}${LINEA_DOCROOT:-dizain-studiya-kvartir/public_html}"
 if [ "$SITE" = preview ] && [ "${LINEA_ALLOW_PREVIEW:-0}" != 1 ]; then
   echo "Сборка preview закрывает сайт от поиска, а папка на Beget общая с доменом. Нужно — LINEA_ALLOW_PREVIEW=1 $0 --site=preview" >&2; exit 2
 fi
@@ -78,7 +96,7 @@ else
 fi
 
 # ─────────────────────────────────────────────── 2. Связь
-say "2. Связь с Beget"
+say "2. Связь с сервером ($TARGET: ssh $HOST → $DOCROOT)"
 IFACE=$(route -n get default 2>/dev/null | awk '/interface:/{print $2}')
 case "$IFACE" in
   utun*|ppp*|ipsec*|tun*)
@@ -89,15 +107,25 @@ case "$IFACE" in
 esac
 [ -n "$BIP" ] && SSH_OPTS+=(-b "$BIP")
 rssh() { command ssh "${SSH_OPTS[@]}" "$HOST" "$@"; }
-ccurl() { if [ -n "$BIP" ]; then command curl --interface "$BIF" "$@"; else command curl "$@"; fi; }
+# На VPS домен прозванивается по IP сервера (--resolve): DNS ещё на Beget, а сертификат на VPS до переключения
+# может быть не выпущен — поэтому без проверки сертификата (-k). После переезда DNS VPS_IP можно не задавать.
+CURL_VPS=()
+if [ -n "$VPS_IP" ]; then BH="${BASE#*://}"; BH="${BH%%/*}"; CURL_VPS=(-k --resolve "$BH:443:$VPS_IP" --resolve "$BH:80:$VPS_IP"); fi
+ccurl() { if [ -n "$BIP" ]; then command curl --interface "$BIF" "${CURL_VPS[@]}" "$@"; else command curl "${CURL_VPS[@]}" "$@"; fi; }
+# Владелец файлов после заливки (только VPS): rsync/tar от root оставляют файлы root-у, а PHP-fpm и Apache там — www-data.
+fix_owner() { [ -n "$WEB_OWNER" ] || return 0; rssh "chown -R $WEB_OWNER '$1'" && ok "владелец $1 → $WEB_OWNER" || warn "chown $WEB_OWNER на $1 не прошёл"; }
 
 for i in 1 2 3; do
   if rssh true 2>/dev/null; then ok "SSH до $HOST работает"; break; fi
-  [ "$i" = 3 ] && die "SSH до $HOST не отвечает (ключ ~/.ssh/beget_myarredo_deploy в ~/.ssh/config, VPN?)"
+  [ "$i" = 3 ] && die "SSH до $HOST не отвечает (ключ в ~/.ssh/config, VPN? при VPN — обход через en0)"
   warn "SSH не ответил, повтор через $((i * 10)) с"; sleep $((i * 10))
 done
 
-rssh "test -d '$DOCROOT'" || die "на сервере нет папки $DOCROOT — сайт создаётся в панели/API Beget (site/add)"
+if [ "$TARGET" = vps ]; then
+  rssh "test -d '$DOCROOT'" || die "на VPS нет папки $DOCROOT — копия Beget не поднята (см. scripts переезда в seomarket-site/scripts/pereezd)"
+else
+  rssh "test -d '$DOCROOT'" || die "на сервере нет папки $DOCROOT — сайт создаётся в панели/API Beget (site/add)"
+fi
 ok "папка $DOCROOT на месте"
 
 # Свежая папка Beget: заглушка index.php (у Apache она главнее index.html) и cgi-bin. Заглушку убираем
@@ -168,6 +196,13 @@ if [ "$ONLY_CHECK" = 0 ]; then
     [ "$k" -lt "$BATCHES" ] && sleep "$BATCH_PAUSE"
   done
 
+  [ "$N" = 0 ] || fix_owner "$DOCROOT"
+  # PHP приёмника на VPS — другая версия (8.3 вместо 8.2 Beget): синтаксис проверяем сразу после заливки
+  if [ "$TARGET" = vps ] && [ -d "$OUT/api" ]; then
+    LINT=$(rssh "cd '$DOCROOT' && find api -name '*.php' -exec php -l {} \; 2>&1 | grep -v 'No syntax errors'" | tr -d '\r')
+    [ -z "$LINT" ] && ok "php -l api/*.php на VPS — без ошибок" || { warn "php -l на VPS:"; printf '%s\n' "$LINT" | head -10 | sed 's/^/       /'; }
+  fi
+
   # Сверка: всё ли легло, тем же размером
   rssh "cd '$DOCROOT' && find . -type f -printf '%P\t%s\n'" | tr -d '\r' | LC_ALL=C sort > "$TMP/remote2.tsv"
   cut -f1,2 "$TMP/local.tsv" | LC_ALL=C sort > "$TMP/local2.tsv"
@@ -184,17 +219,19 @@ if [ "$ONLY_CHECK" = 0 ]; then
       # не rm: переносим рядом с веб-корнем (правило «ничего не удалять на проде без бэкапа рядом»); снаружи — 404
       BK="${DOCROOT%/}_backup/$(date +%Y%m%d-%H%M%S)"
       rssh "while IFS= read -r f; do mkdir -p \"$BK/\$(dirname -- \"\$f\")\" && mv -f -- \"$DOCROOT/\$f\" \"$BK/\$f\"; done" < "$TMP/extra" \
-        && ok "убрано лишних с сайта: $EX → ~/$BK (вне веб-корня; вернуть — mv обратно)" \
+        && ok "убрано лишних с сайта: $EX → ${RBASE:-~/}${BK#"$RBASE"} (вне веб-корня; вернуть — mv обратно)" \
         || die "перенос лишних в $BK не прошёл"
+      fix_owner "$BK"
       head -12 "$TMP/extra" | sed 's/^/       /'; [ "$EX" -gt 12 ] && echo "       … и ещё $((EX - 12))"
     else warn "на сервере $EX лишних файлов (нет в выпуске) — убрать: $0 --site=$SITE --prune"; fi
   fi
 
   printf '%s  %s  %s\n' "$(date '+%d.%m.%Y %H:%M')" "$(cd "$ROOT" && git rev-parse --short HEAD 2>/dev/null)" "$BASE" | rssh "cat > '$DOCROOT/$MARK'"
+  [ -n "$WEB_OWNER" ] && rssh "chown $WEB_OWNER '$DOCROOT/$MARK'"
 fi
 
 # ─────────────────────────────────────────────── 5. Прозвон
-say "5. Проверяю живой адрес $BASE"
+say "5. Проверяю живой адрес $BASE${VPS_IP:+ (по IP VPS $VPS_IP, сертификат не проверяется)}"
 FAIL=0
 PDF=$(cd "${OUT}" 2>/dev/null && ls portfolio/gost-*/album.pdf 2>/dev/null | head -1)
 for u in / /index.html /brief.html /review.html "/review.html?p=gost-kv3k" /portfolio-hub/ /portfolio/gost-kv3k/ \

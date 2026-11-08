@@ -25,10 +25,12 @@ rs '(if not exist C:\linea-ops\ops.json copy /y C:\linea-ops\tools\ops.example.j
 say "3/6 Секреты: пароль архива, ключ SSH, known_hosts Beget"
 rs 'if not exist C:\linea-ops\secrets\backup.pass ("C:\Program Files\nodejs\node.exe" -e "require(\"fs\").writeFileSync(\"C:/linea-ops/secrets/backup.pass\", require(\"crypto\").randomBytes(30).toString(\"base64url\"))" && echo backup.pass created) else (echo backup.pass exists)'
 rs 'if not exist C:\linea-ops\secrets\beget_ed25519 (ssh-keygen -q -t ed25519 -N "" -C linea-backup@smartape -f C:\linea-ops\secrets\beget_ed25519 && echo key created) else (echo key exists)'
-KH=$(grep -E '^gandalf\.beget\.com ' ~/.ssh/known_hosts | head -3 || true)
+# Ключи хостов обоих источников дампа — Beget и VPS SmartApe (45.154.185.168, после переезда): бэкапер проверяет их строго.
+VPS_IP="${VPS_IP:-45.154.185.168}"
+KH=$(grep -E "^(gandalf\.beget\.com|$VPS_IP) " ~/.ssh/known_hosts | head -6 || true)
 W="${LINEA_SCRATCH:-${TMPDIR:-/tmp}}/linea-install.$$"; mkdir -p "$W"; trap 'rm -rf "$W"' EXIT
 if [ -n "$KH" ]; then printf '%s\n' "$KH" > "$W/known_hosts"; scp -q -o BatchMode=yes "$W/known_hosts" "$H":C:/linea-ops/secrets/known_hosts
-  echo "  known_hosts: ключ хоста gandalf.beget.com перенесён с мака"; fi
+  echo "  known_hosts: ключи хостов перенесены с мака ($(printf '%s\n' "$KH" | cut -d' ' -f1 | sort -u | tr '\n' ' '))"; fi
 # права на всю C:\linea-ops: только SYSTEM и Administrators (иначе OpenSSH для Windows отвергает ключ, а пароль видели бы другие учётки)
 rs 'icacls C:\linea-ops /inheritance:r /grant:r "*S-1-5-18:(OI)(CI)F" "*S-1-5-32-544:(OI)(CI)F" /Q >NUL && icacls C:\linea-ops\* /reset /T /Q >NUL && echo acl ok'
 echo "  открытый ключ для Beget (его добавит after-beget-up.sh):"

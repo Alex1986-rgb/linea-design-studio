@@ -7,10 +7,16 @@
     "kabinet": "/kabinet/"
   },
   "sslWarnDays": 14,
+  "source": "beget",
   "beget": {
     "host": "gandalf.beget.com",
     "user": "aleks2si",
     "root": "dizain-studiya-kvartir"
+  },
+  "vps": {
+    "host": "45.154.185.168",
+    "user": "root",
+    "root": "/srv/beget/dizain-studiya-kvartir"
   },
   "keepDaily": 14,
   "keepWeekly": 8,

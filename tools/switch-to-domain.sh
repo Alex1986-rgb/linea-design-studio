@@ -30,10 +30,12 @@ SITE_ID=9469516
 FQDN="дизайн-студия-квартир.рф"
 PUNY="xn-----6kccjicviedfr1b2cbishm8w.xn--p1ai"
 CHECK=0 DRY=0 HOST=""
+TARGET="${DEPLOY_TARGET:-beget}"   # --target=vps: выкладка на VPS SmartApe без шагов API Beget (см. ниже)
 for a in "$@"; do
   case "$a" in
     --check) CHECK=1 ;;
     --dry-run) DRY=1 ;;
+    --target=*) TARGET="${a#--target=}" ;;
     --host=*) HOST="${a#--host=}" ;;
     -h|--help) awk 'NR>1 { if (/^#/) { sub(/^# ?/, ""); print } else exit }' "$0"; exit 0 ;;
     *) echo "Неизвестный ключ: $a (см. --help)" >&2; exit 2 ;;
@@ -151,6 +153,19 @@ after_deploy() {
 }
 
 if [ "$DRY" = 1 ]; then ready_offline; say "Репетиция пройдена: переключение на копиях без ошибок (предупреждений: $WARNS)"; exit 0; fi
+
+# Цель VPS (переезд с Beget, ноябрь 2026): шаги 1–3 и 6 здесь — про аккаунт Beget (API: регистрация и привязка домена,
+# сертификат панели) и про домен по DNS, который ещё смотрит на Beget. На VPS домен обслуживает vhost Apache, DNS и сертификат
+# переключаются отдельно (SmartApe) — скрипт их не трогает. Остаются шаг 0 (копия .deploy/domain готова) и шаг 5 (выкладка).
+if [ "$TARGET" = vps ]; then
+  say "Цель VPS: шаги 1–3 и 6 (API Beget, https по DNS) пропущены — на VPS они не применимы"
+  [ "$CHECK" = 1 ] && { ready_offline; say "Проверка для VPS: копия готова; выкладка — $0 --target=vps"; exit 0; }
+  ready_offline
+  say "5. Выкладка на VPS"
+  "$ROOT/tools/deploy-beget.sh" --site=domain --prune --target=vps || die "выкладка на VPS с ошибками — см. выше"
+  say "Готово: сайт выложен на VPS (прозвон по IP внутри deploy-beget.sh). DNS домена переключается у SmartApe отдельно."
+  exit 0
+fi
 
 if [ -n "$HOST" ]; then
   say "Шаги 1–2 пропущены: проверка шага 3 против $HOST"
