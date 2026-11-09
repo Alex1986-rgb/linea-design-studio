@@ -2,7 +2,8 @@
 //   1. План квартиры — файл или камера, площадь (обязательно — по ней считается сумма), «плана нет»
 //   2. Что нравится — свои картинки или ♥ на кадрах галереи (assets/refs/refs.json)
 //   3. Расскажите словами — одно поле, 🎤 (Web Speech API), чипы-заготовки; подробности (помещения, стиль…) — под «Добавить подробности»
-//   4. Контакты, согласие, цена по площади, что дальше → отправка
+//   +  необязательно (09.11.2026 — после «словами»): «Жизнь в квартире» (life) и «Дом и ремонт» (home) — каталоги js/brief-life.js
+//   4. Контакты, сводка из 5–6 пунктов для проверки, согласие, цена по площади, что дальше → отправка
 // Формат заказа прежний: архив brief.json + brief.txt + plan/* + referensy/* (+ referensy-galereya.txt). brief.json читают
 // api/brief.php, tools/brief-intake.js и gost-draft tools/site-brief.js — поля collect() сохранены (rooms может быть пустым).
 // Где есть приёмник (<meta name="linea-api" content="api/">, её вставляет tools/site-rebase.js) и соединение защищено (https),
@@ -17,9 +18,10 @@
   const SECURE = location.protocol === 'https:' || /^(localhost|127\.0\.0\.1|\[::1\])$/.test(location.hostname);
   const API = (SECURE || TEST) ? ((document.querySelector('meta[name="linea-api"]') || {}).content || '') : '';
   const MAX_MB = 100;
-  const NAMES = ['План квартиры', 'Что нравится', 'Жизнь в квартире', 'Расскажите словами', 'Куда прислать проект'];
-  const LIFE = 2, STORY = 3, SEND = 4, DONE = 5;   // шаг LIFE необязателен (08.11.2026): вопросы, о которых забывают до ремонта — js/brief-life.js
-  const L = window.LineaLife;
+  const NAMES = ['План квартиры', 'Что нравится', 'Расскажите словами', 'Жизнь в квартире', 'Дом и ремонт', 'Куда прислать проект'];
+  // шаги LIFE и HOME необязательны и идут после главного «словами» (09.11.2026): вопросы о быте и вопросы прораба — js/brief-life.js
+  const STORY = 2, LIFE = 3, HOME = 4, SEND = 5, DONE = 6;
+  const L = window.LineaLife, H = window.LineaHome;
   // ставки — из TERMS (sync-static-nav.js пишет <script id="briefTerms">); запасные значения — на случай старой копии страницы
   let T = { packs: [{ key: 'proekt', name: 'Проект с визуализациями', rate: 2000, min: 80000 }], minArea: 40 };
   try { const el = $('briefTerms'); if (el) T = JSON.parse(el.textContent); } catch (e) {}
@@ -36,26 +38,30 @@
   const pack = () => T.packs[0].key;   // пакет один (31.10.2026): визуализации входят в цену
 
   let step = 0, ready = false;
-  const files = { plans: [], photos: [] };   // File → в архив; в черновике только имена
+  const files = { plans: [], photos: [], now: [] };   // File → в архив; в черновике только имена (now — фото «как сейчас», шаг HOME)
   const liked = new Set();                   // id кадров галереи
   $('prog').hidden = false; $('nav').hidden = false;
+  // прогресс шагов с вопросами «прилипает» под шапкой сайта: её высота разная на телефоне и компьютере
+  const hdrH = () => { const h = document.querySelector('header.site'); document.documentElement.style.setProperty('--hdrH', (h ? h.offsetHeight : 0) + 'px'); };
+  hdrH(); addEventListener('resize', hdrH);
 
   // ── шаги
   function show(n, focus) {
     step = n;
     document.querySelectorAll('#wiz .panel').forEach(p => { p.hidden = +p.dataset.step !== step; });
-    $('progStep').textContent = step === LIFE ? 'Дополнительно' : step < LIFE ? `Шаг ${step + 1} из 3` : step < SEND ? 'Шаг 3 из 3' : step === SEND ? 'Последний шаг' : 'Готово';
-    $('progName').textContent = (NAMES[step] || 'Отправка') + (step === LIFE ? ' · можно пропустить' : '');
-    $('progBar').style.width = Math.round(((step + 1) / 5) * 100) + '%';
+    $('progStep').textContent = step <= STORY ? `Шаг ${step + 1} из 3` : step === LIFE ? 'Дополнительно, 1 из 2' : step === HOME ? 'Дополнительно, 2 из 2' : step === SEND ? 'Последний шаг' : 'Готово';
+    $('progName').textContent = (NAMES[step] || 'Отправка') + (step === LIFE || step === HOME ? ' · можно пропустить' : '');
+    $('progBar').style.width = Math.round(((step + 1) / (SEND + 1)) * 100) + '%';
     $('stepLive').textContent = $('progStep').textContent + ': ' + $('progName').textContent;
     $('nav').hidden = step === DONE;
     $('nav').classList.toggle('last', step === SEND);
     $('prev').hidden = step === 0;
     document.body.classList.toggle('stepped', step > 0);
     $('next').hidden = step >= SEND;
-    $('next').textContent = step === STORY ? 'К отправке →' : 'Дальше →';
-    $('skipNote').textContent = step === 1 ? 'Ничего не подходит — просто нажмите «Дальше».' : step === LIFE ? 'Можно ответить на часть вопросов или нажать «Пропустить шаг».' : step === STORY ? 'Можно коротко: пара фраз уже помогает.' : '';
-    if (step === SEND) price();
+    $('next').textContent = step === HOME ? 'К отправке →' : 'Дальше →';
+    $('skipNote').textContent = step === 1 ? 'Ничего не подходит — просто нажмите «Дальше».' : step === LIFE || step === HOME ? 'Можно ответить на часть вопросов или нажать «Пропустить шаг».'
+      : step === STORY ? 'Можно коротко: пара фраз уже помогает. Дальше — два необязательных шага с вопросами, их можно пропустить.' : '';
+    if (step === SEND) { price(); recap(); }
     if (focus) {
       const h = document.querySelector(`.panel[data-step="${step}"] h2`);
       if (h) { h.tabIndex = -1; h.focus({ preventScroll: true }); }
@@ -114,6 +120,7 @@
   }
   fileZone(['filePlan', 'camPlan'], 'dropPlan', 'planList', 'plans', 'Загружено страниц плана');
   fileZone(['fileRefs'], null, 'refList', 'photos', 'Ваших картинок');
+  fileZone(['fileNow'], null, 'nowList', 'now', 'Фото квартиры');
 
   // ── галерея: нажатие = нравится. Сначала по одному кадру каждого стиля, остальные — «Показать ещё»
   const gal = $('gal');
@@ -144,12 +151,16 @@
     if (hid.length <= 9) $('galMore').hidden = true;
   };
 
-  // ── «Жизнь в квартире»: группы чипов из js/brief-life.js; «Пропустить» помечает шаг пропущенным
-  let lifeSkipped = false;
+  // ── «Жизнь в квартире» и «Дом и ремонт»: каталоги из js/brief-life.js; «Пропустить» помечает шаг пропущенным
+  let lifeSkipped = false, homeSkipped = false;
   if (L) {
     L.mount($('lifeBox'), () => { lifeSkipped = false; save(); });
-    $('skipLife').onclick = () => { lifeSkipped = !L.answered(); show(STORY, true); };
-  } else { $('lifeBox').hidden = true; $('skipLife').textContent = 'Дальше'; $('skipLife').onclick = () => show(STORY, true); }
+    $('skipLife').onclick = () => { lifeSkipped = !L.answered(); show(HOME, true); };
+  } else { $('lifeBox').hidden = true; $('skipLife').textContent = 'Дальше'; $('skipLife').onclick = () => show(HOME, true); }
+  if (H) {
+    H.mount($('homeBox'), () => { homeSkipped = false; save(); });
+    $('skipHome').onclick = () => { homeSkipped = !H.answered(); show(SEND, true); };
+  } else { $('homeBox').hidden = true; $('skipHome').textContent = 'Дальше'; $('skipHome').onclick = () => show(SEND, true); }
 
   // ── рассказ: чипы-заготовки («Кто живёт: …» отдельной строкой)
   const story = $('story');
@@ -268,13 +279,19 @@
   }
   // ответы шага «Жизнь в квартире» дополняют answers.* там, где клиент сам ничего не написал (старые читатели брифа получают их без правок)
   function mergeLife(A) {
-    if (!L || !L.answered()) return A;
-    const X = L.answers();
-    for (const k of Object.keys(X)) if (!A[k] || (Array.isArray(A[k]) && !A[k].length)) A[k] = X[k];
+    for (const S of [L, H]) {
+      if (!S || !S.answered()) continue;
+      const X = S.answers();
+      for (const k of Object.keys(X)) if (!A[k] || (Array.isArray(A[k]) && !A[k].length)) A[k] = X[k];
+    }
     return A;
   }
+  // бюджет на ремонт из шага «Дом и ремонт» → класс материалов по ₽/м² (середина вилки / площадь): до 20 тыс. — эконом, до 45 — бизнес
+  const FINISH_MID = { '1': 700000, '2': 1500000, '35': 2750000, '35plus': 4500000 };
   function budgetClass(text) {
     if (val('qBudget')) return val('qBudget');
+    const f = H && H.pick('plan', 'budFinish')[0], a = num(val('objArea'));
+    if (f && FINISH_MID[f] && a) { const m2 = FINISH_MID[f] / a; return m2 < 20000 ? 'econom' : m2 < 45000 ? 'business' : 'premium'; }
     if (/эконом|недорог|скромн|бюджетн/i.test(text)) return 'econom';
     if (/премиум|без компромисс/i.test(text)) return 'premium';
     return 'business';
@@ -297,12 +314,13 @@
         needSurvey: $('needSurvey').checked && !files.plans.length },
       rooms,
       story: t,
-      files: { plans: files.plans.map(f => f.name), photos: files.photos.map(f => f.name) },
-      style: { key, title: st ? st[1] : key, byStudio: key === 'studio', colors: '', avoidColors: '', liked: [...liked], disliked: [],
+      files: { plans: files.plans.map(f => f.name), photos: files.photos.map(f => f.name), now: files.now.map(f => f.name) },
+      style: { key, title: st ? st[1] : key, byStudio: key === 'studio', colors: '', avoidColors: L && L.avoidColorsText ? L.avoidColorsText() : '', liked: [...liked], disliked: [],
         links: val('stRefs').split(/[\s,]+/).map(s => s.trim()).filter(s => /^https?:\/\//.test(s)) },
       budget: budgetClass(A.budget),
       answers: A,
-      life: L ? L.out(lifeSkipped) : undefined
+      life: L ? L.out(lifeSkipped) : undefined,
+      home: H ? H.out(homeSkipped) : undefined
     };
   }
 
@@ -314,12 +332,15 @@
     clearTimeout(saveT);
     saveT = setTimeout(() => {
       const b = collect();
-      const d = { v: 3, fields: {}, kind: kind(), pack: pack(), needSurvey: $('needSurvey').checked, liked: [...liked], rooms: b.rooms, step: Math.min(step, SEND), ds: 2, life: L ? L.out(false) : null, lifeSkipped, files: b.files };
+      const d = { v: 3, fields: {}, kind: kind(), pack: pack(), needSurvey: $('needSurvey').checked, liked: [...liked], rooms: b.rooms, step: Math.min(step, SEND), ds: 3,
+        life: L ? L.out(false) : null, lifeSkipped, home: H ? H.out(false) : null, homeSkipped, files: b.files };
       FIELDS.forEach(id => { d.fields[id] = val(id); });
       try {
         localStorage.setItem(KEY, JSON.stringify(d));
         if ($('draftNote').hidden) { $('draftNote').hidden = false; $('draftNote').textContent = 'Черновик сохраняется в этом браузере — можно закрыть и вернуться.'; }
-      } catch (e) {}
+        const t = new Date();
+        $('savedMark').textContent = '✓ Черновик сохранён · ' + String(t.getHours()).padStart(2, '0') + ':' + String(t.getMinutes()).padStart(2, '0');
+      } catch (e) { $('savedMark').textContent = ''; }
     }, 300);
   }
   document.addEventListener('input', save);
@@ -331,14 +352,16 @@
     FIELDS.forEach(id => { if ($(id) && d.fields && d.fields[id] != null) $(id).value = d.fields[id]; });
     $('needSurvey').checked = !!d.needSurvey;
     if (L && d.life) L.restore(d.life);
-    lifeSkipped = !!d.lifeSkipped;
-    // черновик до появления шага «Жизнь в квартире» (без ds) хранил номера шагов на единицу меньше, начиная с «словами»
-    if (d.ds !== 2 && d.step >= 2) d.step += 1;
+    if (H && d.home) H.restore(d.home);
+    lifeSkipped = !!d.lifeSkipped; homeSkipped = !!d.homeSkipped;
+    // номера шагов в старых черновиках: без ds — 2 «словами», 3 «контакты»; ds 2 — 2 «жизнь», 3 «словами», 4 «контакты»
+    if (!d.ds) d.step = { 2: STORY, 3: SEND }[d.step] ?? d.step;
+    else if (d.ds === 2) d.step = { 2: LIFE, 3: STORY, 4: SEND }[d.step] ?? d.step;
     (d.liked || []).forEach(id => liked.add(id));
     (d.rooms || []).forEach(addRoom);
     if ((d.rooms || []).length || d.fields.objH || d.fields.objState || d.fields.objAddr) $('more').open = true;
-    const lostPlans = d.files ? d.files.plans.length : 0, lost = lostPlans + (d.files ? d.files.photos.length : 0);
-    $('draftNote').hidden = false;
+    const lostPlans = d.files ? d.files.plans.length : 0, lost = lostPlans + (d.files ? d.files.photos.length + (d.files.now || []).length : 0);
+    $('draftNote').hidden = false; $('savedMark').textContent = '✓ Черновик восстановлен';
     $('draftNote').innerHTML = 'Черновик восстановлен.' + (lost ? ' <b>Файлы браузер не сохраняет — добавьте план и картинки ещё раз.</b>' : '')
       + ' <button type="button" class="linklike" id="draftReset">Начать заново</button>';
     $('draftReset').onclick = () => { try { localStorage.removeItem(KEY); } catch (e) {} location.href = location.pathname + (TEST ? '?test=1' : ''); };
@@ -349,6 +372,36 @@
   const want = qs.get('style');
   if (want && STYLES.some(s => s[0] === want) && val('stKey') === 'studio') $('stKey').value = want;
   paintChips();
+
+  // ── сводка перед отправкой (09.11.2026): 5–6 пунктов «так ли мы поняли» с переходом к шагу, где это исправить
+  function recap() {
+    const box = $('recap'); if (!box) return;
+    const b = collect(), o = b.object, P = [];
+    const lp = (S, g, k) => (S ? S.L(g, k).filter(Boolean) : []);
+    const lc = a => a.map(x => x.toLowerCase());
+    const cut = x => String(x || '').replace(/[.\s;,]+$/, '');
+    const item = (title, text, go) => P.push({ title, text: cut(text), go });
+    const house = [lp(H, 'house', 'type')[0], lp(H, 'house', 'year')[0] && 'год: ' + lc(lp(H, 'house', 'year'))[0], lp(H, 'house', 'floor')[0] && lp(H, 'house', 'floor')[0] + '-й этаж'].filter(Boolean);
+    item('Квартира', [o.area ? String(o.area).replace('.', ',') + ' м²' : 'площадь не указана', b.files.plans.length ? 'план приложен' : o.needSurvey ? 'плана нет — нужен обмер' : 'план не приложен', house.join(', ')].filter(Boolean).join(' · '), 0);
+    const la = L && L.answered() ? L.answers() : {};
+    const who = [cut(la.household || b.answers.household), cut(la.pets || b.answers.pets) && 'животные: ' + cut(la.pets || b.answers.pets)].filter(Boolean).join('; ');
+    item('Кто живёт', who || 'не указано — спросим', who ? LIFE : STORY);
+    const look = [b.style.byStudio ? 'стиль — на усмотрение студии' : 'стиль: ' + b.style.title, b.style.liked.length ? 'отмечено кадров: ' + b.style.liked.length : '', b.files.photos.length ? 'своих картинок: ' + b.files.photos.length : ''].filter(Boolean).join(', ');
+    const no = [b.style.avoidColors, b.answers.dislikes].filter(Boolean).join('; ');
+    item('Что нравится и что нет', look + (no ? '. Не хотите: ' + no : ''), 1);
+    const must = [b.answers.must, b.answers.kitchen && 'кухня: ' + b.answers.kitchen, b.answers.storage && 'хранение: ' + b.answers.storage, b.answers.wfh].filter(Boolean).map(cut).join('; ');
+    item('Обязательно учесть', must || (b.story ? 'по вашему рассказу' : 'пока ничего — можно дописать в рассказе'), STORY);
+    const eng = [lp(H, 'power', 'kw')[0] && 'мощность ' + lp(H, 'power', 'kw')[0], lp(H, 'water', 'gas')[0] && 'газ: ' + lc(lp(H, 'water', 'gas'))[0], lc(lp(H, 'works', 'replan')).join(', '), lp(H, 'works', 'keep').length && 'оставляем: ' + lc(lp(H, 'works', 'keep')).join(', ')].filter(Boolean).join('; ');
+    item('Дом и ремонт', eng || 'не заполнено — уточним на обмере', HOME);
+    const when = [b.answers.timeline, b.answers.budget && 'бюджет: ' + b.answers.budget].filter(Boolean).join('; ');
+    item('Сроки и бюджет', when || 'не указаны — обсудим до оплаты', HOME);
+    const unk = [L, H].reduce((n, S) => n + (S ? S.out(false).unknown.length : 0), 0);
+    box.hidden = false;
+    box.innerHTML = '<h3>Проверьте, так ли мы поняли</h3><p>Если что-то не так — нажмите «Исправить», ответы сохранятся.</p><ol>'
+      + P.map(x => `<li><b>${esc(x.title)}.</b> ${esc(x.text)} <button type="button" class="linklike fix" data-go="${x.go}">Исправить</button></li>`).join('') + '</ol>'
+      + (unk ? `<p class="rk" style="margin:8px 0 0">«Не знаю» отмечено у ${unk} ${unk === 1 ? 'вопроса' : 'вопросов'} — их решим вместе с дизайнером или уточним на обмере.</p>` : '');
+    box.querySelectorAll('[data-go]').forEach(btn => { btn.onclick = () => show(+btn.dataset.go, true); });
+  }
 
   // ── отправка: проверка контактов → архив → приёмник или «Поделиться»
   function checkContacts() {
@@ -374,10 +427,11 @@
     if (b.rooms.length) L.push('Помещения: ' + b.rooms.map(r => r.name + (r.width && r.length ? ' ' + r.width + '×' + r.length + ' м' : '') + (r.level != null ? ' (' + r.level + ' эт.)' : '')).join('; '));
     if (b.story) L.push('Своими словами: ' + b.story.replace(/\n+/g, ' / '));
     if (b.life && b.life.text && b.life.text.length) { L.push('Жизнь в квартире:'); b.life.text.forEach(x => L.push('· ' + x)); }
+    if (b.home && b.home.text && b.home.text.length) { L.push('Дом и ремонт:'); b.home.text.forEach(x => L.push('· ' + x)); }
     if (!b.style.byStudio) L.push('Стиль: ' + b.style.title);
     if (b.style.liked.length) L.push('Кадры галереи: нравится ' + b.style.liked.length);
     if (b.style.links.length) L.push('Ссылки: ' + b.style.links.join(' '));
-    L.push('Файлы: план ' + b.files.plans.length + ', свои картинки ' + b.files.photos.length);
+    L.push('Файлы: план ' + b.files.plans.length + ', свои картинки ' + b.files.photos.length + (b.files.now.length ? ', фото квартиры ' + b.files.now.length : ''));
     return L.join('\n');
   }
 
@@ -428,6 +482,8 @@
     for (const f of files.plans) list.push({ name: 'plan/' + String(++k).padStart(2, '0') + '-' + safe(f.name.replace(/\.(png|webp)$/i, '.jpg')), data: await shrink(f) });
     k = 0;
     for (const f of files.photos) list.push({ name: 'referensy/' + String(++k).padStart(2, '0') + '-' + safe(f.name.replace(/\.(png|webp)$/i, '.jpg')), data: await shrink(f) });
+    k = 0;
+    for (const f of files.now) list.push({ name: 'foto-seychas/' + String(++k).padStart(2, '0') + '-' + safe(f.name.replace(/\.(png|webp)$/i, '.jpg')), data: await shrink(f) });
     const who = safe((b.client.name || 'klient').trim().replace(/\s+/g, '-'));
     return new File([zip(list)], `LINEA-brif-${who}-${b.meta.created}.zip`, { type: 'application/zip' });
   }
@@ -488,7 +544,7 @@
       const b = lastBrief = collect();
       const f = archive = await makeArchive(b);
       if (f.size > MAX_MB * 1048576) { say('Файлы весят ' + sizeText(f.size) + ' — больше ' + MAX_MB + ' МБ. Уберите часть фото на шагах 1–2 или пришлите их отдельно в WhatsApp.', true); return; }
-      const heic = files.plans.concat(files.photos).filter(x => /\.(heic|heif)$/i.test(x.name) || /heic|heif/i.test(x.type)).length;
+      const heic = files.plans.concat(files.photos, files.now).filter(x => /\.(heic|heif)$/i.test(x.name) || /heic|heif/i.test(x.type)).length;
       let fallback = false;
       if (API) {
         btn.textContent = 'Отправляю…';
