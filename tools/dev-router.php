@@ -27,7 +27,7 @@ if (preg_match('#^/api/((?:brigade/)?[a-z-]+\.php)$#', $path, $m)) {
 }
 if (str_starts_with($path, '/api/')) { http_response_code(403); exit('403'); }
 $file = $root . '/site' . $path . (str_ends_with($path, '/') ? 'index.html' : '');
-foreach (['order.html' => 'api/', 'brigada/index.html' => '../api/', 'kabinet/index.html' => '../api/', 'vhod/index.html' => '../api/'] as $page => $api) {
+foreach (['order.html' => 'api/', 'brief.html' => 'api/', 'brigada/index.html' => '../api/', 'kabinet/index.html' => '../api/', 'vhod/index.html' => '../api/'] as $page => $api) {
     if ($file === $root . '/site/' . $page && is_file($file)) {
         header('Content-Type: text/html; charset=utf-8');
         echo str_replace('</head>', '<meta name="linea-api" content="' . $api . '">' . "\n</head>", (string)file_get_contents($file));

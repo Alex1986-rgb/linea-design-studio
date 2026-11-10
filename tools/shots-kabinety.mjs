@@ -78,6 +78,13 @@ await shot('proekt-375-dlinno', { y: await topOf('#kab'), maxH: 2600 });
 await go(K + '#/o/' + DEV.order + '/voprosy', 375);
 await js(`document.querySelector('[data-qf="done"]')?.click(); return 1`); await sleep(900);
 await shot('voprosy-375', { y: await topOf('.kab-tabs'), maxH: 1400 });
+// 4б. доработка 09.11: бриф, история, дополнительные вопросы
+await go(K + '#/o/' + DEV.order + '/brif', 1280); await sleep(700); await shot('brif-1280', { y: await topOf('#kab'), maxH: 1900 });
+await go(K + '#/o/' + DEV.order + '/brif', 375); await sleep(700); await shot('brif-375', { y: await topOf('.kab-tabs'), maxH: 2200 });
+await go(K + '#/o/' + DEV.order + '/istoriya', 375); await shot('istoriya-375', { y: await topOf('.kab-tabs'), maxH: 1600 });
+await go(K + '#/o/' + DEV.order + '/istoriya', 1280); await shot('istoriya-1280', { y: await topOf('.kab-tabs'), maxH: 1200 });
+await go(`${BASE}/brief.html?add=${DEV.token}`, 375); await sleep(600); await shot('brief-add-375', { y: 0, maxH: 1700 });
+await go(`${BASE}/brief.html?add=${DEV.token}`, 1280); await sleep(600); await shot('brief-add-1280', { y: 0, maxH: 1300 });
 // 5. ремонт
 await go(K + '#/o/' + DEV.order + '/remont', 1280); await sleep(800); await shot('remont-1280', { y: await topOf('.kab-tabs'), maxH: 1800 });
 // 6. документы, уведомления, профиль

@@ -324,7 +324,11 @@ try {
   ok(true, 'все вкладки карточки заказа открываются');
 
   if (UNTIL) {
-    fs.writeFileSync(path.join(PRIV, '_dev.json'), JSON.stringify({ base: BASE, admin: ADMIN_PASS, email: 'anna@example.test', order: NA }));
+    // для снимков: плановая дата, дополнение к брифу (шаг «Двери, свет и электрика») — как у живого заказа
+    await panel({ act: 'o_expected', o: NA, expected_at: '2099-11-28', expected_note: 'финальный альбом' });
+    { const dd = JSON.parse(fs.readFileSync(path.join(ROOT, 'server/api/lib/brief-dict.json'), 'utf8')); const TNOW = sql(`SELECT token FROM orders WHERE number = '${NA}'`)[0].token; const mk = key => { const o = { version: 1, answered: 0, skipped: false }; for (const g of dd[key].groups.slice(0, 3)) { o[g.k] = {}; for (const q of g.q.slice(0, 3)) { if (q.o) { const v = Object.keys(q.o)[0]; o[g.k][q.k] = q.ask === 'multi' ? [v] : v; o.answered++; } } } return o; };
+      await actor('shots').req('POST', '/api/brief-add.php', { json: { t: TNOW, life: mk('life'), tech: mk('tech') } }); }
+    fs.writeFileSync(path.join(PRIV, '_dev.json'), JSON.stringify({ base: BASE, admin: ADMIN_PASS, email: 'anna@example.test', order: NA, token: sql(`SELECT token FROM orders WHERE number = '${NA}'`)[0].token }));
     console.log(`\n--until=${UNTIL}: сервер ${BASE} оставлен, данные — ${PRIV}`); throw 'stop';
   }
   step('12. Удаление данных после завершения, выход на всех устройствах');
