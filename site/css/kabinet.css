@@ -191,3 +191,6 @@
 }
 
 .sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;border:0}
+
+/* опции заказа («Смета на материалы»): строки оплаты и итог */
+.kab-optline{display:flex;gap:12px;align-items:baseline;justify-content:space-between;margin:6px 0}.kab-optline b{white-space:nowrap}.kab-optsum{border-top:1px solid var(--line);padding-top:8px;font-size:18px}.kab-optsum b{color:var(--gold)}

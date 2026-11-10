@@ -103,9 +103,19 @@ function yk_tax(): array
  * Чек 54-ФЗ к платежу (передаётся только при config yk_receipt = true; боевой режим этим не включается). Деньги за проект приходят до
  * выдачи альбома — это предоплата 100 % (full_prepayment); при выдаче альбома уходит второй чек «полный расчёт» (yk_full_receipt()).
  */
-function yk_receipt(array $o, int $kop): array
+function yk_receipt(array $o, int $kop, array $extraItems = []): array
 {
-    return yk_tax() + ['customer' => yk_customer($o), 'items' => [yk_item($o, $kop, 'full_prepayment')]];
+    return yk_tax() + ['customer' => yk_customer($o), 'items' => array_merge($kop > 0 ? [yk_item($o, $kop, 'full_prepayment')] : [], $extraItems)];
+}
+
+/** Строка чека для опции заказа («Смета на материалы» — отдельной позицией). */
+function yk_item_opt(array $o, array $r, string $mode = 'full_prepayment'): array
+{
+    return [
+        'description' => mb_substr(opt_title((string)$r['opt']) . ', заказ ' . $o['number'], 0, 128, 'UTF-8'),
+        'quantity' => '1.00', 'amount' => yk_money((int)$r['amount_kop']), 'vat_code' => (int)linea_cfg()['yk_vat_code'],
+        'payment_mode' => $mode, 'payment_subject' => 'service',
+    ];
 }
 
 // ───────────────────────── второй чек и возвраты (54-ФЗ). Всё — только при yk_receipt = true (по умолчанию выключено).
@@ -369,14 +379,21 @@ function yk_payment_for(array $o): array
 {
     if (!yk_ready()) { return ['ok' => false, 'url' => '', 'why' => 'онлайн-оплата не включена']; }
     if ($o['status'] !== 'awaiting_payment') { return ['ok' => false, 'url' => '', 'why' => 'заказ не ждёт оплаты']; }
-    $kop = (int)($o['amount_kop'] ?? 0);
-    if ($kop <= 0) { return ['ok' => false, 'url' => '', 'why' => 'сумма ещё не выставлена']; }
+    $kopProj = (int)($o['amount_kop'] ?? 0);
+    if ($kopProj <= 0) { return ['ok' => false, 'url' => '', 'why' => 'сумма ещё не выставлена']; }
     if (!linea_amount_ok($o)) { return ['ok' => false, 'url' => '', 'why' => 'сумму подтвердим по плану в течение рабочего дня — после этого откроется оплата']; }   // В-3
+    // опции заказа («Смета на материалы»), отмеченные в брифе или добавленные до оплаты, идут в этот же платёж отдельными строками
+    require_once __DIR__ . '/options.php';
+    $bundle = opt_bundle($o);
+    $kop = $kopProj + array_sum(array_map(fn($r) => (int)$r['amount_kop'], $bundle));
+    $optKeys = implode(',', array_map(fn($r) => (string)$r['opt'], $bundle));
 
     if ($o['payment_id'] && $o['payment_url'] && strtotime((string)$o['payment_created_at']) > time() - 3600) {
         $chk = yk_call('GET', 'payments/' . rawurlencode((string)$o['payment_id']));
         $st = (string)($chk['data']['status'] ?? '');
-        if ($chk['ok'] && $st === 'pending') { return ['ok' => true, 'url' => (string)$o['payment_url'], 'why' => '']; }
+        // старую ссылку переиспользуем, только если сумма в ней равна текущей (опцию могли добавить после создания платежа)
+        $sameSum = $chk['ok'] && (int)round(((float)($chk['data']['amount']['value'] ?? 0)) * 100) === $kop;
+        if ($chk['ok'] && $st === 'pending' && $sameSum) { return ['ok' => true, 'url' => (string)$o['payment_url'], 'why' => '']; }
         if ($chk['ok'] && in_array($st, ['succeeded', 'waiting_for_capture'], true)) {
             yk_settle((string)$o['payment_id']);
             return ['ok' => false, 'url' => '', 'why' => 'платёж уже проведён — обновите страницу'];
@@ -389,9 +406,10 @@ function yk_payment_for(array $o): array
         'capture' => true,
         'description' => mb_substr('LINEA, заказ ' . $o['number'], 0, 128, 'UTF-8'),
         'confirmation' => ['type' => 'redirect', 'return_url' => linea_base() . '/order.html?t=' . $o['token'] . '&pay=back'],
-        'metadata' => ['order' => $o['number']],
+        'metadata' => ['order' => $o['number']] + ($optKeys !== '' ? ['opts' => $optKeys] : []),
     ];
-    if (linea_cfg()['yk_receipt']) { $body['receipt'] = yk_receipt($o, $kop); }
+    if ($optKeys !== '') { $body['description'] = mb_substr('LINEA, заказ ' . $o['number'] . ' + ' . implode(', ', array_map(fn($r) => mb_strtolower(opt_title((string)$r['opt'])), $bundle)), 0, 128, 'UTF-8'); }
+    if (linea_cfg()['yk_receipt']) { $body['receipt'] = yk_receipt($o, $kopProj, array_map(fn($r) => yk_item_opt($o, $r), $bundle)); }
     $res = yk_call('POST', 'payments', $body, $o['number'] . '-' . $try);
     if (!$res['ok']) { linea_log('pay.log', 'create ' . $o['number'] . ' fail: ' . $res['why']); return ['ok' => false, 'url' => '', 'why' => 'платёжный сервис не ответил, попробуйте через минуту']; }
     $url = (string)($res['data']['confirmation']['confirmation_url'] ?? '');
@@ -405,14 +423,57 @@ function yk_payment_for(array $o): array
     return ['ok' => true, 'url' => $url, 'why' => ''];
 }
 
-/** Платёж наш? Текущий или прежний (после смены суммы) id платежа какого-либо заказа — по своей базе, без запроса в API (В-5). */
+/**
+ * Отдельный платёж за опцию заказа (проект уже оплачен или оплачивается отдельно). Пока проект ждёт оплаты, опция идёт в платёж проекта (yk_payment_for).
+ * Сумма — из строки order_options, не из запроса. Idempotence-Key: номер заказа + опция + попытка. @return array{ok:bool, url:string, why:string}
+ */
+function yk_option_payment_for(array $o, string $opt): array
+{
+    require_once __DIR__ . '/options.php';
+    if (!yk_ready()) { return ['ok' => false, 'url' => '', 'why' => 'онлайн-оплата не включена']; }
+    $r = opt_get((int)$o['id'], $opt);
+    if (!$r || $r['status'] !== 'awaiting_payment') { return ['ok' => false, 'url' => '', 'why' => 'опция не ждёт оплаты']; }
+    if ($o['status'] === 'awaiting_payment') { return ['ok' => false, 'url' => '', 'why' => 'опция оплачивается вместе с проектом']; }
+    $kop = (int)($r['amount_kop'] ?? 0);
+    if ($kop <= 0) { return ['ok' => false, 'url' => '', 'why' => 'сумма опции ещё не выставлена']; }
+    if (!opt_can_pay($o, $r)) { return ['ok' => false, 'url' => '', 'why' => 'оплата этой опции сейчас недоступна']; }
+    if ($r['payment_id'] && $r['payment_url'] && strtotime((string)$r['payment_created_at']) > time() - 3600) {
+        $chk = yk_call('GET', 'payments/' . rawurlencode((string)$r['payment_id']));
+        $st = (string)($chk['data']['status'] ?? '');
+        if ($chk['ok'] && $st === 'pending') { return ['ok' => true, 'url' => (string)$r['payment_url'], 'why' => '']; }
+        if ($chk['ok'] && in_array($st, ['succeeded', 'waiting_for_capture'], true)) {
+            yk_settle((string)$r['payment_id']);
+            return ['ok' => false, 'url' => '', 'why' => 'платёж уже проведён — обновите страницу'];
+        }
+    }
+    $try = (int)$r['payment_tries'] + 1;
+    $body = [
+        'amount' => yk_money($kop), 'capture' => true,
+        'description' => mb_substr('LINEA, заказ ' . $o['number'] . ' — ' . mb_strtolower(opt_title($opt)), 0, 128, 'UTF-8'),
+        'confirmation' => ['type' => 'redirect', 'return_url' => linea_base() . '/kabinet/#/o/' . $o['number'] . '/proekt'],
+        'metadata' => ['order' => $o['number'], 'opts' => $opt, 'proj' => '0'],
+    ];
+    if (linea_cfg()['yk_receipt']) { $body['receipt'] = yk_receipt($o, 0, [yk_item_opt($o, $r)]); }
+    $res = yk_call('POST', 'payments', $body, $o['number'] . '-' . $opt . '-' . $try);
+    if (!$res['ok']) { linea_log('pay.log', 'create-opt ' . $o['number'] . ' ' . $opt . ' fail: ' . $res['why']); return ['ok' => false, 'url' => '', 'why' => 'платёжный сервис не ответил, попробуйте через минуту']; }
+    $url = (string)($res['data']['confirmation']['confirmation_url'] ?? '');
+    $id = (string)($res['data']['id'] ?? '');
+    if ($url === '' || $id === '') { return ['ok' => false, 'url' => '', 'why' => 'в ответе нет ссылки на оплату']; }
+    db_update('order_options', ['payment_id' => $id, 'payment_url' => $url, 'payment_created_at' => linea_now(), 'payment_tries' => $try, 'payment_receipt' => isset($body['receipt']) ? 1 : 0, 'updated_at' => linea_now()], 'id = ?', [(int)$r['id']]);
+    linea_event((int)$o['id'], 'yookassa', 'Создан платёж за «' . opt_title($opt) . '» на ' . number_format($kop / 100, 0, ',', ' ') . ' ₽ (' . $id . ')');
+    linea_log('pay.log', 'create-opt ' . $o['number'] . ' ' . $opt . ' ' . $id . ' ' . $kop);
+    return ['ok' => true, 'url' => $url, 'why' => ''];
+}
+
+/** Платёж наш? Текущий или прежний (после смены суммы) id платежа какого-либо заказа или опции — по своей базе, без запроса в API (В-5). */
 function yk_known_payment(string $paymentId): bool
 {
     if (!preg_match('/^[0-9a-f-]{20,64}$/i', $paymentId)) { return false; }
     linea_schema();
     $q = linea_db()->prepare('SELECT COUNT(*) FROM orders WHERE payment_id = ? OR payment_ids_old LIKE ?');
     $q->execute([$paymentId, '%' . $paymentId . '%']);
-    return (int)$q->fetchColumn() > 0;
+    if ((int)$q->fetchColumn() > 0) { return true; }
+    return (int)db_val('SELECT COUNT(*) FROM order_options WHERE payment_id = ?', [$paymentId]) > 0;
 }
 
 /** Адрес в списке подсетей (IPv4/IPv6, «адрес/маска»). */
@@ -484,8 +545,23 @@ function yk_settle(string $paymentId): array
     $status = (string)($d['status'] ?? '');
     $kop = (int)round(((float)($d['amount']['value'] ?? 0)) * 100);
 
+    // платёж за опцию отдельно от проекта (metadata.proj = 0): помечаем только строку order_options, заказ не трогаем
+    if ((string)($d['metadata']['proj'] ?? '1') === '0') { return yk_settle_option($o, $d, $paymentId, $status, $kop); }
+    // платёж проекта вместе с опциями (metadata.opts): ждём сумму проекта + неоплаченные опции из метаданных
+    require_once __DIR__ . '/options.php';
+    $optNames = array_values(array_filter(explode(',', (string)($d['metadata']['opts'] ?? '')), fn($k) => isset(OPT_CATALOG[$k])));
+    $optRows = [];
+    $optAll = [];
+    foreach ($optNames as $k) {
+        $r = opt_get((int)$o['id'], $k);
+        if (!$r || (int)$r['amount_kop'] <= 0) { continue; }
+        if ($r['status'] === 'awaiting_payment') { $optRows[] = $r; $optAll[] = $r; }
+        elseif (in_array($r['status'], ['paid', 'delivered'], true) && (string)$r['paid_by'] === 'yookassa ' . $paymentId) { $optAll[] = $r; }   // уже учтена этим платежом — повтор уведомления
+    }
+    $expect = (int)$o['amount_kop'] + array_sum(array_map(fn($r) => (int)$r['amount_kop'], $optAll));
+
     if ($status === 'succeeded' && !empty($d['paid'])) {
-        if ($kop !== (int)$o['amount_kop'] || ($d['amount']['currency'] ?? '') !== 'RUB') {
+        if ($kop !== $expect || ($d['amount']['currency'] ?? '') !== 'RUB') {
             // В-4: деньги пришли по старой сумме (ссылка до смены суммы) — тревога: пометка «нужна проверка», письмо Александру (один раз на платёж)
             linea_log('pay.log', 'settle ' . $o['number'] . ' ' . $paymentId . ' сумма не совпала ' . $kop . ' != ' . $o['amount_kop']);
             yk_alert($o, $paymentId, 'ВНИМАНИЕ: платёж ' . $paymentId . ' на ' . number_format($kop / 100, 0, ',', ' ') . ' ₽ не совпал с суммой заказа ' . number_format((int)$o['amount_kop'] / 100, 0, ',', ' ')
@@ -500,6 +576,8 @@ function yk_settle(string $paymentId): array
         if ($q->rowCount() === 1) {
             linea_event((int)$o['id'], 'yookassa', 'Оплата получена: ' . number_format($kop / 100, 0, ',', ' ') . ' ₽ (' . $paymentId . ')');
             linea_log('pay.log', 'paid ' . $o['number'] . ' ' . $paymentId . ' ' . $kop);
+            $paidNow = linea_order_by_number((string)$o['number']);
+            foreach ($optRows as $r) { opt_mark_paid($paidNow, $r, 'yookassa ' . $paymentId, true); }   // опции, оплаченные тем же платежом
             require_once __DIR__ . '/notify.php';
             linea_notify('LINEA: оплачен заказ ' . $o['number'], 'Заказ ' . $o['number'] . ' оплачен через ЮKassa: '
                 . number_format($kop / 100, 0, ',', ' ') . " ₽.\nСтарт работы — сейчас.\n" . linea_base() . '/api/admin.php', (bool)$o['test']);
@@ -531,6 +609,40 @@ function yk_settle(string $paymentId): array
         linea_db()->prepare('UPDATE orders SET payment_id = NULL, payment_url = NULL, payment_created_at = NULL, updated_at = ? WHERE id = ?')->execute([linea_now(), $o['id']]);
         linea_event((int)$o['id'], 'yookassa', 'Платёж ' . $paymentId . ' отменён (' . (string)($d['cancellation_details']['reason'] ?? '—') . ')');
         linea_log('pay.log', 'canceled ' . $o['number'] . ' ' . $paymentId);
+    }
+    return ['ok' => true, 'paid' => false, 'why' => $status];
+}
+
+
+/** Отдельный платёж за опцию заказа: проверка суммы по строке order_options и отметка «оплачена». @return array{ok:bool, paid:bool, why:string} */
+function yk_settle_option(array $o, array $d, string $paymentId, string $status, int $kop): array
+{
+    require_once __DIR__ . '/options.php';
+    $opt = (string)explode(',', (string)($d['metadata']['opts'] ?? ''))[0];
+    $r = isset(OPT_CATALOG[$opt]) ? opt_get((int)$o['id'], $opt) : null;
+    if (!$r) { return ['ok' => true, 'paid' => false, 'why' => 'нет опции']; }
+    if ($status === 'succeeded' && !empty($d['paid'])) {
+        if ($kop !== (int)$r['amount_kop'] || ($d['amount']['currency'] ?? '') !== 'RUB') {
+            $mark = 'ВНИМАНИЕ: платёж ' . $paymentId;
+            if (!(int)db_val('SELECT COUNT(*) FROM events WHERE order_id = ? AND text LIKE ?', [(int)$o['id'], $mark . '%'])) {
+                linea_event((int)$o['id'], 'yookassa', $mark . ' на ' . number_format($kop / 100, 0, ',', ' ') . ' ₽ не совпал с суммой опции «' . opt_title($opt) . '» ' . number_format((int)$r['amount_kop'] / 100, 0, ',', ' ') . ' ₽ — нужна проверка');
+                require_once __DIR__ . '/notify.php';
+                linea_notify('LINEA: оплата опции не совпала с суммой, заказ ' . $o['number'], 'Платёж ' . $paymentId . ' на ' . number_format($kop / 100, 0, ',', ' ') . ' ₽ по опции «' . opt_title($opt) . '».' . "\n" . linea_base() . '/api/admin.php?o=' . rawurlencode((string)$o['number']), (bool)$o['test']);
+            }
+            return ['ok' => true, 'paid' => false, 'why' => 'сумма не совпала'];
+        }
+        if ($r['status'] === 'awaiting_payment' && (string)$r['payment_id'] === $paymentId) {
+            opt_mark_paid($o, $r, 'yookassa ' . $paymentId, true);
+            linea_log('pay.log', 'paid-opt ' . $o['number'] . ' ' . $opt . ' ' . $paymentId . ' ' . $kop);
+            return ['ok' => true, 'paid' => true, 'why' => ''];
+        }
+        if (in_array($r['status'], ['paid', 'delivered'], true) && (string)$r['payment_id'] === $paymentId) { return ['ok' => true, 'paid' => true, 'why' => '']; }
+        linea_log('pay.log', 'unexpected-opt ' . $o['number'] . ' ' . $opt . ' ' . $paymentId . ' status=' . $r['status']);
+        return ['ok' => true, 'paid' => false, 'why' => 'опция не ждёт оплаты — свяжемся и вернём деньги'];
+    }
+    if ($status === 'canceled' && (string)$r['payment_id'] === $paymentId) {
+        db_update('order_options', ['payment_id' => null, 'payment_url' => null, 'payment_created_at' => null, 'updated_at' => linea_now()], 'id = ?', [(int)$r['id']]);
+        linea_event((int)$o['id'], 'yookassa', 'Платёж за «' . opt_title($opt) . '» ' . $paymentId . ' отменён (' . (string)($d['cancellation_details']['reason'] ?? '—') . ')');
     }
     return ['ok' => true, 'paid' => false, 'why' => $status];
 }

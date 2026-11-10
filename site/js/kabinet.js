@@ -183,15 +183,50 @@
     const P = j.pay || {};
     let pay = '';
     if (O.status === 'awaiting_payment' || O.status === 'new') {
-      pay = O.amount ? `<div class="ord-sum" style="font-family:var(--serif);font-size:28px;color:var(--gold)">${rub(O.amount)}</div>${P.formula ? `<p class="kab-mut kab-formula">${esc(P.formula)}</p>` : O.area ? `<p class="kab-mut">${String(O.area).replace('.', ',')} м² по брифу</p>` : ''}${O.amountConfirmed === false ? '<p class="kab-mut">' + esc(T.areaRecalc || '') + '</p>' : ''}`
+      const bund = (j.options || []).filter(x => x.status === 'awaiting_payment' && x.bundled);
+      // опции заказа («Смета на материалы») идут отдельными строками; в сумме платежа — вместе с проектом
+      const optLines = bund.length ? bund.map(x => `<p class="kab-optline"><span>${esc(x.title)}</span><b>${x.amountKnown ? rub(x.amount) : 'сумму подтвердим'}</b></p>`).join('')
+        + (P.totalDue && bund.every(x => x.amountKnown) ? `<p class="kab-optline kab-optsum"><span>Итого к оплате</span><b>${rub(P.totalDue / 100)}</b></p>` : '') : '';
+      pay = O.amount ? `${bund.length ? '<p class="kab-optline"><span>Дизайн-проект</span><b>' + rub(O.amount) + '</b></p>' + optLines : `<div class="ord-sum" style="font-family:var(--serif);font-size:28px;color:var(--gold)">${rub(O.amount)}</div>`}${P.formula ? `<p class="kab-mut kab-formula">${esc(P.formula)}</p>` : O.area ? `<p class="kab-mut">${String(O.area).replace('.', ',')} м² по брифу</p>` : ''}${O.amountConfirmed === false ? '<p class="kab-mut">' + esc(T.areaRecalc || '') + '</p>' : ''}`
         + (O.canPay ? '<button class="btn" type="button" data-pay>Оплатить картой или СБП</button>' : O.invoiced ? '<p>Счёт отправлен на почту — оплатите по реквизитам из счёта.</p>' : '<p class="kab-mut">Счёт на оплату пришлём на почту.</p>')
         : '<p>Сумму пересчитаем по плану и подтвердим в течение рабочего дня.</p>';
       if (P.includes && P.includes.length) pay += `<details class="kab-det"><summary>Что входит в стоимость</summary><ul class="kab-ul">${P.includes.map(x => '<li>' + esc(x) + '</li>').join('')}</ul>${P.notIncluded && P.notIncluded.length ? '<p class="kab-mut">Не входит:</p><ul class="kab-ul">' + P.notIncluded.map(x => '<li>' + esc(x) + '</li>').join('') + '</ul>' : ''}</details>`;
       pay += `<p class="kab-mut kab-legal">${P.requisites ? esc(P.requisites) + '. ' : ''}<a href="../${esc(P.refund || 'oplata/')}" target="_blank" rel="noopener">Оплата и возврат</a> · <a href="../${esc(P.offer || 'oferta/')}" target="_blank" rel="noopener">Оферта</a></p>`;
-      if (j.termsCall || T.call) pay += '<p class="kab-mut">' + esc(j.termsCall || T.call) + '</p>';
+      { const tc = j.termsCall || T.call; const tt = tc && typeof tc === 'object' ? [tc.title, tc.line].filter(Boolean).join('. ') : tc; if (tt) pay += '<p class="kab-mut">' + esc(tt) + '</p>'; }
     } else if (O.paidAt) pay = `<p><span class="kab-tag ok">Оплачено</span> ${O.amount ? rub(O.amount) : ''} · ${esc(dt(O.paidAt))}</p>${P.formula ? `<p class="kab-mut">${esc(P.formula)}</p>` : ''}<p class="kab-mut">Чек об оплате — в письме сервиса онлайн-оплаты; копия — в «Документах».</p>`;
     else pay = `<p>${esc(O.statusText)}</p>`;
     return pay;
+  };
+  // Опции заказа («Смета на материалы»): статус, оплата отдельной строкой, файлы после выдачи; кнопка «Добавить», если опции ещё нет
+  const optionsCards = j => {
+    const A = (j.pay && j.pay.addons) || {};
+    const o = j.order, num = esc(o.number);
+    const detail = ad => ad && ad.includes ? `<details class="kab-det"><summary>Что в смете</summary><ul class="kab-ul">${ad.includes.map(x => '<li><b>' + esc(x[0]) + ':</b> ' + esc(x[1]) + '</li>').join('')}</ul><ul class="kab-ul">${(ad.features || []).map(x => '<li>' + esc(x) + '</li>').join('')}</ul><p class="kab-mut">${esc(ad.priceNote || '')}. Формат: ${esc(ad.format || '')}.</p>${ad.excludes ? '<p class="kab-mut">Чего нет: ' + ad.excludes.map(esc).join('; ') + '.</p>' : ''}</details>` : '';
+    let h = '';
+    for (const x of j.options || []) {
+      const ad = A[x.key] || {};
+      let body = '';
+      if (x.status === 'awaiting_payment') {
+        body = `<p><span class="kab-tag g">Ждёт оплаты</span> ${x.amountKnown ? '<b>' + rub(x.amount) + '</b>' : 'сумму подтвердим в течение рабочего дня'}</p>`
+          + (x.bundled ? '<p class="kab-mut">Оплачивается вместе с проектом — одной оплатой, в чеке отдельной строкой.</p>'
+            : x.canPay ? `<button class="btn sm" type="button" data-optpay="${esc(x.key)}">Оплатить ${rub(x.amount)} картой или СБП</button>`
+            : x.invoiced ? '<p>Счёт отправлен на почту — оплатите по реквизитам из счёта.</p>' : x.amountKnown ? '<p class="kab-mut">Счёт на оплату пришлём на почту.</p>' : '');
+      } else if (x.status === 'paid') {
+        body = `<p><span class="kab-tag ok">Оплачено</span> ${rub(x.amount)} · ${esc(dt(x.paidAt))}</p><p>Смета в работе. ${esc(ad.termLine || '')}. Файлы появятся здесь, письмо придёт на почту.</p>`;
+      } else if (x.status === 'delivered') {
+        body = `<p><span class="kab-tag ok">Готова</span> ${esc(dt(x.deliveredAt))}</p><div class="kab-row">${x.files.map(f => `<a class="btn sm" href="${API}kabinet.php?a=ofile&o=${encodeURIComponent(o.number)}&opt=${encodeURIComponent(x.key)}&f=${encodeURIComponent(f.name)}&dl=1" download>${esc(f.label)}</a>`).join('')}</div>`
+          + `<p class="kab-mut">${esc(ad.priceNote || 'Цены ориентировочные, на дату расчёта')}.</p>`;
+      }
+      h += `<div class="kab-card" data-opt-card="${esc(x.key)}"><h3>${esc(x.title)}</h3>${body}${detail(ad)}</div>`;
+    }
+    for (const av of j.optionsAvailable || []) {
+      const ad = A[av.key] || {};
+      h += `<div class="kab-card" data-opt-avail="${esc(av.key)}"><h3>${esc(av.title)} <span class="kab-tag">по желанию</span></h3>`
+        + `<p>${esc(ad.what ? ad.what[0].toUpperCase() + ad.what.slice(1) : 'Дополнение к проекту')}.</p>`
+        + `<p class="kab-mut">${av.amount ? rub(av.amount) + ' — ' : ''}${esc(ad.line || '')}. Оплачивается отдельной строкой.</p>`
+        + `<button class="btn sm" type="button" data-optadd="${esc(av.key)}">Добавить ${esc(av.title.toLowerCase())}${av.amount ? ' — ' + rub(av.amount) : ''}</button><p class="kab-err" role="alert"></p>${detail(ad)}</div>`;
+    }
+    return h;
   };
   const statusCard = j => {
     const ex = j.expected, st = j.stage;
@@ -212,6 +247,7 @@
     return statusCard(j) + `<div class="kab-grid">
       <div class="kab-card"><h3>Бриф</h3><p>${esc(B.objectType || 'Объект')}${B.area ? ', ' + String(B.area).replace('.', ',') + ' м²' : ''}${B.rooms.length ? ' · ' + B.rooms.length + ' помещ.' : ''}</p>${B.style ? '<p class="kab-mut">Стиль: ' + esc(B.style) + '</p>' : ''}<p class="kab-mut">Отправлен ${esc(dt(B.sent))}, файлов: ${B.files}.</p><a class="btn ghost sm" href="#/o/${esc(O.number)}/brif">Посмотреть и дополнить</a></div>
       <div class="kab-card"><h3>Оплата</h3>${pay}</div>
+      ${optionsCards(j)}
       <div class="kab-card"><h3>Альбом</h3>${album}</div>
       <div class="kab-card"><h3>Вопросы к вам</h3>${R ? (open.length ? `<p>Открыто: <b>${open.length}</b>, отвечено: ${R.items.length - open.length}</p><a class="btn sm" href="#/o/${esc(O.number)}/voprosy">Ответить</a>` : '<p class="kab-empty">Все вопросы отвечены. Спасибо!</p>') : '<p class="kab-empty">Вопросов нет — всё понятно из брифа.</p>'}</div>
       <div class="kab-card"><h3>Правки</h3>${j.reviews.length ? `<p>Последние: ${esc(j.reviews[0].number)} от ${esc(dt(j.reviews[0].at))} — ${esc(j.reviews[0].status)}</p>` : '<p class="kab-empty">Хотите что-то изменить на листе? Отметьте прямо на листе.</p>'}<a class="btn ghost sm" href="#/o/${esc(O.number)}/pravki">К правкам</a></div>
@@ -307,6 +343,11 @@
   }
 
   function bindPay(j) {
+    root.querySelectorAll('[data-optpay]').forEach(b => b.onclick = async () => { b.disabled = true; const r = await act('opt_pay', { o: j.order.number, opt: b.dataset.optpay }); b.disabled = false; if (r.ok && r.url) location.href = r.url; });
+    root.querySelectorAll('[data-optadd]').forEach(b => b.onclick = async () => {
+      const r = await act('opt_add', { o: j.order.number, opt: b.dataset.optadd }, b.parentNode.querySelector('.kab-err'));
+      if (r.ok) object(j.order.number, 'proekt');
+    });
     root.querySelectorAll('[data-pay]').forEach(b => b.onclick = async () => { b.disabled = true; const r = await act('pay', { o: j.order.number }); b.disabled = false; if (r.ok && r.url) location.href = r.url; });
   }
   function bindObject(j, tab) {

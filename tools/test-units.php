@@ -248,4 +248,63 @@ file_put_contents($sn . '/config.php', "<?php return ['mode' => 'yookassa', 'yk_
 $outSn = shell_exec('LINEA_PRIVATE=' . escapeshellarg($sn) . ' php -r ' . escapeshellarg('$_SERVER["SCRIPT_FILENAME"]="x"; require ' . var_export(__DIR__ . '/../server/api/lib/boot.php', true) . '; require ' . var_export(__DIR__ . '/../server/api/lib/yookassa.php', true)
     . '; $o = ["paid_by"=>"yookassa x","payment_id"=>"x","paid_receipt"=>1]; echo json_encode([yk_receipt_chain($o + ["paid_at"=>"2026-11-20 10:00:00"]), yk_receipt_chain($o + ["paid_at"=>"2026-12-02 10:00:00"])]);'));
 $ok(trim((string)$outSn) === '[false,true]', 'В2: yk_receipts_since — оплаченные раньше даты включения чеков не получают второй чек автоматически' . (trim((string)$outSn) === '[false,true]' ? '' : ' — ' . $outSn));
+
+// ── 09.11.2026: опции заказа («Смета на материалы», lib/options.php): цена не задана → не падаем; оплата вместе с проектом и отдельным платежом
+require_once __DIR__ . '/../server/api/lib/options.php';
+require_once __DIR__ . '/../server/api/lib/kabinet.php';
+$mkO = function (string $num, string $status, float $area) use ($db): array {
+    $db->prepare("INSERT INTO orders(number, token, status, kind, created_at, updated_at, amount_kop, area, amount_confirmed_at, email, test) VALUES(?,?,?,?,?,?,?,?,?,?,1)")
+        ->execute([$num, bin2hex(random_bytes(16)), $status, 'kvartira', linea_now(), linea_now(), 10000000, $area, linea_now(), 'opt@example.test']);
+    return linea_order_by_number($num);
+};
+$readReq = fn(string $what) => array_map(fn($f) => json_decode((string)file_get_contents($f), true), glob($mockDir . '/req-' . $what . '-*.json') ?: []);
+$oa = $mkO('LN-TEST-0401', 'awaiting_payment', 100.0);
+$ra = opt_add($oa, 'smeta', 'brief');
+$ok($ra['ok'] && $ra['row']['amount_kop'] === null && opt_price('smeta', 100.0) === null, 'опция: цена в config не задана — опция добавлена, сумма «уточняется» (NULL), без ошибки');
+$ok(!opt_add($oa, 'smeta', 'kabinet')['ok'] && !opt_add($oa, 'nope', 'brief')['ok'], 'опция: повторное добавление и неизвестный ключ отклоняются');
+$ok(opt_bundle($oa) === [] && opt_public($oa, opt_get((int)$oa['id'], 'smeta'))['amountKnown'] === false && !opt_public($oa, opt_get((int)$oa['id'], 'smeta'))['canPay'], 'опция без суммы не входит в платёж и не оплачивается онлайн');
+$db->prepare("UPDATE order_options SET amount_kop = 1000000 WHERE id = ?")->execute([(int)$ra['row']['id']]);   // админ назвал сумму: 10 000 ₽
+$p1 = yk_payment_for($oa);
+$rq = $readReq('payments');
+$b1 = $rq ? end($rq)['body'] : [];
+$ok($p1['ok'] && ($b1['amount']['value'] ?? '') === '110000.00' && ($b1['metadata']['opts'] ?? '') === 'smeta' && count($b1['receipt']['items'] ?? []) === 2
+    && str_contains($b1['receipt']['items'][1]['description'] ?? '', 'Смета на материалы'), 'оплата проекта с опцией: один платёж на сумму проекта + опции, опция — отдельной строкой чека');
+$pid1 = (string)linea_order_by_number('LN-TEST-0401')['payment_id'];
+file_put_contents($mockDir . '/' . $pid1 . '.json', json_encode(['id' => $pid1, 'status' => 'succeeded', 'paid' => true, 'amount' => ['value' => '110000.00', 'currency' => 'RUB'], 'metadata' => ['order' => 'LN-TEST-0401', 'opts' => 'smeta']]));
+$s1 = yk_settle($pid1);
+$o1 = linea_order_by_number('LN-TEST-0401'); $x1 = opt_get((int)$o1['id'], 'smeta');
+$ok($s1['paid'] && $o1['status'] === 'paid' && $x1['status'] === 'paid' && str_starts_with((string)$x1['paid_by'], 'yookassa '), 'оплата проекта с опцией: заказ и опция оплачены одним платежом');
+$ok(yk_settle($pid1)['paid'] && opt_get((int)$o1['id'], 'smeta')['status'] === 'paid', 'повтор уведомления об оплате — без изменений');
+// сумма платежа не равна проекту + опции → не оплачено, тревога
+$ob = $mkO('LN-TEST-0402', 'awaiting_payment', 100.0); $rb = opt_add($ob, 'smeta', 'brief');
+$db->prepare("UPDATE order_options SET amount_kop = 1000000 WHERE id = ?")->execute([(int)$rb['row']['id']]);
+yk_payment_for($ob); $pidB = (string)linea_order_by_number('LN-TEST-0402')['payment_id'];
+file_put_contents($mockDir . '/' . $pidB . '.json', json_encode(['id' => $pidB, 'status' => 'succeeded', 'paid' => true, 'amount' => ['value' => '100000.00', 'currency' => 'RUB'], 'metadata' => ['order' => 'LN-TEST-0402', 'opts' => 'smeta']]));
+$sB = yk_settle($pidB);
+$ok(!$sB['paid'] && linea_order_by_number('LN-TEST-0402')['status'] === 'awaiting_payment' && opt_get((int)$ob['id'], 'smeta')['status'] === 'awaiting_payment', 'платёж без суммы опции не засчитывается ни проекту, ни опции (нужна проверка)');
+// докупка после оплаты проекта: отдельный платёж только за опцию
+$op = $mkO('LN-TEST-0403', 'paid', 100.0);
+$rp = opt_add($op, 'smeta', 'kabinet');
+$db->prepare("UPDATE order_options SET amount_kop = 1000000 WHERE id = ?")->execute([(int)$rp['row']['id']]);
+$ok(opt_bundle($op) === [] && opt_can_pay($op, opt_get((int)$op['id'], 'smeta')), 'докупка после оплаты проекта: в платёж проекта не входит, оплачивается отдельно');
+$p2 = yk_option_payment_for($op, 'smeta'); $rq2 = $readReq('payments'); $b2 = end($rq2)['body'];
+$ok($p2['ok'] && ($b2['amount']['value'] ?? '') === '10000.00' && ($b2['metadata']['proj'] ?? '') === '0' && count($b2['receipt']['items'] ?? []) === 1, 'отдельный платёж за опцию: сумма опции, proj=0, в чеке одна строка');
+$p2b = yk_option_payment_for($op, 'smeta');
+$ok($p2b['ok'] && $p2b['url'] === $p2['url'] && count($readReq('payments')) === count($rq2), 'повторное нажатие: живой платёж переиспользуется, второй не создаётся');
+$pidO = (string)opt_get((int)$op['id'], 'smeta')['payment_id'];
+$ok(yk_known_payment($pidO), 'вебхук узнаёт платёж опции по своей базе');
+file_put_contents($mockDir . '/' . $pidO . '.json', json_encode(['id' => $pidO, 'status' => 'succeeded', 'paid' => true, 'amount' => ['value' => '10000.00', 'currency' => 'RUB'], 'metadata' => ['order' => 'LN-TEST-0403', 'opts' => 'smeta', 'proj' => '0']]));
+$sO = yk_settle($pidO);
+$oO = linea_order_by_number('LN-TEST-0403'); $xO = opt_get((int)$op['id'], 'smeta');
+$ok($sO['paid'] && $xO['status'] === 'paid' && $oO['status'] === 'paid' && $oO['paid_by'] === $op['paid_by'], 'отдельный платёж за опцию: опция оплачена, заказ проекта не тронут');
+$ok(yk_settle($pidO)['paid'] && !yk_option_payment_for($oO, 'smeta')['ok'], 'после оплаты опции новый платёж за неё не создаётся');
+// несовпавшая сумма отдельного платежа
+$om = $mkO('LN-TEST-0404', 'paid', 100.0); $rm2 = opt_add($om, 'smeta', 'kabinet');
+$db->prepare("UPDATE order_options SET amount_kop = 1000000 WHERE id = ?")->execute([(int)$rm2['row']['id']]);
+yk_option_payment_for($om, 'smeta'); $pidM = (string)opt_get((int)$om['id'], 'smeta')['payment_id'];
+file_put_contents($mockDir . '/' . $pidM . '.json', json_encode(['id' => $pidM, 'status' => 'succeeded', 'paid' => true, 'amount' => ['value' => '5000.00', 'currency' => 'RUB'], 'metadata' => ['order' => 'LN-TEST-0404', 'opts' => 'smeta', 'proj' => '0']]));
+$ok(!yk_settle($pidM)['paid'] && opt_get((int)$om['id'], 'smeta')['status'] === 'awaiting_payment' && (int)$db->query("SELECT COUNT(*) FROM events WHERE order_id = " . (int)$om['id'] . " AND text LIKE 'ВНИМАНИЕ%'")->fetchColumn() === 1, 'отдельный платёж не на сумму опции — не засчитан, пометка «нужна проверка»');
+// опцию нельзя оплатить, пока заказ отменён
+$oc = $mkO('LN-TEST-0405', 'cancelled', 100.0);
+$ok(!opt_add($oc, 'smeta', 'kabinet')['ok'], 'к отменённому заказу опцию добавить нельзя');
 exit($fail ? 1 : 0);

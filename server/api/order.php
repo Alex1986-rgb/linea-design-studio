@@ -14,4 +14,13 @@ if ($o['payment_id'] && $o['status'] === 'awaiting_payment' && yk_ready()) {
     try { yk_settle((string)$o['payment_id']); } catch (Throwable $e) { linea_log('error.log', 'order settle: ' . $e->getMessage()); }
     $o = linea_order_by_token((string)$o['token']);
 }
+// отдельные платежи за опции («Смета на материалы») перепроверяем так же
+if (yk_ready()) {
+    require_once __DIR__ . '/lib/options.php';
+    foreach (opt_list((int)$o['id']) as $r) {
+        if ($r['status'] === 'awaiting_payment' && $r['payment_id']) {
+            try { yk_settle((string)$r['payment_id']); } catch (Throwable $e) { linea_log('error.log', 'order settle opt: ' . $e->getMessage()); }
+        }
+    }
+}
 linea_json(['ok' => true, 'order' => linea_public_order($o)]);

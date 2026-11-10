@@ -524,6 +524,121 @@ try {
     const kjs2 = fs.readFileSync(path.join(ROOT, 'site/js/kabinet.js'), 'utf8'), bjs = fs.readFileSync(path.join(ROOT, 'site/js/brief.js'), 'utf8');
     ok(/IntersectionObserver/.test(kjs2) && /brif.*История|истор/i.test(kjs2) && /brief\.html\?add=/.test(kjs2) && /ADDMODE/.test(bjs), 'интерфейс: липкая кнопка по IntersectionObserver, вкладки «Бриф» и «История», вход brief.html?add=');
   }
+
+  step('18. Опция «Смета на материалы»: бриф с галочкой, цена из config (и без неё), докупка из кабинета, оплата, выдача файлов, письма');
+  {
+    const cfgPath = path.join(PRIV, 'config.php'), cfg0 = fs.readFileSync(cfgPath, 'utf8');
+    const outbox = () => { try { return fs.readFileSync(path.join(PRIV, 'mail-outbox.jsonl'), 'utf8').trim().split('\n').filter(Boolean).map(l => JSON.parse(l)); } catch { return []; } };
+    const mkOpt = (email, name, area, options) => {
+      const b = { meta: { test: true, service: 'kvartira' }, client: { name, phone: '+7 900 000-00-0' + name.length, email, consent: { personalData: true, portfolio: false, edition: '27.10.2026', at: new Date().toISOString() } },
+        object: { type: 'квартира', area, address: 'Москва, тестовая ул., 1' }, ...(options ? { options } : {}) };
+      const f = path.join(FX, name + '.json'); fs.writeFileSync(f, JSON.stringify(b)); execFileSync('zip', ['-qj', path.join(FX, name + '.zip'), f]); return b;
+    };
+    const send = async (who, name) => (await who.req('POST', '/api/brief.php?test=1', { form: { test: 1, json: fs.readFileSync(path.join(FX, name + '.json'), 'utf8'), brief: { file: path.join(FX, name + '.zip'), type: 'application/zip' } } })).j;
+    const optRow = num => sql(`SELECT x.* FROM order_options x JOIN orders o ON o.id = x.order_id WHERE o.number = '${num}'`)[0];
+
+    // — без цены в config: опция записывается, сумма «уточняется», ничего не падает
+    const D1 = actor('clientD'); mkOpt('dina@example.test', 'Дина', 64, { smeta: true, smetaSumRub: 6400 });
+    const bD = await send(D1, 'Дина'); const ND = bD.number;
+    ok(bD?.ok, 'бриф с options.smeta принят', JSON.stringify(bD));
+    let rD = optRow(ND);
+    ok(rD && rD.opt === 'smeta' && rD.status === 'awaiting_payment' && rD.source === 'brief' && rD.amount_kop === null, 'опция записана в заказ; цены в config нет — сумма не задана (NULL), сервис не упал', JSON.stringify(rD));
+    ok(JSON.parse(fs.readFileSync(path.join(PRIV, 'orders', ND, 'brief.json'), 'utf8')).options?.smeta === true, 'в brief.json заказа лежит options.smeta');
+    await D1.login('dina@example.test');
+    let od = (await D1.req('GET', `/api/kabinet.php?a=object&o=${ND}`)).j;
+    ok(od.options?.length === 1 && od.options[0].amountKnown === false && od.options[0].amount === null && od.optionsAvailable.length === 0, 'кабинет: опция видна, сумма «уточняется»; кнопки «Добавить» нет (уже добавлена)');
+    ok(outbox().some(m => /бриф получен/.test(m.subject) && m.text.includes('Смета на материалы') && /сумму подтвердим/.test(m.text)), 'письмо «бриф получен» содержит опцию отдельной строкой');
+    ok(od.history?.some(e => /Добавлена опция «Смета на материалы»/.test(e.title)), 'история заказа: «Добавлена опция»');
+    const lst0 = (await admin.req('GET', `/api/panel.php?s=orders&opt=any`, { raw: true })).text;
+    ok(lst0.includes(ND) && lst0.includes('Смета на материалы: ждёт оплаты') && !(await admin.req('GET', `/api/panel.php?s=orders&opt=work`, { raw: true })).text.includes(ND), 'админка: в списке заказов значок опции и фильтр «со сметой» / «оплачена, не выдана»');
+    ok((await admin.req('GET', '/api/panel.php?s=order&o=' + ND, { raw: true })).text.includes('не задана (в config нет цены)'), 'админка: у опции без цены — пометка и поле для суммы');
+    await panel({ act: 'opt_amount', o: ND, opt: 'smeta', rub: 6400 });
+    ok(+optRow(ND).amount_kop === 640000, 'админ назвал сумму опции вручную: 6 400 ₽');
+    ok(outbox().some(m => /добавлена опция/.test(m.subject) && m.text.includes('6 400')), 'клиенту ушло письмо «Смета на материалы добавлена» с суммой');
+
+    // — цена в config: 100 ₽/м², минимум 5 000 ₽; сервер считает сам, цифра из браузера не доверяется
+    fs.writeFileSync(cfgPath, cfg0.replace(/\];\s*$/, `, 'prices' => ['smeta' => ['per_m2' => 10000, 'min' => 500000], 'kvartira' => ['per_m2' => 200000, 'min' => 8000000]]];`));
+    const E1 = actor('clientE'), F1 = actor('clientF');
+    mkOpt('eva@example.test', 'Ева', 83.4, { smeta: true, smetaSumRub: 1 }); mkOpt('fil@example.test', 'Филипп', 30, { smeta: true });
+    const bE = await send(E1, 'Ева'), bF = await send(F1, 'Филипп');
+    ok(+optRow(bE.number).amount_kop === 834000 && +optRow(bF.number).amount_kop === 500000, '83,4 м² → 8 340 ₽ (ставка 100 ₽/м²); 30 м² → минимум 5 000 ₽; число из браузера (1 ₽) не принято');
+    await E1.login('eva@example.test');
+    const oe = (await E1.req('GET', `/api/kabinet.php?a=object&o=${bE.number}`)).j;
+    ok(oe.pay.options.length === 1 && oe.pay.projectAmount === 16680000 && oe.pay.optionsDue === 834000 && oe.pay.totalDue === 16680000 + 834000, 'карточка оплаты: проект и опция двумя строками, итого = проект + опция', JSON.stringify([oe.pay.projectAmount, oe.pay.optionsDue, oe.pay.totalDue]));
+    ok(oe.pay.addons?.smeta?.rate === 100 && oe.pay.addons.smeta.min === 5000 && /1–3 суток/.test(oe.pay.addons.smeta.termLine), 'условия опции для кабинета — из terms-client.json (TERMS сайта): ставка, минимум, срок');
+
+    // — нет опции в брифе: кнопка «Добавить» в кабинете (докупка), второй раз — 409, чужой заказ — 404
+    mkOpt('gal@example.test', 'Галина', 52, null);
+    const G1 = actor('clientG'); const bG = await send(G1, 'Галина'); const NG = bG.number;
+    await G1.login('gal@example.test');
+    let og = (await G1.req('GET', `/api/kabinet.php?a=object&o=${NG}`)).j;
+    ok(og.options.length === 0 && og.optionsAvailable.length === 1 && og.optionsAvailable[0].key === 'smeta' && og.optionsAvailable[0].amount === 5200, 'без опции в брифе: кабинет предлагает «Добавить» с суммой по площади (52 м² → 5 200 ₽)');
+    const stranger = await E1.req('POST', '/api/kabinet.php?a=opt_add', { json: { o: NG, opt: 'smeta' } });
+    ok(stranger.code === 404, 'чужой клиент не может добавить опцию к заказу');
+    const add1 = await G1.req('POST', '/api/kabinet.php?a=opt_add', { json: { o: NG, opt: 'smeta' } });
+    ok(add1.j?.ok && add1.j.options.length === 1 && add1.j.options[0].amount === 5200 && add1.j.options[0].bundled === true && add1.j.optionsAvailable.length === 0, 'докупка из кабинета: опция добавлена, идёт в платёж проекта');
+    ok(optRow(NG).source === 'kabinet' && outbox().some(m => /добавлена опция/.test(m.subject) && m.to === 'gal@example.test'), 'источник — кабинет; клиенту ушло письмо');
+    ok((await G1.req('POST', '/api/kabinet.php?a=opt_add', { json: { o: NG, opt: 'smeta' } })).code === 409, 'повторное добавление — 409');
+    ok((await G1.req('POST', '/api/kabinet.php?a=opt_add', { json: { o: NG, opt: 'nope' } })).code === 409, 'неизвестная опция — отказ');
+    ok((await G1.req('POST', '/api/kabinet.php?a=opt_pay', { json: { o: NG, opt: 'smeta' } })).code === 409, 'онлайн-оплата не включена (режим manual) — понятный отказ, не ошибка сервера');
+
+    // — оплата вручную: проект и опция отдельными кнопками; «смета в работе»; очередь «Ждут нас»
+    await panel({ act: 'o_status', o: NG, to: 'paid', reason: 'платёжка проекта' });
+    ok(optRow(NG).status === 'awaiting_payment', 'оплата проекта вручную не отмечает опцию сама (две отдельные строки)');
+    const noReason = await panel({ act: 'opt_cancel', o: NG, opt: 'smeta' });
+    ok(optRow(NG).status === 'awaiting_payment', 'отмена опции без причины не проходит');
+    await panel({ act: 'opt_invoice', o: NG, opt: 'smeta' });
+    ok(optRow(NG).invoice_at, 'счёт на опцию отмечен');
+    await panel({ act: 'opt_paid', o: NG, opt: 'smeta', reason: 'платёжка 77' });
+    const xg = optRow(NG);
+    ok(xg.status === 'paid' && /вручную: платёжка 77/.test(xg.paid_by) && xg.paid_at, 'оплата опции отмечена вручную с причиной');
+    ok(outbox().some(m => /оплата «смета на материалы» получена/.test(m.subject) && /1–3 суток/.test(m.text)), 'клиенту ушло письмо об оплате со сроком из TERMS');
+    og = (await G1.req('GET', `/api/kabinet.php?a=object&o=${NG}`)).j;
+    ok(og.options[0].status === 'paid' && og.options[0].files.length === 0, 'кабинет: «оплачена, в работе», файлов ещё нет');
+    ok((await G1.req('GET', `/api/kabinet.php?a=ofile&o=${NG}&opt=smeta&f=smeta.pdf`, { raw: true })).code === 404, 'до выдачи файл не скачать (404)');
+    const dashQ = (await admin.req('GET', '/api/panel.php?s=orders&opt=work', { raw: true })).text;
+    ok(dashQ.includes(NG) && dashQ.includes('оплачена, не выдана'), 'админка: «смета оплачена, не выдана» — значок и фильтр в списке заказов');
+    sql(`UPDATE orders SET test = 0 WHERE number = '${NG}'`);   // очередь и «Требует действия» тестовые заказы скрывают — на минуту делаем заказ «боевым»
+    const dashBoss = (await admin.req('GET', '/api/panel.php', { raw: true })).text;
+    ok(dashBoss.includes('Сделать и выдать «Смета на материалы»') && dashBoss.includes('Оплачена опция «Смета на материалы»'), 'дашборд: очередь «Ждут нас» и «Требует действия» показывают оплаченную и не выданную смету');
+    sql(`UPDATE orders SET test = 1 WHERE number = '${NG}'`);
+
+    // — выдача файлов: PDF + таблица; проверки типов; письмо; скачивание
+    fs.writeFileSync(path.join(FX, 'smeta.csv'), 'Позиция;Количество\nКраска;19\n');
+    fs.writeFileSync(path.join(FX, 'fake.pdf'), 'это не pdf');
+    const only = await panel({ act: 'opt_deliver', o: NG, opt: 'smeta', pdf: { file: path.join(FX, 'album.pdf'), type: 'application/pdf' } });
+    ok(optRow(NG).status === 'paid', 'выдача только PDF без таблицы не проходит (нужны оба файла)');
+    await panel({ act: 'opt_deliver', o: NG, opt: 'smeta', pdf: { file: path.join(FX, 'fake.pdf'), type: 'application/pdf' }, table: { file: path.join(FX, 'smeta.csv'), type: 'text/csv' } });
+    ok(optRow(NG).status === 'paid', 'файл «.pdf», который не PDF, не принимается');
+    await panel({ act: 'opt_deliver', o: NG, opt: 'smeta', pdf: { file: path.join(FX, 'album.pdf'), type: 'application/pdf' }, table: { file: path.join(FX, 'smeta.csv'), type: 'text/csv' } });
+    const dg = optRow(NG);
+    ok(dg.status === 'delivered' && dg.delivered_at && JSON.parse(dg.files).length === 2 && fs.existsSync(path.join(PRIV, 'orders', NG, 'options/smeta/smeta.pdf')) && fs.existsSync(path.join(PRIV, 'orders', NG, 'options/smeta/smeta.csv')), 'файлы выданы: PDF и csv лежат вне веб-корня в orders/<номер>/options/smeta/');
+    ok(outbox().some(m => /смета на материалы готова/.test(m.subject) && m.to === 'gal@example.test' && /Файлы/.test(m.text)), 'клиенту ушло письмо «Смета готова» со списком файлов');
+    og = (await G1.req('GET', `/api/kabinet.php?a=object&o=${NG}`)).j;
+    ok(og.options[0].status === 'delivered' && og.options[0].files.map(f => f.name).sort().join() === 'smeta.csv,smeta.pdf', 'кабинет: блок «Смета на материалы» с двумя файлами');
+    const dl = await G1.req('GET', `/api/kabinet.php?a=ofile&o=${NG}&opt=smeta&f=smeta.pdf`, { raw: true });
+    const dc = await G1.req('GET', `/api/kabinet.php?a=ofile&o=${NG}&opt=smeta&f=smeta.csv`, { raw: true });
+    ok(dl.code === 200 && /application\/pdf/.test(dl.headers.get('content-type')) && dl.text.startsWith('%PDF') && dc.code === 200 && /text\/csv/.test(dc.headers.get('content-type')) && /attachment/.test(dc.headers.get('content-disposition')), 'клиент скачивает PDF и таблицу');
+    ok((await E1.req('GET', `/api/kabinet.php?a=ofile&o=${NG}&opt=smeta&f=smeta.pdf`, { raw: true })).code === 404 && (await G1.req('GET', `/api/kabinet.php?a=ofile&o=${NG}&opt=smeta&f=..%2Fbrief.json`, { raw: true })).code === 404, 'чужой клиент и обход пути (../) файл не получают');
+    ok((await G1.req('GET', `/api/kabinet.php?a=docs&o=${NG}`)).j.docs.some(d => d.kind === 'Смета' && /ofile/.test(d.href || '')), 'файлы сметы — в «Документах» кабинета');
+    const adl = await admin.req('GET', `/api/panel.php?optfile=smeta&o=${NG}&f=smeta.csv`, { raw: true });
+    ok(adl.code === 200 && /Краска/.test(adl.text), 'админ скачивает выданный файл из карточки заказа');
+    await panel({ act: 'opt_deliver', o: NG, opt: 'smeta', table: { file: path.join(FX, 'smeta.csv'), type: 'text/csv' } });
+    ok(JSON.parse(optRow(NG).files).length === 2 && optRow(NG).status === 'delivered', 'повторная загрузка только таблицы заменяет файл, PDF остаётся');
+
+    // — отмена оплаченной опции с причиной; отменённую можно добавить снова
+    await panel({ act: 'opt_cancel', o: ND, opt: 'smeta', reason: 'клиент передумал' });
+    ok(optRow(ND).status === 'cancelled', 'неоплаченную опцию можно отменить с причиной');
+    od = (await D1.req('GET', `/api/kabinet.php?a=object&o=${ND}`)).j;
+    ok(od.options.length === 0 && od.optionsAvailable.length === 1, 'отменённая опция из кабинета пропадает и снова доступна к добавлению');
+    ok((await D1.req('POST', '/api/kabinet.php?a=opt_add', { json: { o: ND, opt: 'smeta' } })).j?.ok && optRow(ND).status === 'awaiting_payment' && +optRow(ND).amount_kop === 640000, 'добавление после отмены — та же строка заново ждёт оплаты по цене из config');
+    // — страница и сводка: в журнале аудита есть действия с опциями
+    const audit = sql("SELECT action FROM br_audit WHERE action LIKE 'option-%'").map(r => r.action);
+    ok(['option-amount', 'option-invoice', 'option-paid', 'option-deliver', 'option-cancel'].every(a => audit.includes(a)), 'действия админа с опциями — в журнале аудита');
+    fs.writeFileSync(cfgPath, cfg0);
+    // --keep: сервер и данные остаются для снимков; номера заказов шага 18 — рядом
+    if (KEEP) fs.writeFileSync(path.join(PRIV, '_dev18.json'), JSON.stringify({ base: BASE, admin: ADMIN_PASS, ND, NE: bE.number, NF: bF.number, NG, emails: { E: 'eva@example.test', G: 'gal@example.test', D: 'dina@example.test' } }));
+  }
 } catch (e) { if (e !== 'stop') ok(false, 'исключение: ' + (e.stack || e)); }
 
 if (srvErr.match(/Fatal|Parse error|Warning|Deprecated/)) console.log('\nПредупреждения PHP:\n' + srvErr.split('\n').filter(l => /Fatal|Parse|Warning|Deprecated/.test(l)).slice(0, 10).join('\n'));

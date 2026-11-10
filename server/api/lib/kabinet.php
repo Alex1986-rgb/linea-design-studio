@@ -19,6 +19,7 @@ if (realpath((string)($_SERVER['SCRIPT_FILENAME'] ?? '')) === __FILE__) { http_r
 require_once __DIR__ . '/brig.php';
 require_once __DIR__ . '/kab-mail.php';
 require_once __DIR__ . '/brief-view.php';
+require_once __DIR__ . '/options.php';
 
 const KAB_GUEST_HOURS = 12;
 const KAB_REMEMBER_DAYS = 30;

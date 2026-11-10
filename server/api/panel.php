@@ -112,6 +112,17 @@ if (isset($_GET['of'], $_GET['o'])) {
     brig_audit('admin', 'brief-file', 'order ' . $fo['number'], substr((string)$_GET['on'], 0, 80));
     brief_file_send($fo, (string)$_GET['of'], (string)$_GET['on'], !empty($_GET['inl']));
 }
+// ── файл выданной опции заказа («Смета на материалы»): ?optfile=<ключ>&o=<номер>&f=<имя>
+if (isset($_GET['optfile'], $_GET['o'])) {
+    $fo = linea_order_by_number((string)$_GET['o']);
+    $fr = $fo ? opt_get((int)$fo['id'], preg_replace('/[^a-z0-9_-]/', '', (string)$_GET['optfile']) ?? '') : null;
+    $fn = basename((string)($_GET['f'] ?? ''));
+    if (!$fr || !array_filter(opt_files($fo, $fr), fn($x) => $x['name'] === $fn)) { http_response_code(404); exit; }
+    $ext = strtolower(pathinfo($fn, PATHINFO_EXTENSION));
+    header('Content-Type: ' . (['pdf' => 'application/pdf', 'xlsx' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', 'csv' => 'text/csv; charset=utf-8'][$ext] ?? 'application/octet-stream'));
+    header('Content-Disposition: attachment; filename="LINEA-' . $fo['number'] . '-' . $fr['opt'] . '.' . $ext . '"');
+    readfile(opt_dir($fo, (string)$fr['opt']) . '/' . $fn); exit;
+}
 // ── CSV-экспорт (спецификация 5.12): без паспортных данных и без контактов клиентов; ячейки «= + - @ таб CR» — с префиксом «'» (CSV-инъекции)
 const ADM_CSV = ['deals' => 'Сделки', 'payments' => 'Оплаты по сделкам (реестр)', 'ledger' => 'Проводки вознаграждения', 'invoices' => 'Счета', 'brigades' => 'Бригады', 'signals' => 'Сигналы обхода'];
 function adm_csv_cell($v) { return is_string($v) && $v !== '' && !is_numeric($v) && strpbrk($v[0], "=+-@\t\r") !== false ? "'" . $v : $v; }
@@ -196,6 +207,79 @@ if (($_SERVER['REQUEST_METHOD'] ?? '') === 'POST') {
                 $mr = kab_notify_order($o, kab_ev('invoice', $o));
                 brig_audit($WHO, 'order-invoice', 'order ' . $o['number']);
                 $msg = 'Отмечено: счёт выставлен. Письмо клиенту: ' . ADM_MAIL_WORD[$mr['mail']] . '. Сам счёт с реквизитами вы отправляете отдельно.'; break;
+            }
+            // ── опции заказа («Смета на материалы»): сумма, счёт, оплата вручную, отмена, выдача файлов
+            case 'opt_amount': case 'opt_invoice': case 'opt_paid': case 'opt_cancel': case 'opt_deliver': {
+                $optKey = preg_replace('/[^a-z0-9_-]/', '', (string)($_POST['opt'] ?? '')) ?? '';
+                $r = $o ? opt_get((int)$o['id'], $optKey) : null;
+                if (!$r || !$need(isset(OPT_CATALOG[$optKey]), 'Опция не найдена')) { break; }
+                $ttl = opt_title($optKey);
+                if ($act === 'opt_amount') {
+                    $kop = (int)round((float)str_replace([' ', ','], ['', '.'], (string)($_POST['rub'] ?? '')) * 100);
+                    if (!$need($kop > 0 && $kop < 1000000000 && $r['status'] === 'awaiting_payment', 'Сумма — больше нуля, и опция должна ждать оплаты')) { break; }
+                    db_update('order_options', ['amount_kop' => $kop, 'payment_url' => null, 'payment_created_at' => null, 'updated_at' => $now], 'id = ?', [(int)$r['id']]);
+                    linea_event((int)$o['id'], 'admin', 'Сумма опции «' . $ttl . '»: ' . $rub($kop));
+                    brig_audit($WHO, 'option-amount', 'order ' . $o['number'], $optKey . ' ' . $rub($r['amount_kop']) . ' → ' . $rub($kop));
+                    $mr = kab_notify_order($o, kab_ev('opt_added', $o, ['opt' => $optKey, 'sum' => $kop]));
+                    $msg = 'Сумма опции сохранена. Письмо клиенту: ' . ADM_MAIL_WORD[$mr['mail']] . '.'; break;
+                }
+                if ($act === 'opt_invoice') {
+                    if (!$need($r['status'] === 'awaiting_payment' && (int)$r['amount_kop'] > 0, 'Счёт — когда опция ждёт оплаты и сумма задана')) { break; }
+                    db_update('order_options', ['invoice_at' => $now, 'updated_at' => $now], 'id = ?', [(int)$r['id']]);
+                    linea_event((int)$o['id'], 'admin', 'Счёт на опцию «' . $ttl . '» выставлен');
+                    brig_audit($WHO, 'option-invoice', 'order ' . $o['number'], $optKey);
+                    $msg = 'Отмечено: счёт на опцию выставлен. Сам счёт с реквизитами вы отправляете отдельно.'; break;
+                }
+                if ($act === 'opt_paid') {
+                    if (!$need($r['status'] === 'awaiting_payment' && (int)$r['amount_kop'] > 0, 'Оплату можно отметить, когда опция ждёт её и сумма задана')) { break; }
+                    opt_mark_paid($o, $r, 'вручную: ' . ($reason ?: 'админка'), true);
+                    brig_audit($WHO, 'option-paid', 'order ' . $o['number'], $optKey . ($reason ? ': ' . $reason : ''));
+                    $msg = 'Оплата опции отмечена, клиенту ушло письмо (по настройкам сервера). Теперь сделайте смету и выдайте файлы.'; break;
+                }
+                if ($act === 'opt_cancel') {
+                    if (!$need($reason !== '' && in_array($r['status'], ['awaiting_payment', 'paid'], true), 'Отмена — с причиной, пока опция не выдана')) { break; }
+                    db_update('order_options', ['status' => 'cancelled', 'updated_at' => $now], 'id = ?', [(int)$r['id']]);
+                    linea_event((int)$o['id'], 'admin', 'Опция «' . $ttl . '» отменена: ' . $reason . ($r['status'] === 'paid' ? ' (была оплачена — вернуть деньги отдельно)' : ''));
+                    brig_audit($WHO, 'option-cancel', 'order ' . $o['number'], $optKey . ': ' . $reason);
+                    $msg = 'Опция отменена.' . ($r['status'] === 'paid' ? ' Она была оплачена: возврат оформите отдельно.' : ''); break;
+                }
+                // opt_deliver: PDF + таблица (xlsx или csv)
+                if (!$need(in_array($r['status'], ['paid', 'delivered'], true), 'Выдать файлы можно после оплаты опции')) { break; }
+                $dir = opt_dir($o, $optKey);
+                $have = array_column(opt_files($o, $r), null, 'name');
+                $okUp = function (string $field, array $exts) use ($need): ?array {
+                    $f = $_FILES[$field] ?? null;
+                    if (!$f || ($f['error'] ?? UPLOAD_ERR_NO_FILE) === UPLOAD_ERR_NO_FILE || empty($f['tmp_name'])) { return null; }
+                    if (!$need(($f['error'] ?? 0) === UPLOAD_ERR_OK && is_uploaded_file_or_test((string)$f['tmp_name']) && (int)$f['size'] > 0 && (int)$f['size'] <= 30 * 1048576, 'Файл не загрузился или больше 30 МБ')) { return ['bad' => true]; }
+                    $ext = strtolower(pathinfo((string)$f['name'], PATHINFO_EXTENSION));
+                    if (!$need(in_array($ext, $exts, true), 'Тип файла — только ' . implode(' / ', $exts))) { return ['bad' => true]; }
+                    $head = (string)file_get_contents((string)$f['tmp_name'], false, null, 0, 5);
+                    if ($ext === 'pdf' && !$need(str_starts_with($head, '%PDF'), 'Файл — не PDF')) { return ['bad' => true]; }
+                    if ($ext === 'xlsx' && !$need(str_starts_with($head, 'PK'), 'Файл — не xlsx (ожидается архив Office)')) { return ['bad' => true]; }
+                    return ['tmp' => (string)$f['tmp_name'], 'ext' => $ext];
+                };
+                $up1 = $okUp('pdf', ['pdf']); $up2 = $okUp('table', ['xlsx', 'csv']);
+                if (($up1['bad'] ?? false) || ($up2['bad'] ?? false)) { break; }
+                if (!$need(($up1 || isset($have[$optKey . '.pdf'])) && ($up2 || array_filter($have, fn($x) => preg_match('/\.(xlsx|csv)$/', $x['name']))), 'Нужны оба файла: PDF и таблица (xlsx или csv)')) { break; }
+                linea_mkdir($dir);
+                $files = array_map(fn($x) => ['name' => $x['name'], 'label' => $x['label']], $have);
+                $put = function (array $up, string $label) use ($dir, $optKey, &$files) {
+                    foreach ($up['ext'] === 'pdf' ? ['pdf'] : ['xlsx', 'csv'] as $e) { @unlink($dir . '/' . $optKey . '.' . $e); }   // прежний файл того же вида заменяется
+                    $name = $optKey . '.' . $up['ext'];
+                    move_uploaded_file($up['tmp'], $dir . '/' . $name) || copy($up['tmp'], $dir . '/' . $name);
+                    @chmod($dir . '/' . $name, 0600);
+                    $files = array_values(array_filter($files, fn($x) => $up['ext'] === 'pdf' ? !str_ends_with($x['name'], '.pdf') : !preg_match('/\.(xlsx|csv)$/', $x['name'])));
+                    $files[] = ['name' => $name, 'label' => $label];
+                };
+                if ($up1) { $put($up1, $ttl . ' (PDF)'); }
+                if ($up2) { $put($up2, $ttl . ' (таблица ' . $up2['ext'] . ')'); }
+                $first = $r['status'] !== 'delivered';
+                db_update('order_options', ['status' => 'delivered', 'files' => json_encode($files, JSON_UNESCAPED_UNICODE), 'delivered_at' => $r['delivered_at'] ?: $now, 'updated_at' => $now,
+                    'note' => linea_str($_POST['note'] ?? '', 500) ?: $r['note']], 'id = ?', [(int)$r['id']]);
+                linea_event((int)$o['id'], 'admin', ($first ? 'Выдана опция «' : 'Обновлены файлы опции «') . $ttl . '»: ' . implode(', ', array_column($files, 'name')));
+                brig_audit($WHO, 'option-deliver', 'order ' . $o['number'], $optKey . ' ' . implode(',', array_column($files, 'name')));
+                $mr = kab_notify_order($o, kab_ev('opt_delivered', $o, ['opt' => $optKey, 'files' => array_column($files, 'label')]));
+                $msg = ($first ? 'Файлы выданы клиенту.' : 'Файлы обновлены.') . ' Письмо клиенту: ' . ADM_MAIL_WORD[$mr['mail']] . '.'; break;
             }
             case 'o_refund': {
                 if (!$o) { break; }
@@ -541,6 +625,9 @@ function adm_todo(): array
         $lastRel = max(array_map(fn($r) => strtotime((string)($r['published_at'] ?? $r['date'] ?? '')), $rel));
         if (is_file($af) && filemtime($af) > $lastRel) { $add('Клиент ответил на вопросы ' . $o['number'] . ' → выпустить версию', 'panel.php?s=order&o=' . rawurlencode($o['number']) . '&tab=voprosy', false, 'voprosy'); }
     }
+    foreach (brig_all("SELECT o.number, x.paid_at, x.opt FROM order_options x JOIN orders o ON o.id = x.order_id WHERE o.test = 0 AND x.status = 'paid' ORDER BY x.id") as $x) {
+        $add('Оплачена опция «' . opt_title((string)$x['opt']) . '» ' . $x['number'] . ' — сделать и выдать файлы', 'panel.php?s=order&o=' . rawurlencode($x['number']) . '&tab=obzor', strtotime((string)$x['paid_at']) < $now - 3 * 86400);
+    }
     foreach (glob(linea_private() . '/reviews/*/*.json') ?: [] as $f) {
         $r = json_decode((string)file_get_contents($f), true);
         if (is_array($r) && empty($r['test']) && empty($r['status']) && !empty($r['order'])) { $add('Новые правки ' . $r['number'] . ' (заказ ' . $r['order'] . ')', 'panel.php?s=order&o=' . rawurlencode((string)$r['order']) . '&tab=pravki', false, 'voprosy'); }
@@ -597,6 +684,11 @@ function adm_wait(array $o): ?array
     $lastC = (string)db_val("SELECT MAX(at) FROM events WHERE order_id = ? AND who = 'kab:client'", [(int)$o['id']]);
     $lastL = (string)db_val("SELECT MAX(at) FROM events WHERE order_id = ? AND who IN ('kab:linea')", [(int)$o['id']]);
     if ($lastC !== '' && $lastC > $lastL) { return $mk('Ответить клиенту (сообщение в кабинете)', $ts($lastC), 'lenta'); }
+    // опции заказа («Смета на материалы»): оплачена и не выдана — сделать и выдать; цена не задана — назвать сумму
+    foreach (opt_list((int)$o['id']) as $ox) {
+        if ($ox['status'] === 'paid') { return $mk('Сделать и выдать «' . opt_title((string)$ox['opt']) . '» (оплачена)', $ts($ox['paid_at']), 'obzor'); }
+        if ($ox['status'] === 'awaiting_payment' && (int)$ox['amount_kop'] <= 0) { return $mk('Назвать сумму опции «' . opt_title((string)$ox['opt']) . '»', $ts($ox['created_at']), 'dengi'); }
+    }
     if ($o['status'] === 'new' || ($o['status'] === 'awaiting_payment' && !$o['amount_confirmed_at'] && !(int)$o['amount_kop'])) { return $mk('Подтвердить сумму', $ts($o['created_at']), 'dengi'); }
     if ($o['status'] === 'awaiting_payment' && !$o['amount_confirmed_at'] && !linea_amount_ok($o)) { return $mk('Сверить площадь по плану и подтвердить сумму', $ts($o['created_at']), 'dengi'); }
     if ($o['status'] === 'awaiting_payment') {
@@ -658,6 +750,7 @@ switch ($s) {
     case 'orders': {
         $st = (string)($_GET['st'] ?? ''); $q = trim((string)($_GET['q'] ?? ''));
         $who = in_array($_GET['who'] ?? '', ['us', 'client'], true) ? (string)$_GET['who'] : '';
+        $optF = in_array($_GET['opt'] ?? '', ['any', 'unpaid', 'work'], true) ? (string)$_GET['opt'] : '';   // фильтр по опциям: есть любая / не оплачена / оплачена и не выдана
         $from = preg_match('/^\d{4}-\d{2}-\d{2}$/', (string)($_GET['from'] ?? '')) ? (string)$_GET['from'] : '';
         $to = preg_match('/^\d{4}-\d{2}-\d{2}$/', (string)($_GET['to'] ?? '')) ? (string)$_GET['to'] : '';
         $sort = in_array($_GET['sort'] ?? '', ['new', 'old', 'wait', 'sum'], true) ? (string)$_GET['sort'] : 'new';
@@ -676,7 +769,11 @@ switch ($s) {
             $waitClient = $wt === null && $nx['who'] === 'client';
             if ($who === 'us' && !$waitUs) { continue; }
             if ($who === 'client' && !$waitClient) { continue; }
-            $all[] = ['o' => $o, 'nx' => $nx, 'wt' => $wt];
+            $ox = opt_list((int)$o['id']);
+            if ($optF === 'any' && !$ox) { continue; }
+            if ($optF === 'unpaid' && !array_filter($ox, fn($r) => $r['status'] === 'awaiting_payment')) { continue; }
+            if ($optF === 'work' && !array_filter($ox, fn($r) => $r['status'] === 'paid')) { continue; }
+            $all[] = ['o' => $o, 'nx' => $nx, 'wt' => $wt, 'ox' => $ox];
         }
         usort($all, function ($x, $y) use ($sort) {
             return match ($sort) {
@@ -693,16 +790,17 @@ switch ($s) {
             $wcell = $wt ? ($wt['hot'] ? '<b class="late">' : '') . $h($wt['what']) . ' · ' . $h(adm_ago($wt['since'], $nowT)) . ($wt['hot'] ? '</b>' : '') : '<span class="mut">ждём: ' . ['client' => 'клиента', 'studio' => 'от нас', 'brigade' => 'бригаду', 'none' => '—'][$nx['who']] . '</span>';
             $rows .= '<tr' . ($wt && $wt['hot'] ? ' class="hotrow"' : '') . '><td><a href="panel.php?s=order&o=' . rawurlencode($o['number']) . '">' . $h($o['number']) . '</a>' . ($o['test'] ? ' <span class="test">тест</span>' : '') . '<div class="mut">' . $h(substr((string)$o['created_at'], 0, 16)) . '</div></td>'
                 . '<td>' . $h($o['name']) . '<div class="mut hide-m">' . $h($o['email']) . '</div></td><td class="hide-m">' . $h(LINEA_KINDS[$o['kind']] ?? $o['kind']) . ($o['area'] ? ', ' . $h($o['area']) . ' м²' : '') . '</td>'
-                . '<td>' . $rub($o['amount_kop']) . '</td><td><span class="st">' . $h(LINEA_STATUS[$o['status']] ?? $o['status']) . '</span><div>' . $wcell . '</div></td>'
+                . '<td>' . $rub($o['amount_kop']) . implode('', array_map(fn($r) => '<div class="mut"><span class="st ' . ['awaiting_payment' => 'w', 'paid' => 'r', 'delivered' => 'g'][$r['status']] . '">' . $h(opt_title((string)$r['opt'])) . ': ' . $h(['awaiting_payment' => 'ждёт оплаты', 'paid' => 'оплачена, не выдана', 'delivered' => 'выдана'][$r['status']]) . '</span></div>', $x['ox'])) . '</td><td><span class="st">' . $h(LINEA_STATUS[$o['status']] ?? $o['status']) . '</span><div>' . $wcell . '</div></td>'
                 . '<td class="hide-m">' . ($rm['job'] ? 'сделка: ' . $h(BRIG_JOB_STATUS[$rm['job']['status']] ?? '') : ($rm['request'] ? 'подбор' : '—')) . '</td></tr>';
         }
         $sel = fn(string $name, array $opts, string $cur) => '<select name="' . $name . '">' . implode('', array_map(fn($k, $t) => '<option value="' . $h($k) . '"' . ((string)$k === $cur ? ' selected' : '') . '>' . $h($t) . '</option>', array_keys($opts), $opts)) . '</select>';
         $flt = '<form method="get" class="inl"><input type="hidden" name="s" value="orders">' . $sel('st', ['' => 'все статусы'] + LINEA_STATUS, $st)
             . $sel('who', ['' => 'все', 'us' => 'ждём нас', 'client' => 'ждём клиента'], $who)
+            . $sel('opt', ['' => 'любые опции', 'any' => 'со сметой на материалы', 'unpaid' => 'смета не оплачена', 'work' => 'смета оплачена, не выдана'], $optF)
             . ' с <input type="date" name="from" value="' . $h($from) . '"> по <input type="date" name="to" value="' . $h($to) . '">'
             . $sel('sort', ['new' => 'сначала новые', 'old' => 'сначала старые', 'wait' => 'дольше всех ждут нас', 'sum' => 'по сумме'], $sort)
             . '<input name="q" value="' . $h($q) . '" placeholder="номер, почта, телефон"><button>Показать</button></form>';
-        $qs = fn(int $pg) => 'panel.php?' . http_build_query(['s' => 'orders', 'st' => $st, 'who' => $who, 'from' => $from, 'to' => $to, 'sort' => $sort, 'q' => $q, 'p' => $pg]);
+        $qs = fn(int $pg) => 'panel.php?' . http_build_query(['s' => 'orders', 'st' => $st, 'who' => $who, 'opt' => $optF, 'from' => $from, 'to' => $to, 'sort' => $sort, 'q' => $q, 'p' => $pg]);
         $pager = '<p class="mut">Найдено: ' . $total . '. Страница ' . $page . ' из ' . $pages . ($page > 1 ? ' · <a href="' . $h($qs($page - 1)) . '">← назад</a>' : '') . ($page < $pages ? ' · <a href="' . $h($qs($page + 1)) . '">вперёд →</a>' : '') . '</p>';
         adm_page('Заказы', '<h1>Заказы проектов</h1>' . $flt . $pager . '<div class="scroll"><table><tr><th>Номер</th><th>Клиент</th><th class="hide-m">Вид</th><th>Сумма</th><th>Статус / что ждём</th><th class="hide-m">Ремонт</th></tr>' . ($rows ?: '<tr><td colspan="6">Пусто</td></tr>') . '</table></div>' . $pager, 'orders', $msg);
     }
@@ -713,6 +811,33 @@ switch ($s) {
         $TABS = ['obzor' => 'Обзор', 'brif' => 'Бриф', 'dengi' => 'Деньги', 'vypuski' => 'Выпуски', 'voprosy' => 'Вопросы и решения', 'pravki' => 'Правки', 'lenta' => 'Лента', 'docs' => 'Документы', 'remont' => 'Ремонт', 'sluzh' => 'Служебное'];
         $num = $o['number'];
         $H = ['o' => $num, 's_back' => 'order', 'o_back' => $num, 'tab_back' => $tab];
+        // опции заказа («Смета на материалы»): статус, сумма, счёт, оплата вручную, отмена и выдача файлов (PDF + таблица)
+        $optBlock = function () use ($o, $h, $form, $H, $rub, $d, $reasonIn, $num): string {
+            $rows = opt_list((int)$o['id'], true);
+            if (!$rows) { return '<h2>Опции заказа</h2><p class="box mut">Клиент не добавлял опции («Смета на материалы»). Он может добавить её сам в кабинете.</p>'; }
+            $out = '<h2>Опции заказа</h2>';
+            foreach ($rows as $r) {
+                $k = (string)$r['opt'];
+                $files = opt_files($o, $r);
+                $fl = $files ? implode(' · ', array_map(fn($f) => '<a href="panel.php?optfile=' . rawurlencode($k) . '&o=' . rawurlencode($num) . '&f=' . rawurlencode($f['name']) . '">' . $h($f['label']) . '</a> <span class="mut">' . round($f['size'] / 1024) . ' КБ</span>', $files)) : 'файлов нет';
+                $out .= '<div class="box" id="opt-' . $h($k) . '"><p><b>' . $h(opt_title($k)) . '</b> <span class="st ' . ['awaiting_payment' => 'w', 'paid' => 'r', 'delivered' => 'g', 'cancelled' => ''][$r['status']] . '">' . $h(OPT_STATUS[$r['status']] ?? $r['status']) . '</span>'
+                    . ' · сумма <b>' . ((int)$r['amount_kop'] > 0 ? $rub($r['amount_kop']) : 'не задана (в config нет цены)') . '</b> · ' . ($r['source'] === 'kabinet' ? 'добавлена из кабинета' : 'отмечена в брифе') . ' ' . $d($r['created_at'])
+                    . '<br><span class="mut">счёт: ' . $d($r['invoice_at']) . ' · оплачена: ' . $d($r['paid_at']) . ($r['paid_by'] ? ' (' . $h($r['paid_by']) . ')' : '') . ' · выдана: ' . $d($r['delivered_at']) . '</span></p>';
+                $hid = $H + ['opt' => $k];
+                if ($r['status'] === 'awaiting_payment') {
+                    $out .= $form('opt_amount', $hid, '<input name="rub" size="9" placeholder="сумма, ₽" value="' . ((int)$r['amount_kop'] > 0 ? (int)$r['amount_kop'] / 100 : '') . '">', 'Сохранить сумму')
+                        . ((int)$r['amount_kop'] > 0 ? $form('opt_invoice', $hid, '', 'Счёт выставлен', 'lt') . $form('opt_paid', $hid, $reasonIn, 'Опция оплачена (вручную)') : '')
+                        . $form('opt_cancel', $hid, $reasonIn, 'Отменить', 'bad')
+                        . '<p class="mut">Пока проект ждёт оплаты, опция входит в тот же платёж. Если клиент оплатил проект и смету одним счётом — отметьте оплату проекта и опции отдельными кнопками.</p>';
+                } elseif (in_array($r['status'], ['paid', 'delivered'], true)) {
+                    $out .= '<p>Файлы: ' . $fl . '</p>'
+                        . $form('opt_deliver', $hid, '<label>PDF <input type="file" name="pdf" accept="application/pdf"></label> <label>Таблица (xlsx/csv) <input type="file" name="table" accept=".xlsx,.csv"></label>', $r['status'] === 'delivered' ? 'Заменить файлы' : 'Выдать клиенту', '', true)
+                        . ($r['status'] === 'paid' ? $form('opt_cancel', $hid, $reasonIn, 'Отменить', 'bad') : '');
+                }
+                $out .= '</div>';
+            }
+            return $out;
+        };
         $tabs = '<div class="tabs">' . implode('', array_map(fn($k, $t) => '<a href="panel.php?s=order&o=' . rawurlencode($num) . '&tab=' . $k . '"' . ($k === $tab ? ' class="on"' : '') . '>' . $t . '</a>', array_keys($TABS), $TABS)) . '</div>';
         $nx = kab_next_action($o);
         $head = '<h1>' . $h($num) . ' <span class="st">' . $h(LINEA_STATUS[$o['status']] ?? $o['status']) . '</span>' . ($o['test'] ? ' <span class="test">ТЕСТ</span>' : '') . '</h1>'
@@ -732,6 +857,7 @@ switch ($s) {
                         [$subj, $txt] = kab_ev_render($o, kab_ev($en, $o, ['reason' => '(причина, которую вы укажете)']));
                         return '<details><summary class="mut">Письмо клиенту при «' . $h(LINEA_STATUS[$to] ?? $to) . '»</summary><div class="pv"><b>' . $h($subj) . "</b>\n\n" . $h($txt) . '</div></details>';
                     }, $tos)) . '</div>'
+                    . $optBlock()
                     . '<h2>Плановая дата следующего шага</h2><div class="box"><p class="mut">Клиент видит её в кабинете («Сейчас») и в письмах. Сейчас: <b>' . ($o['expected_at'] ? $h(kab_date_ru((string)$o['expected_at'], true)) . ($o['expected_note'] ? ' — ' . $h($o['expected_note']) : '') : 'не задана') . '</b></p>'
                     . $form('o_expected', $H, '<input type="date" name="expected_at" value="' . $h(substr((string)$o['expected_at'], 0, 10)) . '"><input name="expected_note" size="30" placeholder="что будет к этой дате (например, первый вариант)" value="' . $h($o['expected_note']) . '">', 'Сохранить дату', 'lt') . '</div>'
                     . '<h2>Этап работы — записать в историю клиента и написать ему</h2><div class="box"><p class="mut">Текст можно поправить перед отправкой; письмо уйдёт с учётом настроек клиента (группа «Проект»). Снимите галочку, чтобы только записать этап в историю.</p>'
@@ -772,6 +898,7 @@ switch ($s) {
                     . '<p class="mut">Платёж онлайн-оплаты: ' . $h($o['payment_id'] ?: '—') . ' · попыток ' . (int)$o['payment_tries'] . ($o['pay_alert_at'] ? ' · <b>нужна проверка оплаты</b>' : '') . '</p>'
                     . $form('o_amount', $H, '<input name="rub" size="9" placeholder="сумма, ₽" value="' . ($o['amount_kop'] ? (int)$o['amount_kop'] / 100 : '') . '">', 'Сохранить и подтвердить сумму')
                     . $form('o_invoice', $H, '', 'Счёт выставлен', 'lt')
+                    . $optBlock()
                     . '<p class="mut">Второй чек «полный расчёт»: ' . ($o['receipt2_id'] ? $h($o['receipt2_id']) . ' · ' . $d($o['receipt2_at']) . ' · ' . $h($o['receipt2_status']) : (yk_receipts_on() ? (yk_receipt_chain($o) || !in_array($o['status'], ['paid', 'delivered', 'refunded'], true) ? 'уйдёт при выдаче альбома' : 'первый платёж прошёл без чека онлайн-кассы — выбить вручную') : 'чеки через онлайн-кассу выключены (yk_receipt)')) . ' · возвращено: ' . $rub((int)$o['refunded_kop']) . '</p>'
                     . (in_array($o['status'], ['paid', 'delivered'], true) ? '<h2>Возврат</h2>' . (yk_receipts_on() && yk_receipt_chain($o)
                         ? $form('o_refund', $H, '<input name="rub" size="9" placeholder="сумма, ₽">' . $reasonIn, 'Вернуть через онлайн-кассу', 'bad') . '<p class="mut">Частичный или полный. Возврат и чек возврата создаёт онлайн-касса; доступно к возврату: ' . $rub(yk_refund_left($o)) . '.</p>'

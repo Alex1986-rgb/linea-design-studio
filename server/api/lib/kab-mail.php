@@ -75,6 +75,11 @@ function kab_pay_info(array $o): array
     }
     $req = linea_requisites();
     $reqSet = $req !== null || !empty($tc['requisites']);
+    // опции заказа («Смета на материалы»): отдельные строки оплаты; в платёж проекта входят неоплаченные, пока проект ждёт оплаты (lib/options.php)
+    require_once __DIR__ . '/options.php';
+    $opts = array_map(fn($r) => opt_public($o, $r), opt_list((int)$o['id']));
+    $optDue = array_sum(array_map(fn($r) => (int)$r['amount_kop'], array_filter(opt_list((int)$o['id']), fn($r) => $r['status'] === 'awaiting_payment' && (int)$r['amount_kop'] > 0)));
+    $projDue = in_array($o['status'], ['new', 'awaiting_payment'], true) && $amount ? $amount : 0;
     return [
         'amount' => $amount, 'formula' => $formula, 'rate' => $rateKop, 'min' => $minKop, 'area' => $area, 'minApplied' => $minApplied, 'matches' => $matches,
         'includes' => array_values(array_filter([(string)($tc['line'] ?? ''), (string)($tc['roundsText'] ?? ''), (string)($tc['start'] ?? '')])),
@@ -82,6 +87,8 @@ function kab_pay_info(array $o): array
         'rounds' => isset($tc['rounds']) ? (int)$tc['rounds'] : null, 'roundsText' => (string)($tc['roundsText'] ?? ''),
         'refund' => (string)(($tc['pages']['refund'] ?? 'oplata/')), 'offer' => (string)(($tc['pages']['offer'] ?? 'oferta/')),
         'requisitesSet' => $reqSet,
+        'options' => $opts, 'optionsDue' => $optDue, 'totalDue' => $projDue + $optDue, 'projectAmount' => $amount,
+        'addons' => (array)($tc['addons'] ?? []),
         'requisites' => $req !== null ? trim((string)$req['name'] . ', ИНН ' . (string)$req['inn']) : (!empty($tc['requisites']) ? (string)$tc['reqLine'] : (string)($tc['reqLine'] ?? '')),
     ];
 }
@@ -165,6 +172,10 @@ function kab_ev(string $name, array $o, array $x = []): array
             $rows = [['Номер заказа', $num], ['Объект', trim((string)$o['object_type'] . ($o['area'] ? ', ' . str_replace('.', ',', (string)$o['area']) . ' м²' : ''))],
                 ['Сумма', $sum ? $rub($o['amount_kop']) : 'подтвердим в течение рабочего дня']];
             if ($sum && $pi['formula'] !== '') { $rows[] = ['Как посчитано', $pi['formula']]; }
+            foreach ($pi['options'] as $op) {   // опции заказа отдельной строкой («Смета на материалы»)
+                $rows[] = [$op['title'], $op['amountKnown'] ? $rub((int)round($op['amount'] * 100)) . ' — отдельной строкой' : 'сумму подтвердим'];
+            }
+            if ($sum && $pi['optionsDue'] > 0) { $rows[] = ['Итого к оплате', $rub($o['amount_kop'] + $pi['optionsDue'])]; }
             $next = $sum ? 'Дальше: оплатите проект в кабинете (картой или СБП) — или мы пришлём счёт на эту почту. Работа начинается после оплаты.'
                 : 'Дальше: мы проверим бриф и план, подтвердим сумму и напишем вам. Работа начинается после оплаты.';
             return ['grp' => 'proekt', 'subject' => 'бриф получен', 'text' => 'Бриф ' . $num . ' получен. ' . ($sum ? 'Сумма — ' . $rub($o['amount_kop']) . '.' : 'Сумму подтвердим в течение рабочего дня.'),
@@ -227,6 +238,32 @@ function kab_ev(string $name, array $o, array $x = []): array
             return ['grp' => 'proekt', 'subject' => 'сообщение по заказу ' . $num, 'text' => 'Сообщение от LINEA: ' . mb_substr($t, 0, 300),
                 'title' => 'Сообщение от студии', 'lead' => $t, 'rows' => [['Заказ', $num]], 'note' => 'Ответить можно в кабинете — в ленте заказа.',
                 'btn' => 'Открыть переписку', 'tab' => 'proekt', 'legal' => false];
+        }
+        case 'opt_added':
+        case 'opt_paid':
+        case 'opt_delivered': {
+            $opt = (string)($x['opt'] ?? 'smeta');
+            require_once __DIR__ . '/options.php';
+            $ttl = opt_title($opt);
+            $term = (string)($tc['addons'][$opt]['termLine'] ?? '');
+            $sum = isset($x['sum']) ? $rub($x['sum']) : '';
+            if ($name === 'opt_added') {
+                return ['grp' => 'dengi', 'subject' => 'добавлена опция «' . mb_strtolower($ttl) . '»', 'text' => 'К заказу добавлена опция «' . $ttl . '»' . ($sum !== '' ? ': ' . $sum : '') . '. Оплачивается отдельной строкой.',
+                    'title' => $ttl . ' добавлена', 'lead' => 'К заказу ' . $num . ' добавлена опция «' . $ttl . '»: ' . (string)($tc['addons'][$opt]['what'] ?? 'список покупок на весь ремонт с количеством') . '. Оплачивается отдельной строкой, дизайн-проект в эту сумму не входит.',
+                    'rows' => [['Заказ', $num], ['Опция', $ttl], ['Сумма опции', $sum !== '' ? $sum : 'подтвердим в течение рабочего дня'], ['Срок', $term]],
+                    'note' => (string)($tc['addons'][$opt]['priceNote'] ?? ''), 'btn' => 'Открыть кабинет заказа', 'tab' => 'proekt', 'legal' => true];
+            }
+            if ($name === 'opt_paid') {
+                return ['grp' => 'dengi', 'subject' => 'оплата «' . mb_strtolower($ttl) . '» получена', 'text' => 'Оплата опции «' . $ttl . '» получена' . ($sum !== '' ? ': ' . $sum : '') . ' — мы начали работу.',
+                    'title' => 'Оплата получена — ' . mb_strtolower($ttl) . ' в работе', 'lead' => 'Спасибо! Оплата опции «' . $ttl . '» по заказу ' . $num . ' получена. Готовые файлы (PDF и таблица) появятся в кабинете, на почту придёт письмо.',
+                    'rows' => [['Заказ', $num], ['Оплачено', $sum], ['Срок', $term]], 'note' => $exp, 'btn' => 'Открыть кабинет заказа', 'tab' => 'proekt', 'legal' => true];
+            }
+            $names = implode(', ', array_map(fn($f) => (string)$f, (array)($x['files'] ?? [])));
+            return ['grp' => 'proekt', 'subject' => mb_strtolower($ttl) . ' готова', 'text' => $ttl . ' готова — файлы в кабинете.',
+                'title' => $ttl . ' готова', 'lead' => $ttl . ' по заказу ' . $num . ' готова. Файлы лежат в кабинете, в разделе «Проект»: скачайте PDF и таблицу. '
+                    . (string)($tc['addons'][$opt]['priceNote'] ?? 'Цены ориентировочные, на дату расчёта.') . '.',
+                'rows' => [['Заказ', $num], ['Файлы', $names]], 'note' => 'Закупку и доставку мы не делаем; работы бригады в смету материалов не входят.',
+                'btn' => 'Открыть файлы', 'tab' => 'proekt', 'legal' => true];
         }
         case 'delivered':
             return ['grp' => 'proekt', 'subject' => 'финальный альбом выдан', 'text' => 'Финальный альбом выдан. Теперь можно подобрать бригаду на ремонт — это необязательно.',

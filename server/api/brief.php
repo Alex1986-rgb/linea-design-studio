@@ -124,6 +124,17 @@ try {
 }
 
 linea_rate_add('brief');
+// опции заказа (необязательные, отдельная строка оплаты): brief.options.smeta = true → «Смета на материалы». Цена — config prices.smeta (копейки);
+// нет цены — опция записана, сумма «уточняется», сервис не падает. Сумму клиент видел на сайте, но верна серверная.
+$optLine = '';
+try {
+    if (is_array($brief['options'] ?? null) && ($brief['options']['smeta'] ?? false) === true) {
+        require_once __DIR__ . '/lib/options.php';
+        $oOpt = linea_order_by_number($number);
+        $ra = $oOpt ? opt_add($oOpt, 'smeta', 'brief') : null;
+        if ($ra && $ra['ok']) { $optLine = 'Опция: ' . opt_title('smeta') . ' — ' . ($ra['row']['amount_kop'] ? number_format((int)$ra['row']['amount_kop'] / 100, 0, ',', ' ') . ' ₽' : 'сумма уточняется'); }
+    }
+} catch (Throwable $e) { linea_log('error.log', 'brief option: ' . $e->getMessage()); }
 // кабинет клиента (С-2): до подтверждения почты кодом аккаунт не создаётся и заказ ни к кому не привязывается — согласия пишутся без аккаунта
 // (account_id = 0) и переходят к аккаунту при первом входе кодом (kab_client_account); бриф на чужую почту не попадает в чужой кабинет сам
 if ($email !== '' && filter_var($email, FILTER_VALIDATE_EMAIL)) {
@@ -146,6 +157,7 @@ linea_notify('LINEA: новый бриф ' . $number, implode("\n", [
     'Новый бриф ' . $number . ' — ' . (LINEA_KINDS[$kind] ?? $kind) . ($area ? ', ' . $area . ' м²' : ''),
     'Клиент: ' . linea_str($client['name'] ?? '', 80) . ' ' . $phone . ' ' . $email,
     'Сумма: ' . ($amount ? number_format($amount / 100, 0, ',', ' ') . ' ₽' : 'уточняется — выставьте в закрытой странице'),
+    $optLine,
     'Заказы: ' . linea_base() . '/api/admin.php',
 ]), $test);
 

@@ -39,6 +39,10 @@ if (fs.existsSync(dop)) {
   for (const n of fs.readdirSync(dop)) { if (n === 'index.json' || n.startsWith('brief-до-')) continue; const q = idx[n] && idx[n].q; fs.copyFileSync(path.join(dop, n), path.join(out, 'source', (q ? q + '_' : '') + (idx[n]?.orig || n))); nExtra++; }
 }
 if (fs.existsSync(path.join(dir, 'answers.json'))) fs.copyFileSync(path.join(dir, 'answers.json'), path.join(out, 'answers.json'));
-fs.writeFileSync(path.join(out, 'order.json'), JSON.stringify({ number: row.number, kind: row.kind, status: row.status, area: row.area, objectType: row.object_type, paidAt: row.paid_at, briefAddedAt: added || null }, null, 2));
+// опция «Смета на материалы» (09.11.2026): smeta = true — опция оплачена, конвейер обязан выпустить смету материалов (файлы — см. docs/reports/2026-11-09-opciya-smeta-materialov.md);
+// smetaStatus — awaiting_payment | paid | delivered | cancelled | null (опции в заказе нет). Старая база без таблицы order_options — опции нет.
+let opt = null;
+try { opt = JSON.parse(execFileSync('php', ['-r', '$p = new PDO("sqlite:" . $argv[1]); $s = $p->prepare("SELECT x.status, x.paid_at FROM order_options x JOIN orders o ON o.id = x.order_id WHERE o.number = ? AND x.opt = \'smeta\'"); $s->execute([$argv[2]]); echo json_encode($s->fetch(PDO::FETCH_ASSOC) ?: null);', path.join(priv, 'linea.sqlite'), num], { stdio: ['ignore', 'pipe', 'ignore'] }).toString()); } catch { }
+fs.writeFileSync(path.join(out, 'order.json'), JSON.stringify({ smeta: !!opt && ['paid', 'delivered'].includes(opt.status), smetaStatus: opt ? opt.status : null, smetaPaidAt: opt ? opt.paid_at : null, number: row.number, kind: row.kind, status: row.status, area: row.area, objectType: row.object_type, paidAt: row.paid_at, briefAddedAt: added || null }, null, 2));
 console.log(`✓ ${num} → clients/${slug}/: brief.json${fs.existsSync(path.join(out, 'brief.txt')) ? ', brief.txt' : ''}, source/ (${fs.readdirSync(path.join(out, 'source')).length} файлов, из них догружено ${nExtra}), answers.json ${fs.existsSync(path.join(out, 'answers.json')) ? 'есть' : 'нет'}`);
 console.log(`Дальше: /new-client ${slug} или node engine/generate.js clients/${slug}/brief.json clients/${slug}/project`);

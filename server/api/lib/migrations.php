@@ -397,4 +397,20 @@ return [
         "ALTER TABLE notices ADD COLUMN mail_state {INT} NOT NULL DEFAULT 0",
         "CREATE INDEX notices_mail ON notices(mail_state)",
     ],
+    // 09.11.2026 — опции заказа (docs/plans/2026-11-09-opciya-smeta-materialov.md): «Смета на материалы» и будущие дополнения к проекту.
+    // Каждая опция — отдельная строка оплаты со своим статусом (awaiting_payment → paid → delivered | cancelled), своим платежом ЮKassa
+    // и своими файлами результата (files — JSON: [{name, label, size}], сами файлы — linea-private/orders/<номер>/options/<ключ>/).
+    // amount_kop = NULL — «цена уточняется» (в config.prices нет ключа опции): сервис не падает, сумму выставляет админ.
+    10 => [
+        "CREATE TABLE IF NOT EXISTS order_options (
+            id {ID}, order_id {INT} NOT NULL, opt {SHORT} NOT NULL, status {SHORT} NOT NULL DEFAULT 'awaiting_payment',
+            source {SHORT} NOT NULL DEFAULT 'brief', amount_kop {INT}, area {REAL},
+            created_at {KEY} NOT NULL, updated_at {KEY} NOT NULL, invoice_at {KEY},
+            payment_id {KEY}, payment_url {TEXT}, payment_created_at {KEY}, payment_tries {INT} NOT NULL DEFAULT 0, payment_receipt {BOOL} NOT NULL DEFAULT 0,
+            paid_at {KEY}, paid_by {KEY}, files {TEXT}, delivered_at {KEY}, note {TEXT},
+            UNIQUE (order_id, opt),
+            FOREIGN KEY (order_id) REFERENCES orders(id) ON DELETE CASCADE)
+            {ENGINE}",
+        "CREATE INDEX order_options_status ON order_options(status)",
+    ],
 ];

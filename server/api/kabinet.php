@@ -9,6 +9,8 @@
  *   GET  ?a=docs | notices | profile
  *   GET  ?a=file&o=&v=&f=album.pdf|registry.json · ?a=file&pd=<id> (выгрузка) · ?a=doc&o=&kind=protocol
  *   POST ?a=upload (multipart: o, files[], q?) — догрузить файлы к заказу или к ответу на вопрос · later {o,id} — «отвечу позже»
+ *   GET  ?a=ofile&o=&opt=smeta&f=<имя> — скачать файл выданной опции («Смета на материалы»)
+ *   POST ?a=opt_add {o,opt} — добавить опцию к заказу (отдельная строка оплаты) · opt_pay {o,opt} — оплатить опцию отдельно
  *   POST ?a=pay {o} · answer {o,id,option,text} · decide {o,id,decision,text} · accept_album {o,ver} · msg {o,text}
  *        profile {name,phone} · prefs {groups,digest} · consent_revoke {id} · pd {kind,note} · device_end {id} · notices_read
  */
@@ -106,6 +108,12 @@ function kb_history(array $o): array
     if ($o['invoice_at']) { $add((string)$o['invoice_at'], 'money', 'Счёт выставлен', 'Реквизиты — в счёте, отправленном на почту.'); }
     if ($o['paid_at']) { $add((string)$o['paid_at'], 'money', 'Оплата получена', brig_rub((int)$o['amount_kop']) . ' — работа начата.'); }
     if ($o['delivered_at']) { $add((string)$o['delivered_at'], 'status', 'Финальный альбом выдан'); }
+    foreach (opt_list((int)$o['id'], true) as $r) {   // опции заказа: добавлена → оплачена → готова
+        $tt = opt_title((string)$r['opt']);
+        $add((string)$r['created_at'], 'money', 'Добавлена опция «' . $tt . '»', $r['amount_kop'] ? brig_rub((int)$r['amount_kop']) . ' — отдельной строкой' : 'сумму подтвердим');
+        if ($r['paid_at']) { $add((string)$r['paid_at'], 'money', 'Оплата опции «' . $tt . '» получена', brig_rub((int)$r['amount_kop'])); }
+        if ($r['delivered_at']) { $add((string)$r['delivered_at'], 'album', $tt . ' готова', implode(', ', array_map(fn($f) => $f['label'], opt_files($o, $r)))); }
+    }
     foreach (kab_releases($o) as $r) { $add((string)($r['published_at'] ?? $r['date'] ?? ''), 'album', 'Вышла версия «' . ($r['title'] ?? $r['ver']) . '»' . (!empty($r['final']) ? ' — финальная' : ''), implode('; ', array_slice((array)($r['changes'] ?? []), 0, 4))); }
     foreach (kab_answers($o)['items'] as $id => $a) {
         $add((string)($a['at'] ?? ''), 'answer', ($a['decision'] ?? '') === 'agree' ? 'Вы согласовали решение ' . $id : (($a['decision'] ?? '') === 'disagree' ? 'Вы предложили своё по ' . $id : 'Вы ответили на вопрос ' . $id), trim((string)($a['option'] ?? '') . ' ' . (string)($a['text'] ?? '')), 'client');
@@ -151,6 +159,7 @@ function kb_object(array $o, ?array $c): array
         'next' => kab_next_action($o), 'step' => kab_step($o), 'brief' => kb_brief($o), 'releases' => $rel,
         'registry' => $reg ? ['ver' => $reg['ver'], 'items' => $items, 'answerBy' => $by] : null, 'reviews' => $rv, 'rounds' => kb_rounds($o, $rv),
         'expected' => kb_expected($o), 'pay' => kab_pay_info($o), 'history' => kb_history($o), 'stage' => kb_stage($o),
+        'options' => array_map(fn($r) => opt_public($o, $r), opt_list((int)$o['id'])), 'optionsAvailable' => opt_available($o),
         'termsCall' => kab_terms_client()['call'] ?? null,
         'remont' => ['eligible' => kab_remont_eligible($o), 'chooseAfter' => brig_terms()['choose_after'], 'hasRequest' => (bool)$rm['request'],
             'jobStatus' => $rm['job']['status'] ?? null, 'rt' => $o['token']],
@@ -177,6 +186,11 @@ function kb_docs(array $orders): array
         $n = $o['number'];
         if ($o['consent_at']) { $out[] = ['o' => $n, 'kind' => 'Согласие', 'title' => 'На обработку персональных данных', 'at' => $o['consent_at'], 'note' => 'дано при отправке брифа']; }
         if ($o['invoice_at']) { $out[] = ['o' => $n, 'kind' => 'Счёт', 'title' => 'Счёт на оплату проекта', 'at' => $o['invoice_at'], 'note' => 'Отправлен на почту']; }
+        foreach (opt_list((int)$o['id']) as $r) {
+            $tt = opt_title((string)$r['opt']);
+            if ($r['paid_at']) { $out[] = ['o' => $n, 'kind' => 'Оплата', 'title' => 'Оплата опции «' . $tt . '» ' . brig_rub((int)$r['amount_kop']), 'at' => $r['paid_at'], 'note' => 'Чек — в письме сервиса онлайн-оплаты, копия — у LINEA по запросу']; }
+            foreach (opt_files($o, $r) as $f) { $out[] = ['o' => $n, 'kind' => 'Смета', 'title' => $tt . ': ' . $f['label'], 'at' => (string)$r['delivered_at'], 'href' => 'ofile&o=' . rawurlencode($n) . '&opt=' . rawurlencode((string)$r['opt']) . '&f=' . rawurlencode($f['name'])]; }
+        }
         if ($o['paid_at']) { $out[] = ['o' => $n, 'kind' => 'Оплата', 'title' => 'Оплата проекта ' . brig_rub((int)$o['amount_kop']), 'at' => $o['paid_at'], 'note' => 'Чек — в письме сервиса онлайн-оплаты, копия — у LINEA по запросу']; }
         foreach (kab_releases($o) as $r) {
             if ($r['hasPdf']) { $out[] = ['o' => $n, 'kind' => 'Альбом', 'title' => 'Альбом ' . ($r['title'] ?? $r['ver']) . ' (PDF)', 'at' => (string)($r['date'] ?? ''), 'href' => 'file&o=' . rawurlencode($n) . '&v=' . rawurlencode($r['ver']) . '&f=album.pdf']; }
@@ -271,6 +285,20 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'GET') {
             header('Content-Length: ' . filesize($f)); header('Cache-Control: private, no-store'); header('X-Content-Type-Options: nosniff');
             readfile($f); exit;
         }
+        case 'ofile': {
+            $o = kb_order((string)($_GET['o'] ?? ''));
+            $r = opt_get((int)$o['id'], preg_replace('/[^a-z0-9_-]/', '', (string)($_GET['opt'] ?? '')) ?? '');
+            $fn = basename((string)($_GET['f'] ?? ''));
+            $hit = $r && $r['status'] === 'delivered' ? array_values(array_filter(opt_files($o, $r), fn($x) => $x['name'] === $fn)) : [];
+            if (!$hit) { linea_fail('Файл не найден', 404); }
+            $f = opt_dir($o, (string)$r['opt']) . '/' . $fn;
+            $ext = strtolower(pathinfo($fn, PATHINFO_EXTENSION));
+            $mime = ['pdf' => 'application/pdf', 'xlsx' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', 'csv' => 'text/csv; charset=utf-8'][$ext] ?? 'application/octet-stream';
+            header('Content-Type: ' . $mime);
+            header('Content-Disposition: ' . ($ext === 'pdf' && empty($_GET['dl']) ? 'inline' : 'attachment') . '; filename="LINEA-' . $o['number'] . '-' . $r['opt'] . '.' . $ext . '"');
+            header('Content-Length: ' . filesize($f)); header('Cache-Control: private, no-store'); header('X-Content-Type-Options: nosniff');
+            readfile($f); exit;
+        }
         case 'doc': {
             $o = kb_order((string)($_GET['o'] ?? ''));
             $h = fn($s) => htmlspecialchars((string)$s, ENT_QUOTES, 'UTF-8');
@@ -338,6 +366,29 @@ switch ($a) {
         require_once __DIR__ . '/lib/yookassa.php';
         if (!linea_rate('pay', 30)) { linea_fail('Слишком много попыток — подождите немного', 429); }
         $r = yk_payment_for($o);
+        if (!$r['ok']) { linea_fail($r['why'], 409); }
+        linea_json(['ok' => true, 'url' => $r['url']]);
+    }
+    case 'opt_add': {
+        $o = kb_order($num);
+        kab_require_fresh_for_order($o);
+        $opt = preg_replace('/[^a-z0-9_-]/', '', (string)($in['opt'] ?? '')) ?? '';
+        if (!linea_rate('kabopt', 20)) { linea_fail('Слишком много попыток — подождите немного', 429); }
+        $res = opt_add($o, $opt, 'kabinet');
+        if (!$res['ok']) { linea_fail($res['why'], 409); }
+        $o2 = linea_order_by_number($o['number']);
+        kab_notify_order($o2, kab_ev('opt_added', $o2, ['opt' => $opt, 'sum' => $res['row']['amount_kop']]));
+        brig_admin_notify('Клиент добавил опцию «' . opt_title($opt) . '»: ' . $o['number'], $res['row']['amount_kop'] ? brig_rub((int)$res['row']['amount_kop']) : 'сумма не задана в config — выставьте вручную', brig_link('api/panel.php?s=order&o=' . rawurlencode($o['number']) . '&tab=dengi'), (bool)$o['test']);
+        linea_json(kb_object($o2, $c));
+    }
+    case 'opt_pay': {
+        $o = kb_order($num);
+        kab_require_fresh_for_order($o);
+        require_once __DIR__ . '/lib/yookassa.php';
+        if (!linea_rate('pay', 30)) { linea_fail('Слишком много попыток — подождите немного', 429); }
+        $opt = preg_replace('/[^a-z0-9_-]/', '', (string)($in['opt'] ?? '')) ?? '';
+        // пока проект ждёт оплаты, опция идёт в его платёж (одна оплата, в чеке — отдельная строка); после — отдельный платёж за опцию
+        $r = $o['status'] === 'awaiting_payment' ? yk_payment_for($o) : yk_option_payment_for($o, $opt);
         if (!$r['ok']) { linea_fail($r['why'], 409); }
         linea_json(['ok' => true, 'url' => $r['url']]);
     }
