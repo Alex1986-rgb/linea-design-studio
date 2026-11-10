@@ -8,7 +8,7 @@
  * Ответ: {ok, number, token, orderUrl}. Архив — linea-private/orders/<номер>/brief.zip, заказ — строка в linea.sqlite.
  *
  * Бриф сметы (09.11.2026, site/smeta/zakaz/, js/smeta-brief.js): тот же приём с meta.service = 'smeta' → заказ вида «smeta» без дизайн-проекта.
- *   brief.smeta = {mode: project|answers, rooms[], electric, plumbing, height, state, note}; в архиве plan/ обязателен, proekt/ — при mode = project.
+ *   brief.smeta = {mode: project|answers, rooms[], electric, plumbing, height, state, note, thick{plaster,screed,level — мм, только заданные}}; в архиве plan/ обязателен, proekt/ — при mode = project.
  *   Цена — config prices.smeta (та же, что у опции к проекту); опции к такому заказу не принимаются.
  */
 declare(strict_types=1);
@@ -50,6 +50,15 @@ if ($isSmeta) {
     $sm = is_array($brief['smeta'] ?? null) ? $brief['smeta'] : [];
     $smMode = (string)($sm['mode'] ?? '');
     if (!in_array($smMode, ['project', 'answers'], true)) { linea_fail('Выберите: у вас есть готовый проект или проекта нет — и мы пришлём вопросы «что где»'); }
+    // толщины черновых слоёв, мм (необязательно): только заданные, диапазоны как в TERMS.addons.smeta.solo.thick (штукатурка 5–80, стяжка 20–150, наливной 2–30)
+    $thickIn = is_array($sm['thick'] ?? null) ? $sm['thick'] : [];
+    $thickOut = [];
+    foreach (['plaster' => ['Штукатурка стен', 5, 80], 'screed' => ['Стяжка пола', 20, 150], 'level' => ['Наливной пол', 2, 30]] as $tk => [$tn, $tmin, $tmax]) {
+        if (!isset($thickIn[$tk]) || $thickIn[$tk] === '' || $thickIn[$tk] === null) { continue; }
+        if (!is_numeric($thickIn[$tk]) || (float)$thickIn[$tk] < $tmin || (float)$thickIn[$tk] > $tmax) { linea_fail($tn . ': толщина слоя от ' . $tmin . ' до ' . $tmax . ' мм. Не знаете — оставьте поле пустым'); }
+        $thickOut[$tk] = round((float)$thickIn[$tk], 1);
+    }
+    if ($thickOut) { $brief['smeta']['thick'] = $thickOut; } else { unset($brief['smeta']['thick']); }
     if ($smMode === 'answers' && !array_filter((array)($sm['rooms'] ?? []), 'is_array')) { linea_fail('Отметьте хотя бы один тип помещений и чем он отделан — иначе считать нечего'); }
 }
 $test = linea_test_req((string)($_POST['test'] ?? '') === '1' || !empty($brief['meta']['test']));

@@ -99,6 +99,10 @@ function brief_view(array $b): array
             ['Состояние', BRIEF_SMETA_STATE[(string)($sm['state'] ?? '')] ?? (string)($sm['state'] ?? '')]]);
         $add('smeta-mode', 'Исходные данные для сметы', [['Что есть', ($sm['mode'] ?? '') === 'project' ? 'готовый проект — считаем по его листам' : 'проекта нет — считаем по плану и ответам «что где» (типовые решения, допущения помечаем)'],
             ['Электрика', BRIEF_SMETA_YN[(string)($sm['electric'] ?? '')] ?? ''], ['Сантехника', BRIEF_SMETA_YN[(string)($sm['plumbing'] ?? '')] ?? '']], trim((string)($sm['note'] ?? '')));
+        $th = is_array($sm['thick'] ?? null) ? $sm['thick'] : [];
+        $thv = fn($k, $none) => isset($th[$k]) && is_numeric($th[$k]) ? str_replace('.', ',', (string)$th[$k]) . ' мм' : $none;
+        $add('smeta-thick', 'Толщина слоёв', [['Штукатурка стен', $thv('plaster', 'не указана — считаем типовую 15 мм, пометить в смете')], ['Стяжка пола', $thv('screed', 'не указана — типовая, пометить в смете')],
+            ['Наливной пол', $thv('level', 'не указан / не знаю')]]);
         $rr = [];
         foreach ((array)($sm['rooms'] ?? []) as $r) {
             if (!is_array($r)) { continue; }

@@ -41,6 +41,9 @@
 #szw [hidden]{display:none!important}
 #szw .hint{font-size:14px;color:var(--mut);margin:0 0 14px;line-height:1.55}
 #szw .qw{margin:-4px 0 10px;font-size:13px;line-height:1.45;color:var(--mut)}
+.sz-thick{border:0;border-top:1px solid var(--line);margin:18px 0 0;padding:14px 0 0}
+.sz-thick legend{font-size:16px;font-weight:600;padding:0 8px 0 0;color:var(--ink)}
+.sz-thick input{max-width:100%}
 .sz-note{border-left:3px solid var(--gold);padding:6px 0 6px 14px;margin:14px 0;color:var(--mut);font-size:14px;line-height:1.55}
 .sz-note b{color:var(--ink)}
 .sz-sum{border:1px solid var(--gold);border-radius:8px;padding:12px 16px;background:#c29a5b10;margin:16px 0 0}
@@ -210,7 +213,7 @@
       <p class="sz-err" id="szProjErr" role="alert"></p>
       <div class="sz-note"><b>Какие листы нужны.</b> Готовый дизайн-проект: PDF или изображения листов — планы, развёртки стен, ведомость отделки, электрика, сантехника; чем полнее листы, тем точнее смета. Чужой проект мы не проверяем и не исправляем — только считаем по нему материалы. Если в проекте нет данных (например, электрики), позицию считаем по типовому решению и помечаем это в смете.</div>
       <label class="t" for="szNoteP">Что учесть <span style="text-transform:none;letter-spacing:0">— по желанию</span></label>
-      <textarea id="szNoteP" rows="3" placeholder="Например: стены неровные, штукатурка слоем 30 мм; стяжка 50 мм"></textarea>
+      <textarea id="szNoteP" rows="3" placeholder="Например: стены неровные, много кривизны; в ванной убираем старую плитку"></textarea>
     </div>
 
     <div id="szAnswers" hidden>
@@ -235,8 +238,21 @@
           <p class="qw" style="margin-top:6px">Зачем спрашиваем: что убираем, а что остаётся — это меняет объём черновых материалов.</p></div>
       </div>
       <label class="t" for="szNoteA">Что учесть <span style="text-transform:none;letter-spacing:0">— по желанию</span></label>
-      <textarea id="szNoteA" rows="3" placeholder="Например: штукатурка слоем 30 мм, стяжка 50 мм; на кухне плитка только фартуком"></textarea>
+      <textarea id="szNoteA" rows="3" placeholder="Например: на кухне плитка только фартуком"></textarea>
     </div>
+
+    <!-- толщины черновых слоёв: общий блок для обоих режимов; тексты и диапазоны — TERMS.addons.smeta.solo.thick -->
+    <fieldset class="sz-thick" id="szThick" hidden>
+      <legend>Толщина слоёв (если знаете)</legend>
+      <p class="hint" style="margin:0 0 6px">Не знаете — оставьте пустым: посчитаем по типовой толщине и пометим это в смете.</p>
+      <p class="qw">Зачем спрашиваем: от толщины слоя зависит число мешков штукатурки, стяжки и наливного пола.</p>
+      <div class="sz-row3">
+        <div><label class="t" for="szTPlaster">Штукатурка стен, мм</label><input type="text" id="szTPlaster" inputmode="numeric" autocomplete="off" placeholder="по умолчанию 15" aria-describedby="szTErr"></div>
+        <div><label class="t" for="szTScreed">Стяжка пола, мм</label><input type="text" id="szTScreed" inputmode="numeric" autocomplete="off" placeholder="не знаю" aria-describedby="szTErr"></div>
+      </div>
+      <label class="t" for="szTLevel">Выравнивающий слой (наливной пол) под ламинат, доску, винил, мм</label><input type="text" id="szTLevel" inputmode="numeric" autocomplete="off" placeholder="не нужен / не знаю" aria-describedby="szTErr">
+      <p class="sz-err" id="szTErr" role="alert"></p>
+    </fieldset>
   </section>
 
   <!-- 3. Контакты -->
@@ -333,7 +349,7 @@
   document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && !m.hidden) b.click(); });
 })();
 </script>
-<script type="application/json" id="smetaTerms">{"rate":100,"min":5000,"minArea":50,"rateText":"100 ₽/м²","minText":"5 000 ₽","title":"Смета на материалы","edition":"27.10.2026","maxMb":100,"line":"100 ₽/м² площади квартиры, не меньше 5 000 ₽ (50 м² — 5 000 ₽)","term":"1–3 суток от оплаты и получения исходных данных"}</script>
-<script src="../../js/smeta-brief.js?v=1"></script>
+<script type="application/json" id="smetaTerms">{"rate":100,"min":5000,"minArea":50,"rateText":"100 ₽/м²","minText":"5 000 ₽","title":"Смета на материалы","edition":"27.10.2026","maxMb":100,"line":"100 ₽/м² площади квартиры, не меньше 5 000 ₽ (50 м² — 5 000 ₽)","term":"1–3 суток от оплаты и получения исходных данных","thick":{"title":"Толщина слоёв (если знаете)","hint":"Не знаете — оставьте пустым: посчитаем по типовой толщине и пометим это в смете","why":"Зачем спрашиваем: от толщины слоя зависит число мешков штукатурки, стяжки и наливного пола.","plaster":{"label":"Штукатурка стен, мм","ph":"по умолчанию 15","min":5,"max":80,"def":15,"name":"Штукатурка стен"},"screed":{"label":"Стяжка пола, мм","ph":"не знаю","min":20,"max":150,"name":"Стяжка пола"},"level":{"label":"Выравнивающий слой (наливной пол) под ламинат, доску, винил, мм","ph":"не нужен / не знаю","min":2,"max":30,"name":"Наливной пол"},"defaulted":"не указана — типовая, пометим в смете"}}</script>
+<script src="../../js/smeta-brief.js?v=2"></script>
 </body>
 </html>

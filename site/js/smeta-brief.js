@@ -15,7 +15,7 @@
   const TEST = qs.get('test') === '1';
   const SECURE = location.protocol === 'https:' || /^(localhost|127\.0\.0\.1|\[::1\])$/.test(location.hostname);
   const API = (SECURE || TEST) ? ((document.querySelector('meta[name="linea-api"]') || {}).content || '') : '';
-  let T = { rate: 100, min: 5000, minArea: 50, title: 'Смета на материалы', edition: '27.10.2026', maxMb: 100, rateText: '', minText: '' };
+  let T = { rate: 100, min: 5000, minArea: 50, title: 'Смета на материалы', edition: '27.10.2026', maxMb: 100, rateText: '', minText: '', thick: { plaster: { min: 5, max: 80, name: 'Штукатурка стен' }, screed: { min: 20, max: 150, name: 'Стяжка пола' }, level: { min: 2, max: 30, name: 'Наливной пол' }, defaulted: 'не указана — типовая, пометим в смете' } };
   try { const el = $('smetaTerms'); if (el) T = Object.assign(T, JSON.parse(el.textContent)); } catch (e) {}
   const NAMES = ['Квартира и план', 'Проект или ответы «что где»', 'Куда прислать смету'];
   const LAST = 2, DONE = 3;
@@ -84,6 +84,7 @@
     $('szProject').hidden = m !== 'project'; $('szAnswers').hidden = m !== 'answers';
     document.querySelectorAll('input[name=szMode]').forEach(r => { r.checked = r.value === m; });
     if (m) $('szModeErr').textContent = '';
+    $('szThick').hidden = !m;
   }
   document.querySelectorAll('input[name=szMode]').forEach(r => r.addEventListener('change', () => { setMode(r.value); save(); }));
 
@@ -104,6 +105,26 @@
     $('szSumL2').textContent = l; $('szSumV2').textContent = v; $('szSumN2').textContent = n;
   }
   $('szArea').addEventListener('input', price);
+  // толщины слоёв, мм: пусто — не задано; диапазоны — из TERMS (T.thick), их же проверяет сервер
+  const TK = [['plaster', 'szTPlaster'], ['screed', 'szTScreed'], ['level', 'szTLevel']];
+  function readThick() {
+    const out = {}, bad = [];
+    for (const [k, id] of TK) {
+      const raw = val(id).trim(); if (!raw) continue;
+      const v = Number(raw.replace(',', '.')), R = T.thick[k];
+      if (!/^\d+([.,]\d+)?$/.test(raw) || !(v >= R.min && v <= R.max)) { bad.push([k, id, `${R.name}: от ${R.min} до ${R.max} мм, например ${Math.round((R.min + R.max) / 3)}. Не знаете — оставьте поле пустым.`]); continue; }
+      out[k] = Math.round(v * 10) / 10;
+    }
+    return { out, bad };
+  }
+  function checkThick() {
+    const { bad } = readThick();
+    TK.forEach(([k, id]) => $(id).setAttribute('aria-invalid', bad.some(b => b[0] === k) ? 'true' : 'false'));
+    $('szTErr').textContent = bad.map(b => b[2]).join(' ');
+    if (bad.length) { $(bad[0][1]).focus(); return false; }
+    return true;
+  }
+  TK.forEach(([, id]) => $(id).addEventListener('input', () => { if ($('szTErr').textContent) checkThick(); }));
   function check(n) {
     if (n === 0) {
       const a = val('szArea').trim(), an = num(a);
@@ -117,6 +138,7 @@
       if (mode === 'project' && !files.project.length) { $('szProjErr').textContent = 'Добавьте файлы проекта (PDF или изображения листов) — или выберите «Проекта нет».'; $('szFileProj').focus(); return false; }
       if (mode === 'answers' && !rooms().length) { $('szRoomsErr').textContent = 'Отметьте хотя бы один тип помещений — иначе считать нечего.'; return false; }
       $('szRoomsErr').textContent = '';
+      if (!checkThick()) return false;
     }
     return true;
   }
@@ -157,6 +179,7 @@
       Object.assign(sm, { rooms: rooms(), electric: radio('szElec'), plumbing: radio('szPlumb'), height: $('szHUnk').checked ? null : num(val('szH')), heightUnknown: $('szHUnk').checked,
         state: val('szState'), note: val('szNoteA').trim() });
     } else sm.note = val('szNoteP').trim();
+    const th = readThick().out; if (Object.keys(th).length) sm.thick = th;
     return {
       meta: Object.assign({ created: new Date().toISOString().slice(0, 10), source: 'site-smeta-brief', version: 1, service: 'smeta' }, TEST ? { test: true } : {}),
       client: { name: val('szName1').trim(), phone: val('szPhone').trim(), email: val('szEmail').trim(), contact: val('szPhone').trim() ? 'телефон / WhatsApp' : 'почта',
@@ -170,7 +193,7 @@
 
   // ── черновик в браузере (файлы браузер не хранит — выбрать заново)
   const KEY = 'linea_smeta_draft1';
-  const FIELDS = ['szArea', 'szH', 'szState', 'szNoteA', 'szNoteP', 'szName1', 'szPhone', 'szEmail'];
+  const FIELDS = ['szTPlaster', 'szTScreed', 'szTLevel', 'szArea', 'szH', 'szState', 'szNoteA', 'szNoteP', 'szName1', 'szPhone', 'szEmail'];
   let saveT = 0;
   function save() {
     clearTimeout(saveT);
@@ -218,6 +241,8 @@
       P.push(['Проекта нет — «что где»', s.rooms.map(r => `${r.label}${r.count > 1 ? ' × ' + r.count : ''}: стены — ${LBL(WALLS, r.walls).toLowerCase()}, пол — ${LBL(FLOOR, r.floor).toLowerCase()}, потолок — ${LBL(CEIL, r.ceiling).toLowerCase()}`).join('; '), 1]);
       P.push(['Электрика / сантехника', `${LBL(YN, s.electric).toLowerCase()} / ${LBL(YN, s.plumbing).toLowerCase()}; высота потолков — ${s.height ? String(s.height).replace('.', ',') + ' м' : 'не указана'}; состояние — ${LBL(STATE, s.state).toLowerCase()}`, 1]);
     }
+    const thickLine = k => b.smeta.thick && b.smeta.thick[k] ? `${String(b.smeta.thick[k]).replace('.', ',')} мм` : T.thick.defaulted;
+    P.push(['Толщина слоёв', `штукатурка стен — ${b.smeta.thick && b.smeta.thick.plaster ? thickLine('plaster') : 'не указана — считаем 15 мм, пометим в смете'}; стяжка — ${thickLine('screed')}; наливной пол — ${b.smeta.thick && b.smeta.thick.level ? thickLine('level') : 'не указан / не знаю'}`, 1]);
     P.push(['Допущения', mode === 'answers' ? 'Что неизвестно или «не знаю», считаем по типовому решению и помечаем в смете.' : 'Чего нет в проекте, считаем по типовому решению и помечаем в смете.', -1]);
     box.hidden = false;
     box.innerHTML = '<h3>Проверьте, так ли мы поняли</h3><p>Если что-то не так — исправьте сейчас, потом это сложнее.</p><ol>'
@@ -248,6 +273,7 @@
       (s.rooms || []).forEach(r => L.push('· ' + r.label + (r.count > 1 ? ' × ' + r.count : '') + ': стены — ' + LBL(WALLS, r.walls).toLowerCase() + '; пол — ' + LBL(FLOOR, r.floor).toLowerCase() + '; потолок — ' + LBL(CEIL, r.ceiling).toLowerCase()));
       L.push('Электрика: ' + LBL(YN, s.electric).toLowerCase() + '; сантехника: ' + LBL(YN, s.plumbing).toLowerCase() + '; потолки: ' + (s.height ? s.height + ' м' : 'не знаю') + '; состояние: ' + LBL(STATE, s.state).toLowerCase());
     }
+    if (s.thick) L.push('Толщина слоёв, мм: ' + [['plaster', 'штукатурка'], ['screed', 'стяжка'], ['level', 'наливной пол']].filter(x => s.thick[x[0]]).map(x => x[1] + ' ' + s.thick[x[0]]).join(', '));
     if (s.note) L.push('Что учесть: ' + s.note.replace(/\n+/g, ' / '));
     L.push('Файлы: план ' + b.files.plans.length + (b.files.project.length ? ', проект ' + b.files.project.length : ''));
     return L.join('\n');

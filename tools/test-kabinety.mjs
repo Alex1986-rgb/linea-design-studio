@@ -645,10 +645,10 @@ try {
     const cfgPath = path.join(PRIV, 'config.php'), cfg0 = fs.readFileSync(cfgPath, 'utf8');
     const outbox = () => { try { return fs.readFileSync(path.join(PRIV, 'mail-outbox.jsonl'), 'utf8').trim().split('\n').filter(Boolean).map(l => JSON.parse(l)); } catch { return []; } };
     // бриф сметы: brief.json + plan/ (+ proekt/) в архиве — как собирает js/smeta-brief.js
-    const mkSmeta = (email, name, area, mode, { consent = true, plan = true, proekt = mode === 'project', rooms, options } = {}) => {
+    const mkSmeta = (email, name, area, mode, { consent = true, plan = true, proekt = mode === 'project', rooms, options, thick } = {}) => {
       const sm = mode === 'project' ? { mode, note: 'ванную не считать' }
         : { mode, rooms: rooms ?? [{ type: 'bathroom', label: 'Ванная / санузел', count: 1, walls: 'tile-full', floor: 'tile', ceiling: 'stretch' }, { type: 'bedroom', label: 'Спальня', count: 2, walls: 'wallpaper', floor: 'laminate', ceiling: 'paint' }],
-          electric: 'yes', plumbing: 'unknown', height: 2.7, heightUnknown: false, state: 'new', note: '' };
+          electric: 'yes', plumbing: 'unknown', height: 2.7, heightUnknown: false, state: 'new', note: '', ...(thick ? { thick } : {}) };
       const b = { meta: { test: true, service: 'smeta', source: 'site-smeta-brief', version: 1 }, client: { name, phone: '+7 900 000-00-0' + name.length, email, consent: { personalData: consent, portfolio: false, edition: '27.10.2026', at: new Date().toISOString() } },
         object: { type: 'квартира', area }, smeta: sm, files: { plans: plan ? ['plan.pdf'] : [], project: proekt ? ['sheets.pdf'] : [] }, ...(options ? { options } : {}) };
       const d = path.join(FX, 'sz-' + name); fs.rmSync(d, { recursive: true, force: true }); fs.mkdirSync(d, { recursive: true });
@@ -664,13 +664,14 @@ try {
 
     // — отказы приёма: без согласия, без плана, проект без файлов проекта, опрос без помещений, площадь меньше 10
     mkSmeta('s0@example.test', 'Нет согласия', 60, 'project', { consent: false }); mkSmeta('s1@example.test', 'Нет плана', 60, 'project', { plan: false });
-    mkSmeta('s2@example.test', 'Нет проекта', 60, 'project', { proekt: false }); mkSmeta('s3@example.test', 'Нет комнат', 60, 'answers', { rooms: [] }); mkSmeta('s4@example.test', 'Малая', 5, 'answers');
+    mkSmeta('s2@example.test', 'Нет проекта', 60, 'project', { proekt: false }); mkSmeta('s3@example.test', 'Нет комнат', 60, 'answers', { rooms: [] }); mkSmeta('s4@example.test', 'Малая', 5, 'answers'); mkSmeta('s8@example.test', 'Кривая толщина', 60, 'answers', { thick: { plaster: 200 } });
     const X1 = actor('szStranger');
     const rej = [];
     for (const n of ['Нет согласия', 'Нет плана', 'Нет проекта', 'Нет комнат', 'Малая']) rej.push((await sendS(X1, n)));
     ok(rej.every(r => r.code === 400 && r.j?.ok === false), 'отказ 400: без согласия на ПДн, без плана в архиве, «есть проект» без файлов проекта, «проекта нет» без помещений, площадь < 10', JSON.stringify(rej.map(r => r.j?.error)));
     ok(/согласие/i.test(rej[0].j.error) && /план/i.test(rej[1].j.error), 'тексты отказов понятны (согласие, план)');
-    ok(!sql("SELECT 1 x FROM orders WHERE name IN ('Нет согласия','Нет плана','Нет проекта','Нет комнат','Малая')").length, 'отклонённые заказы в базе не появились');
+    { const rt = await sendS(X1, 'Кривая толщина'); ok(rt.code === 400 && /Штукатурка.*5 до 80/.test(rt.j?.error || ''), 'толщина штукатурки 200 мм (вне 5–80) — отказ 400 с понятным текстом', JSON.stringify(rt.j)); }
+    ok(!sql("SELECT 1 x FROM orders WHERE name IN ('Нет согласия','Нет плана','Нет проекта','Нет комнат','Малая','Кривая толщина')").length, 'отклонённые заказы в базе не появились');
 
     // — цены в config нет: заказ принят, сумма «уточняется», сервис не упал
     mkSmeta('s5@example.test', 'Без цены', 64, 'project');
@@ -682,7 +683,7 @@ try {
 
     // — цена в config (та же, что у опции): 100 ₽/м², минимум 5 000 ₽; опции к такому заказу не принимаются; test=1
     fs.writeFileSync(cfgPath, cfg0.replace(/\];\s*$/, `, 'prices' => ['smeta' => ['per_m2' => 10000, 'min' => 500000], 'kvartira' => ['per_m2' => 200000, 'min' => 8000000]]];`));
-    mkSmeta('s6@example.test', 'Серафима', 83.4, 'answers', { options: { smeta: true } }); mkSmeta('s7@example.test', 'Тимур', 30, 'project');
+    mkSmeta('s6@example.test', 'Серафима', 83.4, 'answers', { options: { smeta: true }, thick: { plaster: '25', screed: 60, level: 8 } }); mkSmeta('s7@example.test', 'Тимур', 30, 'project');
     const B1 = actor('szB'), C1 = actor('szC');
     const rb = (await sendS(B1, 'Серафима')).j, rc = (await sendS(C1, 'Тимур')).j;
     const NB1 = rb.number, NC1 = rc.number;
@@ -691,6 +692,7 @@ try {
     ok(!opts(NB1).length, 'опции к заказу «только смета» не создаются, даже если пришли в брифе');
     const bj = JSON.parse(fs.readFileSync(path.join(PRIV, 'orders', NB1, 'brief.json'), 'utf8'));
     ok(bj.smeta?.mode === 'answers' && bj.smeta.rooms.length === 2 && fs.existsSync(path.join(PRIV, 'orders', NB1, 'brief.zip')), 'в заказе сохранены ответы «что где» и архив');
+    ok(bj.smeta.thick && bj.smeta.thick.plaster === 25 && bj.smeta.thick.screed === 60 && bj.smeta.thick.level === 8, 'толщины слоёв сохранены в brief.json числами (smeta.thick: штукатурка 25, стяжка 60, наливной пол 8 мм)', JSON.stringify(bj.smeta.thick));
     await B1.login('s6@example.test');
     let kb = (await B1.req('GET', `/api/kabinet.php?a=object&o=${NB1}`)).j;
     ok(kb.order.kind === 'smeta' && kb.order.kindTitle === 'Смета на материалы' && kb.step === 1 && kb.pay.amount === 834000 && kb.optionsAvailable.length === 0 && kb.options.length === 0, 'кабинет: вид «Смета на материалы», шаг 2 (оплата), кнопки «Добавить опцию» нет', JSON.stringify([kb.step, kb.pay?.amount]));
@@ -702,6 +704,7 @@ try {
     ok(lst.objects.some(o => o.number === NB1 && o.kind === 'smeta' && o.step === 1), 'список объектов отдаёт вид и шаг заказа-сметы (4 шага: Заявка → Оплата → Расчёт → Смета готова)');
     const bv = (await B1.req('GET', `/api/kabinet.php?a=brief&o=${NB1}`)).j;
     ok(bv.view.kind === 'smeta' && bv.view.sections.some(sc => sc.id === 'smeta-rooms' && sc.rows.some(r => /Ванная/.test(r[0]) && /плитка до потолка/.test(r[1]))) && bv.view.sections.some(sc => sc.id === 'smeta-mode' && sc.rows.some(r => /проекта нет/.test(r[1]))), 'бриф сметы читается словами: помещения, стены/пол/потолок, режим «проекта нет»');
+    ok(bv.view.sections.some(sc => sc.id === 'smeta-thick' && sc.rows.some(r => /Штукатурка/.test(r[0]) && r[1] === '25 мм') && sc.rows.some(r => /Стяжка/.test(r[0]) && r[1] === '60 мм') && sc.rows.some(r => /Наливной/.test(r[0]) && r[1] === '8 мм')), 'кабинет и админка (brief_view): блок «Толщина слоёв» — штукатурка 25 мм, стяжка 60 мм, наливной пол 8 мм');
     ok((await B1.req('POST', '/api/kabinet.php?a=opt_add', { json: { o: NB1, opt: 'smeta' } })).code === 409, 'добавить опцию к заказу-смете нельзя (409)');
     const mBrief = outbox().find(m => m.to === 's6@example.test' && /заказ сметы получен/.test(m.subject));
     ok(mBrief && /8 340/.test(mBrief.text) && /1–3 суток/.test(mBrief.text) && !/альбом|Бриф получен/i.test(mBrief.text), 'письмо «Заказ сметы получен»: сумма, срок из TERMS, без «альбома» и «бриф получен»', mBrief && mBrief.subject);
@@ -758,6 +761,7 @@ try {
       execFileSync('node', [path.join(ROOT, 'tools/order-pull.mjs'), NB1, '--private=' + PRIV, '--slug=' + slug], { stdio: 'pipe' });
       const od2 = path.join(ROOT, 'clients', slug), oj = JSON.parse(fs.readFileSync(path.join(od2, 'order.json'), 'utf8'));
       ok(oj.kind === 'smeta' && oj.smetaOnly === true && oj.smeta === true && oj.smetaInput.mode === 'answers' && oj.smetaInput.rooms === 2 && fs.existsSync(path.join(od2, 'source/plan/01-plan.pdf')), 'order-pull: order.json с kind=smeta, smetaOnly, режимом и числом помещений; план — в source/plan/');
+      ok(oj.thick?.plaster === 25 && oj.thick.screed === 60 && oj.thick.level === 8 && oj.smetaInput.thick?.plaster === 25, 'order-pull: толщины слоёв клиента дошли до order.json (thick и smetaInput.thick, мм)', JSON.stringify(oj.thick));
       const pc = path.join(PRIV, 'orders', NC1); await panel({ act: 'o_status', o: NC1, to: 'paid', reason: 'для моста' });
       execFileSync('node', [path.join(ROOT, 'tools/order-pull.mjs'), NC1, '--private=' + PRIV, '--slug=' + slug + '-p', '--force'], { stdio: 'pipe' });
       const oj2 = JSON.parse(fs.readFileSync(path.join(ROOT, 'clients', slug + '-p', 'order.json'), 'utf8'));

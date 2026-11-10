@@ -5,7 +5,7 @@
 // В конвейер идут только оплаченные заказы (правило проекта); --force — для проверок. Кладёт: brief.json (с дополнением из кабинета),
 // brief.txt, source/ (план и фото из архива + догруженное, у файлов к вопросу — приставка К-N_), answers.json, order.json (без контактов).
 // Заказ «только смета» (kind = smeta, 09.11.2026): проекта LINEA нет и не будет. source/plan/ — план клиента, source/proekt/ — файлы ЕГО проекта (если есть),
-// brief.json → smeta {mode: project | answers, rooms[], electric, plumbing, height, state, note}; order.json получает smetaOnly = true и smetaInput.
+// brief.json → smeta {mode: project | answers, rooms[], electric, plumbing, height, state, note, thick{plaster,screed,level}}; order.json получает smetaOnly = true и smetaInput.
 import fs from 'node:fs';
 import path from 'node:path';
 import { execFileSync } from 'node:child_process';
@@ -53,11 +53,13 @@ let opt = null;
 try { opt = JSON.parse(execFileSync('php', ['-r', '$p = new PDO("sqlite:" . $argv[1]); $s = $p->prepare("SELECT x.status, x.paid_at FROM order_options x JOIN orders o ON o.id = x.order_id WHERE o.number = ? AND x.opt = \'smeta\'"); $s->execute([$argv[2]]); echo json_encode($s->fetch(PDO::FETCH_ASSOC) ?: null);', path.join(priv, 'linea.sqlite'), num], { stdio: ['ignore', 'pipe', 'ignore'] }).toString()); } catch { }
 const smetaOnly = row.kind === 'smeta', sm = (b && b.smeta) || {};
 const cnt = d => { try { return fs.readdirSync(path.join(out, 'source', d)).length; } catch { return 0; } };
+const thick = (sm.thick && typeof sm.thick === 'object') ? Object.fromEntries(['plaster', 'screed', 'level'].filter(k => Number(sm.thick[k]) > 0).map(k => [k, Number(sm.thick[k])])) : {};
 const smetaInput = smetaOnly ? { mode: sm.mode || null, planFiles: cnt('plan'), projectFiles: cnt('proekt'), rooms: (sm.rooms || []).length, electric: sm.electric || null, plumbing: sm.plumbing || null,
   height: sm.height || null, state: sm.state || null,
+  thick,   // толщины слоёв клиента, мм ({plaster, screed, level}, только заданные) — движок GOST-DRAFT берёт их вместо типовых
   // что взять за основу: по проекту клиента — его листы; без проекта — типовые решения по ответам, каждое допущение пометить в смете
   basis: sm.mode === 'project' ? 'проект клиента (source/proekt) + план (source/plan)' : 'план (source/plan) + ответы «что где» (brief.json → smeta.rooms); допущения помечать в смете' } : null;
-fs.writeFileSync(path.join(out, 'order.json'), JSON.stringify({ smetaOnly, smetaInput, smeta: smetaOnly ? ['paid', 'delivered'].includes(row.status) : !!opt && ['paid', 'delivered'].includes(opt.status), smetaStatus: opt ? opt.status : null, smetaPaidAt: opt ? opt.paid_at : (smetaOnly ? row.paid_at : null), number: row.number, kind: row.kind, status: row.status, area: row.area, objectType: row.object_type, paidAt: row.paid_at, briefAddedAt: added || null }, null, 2));
+fs.writeFileSync(path.join(out, 'order.json'), JSON.stringify({ smetaOnly, smetaInput, thick: smetaOnly ? thick : undefined, smeta: smetaOnly ? ['paid', 'delivered'].includes(row.status) : !!opt && ['paid', 'delivered'].includes(opt.status), smetaStatus: opt ? opt.status : null, smetaPaidAt: opt ? opt.paid_at : (smetaOnly ? row.paid_at : null), number: row.number, kind: row.kind, status: row.status, area: row.area, objectType: row.object_type, paidAt: row.paid_at, briefAddedAt: added || null }, null, 2));
 console.log(`✓ ${num} → clients/${slug}/: brief.json${fs.existsSync(path.join(out, 'brief.txt')) ? ', brief.txt' : ''}, source/ (${fs.readdirSync(path.join(out, 'source')).length} файлов, из них догружено ${nExtra}), answers.json ${fs.existsSync(path.join(out, 'answers.json')) ? 'есть' : 'нет'}`);
 console.log(smetaOnly
   ? `Заказ «только смета»: дизайн-проект НЕ собирать. Основа — ${smetaInput.basis}. Результат — PDF и таблица (xlsx/csv), их выдаёт админка (карточка заказа → «Выдача сметы»).`

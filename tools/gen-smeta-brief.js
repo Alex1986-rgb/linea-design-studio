@@ -16,7 +16,7 @@ const fs = require('fs');
 const path = require('path');
 const SHELL = require('./site-shell.js');
 const { BASE, TERMS } = SHELL;
-const AS = TERMS.addons.smeta, SO = AS.solo;
+const AS = TERMS.addons.smeta, SO = AS.solo, TH = SO.thick;
 const esc = s => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 const cap = s => s[0].toUpperCase() + s.slice(1);
 
@@ -48,6 +48,9 @@ const css = `<style>
 #szw [hidden]{display:none!important}
 #szw .hint{font-size:14px;color:var(--mut);margin:0 0 14px;line-height:1.55}
 #szw .qw{margin:-4px 0 10px;font-size:13px;line-height:1.45;color:var(--mut)}
+.sz-thick{border:0;border-top:1px solid var(--line);margin:18px 0 0;padding:14px 0 0}
+.sz-thick legend{font-size:16px;font-weight:600;padding:0 8px 0 0;color:var(--ink)}
+.sz-thick input{max-width:100%}
 .sz-note{border-left:3px solid var(--gold);padding:6px 0 6px 14px;margin:14px 0;color:var(--mut);font-size:14px;line-height:1.55}
 .sz-note b{color:var(--ink)}
 .sz-sum{border:1px solid var(--gold);border-radius:8px;padding:12px 16px;background:#c29a5b10;margin:16px 0 0}
@@ -199,7 +202,7 @@ ${SHELL.header(u, null)}
       <p class="sz-err" id="szProjErr" role="alert"></p>
       <div class="sz-note"><b>Какие листы нужны.</b> ${esc(cap(SO.needProject[0]))}. ${esc(SO.noCheck)}.</div>
       <label class="t" for="szNoteP">Что учесть <span style="text-transform:none;letter-spacing:0">— по желанию</span></label>
-      <textarea id="szNoteP" rows="3" placeholder="Например: стены неровные, штукатурка слоем 30 мм; стяжка 50 мм"></textarea>
+      <textarea id="szNoteP" rows="3" placeholder="Например: стены неровные, много кривизны; в ванной убираем старую плитку"></textarea>
     </div>
 
     <div id="szAnswers" hidden>
@@ -224,8 +227,21 @@ ${SHELL.header(u, null)}
           <p class="qw" style="margin-top:6px">Зачем спрашиваем: что убираем, а что остаётся — это меняет объём черновых материалов.</p></div>
       </div>
       <label class="t" for="szNoteA">Что учесть <span style="text-transform:none;letter-spacing:0">— по желанию</span></label>
-      <textarea id="szNoteA" rows="3" placeholder="Например: штукатурка слоем 30 мм, стяжка 50 мм; на кухне плитка только фартуком"></textarea>
+      <textarea id="szNoteA" rows="3" placeholder="Например: на кухне плитка только фартуком"></textarea>
     </div>
+
+    <!-- толщины черновых слоёв: общий блок для обоих режимов; тексты и диапазоны — TERMS.addons.smeta.solo.thick -->
+    <fieldset class="sz-thick" id="szThick" hidden>
+      <legend>${esc(TH.title)}</legend>
+      <p class="hint" style="margin:0 0 6px">${esc(TH.hint)}.</p>
+      <p class="qw">${esc(TH.why)}</p>
+      <div class="sz-row3">
+        <div><label class="t" for="szTPlaster">${esc(TH.plaster.label)}</label><input type="text" id="szTPlaster" inputmode="numeric" autocomplete="off" placeholder="${esc(TH.plaster.ph)}" aria-describedby="szTErr"></div>
+        <div><label class="t" for="szTScreed">${esc(TH.screed.label)}</label><input type="text" id="szTScreed" inputmode="numeric" autocomplete="off" placeholder="${esc(TH.screed.ph)}" aria-describedby="szTErr"></div>
+      </div>
+      <label class="t" for="szTLevel">${esc(TH.level.label)}</label><input type="text" id="szTLevel" inputmode="numeric" autocomplete="off" placeholder="${esc(TH.level.ph)}" aria-describedby="szTErr">
+      <p class="sz-err" id="szTErr" role="alert"></p>
+    </fieldset>
   </section>
 
   <!-- 3. Контакты -->
@@ -272,8 +288,8 @@ ${SHELL.header(u, null)}
 
 ${SHELL.footer(u, null)}
 <script type="application/json" id="smetaTerms">${JSON.stringify({ rate: AS.rate, min: AS.min, minArea: AS.minArea, rateText: AS.rateText, minText: AS.minText, title: AS.title, edition: '27.10.2026', maxMb: 100,
-  line: AS.line, term: SO.term })}</script>
-<script src="${u}js/smeta-brief.js?v=1"></script>
+  line: AS.line, term: SO.term, thick: TH })}</script>
+<script src="${u}js/smeta-brief.js?v=2"></script>
 </body>
 </html>
 `;
