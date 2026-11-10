@@ -42,6 +42,12 @@ const ADM_STAGES = [
     'wait' => ['Ждём ответы клиента', 'Ждём ваши ответы', 'Чтобы двигаться дальше, нам нужны ваши ответы на вопросы в кабинете. Без них финальный альбом выпустить нельзя.'],
     'final' => ['Готовим финальный альбом', 'Готовим финальный альбом', 'Все ответы получены. Вносим решения в комплект и готовим финальную версию альбома.'],
 ];
+/** Этапы для заказа «только смета» (kind = smeta): клиент видит их в истории и письмах. */
+const ADM_STAGES_SMETA = [
+    'start' => ['Расчёт начат', 'Начали считать смету', 'Изучаем план и исходные данные, сверяем размеры и помещения, собираем перечень материалов.'],
+    'wait'  => ['Ждём ответы клиента', 'Нужны уточнения для сметы', 'Чтобы посчитать точнее, нам нужны ваши ответы в кабинете. Без них позиции считаем по типовым решениям и помечаем это в смете.'],
+    'check' => ['Проверка перед выдачей', 'Проверяем смету перед выдачей', 'Расчёт собран — сверяем количества, запас и допущения, затем выложим PDF и таблицу в кабинет.'],
+];
 const ADM_ROLE_RIGHTS = ['moderator' => ['brigade-check', 'brigade-warn', 'signal-mark', 'dispute-msg', 'review-hide']];
 /** Право на действие: админ — всё; модератор (будущее) — список ADM_ROLE_RIGHTS. */
 function adm_can(string $action): bool
@@ -175,6 +181,7 @@ if (($_SERVER['REQUEST_METHOD'] ?? '') === 'POST') {
                 if (in_array($to, ['cancelled', 'refunded'], true) && !$need($reason !== '', 'Укажите причину')) { break; }
                 $set = ['status' => $to] + ($to === 'paid' && !$o['paid_at'] ? ['paid_at' => $now, 'paid_by' => 'вручную: ' . ($reason ?: 'админка')] : []) + ($to === 'delivered' ? ['delivered_at' => $now] : []);
                 $oupd($set);
+                if ($to === 'paid' && $o['kind'] === 'smeta') { opt_main_sync(linea_order_by_number((string)$o['number'])); }
                 linea_event((int)$o['id'], 'admin', 'Статус: ' . (LINEA_STATUS[$to] ?? $to) . ($reason ? ' — ' . $reason : ''));
                 // письмо клиенту: оплата получена / альбом выдан / заказ отменён — с настройками клиента и шаблоном (lib/kab-mail.php)
                 $evName = ['paid' => 'paid', 'delivered' => 'delivered', 'cancelled' => 'cancelled'][$to] ?? '';
@@ -276,6 +283,12 @@ if (($_SERVER['REQUEST_METHOD'] ?? '') === 'POST') {
                 $first = $r['status'] !== 'delivered';
                 db_update('order_options', ['status' => 'delivered', 'files' => json_encode($files, JSON_UNESCAPED_UNICODE), 'delivered_at' => $r['delivered_at'] ?: $now, 'updated_at' => $now,
                     'note' => linea_str($_POST['note'] ?? '', 500) ?: $r['note']], 'id = ?', [(int)$r['id']]);
+                if ($o['kind'] === 'smeta' && $o['status'] === 'paid') {   // заказ «только смета»: выдача файлов закрывает и сам заказ
+                    $oupd(['status' => 'delivered', 'delivered_at' => $now]);
+                    linea_event((int)$o['id'], 'admin', 'Статус: ' . (LINEA_STATUS['delivered'] ?? 'delivered') . ' — смета выдана');
+                    $rc = yk_full_receipt(linea_order_by_number((string)$o['number']), $WHO);   // 54-ФЗ: второй чек «полный расчёт» (только при yk_receipt)
+                    if (!$rc['done'] && !$rc['ok']) { linea_event((int)$o['id'], 'admin', 'Второй чек не ушёл: ' . $rc['why']); }
+                }
                 linea_event((int)$o['id'], 'admin', ($first ? 'Выдана опция «' : 'Обновлены файлы опции «') . $ttl . '»: ' . implode(', ', array_column($files, 'name')));
                 brig_audit($WHO, 'option-deliver', 'order ' . $o['number'], $optKey . ' ' . implode(',', array_column($files, 'name')));
                 $mr = kab_notify_order($o, kab_ev('opt_delivered', $o, ['opt' => $optKey, 'files' => array_column($files, 'label')]));
@@ -389,7 +402,7 @@ if (($_SERVER['REQUEST_METHOD'] ?? '') === 'POST') {
                 $msg = !empty($_POST['private']) ? 'Заметка сохранена (клиент её не видит).' : 'Сообщение отправлено в кабинет. Письмо: ' . ADM_MAIL_WORD[$mr['mail']] . '.'; break;
             }
             case 'o_stage': {
-                $st = ADM_STAGES[(string)($_POST['stage'] ?? '')] ?? null;
+                $st = (($o['kind'] ?? '') === 'smeta' ? ADM_STAGES_SMETA : ADM_STAGES)[(string)($_POST['stage'] ?? '')] ?? null;
                 if (!$o || !$need((bool)$st, 'Неизвестный этап')) { break; }
                 $text = linea_str($_POST['text'] ?? '', 1500) ?: $st[2];
                 $exp = trim((string)($_POST['expected_at'] ?? ''));
@@ -619,6 +632,7 @@ function adm_todo(): array
         $add('Не оплачен ' . $o['number'] . ' — ' . (int)floor(($now - strtotime((string)$o['updated_at'])) / 86400) . ' дн.: напомнить', 'panel.php?s=order&o=' . rawurlencode($o['number']) . '&tab=lenta', false, 'dengi');
     }
     foreach (brig_all("SELECT * FROM orders WHERE test = 0 AND status = 'paid'") as $o) {
+        if ($o['kind'] === 'smeta') { continue; }   // заказ «только смета»: в очереди его ведёт строка опции ниже
         $rel = kab_releases($o, true);
         if (!$rel) { $add('Оплачен ' . $o['number'] . ' — первого варианта ещё нет', 'panel.php?s=order&o=' . rawurlencode($o['number']) . '&tab=vypuski', strtotime((string)$o['paid_at']) < $now - 7 * 86400); continue; }
         $af = kab_order_dir($o) . '/answers.json';
@@ -686,7 +700,7 @@ function adm_wait(array $o): ?array
     if ($lastC !== '' && $lastC > $lastL) { return $mk('Ответить клиенту (сообщение в кабинете)', $ts($lastC), 'lenta'); }
     // опции заказа («Смета на материалы»): оплачена и не выдана — сделать и выдать; цена не задана — назвать сумму
     foreach (opt_list((int)$o['id']) as $ox) {
-        if ($ox['status'] === 'paid') { return $mk('Сделать и выдать «' . opt_title((string)$ox['opt']) . '» (оплачена)', $ts($ox['paid_at']), 'obzor'); }
+        if ($ox['status'] === 'paid') { return $mk(($o['kind'] ?? '') === 'smeta' ? 'Посчитать и выдать смету (заказ оплачен)' : 'Сделать и выдать «' . opt_title((string)$ox['opt']) . '» (оплачена)', $ts($ox['paid_at']), 'obzor'); }
         if ($ox['status'] === 'awaiting_payment' && (int)$ox['amount_kop'] <= 0) { return $mk('Назвать сумму опции «' . opt_title((string)$ox['opt']) . '»', $ts($ox['created_at']), 'dengi'); }
     }
     if ($o['status'] === 'new' || ($o['status'] === 'awaiting_payment' && !$o['amount_confirmed_at'] && !(int)$o['amount_kop'])) { return $mk('Подтвердить сумму', $ts($o['created_at']), 'dengi'); }
@@ -757,6 +771,8 @@ switch ($s) {
         $page = max(1, (int)($_GET['p'] ?? 1)); $per = 25;
         $w = []; $args = [];
         if (isset(LINEA_STATUS[$st])) { $w[] = 'status = ?'; $args[] = $st; }
+        $kindF = in_array($_GET['k'] ?? '', ['smeta', 'proekt'], true) ? (string)$_GET['k'] : '';   // вид заказа: только смета / дизайн-проекты
+        if ($kindF === 'smeta') { $w[] = "kind = 'smeta'"; } elseif ($kindF === 'proekt') { $w[] = "kind <> 'smeta'"; }
         if ($q !== '') { $w[] = '(number LIKE ? OR LOWER(email) LIKE ? OR phone LIKE ? OR name LIKE ?)'; array_push($args, "%$q%", '%' . mb_strtolower($q) . '%', "%$q%", "%$q%"); }
         if ($from !== '') { $w[] = 'created_at >= ?'; $args[] = $from . ' 00:00:00'; }
         if ($to !== '') { $w[] = 'created_at <= ?'; $args[] = $to . ' 23:59:59'; }
@@ -789,18 +805,19 @@ switch ($s) {
             $o = $x['o']; $nx = $x['nx']; $wt = $x['wt']; $rm = kab_remont($o);
             $wcell = $wt ? ($wt['hot'] ? '<b class="late">' : '') . $h($wt['what']) . ' · ' . $h(adm_ago($wt['since'], $nowT)) . ($wt['hot'] ? '</b>' : '') : '<span class="mut">ждём: ' . ['client' => 'клиента', 'studio' => 'от нас', 'brigade' => 'бригаду', 'none' => '—'][$nx['who']] . '</span>';
             $rows .= '<tr' . ($wt && $wt['hot'] ? ' class="hotrow"' : '') . '><td><a href="panel.php?s=order&o=' . rawurlencode($o['number']) . '">' . $h($o['number']) . '</a>' . ($o['test'] ? ' <span class="test">тест</span>' : '') . '<div class="mut">' . $h(substr((string)$o['created_at'], 0, 16)) . '</div></td>'
-                . '<td>' . $h($o['name']) . '<div class="mut hide-m">' . $h($o['email']) . '</div></td><td class="hide-m">' . $h(LINEA_KINDS[$o['kind']] ?? $o['kind']) . ($o['area'] ? ', ' . $h($o['area']) . ' м²' : '') . '</td>'
-                . '<td>' . $rub($o['amount_kop']) . implode('', array_map(fn($r) => '<div class="mut"><span class="st ' . ['awaiting_payment' => 'w', 'paid' => 'r', 'delivered' => 'g'][$r['status']] . '">' . $h(opt_title((string)$r['opt'])) . ': ' . $h(['awaiting_payment' => 'ждёт оплаты', 'paid' => 'оплачена, не выдана', 'delivered' => 'выдана'][$r['status']]) . '</span></div>', $x['ox'])) . '</td><td><span class="st">' . $h(LINEA_STATUS[$o['status']] ?? $o['status']) . '</span><div>' . $wcell . '</div></td>'
+                . '<td>' . $h($o['name']) . '<div class="mut hide-m">' . $h($o['email']) . '</div></td><td class="hide-m">' . ($o['kind'] === 'smeta' ? '<span class="st w">только смета</span> ' : '') . $h(LINEA_KINDS[$o['kind']] ?? $o['kind']) . ($o['area'] ? ', ' . $h($o['area']) . ' м²' : '') . '</td>'
+                . '<td>' . $rub($o['amount_kop']) . ($o['kind'] === 'smeta' ? '' : implode('', array_map(fn($r) => '<div class="mut"><span class="st ' . ['awaiting_payment' => 'w', 'paid' => 'r', 'delivered' => 'g'][$r['status']] . '">' . $h(opt_title((string)$r['opt'])) . ': ' . $h(['awaiting_payment' => 'ждёт оплаты', 'paid' => 'оплачена, не выдана', 'delivered' => 'выдана'][$r['status']]) . '</span></div>', $x['ox']))) . '</td><td><span class="st">' . $h(linea_status_text($o)) . '</span><div>' . $wcell . '</div></td>'
                 . '<td class="hide-m">' . ($rm['job'] ? 'сделка: ' . $h(BRIG_JOB_STATUS[$rm['job']['status']] ?? '') : ($rm['request'] ? 'подбор' : '—')) . '</td></tr>';
         }
         $sel = fn(string $name, array $opts, string $cur) => '<select name="' . $name . '">' . implode('', array_map(fn($k, $t) => '<option value="' . $h($k) . '"' . ((string)$k === $cur ? ' selected' : '') . '>' . $h($t) . '</option>', array_keys($opts), $opts)) . '</select>';
         $flt = '<form method="get" class="inl"><input type="hidden" name="s" value="orders">' . $sel('st', ['' => 'все статусы'] + LINEA_STATUS, $st)
+            . $sel('k', ['' => 'любой вид заказа', 'smeta' => 'только смета (без проекта)', 'proekt' => 'дизайн-проекты'], $kindF)
             . $sel('who', ['' => 'все', 'us' => 'ждём нас', 'client' => 'ждём клиента'], $who)
             . $sel('opt', ['' => 'любые опции', 'any' => 'со сметой на материалы', 'unpaid' => 'смета не оплачена', 'work' => 'смета оплачена, не выдана'], $optF)
             . ' с <input type="date" name="from" value="' . $h($from) . '"> по <input type="date" name="to" value="' . $h($to) . '">'
             . $sel('sort', ['new' => 'сначала новые', 'old' => 'сначала старые', 'wait' => 'дольше всех ждут нас', 'sum' => 'по сумме'], $sort)
             . '<input name="q" value="' . $h($q) . '" placeholder="номер, почта, телефон"><button>Показать</button></form>';
-        $qs = fn(int $pg) => 'panel.php?' . http_build_query(['s' => 'orders', 'st' => $st, 'who' => $who, 'opt' => $optF, 'from' => $from, 'to' => $to, 'sort' => $sort, 'q' => $q, 'p' => $pg]);
+        $qs = fn(int $pg) => 'panel.php?' . http_build_query(['s' => 'orders', 'st' => $st, 'k' => $kindF, 'who' => $who, 'opt' => $optF, 'from' => $from, 'to' => $to, 'sort' => $sort, 'q' => $q, 'p' => $pg]);
         $pager = '<p class="mut">Найдено: ' . $total . '. Страница ' . $page . ' из ' . $pages . ($page > 1 ? ' · <a href="' . $h($qs($page - 1)) . '">← назад</a>' : '') . ($page < $pages ? ' · <a href="' . $h($qs($page + 1)) . '">вперёд →</a>' : '') . '</p>';
         adm_page('Заказы', '<h1>Заказы проектов</h1>' . $flt . $pager . '<div class="scroll"><table><tr><th>Номер</th><th>Клиент</th><th class="hide-m">Вид</th><th>Сумма</th><th>Статус / что ждём</th><th class="hide-m">Ремонт</th></tr>' . ($rows ?: '<tr><td colspan="6">Пусто</td></tr>') . '</table></div>' . $pager, 'orders', $msg);
     }
@@ -809,19 +826,22 @@ switch ($s) {
         if (!$o) { adm_page('Нет заказа', '<p>Заказ не найден.</p>', 'orders', $msg); }
         $tab = (string)($_GET['tab'] ?? 'obzor');
         $TABS = ['obzor' => 'Обзор', 'brif' => 'Бриф', 'dengi' => 'Деньги', 'vypuski' => 'Выпуски', 'voprosy' => 'Вопросы и решения', 'pravki' => 'Правки', 'lenta' => 'Лента', 'docs' => 'Документы', 'remont' => 'Ремонт', 'sluzh' => 'Служебное'];
+        if ($o['kind'] === 'smeta') { $TABS = array_diff_key($TABS, ['vypuski' => 1, 'pravki' => 1, 'remont' => 1]); if (!isset($TABS[$tab])) { $tab = 'obzor'; } }   // заказ «только смета»: без альбомов, правок листов и ремонта
         $num = $o['number'];
         $H = ['o' => $num, 's_back' => 'order', 'o_back' => $num, 'tab_back' => $tab];
         // опции заказа («Смета на материалы»): статус, сумма, счёт, оплата вручную, отмена и выдача файлов (PDF + таблица)
         $optBlock = function () use ($o, $h, $form, $H, $rub, $d, $reasonIn, $num): string {
             $rows = opt_list((int)$o['id'], true);
+            $solo = $o['kind'] === 'smeta';
+            if ($solo && !$rows) { return '<h2>Выдача сметы</h2><p class="box mut">Загрузка PDF и таблицы откроется, когда заказ будет оплачен.</p>'; }
             if (!$rows) { return '<h2>Опции заказа</h2><p class="box mut">Клиент не добавлял опции («Смета на материалы»). Он может добавить её сам в кабинете.</p>'; }
-            $out = '<h2>Опции заказа</h2>';
+            $out = '<h2>' . ($solo ? 'Выдача сметы (заказ — сама смета)' : 'Опции заказа') . '</h2>';
             foreach ($rows as $r) {
                 $k = (string)$r['opt'];
                 $files = opt_files($o, $r);
                 $fl = $files ? implode(' · ', array_map(fn($f) => '<a href="panel.php?optfile=' . rawurlencode($k) . '&o=' . rawurlencode($num) . '&f=' . rawurlencode($f['name']) . '">' . $h($f['label']) . '</a> <span class="mut">' . round($f['size'] / 1024) . ' КБ</span>', $files)) : 'файлов нет';
                 $out .= '<div class="box" id="opt-' . $h($k) . '"><p><b>' . $h(opt_title($k)) . '</b> <span class="st ' . ['awaiting_payment' => 'w', 'paid' => 'r', 'delivered' => 'g', 'cancelled' => ''][$r['status']] . '">' . $h(OPT_STATUS[$r['status']] ?? $r['status']) . '</span>'
-                    . ' · сумма <b>' . ((int)$r['amount_kop'] > 0 ? $rub($r['amount_kop']) : 'не задана (в config нет цены)') . '</b> · ' . ($r['source'] === 'kabinet' ? 'добавлена из кабинета' : 'отмечена в брифе') . ' ' . $d($r['created_at'])
+                    . ' · сумма <b>' . ((int)$r['amount_kop'] > 0 ? $rub($r['amount_kop']) : 'не задана (в config нет цены)') . '</b> · ' . ($r['source'] === 'order' ? 'предмет заказа' : ($r['source'] === 'kabinet' ? 'добавлена из кабинета' : 'отмечена в брифе')) . ' ' . $d($r['created_at'])
                     . '<br><span class="mut">счёт: ' . $d($r['invoice_at']) . ' · оплачена: ' . $d($r['paid_at']) . ($r['paid_by'] ? ' (' . $h($r['paid_by']) . ')' : '') . ' · выдана: ' . $d($r['delivered_at']) . '</span></p>';
                 $hid = $H + ['opt' => $k];
                 if ($r['status'] === 'awaiting_payment') {
@@ -832,7 +852,7 @@ switch ($s) {
                 } elseif (in_array($r['status'], ['paid', 'delivered'], true)) {
                     $out .= '<p>Файлы: ' . $fl . '</p>'
                         . $form('opt_deliver', $hid, '<label>PDF <input type="file" name="pdf" accept="application/pdf"></label> <label>Таблица (xlsx/csv) <input type="file" name="table" accept=".xlsx,.csv"></label>', $r['status'] === 'delivered' ? 'Заменить файлы' : 'Выдать клиенту', '', true)
-                        . ($r['status'] === 'paid' ? $form('opt_cancel', $hid, $reasonIn, 'Отменить', 'bad') : '');
+                        . ($r['status'] === 'paid' && $r['source'] !== 'order' ? $form('opt_cancel', $hid, $reasonIn, 'Отменить', 'bad') : '');
                 }
                 $out .= '</div>';
             }
@@ -840,7 +860,7 @@ switch ($s) {
         };
         $tabs = '<div class="tabs">' . implode('', array_map(fn($k, $t) => '<a href="panel.php?s=order&o=' . rawurlencode($num) . '&tab=' . $k . '"' . ($k === $tab ? ' class="on"' : '') . '>' . $t . '</a>', array_keys($TABS), $TABS)) . '</div>';
         $nx = kab_next_action($o);
-        $head = '<h1>' . $h($num) . ' <span class="st">' . $h(LINEA_STATUS[$o['status']] ?? $o['status']) . '</span>' . ($o['test'] ? ' <span class="test">ТЕСТ</span>' : '') . '</h1>'
+        $head = '<h1>' . $h($num) . ' <span class="st">' . $h(linea_status_text($o)) . '</span>' . ($o['kind'] === 'smeta' ? ' <span class="st w">только смета</span>' : '') . ($o['test'] ? ' <span class="test">ТЕСТ</span>' : '') . '</h1>'
             . '<p class="box">Клиенту сейчас: «' . $h($nx['text']) . '» · ждём: <b>' . ['client' => 'клиента', 'studio' => 'от нас', 'brigade' => 'бригаду', 'none' => '—'][$nx['who']] . '</b></p>' . $tabs;
         $b = '';
         switch ($tab) {
@@ -865,7 +885,7 @@ switch ($s) {
                         [$subj, $txt] = kab_ev_render($o, kab_ev('stage', $o, ['title' => $st[1], 'text' => $st[2]]));
                         return '<div style="margin:0 0 10px">' . $form('o_stage', $H + ['stage' => $k], '<textarea name="text" rows="3" cols="60">' . $h($st[2]) . '</textarea><br>до <input type="date" name="expected_at" value="' . $h(substr((string)$o['expected_at'], 0, 10)) . '"><input name="expected_note" size="22" placeholder="к дате: что будет" value="' . $h($o['expected_note']) . '">'
                             . '<label><input type="checkbox" name="send" value="1" checked> письмо клиенту</label>', $st[0]) . '<details><summary class="mut">Письмо, которое уйдёт</summary><div class="pv"><b>' . $h($subj) . "</b>\n\n" . $h($txt) . '</div></details></div>';
-                    }, array_keys(ADM_STAGES), ADM_STAGES)) . '</div>';
+                    }, array_keys($o['kind'] === 'smeta' ? ADM_STAGES_SMETA : ADM_STAGES), $o['kind'] === 'smeta' ? ADM_STAGES_SMETA : ADM_STAGES)) . '</div>';
                 break;
             }
             case 'brif': {
@@ -876,7 +896,7 @@ switch ($s) {
                 foreach ($v['sections'] as $sec) {
                     $b .= '<h2>' . $h($sec['title']) . '</h2><div class="box">' . ($sec['text'] !== '' ? '<p style="white-space:pre-wrap">' . $h($sec['text']) . '</p>' : '') . ($sec['rows'] ? $tbl($sec['rows']) : '') . '</div>';
                 }
-                foreach (['life' => 'Жизнь в квартире', 'tech' => 'Двери, свет и электрика', 'home' => 'Дом и ремонт'] as $k => $t) {
+                foreach ($o['kind'] === 'smeta' ? [] : ['life' => 'Жизнь в квартире', 'tech' => 'Двери, свет и электрика', 'home' => 'Дом и ремонт'] as $k => $t) {
                     $x = $v[$k];
                     if (!$x['present']) { $b .= '<h2>' . $t . '</h2><p class="box mut">Клиент этот шаг не открывал (в брифе его нет).</p>'; continue; }
                     $b .= '<h2>' . $t . '</h2><p class="mut">' . ($x['info']['skipped'] ? 'Клиент пропустил этот шаг.' : 'Отвечено вопросов: ' . (int)$x['info']['answered'] . ' из ' . (int)$x['info']['total'] . '.') . '</p>';

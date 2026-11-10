@@ -268,6 +268,7 @@ if (($_SERVER['REQUEST_METHOD'] ?? '') === 'POST') {
                 if ((int)$o['amount_kop'] <= 0) { $msg = 'Сначала выставьте сумму.'; break; }
                 $upd("status = 'paid', paid_at = ?, paid_by = ?", [$now, 'вручную: ' . $who . ' ' . date('d.m.Y H:i')]);
                 linea_event((int)$o['id'], $who, 'Оплата отмечена вручную: ' . $rub($o['amount_kop']));
+                if ($o['kind'] === 'smeta') { require_once __DIR__ . '/lib/options.php'; opt_main_sync(linea_order_by_number((string)$o['number'])); }
                 $msg = 'Заказ оплачен — срок отсчитывается с этого момента.'; break;
             case 'delivered':
                 $url = linea_str($_POST['url'] ?? '', 300);

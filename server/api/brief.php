@@ -6,6 +6,10 @@
  *   website — поле-ловушка для ботов (у людей пустое)
  *   test    — 1 для наших проверок (заказ помечается тестовым, писем нет)
  * Ответ: {ok, number, token, orderUrl}. Архив — linea-private/orders/<номер>/brief.zip, заказ — строка в linea.sqlite.
+ *
+ * Бриф сметы (09.11.2026, site/smeta/zakaz/, js/smeta-brief.js): тот же приём с meta.service = 'smeta' → заказ вида «smeta» без дизайн-проекта.
+ *   brief.smeta = {mode: project|answers, rooms[], electric, plumbing, height, state, note}; в архиве plan/ обязателен, proekt/ — при mode = project.
+ *   Цена — config prices.smeta (та же, что у опции к проекту); опции к такому заказу не принимаются.
  */
 declare(strict_types=1);
 require __DIR__ . '/lib/boot.php';
@@ -40,6 +44,14 @@ $consentText = 'Согласие на обработку персональны�
     . ' (soglasie/), отмечено в брифе ' . linea_str((string)($consent['at'] ?? ''), 30)
     . '; показ в портфолио: ' . (($consent['portfolio'] ?? false) === true ? 'да' : 'нет');
 
+$isSmeta = ((string)($brief['meta']['service'] ?? '') === 'smeta');
+if ($isSmeta) {
+    // бриф сметы: либо готовый проект, либо опрос «что где»; без этого считать нечего
+    $sm = is_array($brief['smeta'] ?? null) ? $brief['smeta'] : [];
+    $smMode = (string)($sm['mode'] ?? '');
+    if (!in_array($smMode, ['project', 'answers'], true)) { linea_fail('Выберите: у вас есть готовый проект или проекта нет — и мы пришлём вопросы «что где»'); }
+    if ($smMode === 'answers' && !array_filter((array)($sm['rooms'] ?? []), 'is_array')) { linea_fail('Отметьте хотя бы один тип помещений и чем он отделан — иначе считать нечего'); }
+}
 $test = linea_test_req((string)($_POST['test'] ?? '') === '1' || !empty($brief['meta']['test']));
 // Площадь обязательна (01.11.2026): по ней сумма видна сразу на странице заказа (критик продукта, п. 3). Можно примерно —
 // расхождение с планом пересчитывается по той же ставке (TERMS.areaRecalc в tools/site-shell.js).
@@ -60,7 +72,7 @@ if ($zip->open((string)$f['tmp_name'], ZipArchive::RDONLY) !== true) { linea_fai
 $allowed = '/\.(json|txt|jpe?g|png|webp|heic|heif|gif|pdf|dwg|dxf|tiff?|bmp)$/i';
 $count = $zip->numFiles;
 if ($count < 1 || $count > 300) { $zip->close(); linea_fail('В архиве ' . $count . ' файлов — так много не принимаем'); }
-$unpacked = 0;
+$unpacked = 0; $nPlan = 0; $nProj = 0;
 for ($i = 0; $i < $count; $i++) {
     $st = $zip->statIndex($i);
     $name = (string)($st['name'] ?? '');
@@ -68,8 +80,13 @@ for ($i = 0; $i < $count; $i++) {
         $zip->close(); linea_fail('В архиве файл неподходящего типа: ' . mb_substr(basename($name), 0, 60) . '. Можно фото, PDF, DWG');
     }
     $unpacked += (int)($st['size'] ?? 0);
+    if (str_starts_with($name, 'plan/')) { $nPlan++; } elseif (str_starts_with($name, 'proekt/')) { $nProj++; }
 }
 $zip->close();
+if ($isSmeta) {
+    if ($nPlan < 1) { linea_fail('Приложите план квартиры с размерами — без него смету не посчитать'); }
+    if ($smMode === 'project' && $nProj < 1) { linea_fail('Приложите файлы вашего проекта (PDF или изображения листов) — или выберите «проекта нет»'); }
+}
 if ($unpacked > $maxBytes * 2) { linea_fail('Архив слишком большой после распаковки'); }
 
 // Заказ
@@ -77,7 +94,7 @@ $db = linea_db();
 linea_schema();
 $o = $brief['object'] ?? [];
 $area = is_numeric($o['area'] ?? null) ? (float)$o['area'] : null;
-$kind = linea_kind_from_brief($brief);
+$kind = $isSmeta ? 'smeta' : linea_kind_from_brief($brief);
 $amount = linea_price($kind, $area);
 // В-3: площадь можно занизить. Σ площадей помещений брифа заметно больше заявленной — онлайн-оплата только после подтверждения суммы
 $roomsArea = 0.0;
@@ -86,7 +103,7 @@ foreach ((array)($brief['rooms'] ?? []) as $rm) {
     if (is_numeric($rm['area'] ?? null)) { $roomsArea += (float)$rm['area']; }
     elseif (is_numeric($rm['width'] ?? null) && is_numeric($rm['length'] ?? null)) { $roomsArea += (float)$rm['width'] * (float)$rm['length']; }   // схема брифа: width × length, м
 }
-$areaMismatch = $area && $roomsArea > $area * 1.1;
+$areaMismatch = !$isSmeta && $area && $roomsArea > $area * 1.1;
 $token = bin2hex(random_bytes(16));
 $now = linea_now();
 
@@ -104,7 +121,7 @@ try {
         ->execute([$number, $token, 'awaiting_payment', $kind, $now, $now, linea_ip(), $now,
             $consentText,
             linea_str($client['name'] ?? '', 80), $phone, $email, linea_str($client['contact'] ?? '', 60),
-            linea_str($o['type'] ?? '', 30), $area, (int)$f['size'], $count, $amount, $test ? 1 : 0, $areaMismatch ? 1 : 0]);
+            $isSmeta ? 'квартира' : linea_str($o['type'] ?? '', 30), $area, (int)$f['size'], $count, $amount, $test ? 1 : 0, $areaMismatch ? 1 : 0]);
     $id = (int)$db->lastInsertId();
 
     $dir = linea_private() . '/orders/' . $number;
@@ -128,7 +145,7 @@ linea_rate_add('brief');
 // нет цены — опция записана, сумма «уточняется», сервис не падает. Сумму клиент видел на сайте, но верна серверная.
 $optLine = '';
 try {
-    if (is_array($brief['options'] ?? null) && ($brief['options']['smeta'] ?? false) === true) {
+    if (!$isSmeta && is_array($brief['options'] ?? null) && ($brief['options']['smeta'] ?? false) === true) {
         require_once __DIR__ . '/lib/options.php';
         $oOpt = linea_order_by_number($number);
         $ra = $oOpt ? opt_add($oOpt, 'smeta', 'brief') : null;
@@ -151,10 +168,10 @@ if ($email !== '' && filter_var($email, FILTER_VALIDATE_EMAIL)) {
         if ($oNew) { kab_notify_order($oNew, kab_ev('brief', $oNew)); }
     } catch (Throwable $e) { linea_log('error.log', 'brief kabinet: ' . $e->getMessage()); }
 }
-linea_event($id, 'site', 'Бриф получен с сайта: ' . $count . ' файлов, ' . round((int)$f['size'] / 1048576, 1) . ' МБ' . ($test ? ' (тест)' : ''));
+linea_event($id, 'site', ($isSmeta ? 'Заказ сметы получен с сайта (' . ($smMode === 'project' ? 'есть проект' : 'проекта нет, ответы «что где»') . '): ' : 'Бриф получен с сайта: ') . $count . ' файлов, ' . round((int)$f['size'] / 1048576, 1) . ' МБ' . ($test ? ' (тест)' : ''));
 linea_log('orders.log', 'new ' . $number . ($test ? ' test' : '') . ' ' . $kind . ' ' . (int)$f['size']);
-linea_notify('LINEA: новый бриф ' . $number, implode("\n", [
-    'Новый бриф ' . $number . ' — ' . (LINEA_KINDS[$kind] ?? $kind) . ($area ? ', ' . $area . ' м²' : ''),
+linea_notify($isSmeta ? 'LINEA: новый заказ сметы ' . $number : 'LINEA: новый бриф ' . $number, implode("\n", [
+    ($isSmeta ? 'Новый заказ сметы ' : 'Новый бриф ') . $number . ' — ' . (LINEA_KINDS[$kind] ?? $kind) . ($area ? ', ' . $area . ' м²' : ''),
     'Клиент: ' . linea_str($client['name'] ?? '', 80) . ' ' . $phone . ' ' . $email,
     'Сумма: ' . ($amount ? number_format($amount / 100, 0, ',', ' ') . ' ₽' : 'уточняется — выставьте в закрытой странице'),
     $optLine,

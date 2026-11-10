@@ -4,6 +4,8 @@
 //   node tools/order-pull.mjs <LN-ГГММ-NNNN> --private=<папка linea-private> [--slug=<имя>] [--force]
 // В конвейер идут только оплаченные заказы (правило проекта); --force — для проверок. Кладёт: brief.json (с дополнением из кабинета),
 // brief.txt, source/ (план и фото из архива + догруженное, у файлов к вопросу — приставка К-N_), answers.json, order.json (без контактов).
+// Заказ «только смета» (kind = smeta, 09.11.2026): проекта LINEA нет и не будет. source/plan/ — план клиента, source/proekt/ — файлы ЕГО проекта (если есть),
+// brief.json → smeta {mode: project | answers, rooms[], electric, plumbing, height, state, note}; order.json получает smetaOnly = true и smetaInput.
 import fs from 'node:fs';
 import path from 'node:path';
 import { execFileSync } from 'node:child_process';
@@ -30,7 +32,13 @@ const zip = path.join(dir, 'brief.zip');
 if (fs.existsSync(zip)) {
   const tmp = fs.mkdtempSync(path.join(out, '.z-')); execFileSync('unzip', ['-qo', zip, '-d', tmp]);
   const walk = d => fs.readdirSync(d, { withFileTypes: true }).flatMap(e => e.isDirectory() ? walk(path.join(d, e.name)) : [path.join(d, e.name)]);
-  for (const f of walk(tmp)) { const n = path.basename(f); if (n === 'brief.txt') fs.copyFileSync(f, path.join(out, 'brief.txt')); else if (n !== 'brief.json') fs.copyFileSync(f, path.join(out, 'source', n)); }
+  for (const f of walk(tmp)) {
+    const n = path.basename(f), rel = path.relative(tmp, f).split(path.sep);
+    if (n === 'brief.txt') fs.copyFileSync(f, path.join(out, 'brief.txt'));
+    else if (n === 'brief.json') continue;
+    else if (row.kind === 'smeta' && ['plan', 'proekt'].includes(rel[0])) { fs.mkdirSync(path.join(out, 'source', rel[0]), { recursive: true }); fs.copyFileSync(f, path.join(out, 'source', rel[0], n)); }   // план и проект клиента — раздельно
+    else fs.copyFileSync(f, path.join(out, 'source', n));
+  }
   fs.rmSync(tmp, { recursive: true, force: true });
 }
 const dop = path.join(dir, 'dopolnenie'); let nExtra = 0;
@@ -43,6 +51,14 @@ if (fs.existsSync(path.join(dir, 'answers.json'))) fs.copyFileSync(path.join(dir
 // smetaStatus — awaiting_payment | paid | delivered | cancelled | null (опции в заказе нет). Старая база без таблицы order_options — опции нет.
 let opt = null;
 try { opt = JSON.parse(execFileSync('php', ['-r', '$p = new PDO("sqlite:" . $argv[1]); $s = $p->prepare("SELECT x.status, x.paid_at FROM order_options x JOIN orders o ON o.id = x.order_id WHERE o.number = ? AND x.opt = \'smeta\'"); $s->execute([$argv[2]]); echo json_encode($s->fetch(PDO::FETCH_ASSOC) ?: null);', path.join(priv, 'linea.sqlite'), num], { stdio: ['ignore', 'pipe', 'ignore'] }).toString()); } catch { }
-fs.writeFileSync(path.join(out, 'order.json'), JSON.stringify({ smeta: !!opt && ['paid', 'delivered'].includes(opt.status), smetaStatus: opt ? opt.status : null, smetaPaidAt: opt ? opt.paid_at : null, number: row.number, kind: row.kind, status: row.status, area: row.area, objectType: row.object_type, paidAt: row.paid_at, briefAddedAt: added || null }, null, 2));
+const smetaOnly = row.kind === 'smeta', sm = (b && b.smeta) || {};
+const cnt = d => { try { return fs.readdirSync(path.join(out, 'source', d)).length; } catch { return 0; } };
+const smetaInput = smetaOnly ? { mode: sm.mode || null, planFiles: cnt('plan'), projectFiles: cnt('proekt'), rooms: (sm.rooms || []).length, electric: sm.electric || null, plumbing: sm.plumbing || null,
+  height: sm.height || null, state: sm.state || null,
+  // что взять за основу: по проекту клиента — его листы; без проекта — типовые решения по ответам, каждое допущение пометить в смете
+  basis: sm.mode === 'project' ? 'проект клиента (source/proekt) + план (source/plan)' : 'план (source/plan) + ответы «что где» (brief.json → smeta.rooms); допущения помечать в смете' } : null;
+fs.writeFileSync(path.join(out, 'order.json'), JSON.stringify({ smetaOnly, smetaInput, smeta: smetaOnly ? ['paid', 'delivered'].includes(row.status) : !!opt && ['paid', 'delivered'].includes(opt.status), smetaStatus: opt ? opt.status : null, smetaPaidAt: opt ? opt.paid_at : (smetaOnly ? row.paid_at : null), number: row.number, kind: row.kind, status: row.status, area: row.area, objectType: row.object_type, paidAt: row.paid_at, briefAddedAt: added || null }, null, 2));
 console.log(`✓ ${num} → clients/${slug}/: brief.json${fs.existsSync(path.join(out, 'brief.txt')) ? ', brief.txt' : ''}, source/ (${fs.readdirSync(path.join(out, 'source')).length} файлов, из них догружено ${nExtra}), answers.json ${fs.existsSync(path.join(out, 'answers.json')) ? 'есть' : 'нет'}`);
-console.log(`Дальше: /new-client ${slug} или node engine/generate.js clients/${slug}/brief.json clients/${slug}/project`);
+console.log(smetaOnly
+  ? `Заказ «только смета»: дизайн-проект НЕ собирать. Основа — ${smetaInput.basis}. Результат — PDF и таблица (xlsx/csv), их выдаёт админка (карточка заказа → «Выдача сметы»).`
+  : `Дальше: /new-client ${slug} или node engine/generate.js clients/${slug}/brief.json clients/${slug}/project`);

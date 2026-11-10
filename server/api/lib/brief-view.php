@@ -68,6 +68,13 @@ function brief_set_view(string $key, $data): array
 
 const BRIEF_ANSWER_LABELS = ['household' => 'Кто живёт', 'pets' => 'Животные', 'wfh' => 'Работа из дома', 'storage' => 'Хранение', 'kitchen' => 'Кухня', 'sport' => 'Спорт и хобби',
     'dislikes' => 'Что не нравится', 'timeline' => 'Сроки', 'budget' => 'Бюджет', 'wishes' => 'Пожелания'];
+/** Бриф сметы (meta.service = smeta, site/smeta/zakaz/): подписи значений опроса «что где». */
+const BRIEF_SMETA_ROOMS = ['living' => 'Жилая комната / гостиная', 'bedroom' => 'Спальня', 'kids' => 'Детская', 'kitchen' => 'Кухня', 'bathroom' => 'Ванная / санузел', 'hall' => 'Прихожая / коридор', 'balcony' => 'Балкон / лоджия', 'storage' => 'Кладовая / гардеробная'];
+const BRIEF_SMETA_WALLS = ['paint' => 'краска', 'wallpaper' => 'обои', 'tile-full' => 'плитка до потолка', 'tile-part' => 'плитка частично (фартук / до 1,5 м), остальное — краска', 'panels' => 'панели', 'unknown' => 'не знаю'];
+const BRIEF_SMETA_FLOOR = ['laminate' => 'ламинат', 'parquet' => 'паркет / паркетная доска', 'tile' => 'плитка / керамогранит', 'vinyl' => 'кварцвинил', 'linoleum' => 'линолеум', 'unknown' => 'не знаю'];
+const BRIEF_SMETA_CEIL = ['paint' => 'окраска', 'stretch' => 'натяжной', 'gkl' => 'гипсокартон', 'unknown' => 'не знаю'];
+const BRIEF_SMETA_YN = ['yes' => 'да', 'no' => 'нет', 'unknown' => 'не знаю'];
+const BRIEF_SMETA_STATE = ['new' => 'новостройка без отделки', 'old' => 'вторичка, отделку снимаем', 'part' => 'частичный ремонт', 'unknown' => 'не знаю'];
 const BRIEF_BUDGET = ['econom' => 'эконом', 'business' => 'бизнес', 'premium' => 'премиум'];
 
 function brief_view(array $b): array
@@ -84,6 +91,26 @@ function brief_view(array $b): array
     $add('object', 'Объект', [['Вид', (string)($o['type'] ?? '')], ['Адрес', (string)($o['address'] ?? '')], ['Площадь', isset($o['area']) && $o['area'] !== '' ? str_replace('.', ',', (string)$o['area']) . ' м²' : ''],
         ['Высота потолков', isset($o['ceilingHeight']) && $o['ceilingHeight'] ? str_replace('.', ',', (string)$o['ceilingHeight']) . ' м' : ''], ['Состояние', (string)($o['state'] ?? '')],
         ['Нужен обмер', !empty($o['needSurvey']) ? 'да, плана с размерами нет' : '']]);
+    // бриф сметы: режим, опрос «что где», допущения — вместо стиля, рассказа и шагов «жизнь / двери и свет / дом и ремонт»
+    $sm = is_array($b['smeta'] ?? null) ? $b['smeta'] : null;
+    if ((string)($b['meta']['service'] ?? '') === 'smeta' && $sm) {
+        $s = array_values(array_filter($s, fn($x) => $x['id'] !== 'object'));
+        $add('object', 'Квартира', [['Площадь', isset($o['area']) && $o['area'] !== '' ? str_replace('.', ',', (string)$o['area']) . ' м²' : ''], ['Высота потолков', !empty($sm['height']) ? str_replace('.', ',', (string)$sm['height']) . ' м' : ''],
+            ['Состояние', BRIEF_SMETA_STATE[(string)($sm['state'] ?? '')] ?? (string)($sm['state'] ?? '')]]);
+        $add('smeta-mode', 'Исходные данные для сметы', [['Что есть', ($sm['mode'] ?? '') === 'project' ? 'готовый проект — считаем по его листам' : 'проекта нет — считаем по плану и ответам «что где» (типовые решения, допущения помечаем)'],
+            ['Электрика', BRIEF_SMETA_YN[(string)($sm['electric'] ?? '')] ?? ''], ['Сантехника', BRIEF_SMETA_YN[(string)($sm['plumbing'] ?? '')] ?? '']], trim((string)($sm['note'] ?? '')));
+        $rr = [];
+        foreach ((array)($sm['rooms'] ?? []) as $r) {
+            if (!is_array($r)) { continue; }
+            $rr[] = [(BRIEF_SMETA_ROOMS[(string)($r['type'] ?? '')] ?? (string)($r['type'] ?? 'Помещение')) . (!empty($r['count']) && (int)$r['count'] > 1 ? ' × ' . (int)$r['count'] : ''),
+                'стены — ' . (BRIEF_SMETA_WALLS[(string)($r['walls'] ?? '')] ?? (string)($r['walls'] ?? '—')) . '; пол — ' . (BRIEF_SMETA_FLOOR[(string)($r['floor'] ?? '')] ?? (string)($r['floor'] ?? '—'))
+                . '; потолок — ' . (BRIEF_SMETA_CEIL[(string)($r['ceiling'] ?? '')] ?? (string)($r['ceiling'] ?? '—'))];
+        }
+        $add('smeta-rooms', 'Что где отделано (' . count($rr) . ')', $rr);
+        $f = is_array($b['files'] ?? null) ? $b['files'] : [];
+        $add('files', 'Файлы по списку брифа', [['План', implode(', ', (array)($f['plans'] ?? []))], ['Проект клиента', implode(', ', (array)($f['project'] ?? []))]]);
+        return ['sections' => $s, 'life' => ['present' => false], 'tech' => ['present' => false], 'home' => ['present' => false], 'kind' => 'smeta'];
+    }
     $rooms = [];
     foreach ((array)($b['rooms'] ?? []) as $r) {
         if (!is_array($r)) { continue; }

@@ -412,6 +412,7 @@ function kab_remont(array $o): array
 /** Можно ли подбирать бригаду (choose_after: final — только по финальному альбому, т. е. заказ «выдан»). */
 function kab_remont_eligible(array $o): bool
 {
+    if (($o['kind'] ?? '') === 'smeta') { return false; }   // заказ «только смета»: проекта для бригад нет
     if (brig_terms()['choose_after'] === 'first') { return in_array($o['status'], ['paid', 'delivered'], true) && ($o['status'] === 'delivered' || kab_releases($o)); }
     return $o['status'] === 'delivered';
 }
@@ -422,6 +423,7 @@ function kab_next_action(array $o): array
     $pub = linea_public_order($o);
     $num = $o['number'];
     $base = '#/o/' . $num;
+    if (($o['kind'] ?? '') === 'smeta') { return kab_next_action_smeta($o, $pub, $base); }
     if ($o['status'] === 'cancelled') { return ['text' => 'Заказ отменён', 'btn' => null, 'href' => null, 'who' => 'none']; }
     if ($o['status'] === 'refunded') { return ['text' => 'Оплата возвращена. Если остались вопросы — напишите нам', 'btn' => null, 'href' => null, 'who' => 'none']; }
     if ($o['status'] === 'new' || ($o['status'] === 'awaiting_payment' && !$pub['amount'])) {
@@ -485,8 +487,29 @@ function kab_plural(int $n, string $one, string $few, string $many): string
 }
 
 /** Шаг заказа для полосы: brief → pay → work → first → answers → final → remont. */
+/** Заказ «только смета» (kind = smeta): заявка → оплата → расчёт → смета готова; альбома, правок и ремонта нет. */
+function kab_next_action_smeta(array $o, array $pub, string $base): array
+{
+    if ($o['status'] === 'cancelled') { return ['text' => 'Заказ отменён', 'btn' => null, 'href' => null, 'who' => 'none']; }
+    if ($o['status'] === 'refunded') { return ['text' => 'Оплата возвращена. Если остались вопросы — напишите нам', 'btn' => null, 'href' => null, 'who' => 'none']; }
+    if ($o['status'] === 'new' || ($o['status'] === 'awaiting_payment' && !$pub['amount'])) {
+        return ['text' => 'Проверяем план и исходные данные — сумму подтвердим в течение рабочего дня' . (kab_expected_line($o) ? '. ' . kab_expected_line($o) : ''), 'btn' => null, 'href' => null, 'who' => 'studio'];
+    }
+    if ($o['status'] === 'awaiting_payment') {
+        if (!empty($pub['canPay'])) { return ['text' => 'Оплатите смету — расчёт начнётся сразу после оплаты', 'btn' => 'Оплатить ' . brig_rub((int)$o['amount_kop']), 'href' => $base . '/proekt', 'act' => 'pay', 'who' => 'client']; }
+        if ($o['invoice_at']) { return ['text' => 'Счёт отправлен на почту — оплатите по реквизитам из счёта', 'btn' => 'Подробнее', 'href' => $base . '/proekt', 'who' => 'client']; }
+        return ['text' => 'Сумма ' . brig_rub((int)$o['amount_kop']) . '. Счёт на оплату пришлём на почту', 'btn' => null, 'href' => null, 'who' => 'studio'];
+    }
+    if ($o['status'] === 'paid') { return ['text' => 'Считаем смету. ' . (kab_expected_line($o) ?: 'Как будет готова — напишем на почту, файлы появятся здесь'), 'btn' => null, 'href' => null, 'who' => 'studio']; }
+    return ['text' => 'Смета готова — скачайте PDF и таблицу', 'btn' => 'Открыть файлы', 'href' => $base . '/proekt', 'who' => 'none'];
+}
+
 function kab_step(array $o): int
 {
+    if (($o['kind'] ?? '') === 'smeta') {   // четыре шага: 0 заявка, 1 оплата, 2 расчёт, 3 смета готова
+        if (in_array($o['status'], ['new', 'awaiting_payment'], true)) { return $o['amount_kop'] ? 1 : 0; }
+        return $o['status'] === 'paid' ? 2 : ($o['status'] === 'delivered' ? 3 : 0);
+    }
     if (in_array($o['status'], ['new', 'awaiting_payment'], true)) { return $o['amount_kop'] ? 1 : 0; }
     if ($o['status'] === 'paid') {
         $rel = kab_releases($o);

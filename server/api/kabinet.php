@@ -103,13 +103,15 @@ function kb_history(array $o): array
 {
     $h = [];
     $add = function (?string $at, string $kind, string $title, string $text = '', string $who = 'studio') use (&$h) { if ($at) { $h[] = ['at' => $at, 'kind' => $kind, 'title' => $title, 'text' => $text, 'who' => $who]; } };
-    $add((string)$o['created_at'], 'brief', 'Бриф отправлен', 'Заказ ' . $o['number'] . ' создан.', 'client');
+    $solo = ($o['kind'] ?? '') === 'smeta';   // заказ «только смета»: свои формулировки, без альбома и правок
+    $add((string)$o['created_at'], 'brief', $solo ? 'Заказ сметы отправлен' : 'Бриф отправлен', 'Заказ ' . $o['number'] . ' создан.', 'client');
     if ($o['amount_confirmed_at'] && $o['amount_kop']) { $add((string)$o['amount_confirmed_at'], 'money', 'Сумма подтверждена', brig_rub((int)$o['amount_kop'])); }
     if ($o['invoice_at']) { $add((string)$o['invoice_at'], 'money', 'Счёт выставлен', 'Реквизиты — в счёте, отправленном на почту.'); }
-    if ($o['paid_at']) { $add((string)$o['paid_at'], 'money', 'Оплата получена', brig_rub((int)$o['amount_kop']) . ' — работа начата.'); }
-    if ($o['delivered_at']) { $add((string)$o['delivered_at'], 'status', 'Финальный альбом выдан'); }
+    if ($o['paid_at']) { $add((string)$o['paid_at'], 'money', 'Оплата получена', brig_rub((int)$o['amount_kop']) . ($solo ? ' — расчёт начат.' : ' — работа начата.')); }
+    if ($o['delivered_at']) { $add((string)$o['delivered_at'], 'status', $solo ? 'Смета выдана' : 'Финальный альбом выдан'); }
     foreach (opt_list((int)$o['id'], true) as $r) {   // опции заказа: добавлена → оплачена → готова
         $tt = opt_title((string)$r['opt']);
+        if ($r['source'] === 'order') { continue; }   // основная строка заказа «только смета» — те же события уже выше
         $add((string)$r['created_at'], 'money', 'Добавлена опция «' . $tt . '»', $r['amount_kop'] ? brig_rub((int)$r['amount_kop']) . ' — отдельной строкой' : 'сумму подтвердим');
         if ($r['paid_at']) { $add((string)$r['paid_at'], 'money', 'Оплата опции «' . $tt . '» получена', brig_rub((int)$r['amount_kop'])); }
         if ($r['delivered_at']) { $add((string)$r['delivered_at'], 'album', $tt . ' готова', implode(', ', array_map(fn($f) => $f['label'], opt_files($o, $r)))); }
@@ -185,13 +187,13 @@ function kb_docs(array $orders): array
     foreach ($orders as $o) {
         $n = $o['number'];
         if ($o['consent_at']) { $out[] = ['o' => $n, 'kind' => 'Согласие', 'title' => 'На обработку персональных данных', 'at' => $o['consent_at'], 'note' => 'дано при отправке брифа']; }
-        if ($o['invoice_at']) { $out[] = ['o' => $n, 'kind' => 'Счёт', 'title' => 'Счёт на оплату проекта', 'at' => $o['invoice_at'], 'note' => 'Отправлен на почту']; }
+        if ($o['invoice_at']) { $out[] = ['o' => $n, 'kind' => 'Счёт', 'title' => ($o['kind'] === 'smeta' ? 'Счёт на оплату сметы' : 'Счёт на оплату проекта'), 'at' => $o['invoice_at'], 'note' => 'Отправлен на почту']; }
         foreach (opt_list((int)$o['id']) as $r) {
             $tt = opt_title((string)$r['opt']);
-            if ($r['paid_at']) { $out[] = ['o' => $n, 'kind' => 'Оплата', 'title' => 'Оплата опции «' . $tt . '» ' . brig_rub((int)$r['amount_kop']), 'at' => $r['paid_at'], 'note' => 'Чек — в письме сервиса онлайн-оплаты, копия — у LINEA по запросу']; }
+            if ($r['paid_at'] && $r['source'] !== 'order') { $out[] = ['o' => $n, 'kind' => 'Оплата', 'title' => 'Оплата опции «' . $tt . '» ' . brig_rub((int)$r['amount_kop']), 'at' => $r['paid_at'], 'note' => 'Чек — в письме сервиса онлайн-оплаты, копия — у LINEA по запросу']; }
             foreach (opt_files($o, $r) as $f) { $out[] = ['o' => $n, 'kind' => 'Смета', 'title' => $tt . ': ' . $f['label'], 'at' => (string)$r['delivered_at'], 'href' => 'ofile&o=' . rawurlencode($n) . '&opt=' . rawurlencode((string)$r['opt']) . '&f=' . rawurlencode($f['name'])]; }
         }
-        if ($o['paid_at']) { $out[] = ['o' => $n, 'kind' => 'Оплата', 'title' => 'Оплата проекта ' . brig_rub((int)$o['amount_kop']), 'at' => $o['paid_at'], 'note' => 'Чек — в письме сервиса онлайн-оплаты, копия — у LINEA по запросу']; }
+        if ($o['paid_at']) { $out[] = ['o' => $n, 'kind' => 'Оплата', 'title' => ($o['kind'] === 'smeta' ? 'Оплата сметы ' : 'Оплата проекта ') . brig_rub((int)$o['amount_kop']), 'at' => $o['paid_at'], 'note' => 'Чек — в письме сервиса онлайн-оплаты, копия — у LINEA по запросу']; }
         foreach (kab_releases($o) as $r) {
             if ($r['hasPdf']) { $out[] = ['o' => $n, 'kind' => 'Альбом', 'title' => 'Альбом ' . ($r['title'] ?? $r['ver']) . ' (PDF)', 'at' => (string)($r['date'] ?? ''), 'href' => 'file&o=' . rawurlencode($n) . '&v=' . rawurlencode($r['ver']) . '&f=album.pdf']; }
         }
@@ -216,7 +218,7 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'GET') {
             foreach (kb_orders($c, $g) as $o) {
                 $nx = kab_next_action($o);
                 $list[] = ['number' => $o['number'], 'kindTitle' => LINEA_KINDS[$o['kind']] ?? $o['kind'], 'objectTitle' => kb_obj_title($o), 'status' => $o['status'],
-                    'statusText' => LINEA_STATUS[$o['status']] ?? $o['status'], 'step' => kab_step($o), 'next' => $nx, 'archived' => in_array($o['status'], ['cancelled', 'refunded'], true),
+                    'statusText' => linea_status_text($o), 'kind' => (string)$o['kind'], 'step' => kab_step($o), 'next' => $nx, 'archived' => in_array($o['status'], ['cancelled', 'refunded'], true),
                     'test' => (bool)$o['test']];
             }
             usort($list, fn($x, $y) => [($x['archived'] ? 2 : ($x['next']['who'] === 'client' ? 0 : 1))] <=> [($y['archived'] ? 2 : ($y['next']['who'] === 'client' ? 0 : 1))]);

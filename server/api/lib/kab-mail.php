@@ -54,8 +54,10 @@ function kab_pay_info(array $o): array
 {
     $tc = kab_terms_client();
     $cfgP = linea_cfg()['prices'][$o['kind']] ?? null;
-    $rateKop = is_array($cfgP) && (int)($cfgP['per_m2'] ?? 0) > 0 ? (int)$cfgP['per_m2'] : (isset($tc['rate']) ? (int)$tc['rate'] * 100 : null);
-    $minKop = is_array($cfgP) && isset($cfgP['min']) ? (int)$cfgP['min'] : (isset($tc['min']) ? (int)$tc['min'] * 100 : null);
+    $solo = ($o['kind'] ?? '') === 'smeta';   // заказ «только смета»: ставка и минимум — сметы, не проекта
+    $ta = $solo ? (array)($tc['addons']['smeta'] ?? []) : [];
+    $rateKop = is_array($cfgP) && (int)($cfgP['per_m2'] ?? 0) > 0 ? (int)$cfgP['per_m2'] : ($solo ? (isset($ta['rate']) ? (int)$ta['rate'] * 100 : null) : (isset($tc['rate']) ? (int)$tc['rate'] * 100 : null));
+    $minKop = is_array($cfgP) && isset($cfgP['min']) ? (int)$cfgP['min'] : ($solo ? (isset($ta['min']) ? (int)$ta['min'] * 100 : null) : (isset($tc['min']) ? (int)$tc['min'] * 100 : null));
     $area = $o['area'] !== null ? (float)$o['area'] : null;
     $amount = $o['amount_kop'] !== null ? (int)$o['amount_kop'] : null;
     $formula = ''; $minApplied = false; $matches = false;
@@ -67,7 +69,7 @@ function kab_pay_info(array $o): array
         $ar = str_replace('.', ',', (string)$area);
         if ($matches) {
             $formula = $minApplied
-                ? 'Минимальный заказ — как за ' . ($tc['minArea'] ?? 40) . ' м²: ' . brig_rub($minKop) . ' (по вашей площади, ' . $ar . ' м² × ' . brig_rub($rateKop) . ', вышло бы ' . brig_rub($byArea) . ')'
+                ? 'Минимальный заказ — как за ' . ($solo ? ($ta['minArea'] ?? 50) : ($tc['minArea'] ?? 40)) . ' м²: ' . brig_rub($minKop) . ' (по вашей площади, ' . $ar . ' м² × ' . brig_rub($rateKop) . ', вышло бы ' . brig_rub($byArea) . ')'
                 : $ar . ' м² × ' . brig_rub($rateKop) . ' = ' . brig_rub($amount);
         } else {
             $formula = 'Сумма уточнена по плану и согласована: ' . brig_rub($amount) . ' (ставка ' . brig_rub($rateKop) . ' за м², минимальный заказ ' . brig_rub($minKop) . ')';
@@ -82,9 +84,10 @@ function kab_pay_info(array $o): array
     $projDue = in_array($o['status'], ['new', 'awaiting_payment'], true) && $amount ? $amount : 0;
     return [
         'amount' => $amount, 'formula' => $formula, 'rate' => $rateKop, 'min' => $minKop, 'area' => $area, 'minApplied' => $minApplied, 'matches' => $matches,
-        'includes' => array_values(array_filter([(string)($tc['line'] ?? ''), (string)($tc['roundsText'] ?? ''), (string)($tc['start'] ?? '')])),
-        'notIncluded' => (array)($tc['notIncluded'] ?? []),
-        'rounds' => isset($tc['rounds']) ? (int)$tc['rounds'] : null, 'roundsText' => (string)($tc['roundsText'] ?? ''),
+        'includes' => $solo ? array_values(array_filter([(string)($ta['line'] ?? ''), (string)($ta['solo']['termLine'] ?? ''), 'Смета начинается после оплаты', (string)($ta['solo']['accuracy'] ?? '')]))
+            : array_values(array_filter([(string)($tc['line'] ?? ''), (string)($tc['roundsText'] ?? ''), (string)($tc['start'] ?? '')])),
+        'notIncluded' => $solo ? array_values((array)($ta['excludes'] ?? [])) : (array)($tc['notIncluded'] ?? []),
+        'rounds' => $solo ? null : (isset($tc['rounds']) ? (int)$tc['rounds'] : null), 'roundsText' => $solo ? '' : (string)($tc['roundsText'] ?? ''),
         'refund' => (string)(($tc['pages']['refund'] ?? 'oplata/')), 'offer' => (string)(($tc['pages']['offer'] ?? 'oferta/')),
         'requisitesSet' => $reqSet,
         'options' => $opts, 'optionsDue' => $optDue, 'totalDue' => $projDue + $optDue, 'projectAmount' => $amount,
@@ -159,7 +162,7 @@ function kab_order_url(array $o, string $tab = ''): string { return brig_link('k
  * Событие заказа → ['grp','subject','text','lead','rows','note','btn','tab','legal','ukey'].
  * $x — параметры события (title, ver, final, count, deadline, reason, text, status, reply…).
  */
-function kab_ev(string $name, array $o, array $x = []): array
+function kab_ev_proekt(string $name, array $o, array $x = []): array
 {
     $rub = fn($kop) => $kop === null || $kop === '' ? '' : brig_rub((int)$kop);
     $num = (string)$o['number'];
@@ -279,6 +282,61 @@ function kab_ev(string $name, array $o, array $x = []): array
                 'rows' => [['Заказ', $num], ['Сумма возврата', (string)($x['sum'] ?? '')]], 'btn' => 'Открыть кабинет', 'tab' => 'proekt', 'legal' => true];
     }
     return ['grp' => 'proekt', 'subject' => 'заказ ' . $num, 'text' => (string)($x['text'] ?? ''), 'title' => 'Заказ ' . $num, 'lead' => (string)($x['text'] ?? ''), 'rows' => [], 'btn' => 'Открыть кабинет', 'tab' => 'proekt', 'legal' => false];
+}
+
+/**
+ * Событие заказа с учётом вида: заказ «только смета» (kind = smeta, 09.11.2026) получает свои формулировки — в нём нет проекта, альбома, правок и ремонта.
+ * Условия и суммы — из kab_pay_info() (она для сметы берёт ставку сметы). Остальные события (сообщение, отмена, возврат, выдача файлов) общие.
+ */
+function kab_ev(string $name, array $o, array $x = []): array
+{
+    $ev = kab_ev_proekt($name, $o, $x);
+    if (($o['kind'] ?? '') !== 'smeta') { return $ev; }
+    $rub = fn($kop) => $kop === null || $kop === '' ? '' : brig_rub((int)$kop);
+    $num = (string)$o['number'];
+    $pi = kab_pay_info($o);
+    $tc = kab_terms_client();
+    $solo = (array)($tc['addons']['smeta']['solo'] ?? []);
+    $term = (string)($solo['term'] ?? '');
+    $exp = kab_expected_line($o);
+    $area = $o['area'] ? str_replace('.', ',', (string)$o['area']) . ' м²' : '';
+    switch ($name) {
+        case 'brief': {
+            $sum = (int)$o['amount_kop'] > 0 && linea_amount_ok($o);
+            $rows = [['Номер заказа', $num], ['Квартира', $area], ['Сумма', $sum ? $rub($o['amount_kop']) : 'подтвердим в течение рабочего дня']];
+            if ($sum && $pi['formula'] !== '') { $rows[] = ['Как посчитано', $pi['formula']]; }
+            $rows[] = ['Срок', $term !== '' ? $term : (string)($solo['termLine'] ?? '')];
+            return ['grp' => 'proekt', 'subject' => 'заказ сметы получен', 'text' => 'Заказ сметы ' . $num . ' получен. ' . ($sum ? 'Сумма — ' . $rub($o['amount_kop']) . '.' : 'Сумму подтвердим в течение рабочего дня.'),
+                'title' => 'Заказ сметы получен — ' . $num, 'lead' => 'Спасибо! Мы получили план и исходные данные для сметы на материалы. '
+                    . ($sum ? 'Дальше: оплатите смету в кабинете (картой или СБП) — или мы пришлём счёт на эту почту.' : 'Дальше: мы проверим план, подтвердим сумму и напишем вам.') . ' Расчёт начинается после оплаты.',
+                'rows' => $rows, 'note' => trim((string)($solo['accuracy'] ?? '') . ($solo['accuracy'] ?? '' ? '.' : '') . "\n" . 'Сохраните номер заказа.'), 'btn' => 'Открыть кабинет заказа', 'tab' => 'proekt', 'legal' => true];
+        }
+        case 'amount':
+            $ev['subject'] = 'сумма сметы подтверждена: ' . $rub($o['amount_kop']);
+            $ev['text'] = 'Сумма сметы подтверждена: ' . $rub($o['amount_kop']) . '. Можно оплачивать.';
+            $ev['title'] = 'Сумма сметы подтверждена';
+            $ev['lead'] = 'Мы проверили план: сумма сметы на материалы ' . $rub($o['amount_kop']) . '. Оплатите в кабинете картой или СБП — расчёт начнётся сразу после оплаты.';
+            $ev['rows'] = [['Заказ', $num], ['Сумма сметы', $rub($o['amount_kop'])], ['Как посчитано', $pi['formula']]];
+            $ev['note'] = trim('Условия возврата — на странице «Оплата и возврат».' . ($exp ? "\n" . $exp : ''));
+            return $ev;
+        case 'invoice':
+            $ev['title'] = 'Счёт на оплату сметы';
+            $ev['lead'] = 'Выставили счёт на ' . $rub($o['amount_kop']) . ' по заказу ' . $num . ' (смета на материалы). Реквизиты и назначение платежа — в счёте. Как только оплата придёт, мы напишем и начнём расчёт.';
+            return $ev;
+        case 'paid':
+            return ['grp' => 'dengi', 'subject' => 'оплата получена, смета в работе', 'text' => 'Оплата получена — смета в работе.' . ($exp ? ' ' . $exp : ''),
+                'title' => 'Оплата получена — смета в работе', 'lead' => 'Спасибо! Оплата по заказу ' . $num . ' получена, мы начали считать смету. Готовые файлы (PDF и таблица) появятся в кабинете, на почту придёт письмо.',
+                'rows' => [['Заказ', $num], ['Оплачено', $rub($o['amount_kop'])], ['Срок', $term]],
+                'note' => trim($exp . ($exp ? "\n" : '') . 'Если для расчёта чего-то не хватает, мы спросим в кабинете.'), 'btn' => 'Открыть кабинет заказа', 'tab' => 'proekt', 'legal' => true];
+        case 'stage':
+            if (trim((string)($x['text'] ?? '')) === '') { $ev['lead'] = 'Расчёт сметы идёт по плану.'; }
+            return $ev;
+        case 'delivered':
+            return ['grp' => 'proekt', 'subject' => 'смета выдана', 'text' => 'Смета на материалы выдана — файлы в кабинете.',
+                'title' => 'Смета выдана', 'lead' => 'Смета на материалы по заказу ' . $num . ' готова. Файлы лежат в кабинете: PDF для чтения и таблица для расчёта и закупки.',
+                'rows' => [['Заказ', $num]], 'note' => (string)($tc['addons']['smeta']['priceNote'] ?? ''), 'btn' => 'Открыть кабинет заказа', 'tab' => 'proekt', 'legal' => true];
+    }
+    return $ev;
 }
 
 /** Готовое письмо по событию: [тема, текст, html]. Можно показать админу до отправки (предпросмотр). */

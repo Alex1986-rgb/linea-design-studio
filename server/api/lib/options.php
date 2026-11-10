@@ -34,10 +34,28 @@ function opt_price(string $opt, ?float $area): ?int
     return isset(OPT_CATALOG[$opt]) ? linea_price($opt, $area) : null;
 }
 
+/**
+ * Заказ «только смета» (kind = smeta, 09.11.2026): сама смета — предмет заказа, а не опция к проекту. Чтобы работали загрузка PDF и таблицы,
+ * письмо и скачивание, после оплаты заказа создаётся «основная» строка order_options (opt = smeta, source = order): статус paid, сумма заказа,
+ * оплата уже учтена в самом заказе (её не платят второй раз). Выдача файлов переводит в delivered и сам заказ (см. panel.php → opt_deliver).
+ * Вызывается из мест, где заказ становится оплаченным, и лениво из opt_list() — на случай, если оплату отметили иначе.
+ */
+function opt_main_sync(array $o): void
+{
+    if (($o['kind'] ?? '') !== 'smeta' || !in_array($o['status'], ['paid', 'delivered'], true)) { return; }
+    if (db_one('SELECT id FROM order_options WHERE order_id = ? AND opt = ?', [(int)$o['id'], 'smeta'])) { return; }
+    $now = linea_now();
+    db_insert('order_options', ['order_id' => (int)$o['id'], 'opt' => 'smeta', 'status' => $o['status'] === 'delivered' ? 'delivered' : 'paid', 'source' => 'order',
+        'amount_kop' => $o['amount_kop'] !== null ? (int)$o['amount_kop'] : null, 'area' => $o['area'] !== null ? (float)$o['area'] : null,
+        'paid_at' => $o['paid_at'] ?: $now, 'paid_by' => 'заказ ' . $o['number'], 'created_at' => $now, 'updated_at' => $now]);
+}
+
 /** Опции заказа (кроме отменённых — по умолчанию). */
 function opt_list(int $orderId, bool $withCancelled = false): array
 {
     linea_schema();
+    $ord = db_one('SELECT * FROM orders WHERE id = ?', [$orderId]);
+    if ($ord && $ord['kind'] === 'smeta') { opt_main_sync($ord); }
     return db_all('SELECT * FROM order_options WHERE order_id = ?' . ($withCancelled ? '' : " AND status <> 'cancelled'") . ' ORDER BY id', [$orderId]);
 }
 
@@ -58,6 +76,7 @@ function opt_dir(array $o, string $opt): string
 function opt_add(array $o, string $opt, string $source): array
 {
     if (!isset(OPT_CATALOG[$opt])) { return ['ok' => false, 'row' => null, 'why' => 'Такой опции нет', 'created' => false]; }
+    if (($o['kind'] ?? '') === 'smeta') { return ['ok' => false, 'row' => null, 'why' => 'Этот заказ — сама смета, добавлять нечего', 'created' => false]; }
     if (in_array($o['status'], ['cancelled', 'refunded'], true)) { return ['ok' => false, 'row' => null, 'why' => 'Заказ закрыт — опцию добавить нельзя', 'created' => false]; }
     $now = linea_now();
     $area = $o['area'] !== null ? (float)$o['area'] : null;
@@ -118,7 +137,7 @@ function opt_public(array $o, array $r): array
 /** Что ещё можно добавить к заказу (нет активной строки опции) — для кнопки в кабинете. Сумма — по площади заказа, null — «уточняется». */
 function opt_available(array $o): array
 {
-    if (in_array($o['status'], ['cancelled', 'refunded'], true)) { return []; }
+    if (in_array($o['status'], ['cancelled', 'refunded'], true) || ($o['kind'] ?? '') === 'smeta') { return []; }
     $have = array_column(opt_list((int)$o['id']), 'opt');
     $area = $o['area'] !== null ? (float)$o['area'] : null;
     $out = [];

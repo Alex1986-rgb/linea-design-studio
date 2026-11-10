@@ -48,7 +48,7 @@ function linea_cfg(): array
         // ревью кода сделки 01.11.2026:
         'allow_test' => false,         // С-4: ?test=1 на боевом принимается только при этом флаге (на маке — всегда); регистрация бригад test — только на маке
         'admin_ip_allow' => [],        // С-6: адреса владельца — их вход в admin не блокируется ни своим, ни общим счётчиком неудач
-        'pay_area_min' => ['kvartira' => 80, 'dom' => 150],   // В-3: онлайн-оплата без подтверждения суммы — только если площадь ≥ порога вида
+        'pay_area_min' => ['kvartira' => 80, 'dom' => 150, 'smeta' => 80],   // В-3: онлайн-оплата без подтверждения суммы — только если площадь ≥ порога вида
                                        // (занизить площадь невыгодно крупным объектам); иначе — после «сумма подтверждена» в admin. [] — всегда подтверждать
         'yk_notify_per_hour' => 120,   // В-5: уведомлений ЮKassa с одного адреса в час
         'yk_ip_check' => false,        // В-5: принимать уведомления только с адресов ЮKassa (yk_ips)
@@ -71,6 +71,7 @@ const LINEA_KINDS = [
     'rd'         => 'Рабочая документация',
     'planirovka' => 'Планировочное решение',
     'vizual'     => 'Визуализации',
+    'smeta'      => 'Смета на материалы',   // самостоятельный заказ без дизайн-проекта (09.11.2026); цена — prices.smeta, та же, что у опции к проекту
 ];
 
 /**
@@ -249,6 +250,12 @@ const LINEA_STATUS = [
     'cancelled'        => 'Отменён',
     'refunded'         => 'Возврат оплаты',
 ];
+/** Заказ «только смета» (kind = smeta): те же статусы другими словами. */
+const LINEA_STATUS_SMETA = ['paid' => 'Оплачен — смета в работе', 'delivered' => 'Смета выдана'];
+function linea_status_text(array $o): string
+{
+    return (($o['kind'] ?? '') === 'smeta' ? LINEA_STATUS_SMETA[$o['status']] ?? null : null) ?? LINEA_STATUS[$o['status']] ?? (string)$o['status'];
+}
 
 function linea_now(): string { return date('Y-m-d H:i:s'); }
 
@@ -498,9 +505,10 @@ function linea_public_order(array $o): array
     return [
         'number' => $o['number'],
         'status' => $o['status'],
-        'statusText' => LINEA_STATUS[$o['status']] ?? $o['status'],
+        'statusText' => linea_status_text($o),
         'kind' => $o['kind'],
         'kindTitle' => LINEA_KINDS[$o['kind']] ?? $o['kind'],
+        'kind' => (string)$o['kind'],
         'name' => (string)$o['name'],
         'created' => $o['created_at'],
         'amount' => $amount !== null ? $amount / 100 : null,

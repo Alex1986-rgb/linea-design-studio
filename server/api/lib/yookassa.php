@@ -577,6 +577,7 @@ function yk_settle(string $paymentId): array
             linea_event((int)$o['id'], 'yookassa', 'Оплата получена: ' . number_format($kop / 100, 0, ',', ' ') . ' ₽ (' . $paymentId . ')');
             linea_log('pay.log', 'paid ' . $o['number'] . ' ' . $paymentId . ' ' . $kop);
             $paidNow = linea_order_by_number((string)$o['number']);
+            opt_main_sync($paidNow);   // заказ «только смета»: основная строка для выдачи файлов
             foreach ($optRows as $r) { opt_mark_paid($paidNow, $r, 'yookassa ' . $paymentId, true); }   // опции, оплаченные тем же платежом
             require_once __DIR__ . '/notify.php';
             linea_notify('LINEA: оплачен заказ ' . $o['number'], 'Заказ ' . $o['number'] . ' оплачен через ЮKassa: '
