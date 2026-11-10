@@ -224,7 +224,7 @@
       h += `<div class="kab-card" data-opt-avail="${esc(av.key)}"><h3>${esc(av.title)} <span class="kab-tag">по желанию</span></h3>`
         + `<p>${esc(ad.what ? ad.what[0].toUpperCase() + ad.what.slice(1) : 'Дополнение к проекту')}.</p>`
         + `<p class="kab-mut">${av.amount ? rub(av.amount) + ' — ' : ''}${esc(ad.line || '')}. Оплачивается отдельной строкой.</p>`
-        + `<button class="btn sm" type="button" data-optadd="${esc(av.key)}">Добавить ${esc(av.title.toLowerCase())}${av.amount ? ' — ' + rub(av.amount) : ''}</button><p class="kab-err" role="alert"></p>${detail(ad)}</div>`;
+        + `<button class="btn sm" type="button" data-optadd="${esc(av.key)}">Добавить ${esc(av.title.toLowerCase().replace(/^смета/, 'смету'))}${av.amount ? ' — ' + rub(av.amount) : ''}</button><p class="kab-err" role="alert"></p>${detail(ad)}</div>`;
     }
     return h;
   };
