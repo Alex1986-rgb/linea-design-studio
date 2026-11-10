@@ -264,7 +264,7 @@ function kab_ev_proekt(string $name, array $o, array $x = []): array
             $names = implode(', ', array_map(fn($f) => (string)$f, (array)($x['files'] ?? [])));
             return ['grp' => 'proekt', 'subject' => mb_strtolower($ttl) . ' готова', 'text' => $ttl . ' готова — файлы в кабинете.',
                 'title' => $ttl . ' готова', 'lead' => $ttl . ' по заказу ' . $num . ' готова. Файлы лежат в кабинете, в разделе «Проект»: скачайте PDF и таблицу. '
-                    . (string)($tc['addons'][$opt]['priceNote'] ?? 'Цены ориентировочные, на дату расчёта.') . '.',
+                    . (string)($tc['addons'][$opt]['priceNote'] ?? 'В смете количество материалов, без цен') . '.',
                 'rows' => [['Заказ', $num], ['Файлы', $names]], 'note' => 'Закупку и доставку мы не делаем; работы бригады в смету материалов не входят.',
                 'btn' => 'Открыть файлы', 'tab' => 'proekt', 'legal' => true];
         }

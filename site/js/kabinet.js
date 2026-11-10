@@ -220,7 +220,7 @@
         body = `<p><span class="kab-tag ok">Оплачено</span> ${rub(x.amount)} · ${esc(dt(x.paidAt))}</p><p>Смета в работе. ${esc(ad.termLine || '')}. Файлы появятся здесь, письмо придёт на почту.</p>`;
       } else if (x.status === 'delivered') {
         body = `<p><span class="kab-tag ok">Готова</span> ${esc(dt(x.deliveredAt))}</p><div class="kab-row">${x.files.map(f => `<a class="btn sm" href="${API}kabinet.php?a=ofile&o=${encodeURIComponent(o.number)}&opt=${encodeURIComponent(x.key)}&f=${encodeURIComponent(f.name)}&dl=1" download>${esc(f.label)}</a>`).join('')}</div>`
-          + `<p class="kab-mut">${esc(ad.priceNote || 'Цены ориентировочные, на дату расчёта')}.</p>`;
+          + `<p class="kab-mut">${esc(ad.priceNote || 'В смете количество материалов, без цен')}.</p>`;
       }
       h += `<div class="kab-card" data-opt-card="${esc(x.key)}"><h3>${esc(x.title)}</h3>${body}${detail(ad)}</div>`;
     }
@@ -244,7 +244,7 @@
     const O = j.order, B = j.brief, A = ((j.pay && j.pay.addons) || {}).smeta || {}, S = A.solo || {};
     const x = (j.options || []).find(o => o.key === 'smeta');
     let files;
-    if (x && x.status === 'delivered') files = `<p><span class="kab-tag ok">Готова</span> ${esc(dt(x.deliveredAt))}</p><div class="kab-row">${x.files.map(f => `<a class="btn sm" href="${API}kabinet.php?a=ofile&o=${encodeURIComponent(O.number)}&opt=smeta&f=${encodeURIComponent(f.name)}&dl=1" download>${esc(f.label)}</a>`).join('')}</div><p class="kab-mut">${esc(A.priceNote || 'Цены ориентировочные, на дату расчёта')}.</p>`;
+    if (x && x.status === 'delivered') files = `<p><span class="kab-tag ok">Готова</span> ${esc(dt(x.deliveredAt))}</p><div class="kab-row">${x.files.map(f => `<a class="btn sm" href="${API}kabinet.php?a=ofile&o=${encodeURIComponent(O.number)}&opt=smeta&f=${encodeURIComponent(f.name)}&dl=1" download>${esc(f.label)}</a>`).join('')}</div><p class="kab-mut">${esc(A.priceNote || 'В смете количество материалов, без цен')}.</p>`;
     else if (x && x.status === 'paid') files = `<p><span class="kab-tag g">В работе</span> Считаем смету. ${esc(S.term ? 'Срок — ' + S.term : '')}. Файлы появятся здесь, письмо придёт на почту.</p>`;
     else files = '<p class="kab-empty">Файлы появятся здесь после оплаты и расчёта: PDF для чтения и таблица для закупки.</p>';
     const accur = S.accuracyList ? `<details class="kab-det"><summary>Насколько точна смета</summary><ul class="kab-ul">${S.accuracyList.map(t => '<li>' + esc(t) + '</li>').join('')}</ul><p class="kab-mut">${esc(S.noCheck || '')}.</p></details>` : '';
