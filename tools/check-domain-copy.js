@@ -163,6 +163,8 @@ if (!fs.existsSync(path.join(DIR, 'api', 'pay-notify.php'))) err('api', 'нет 
 for (const p of ['brief.html', 'review.html', 'order.html'])
   if (fs.existsSync(path.join(DIR, p)) && !fs.readFileSync(path.join(DIR, p), 'utf8').includes('name="linea-api" content="api/"')) err('api', `${p}: нет меты linea-api`);
 
+if (fs.existsSync(path.join(DIR, 'smeta/zakaz/index.html')) && !fs.readFileSync(path.join(DIR, 'smeta/zakaz/index.html'), 'utf8').includes('name="linea-api" content="../../api/"')) err('api', 'smeta/zakaz/index.html: нет меты linea-api');
+
 // 7. Таблица страниц-переходов
 const rdF = arg('redirects');
 if (rdF) {

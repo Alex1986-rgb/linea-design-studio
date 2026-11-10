@@ -261,7 +261,7 @@ ${STEPS.map(([ic, h, p, href, lk], i) => `      <div class="h-step"><span class=
       <div class="card"><h3>Что не входит</h3>
         <ul>${TERMS.notIncluded.map(x => `<li>${esc(cap1(x))}</li>`).join('')}</ul></div>
     </div>
-    <p class="hint" style="margin-top:16px"><b>+ ${esc(TERMS.addons.smeta.title)} ${esc(TERMS.addons.smeta.fromLine)}</b> — ${esc(TERMS.addons.smeta.what)}. Опция к проекту, оплачивается отдельно. <a href="smeta/">Что входит и сколько стоит</a></p>`);
+    <p class="hint" style="margin-top:16px"><b>+ ${esc(TERMS.addons.smeta.title)} ${esc(TERMS.addons.smeta.fromLine)}</b> — ${esc(TERMS.addons.smeta.what)}. К нашему проекту или отдельным заказом — по вашему проекту либо плану. <a href="smeta/">Что входит и сколько стоит</a></p>`);
 
   /* --- гарантии и правки: только то, что закреплено в условиях --- */
   region('guarantees', `    <div class="kicker">Гарантии и правки</div>

@@ -131,7 +131,10 @@
     const btn = nx.btn ? (nx.act === 'pay' ? `<button class="btn" type="button" data-pay>${esc(nx.btn)}</button>` : `<a class="btn" href="${esc(nx.href)}">${esc(nx.btn)}</a>`) : '';
     return `<div class="kab-card kab-now ${nx.who === 'client' ? '' : 'studio'}"><div class="kab-kick">${nx.who === 'client' ? 'Сейчас от вас нужно' : 'Сейчас'}</div><p class="big">${esc(nx.text)}</p>${nx.blocker ? '<p><span class="kab-tag r">Нужно для финального альбома</span></p>' : ''}${btn ? (sticky ? '<div class="kab-sticky-src">' + btn + '</div>' : btn) : ''}</div>`;
   }
-  const steps = n => `<p class="kab-stepn">Шаг ${n + 1} из ${STEPS.length} · ${esc(STEPS[n] || '')}</p>` + '<ol class="kab-steps" aria-label="Шаги проекта">' + STEPS.map((s, i) => `<li class="${i < n ? 'done' : i === n ? 'on' : ''}">${esc(s)}</li>`).join('') + '</ol>';
+  // заказ «только смета» (kind = smeta): четыре шага, без альбома, правок и ремонта
+  const STEPS_SMETA = ['Заявка', 'Оплата', 'Расчёт', 'Смета готова'];
+  const stepsOf = kind => kind === 'smeta' ? STEPS_SMETA : STEPS;
+  const steps = (n, kind) => { const S = stepsOf(kind); return `<p class="kab-stepn">Шаг ${n + 1} из ${S.length} · ${esc(S[n] || '')}</p>` + `<ol class="kab-steps" aria-label="${kind === 'smeta' ? 'Шаги заказа сметы' : 'Шаги проекта'}">` + S.map((s, i) => `<li class="${i < n ? 'done' : i === n ? 'on' : ''}">${esc(s)}</li>`).join('') + '</ol>'; };
 
   // ── мои объекты
   async function objects() {
@@ -150,20 +153,22 @@
     if (L.length === 1 && !sessionStorage.getItem('kab_list')) { sessionStorage.setItem('kab_list', '1'); location.hash = '#/o/' + L[0].number; }
   }
   const card = o => `<a class="kab-card kab-obj" href="#/o/${esc(o.number)}"><div class="kab-kick">${esc(o.kindTitle)} · ${esc(o.number)}${o.test ? ' · тест' : ''}</div>
-    <h2>${esc(o.objectTitle)}</h2><div class="kab-bar" aria-hidden="true"><i style="width:${Math.round((o.step + 1) / STEPS.length * 100)}%"></i></div><div class="kab-mut">${esc(STEPS[o.step] || '')} · ${esc(o.statusText)}</div>
+    <h2>${esc(o.objectTitle)}</h2><div class="kab-bar" aria-hidden="true"><i style="width:${Math.round((o.step + 1) / stepsOf(o.kind).length * 100)}%"></i></div><div class="kab-mut">${esc(stepsOf(o.kind)[o.step] || '')} · ${esc(o.statusText)}</div>
     <div class="kab-next ${o.next.who === 'client' ? '' : 'studio'}">${o.next.who === 'client' ? '<b>Нужно от вас:</b> ' : ''}${esc(o.next.text)}</div></a>`;
 
   // ── объект
   const TABS = [['proekt', 'Проект'], ['brif', 'Бриф'], ['voprosy', 'Вопросы'], ['pravki', 'Правки'], ['istoriya', 'История'], ['remont', 'Ремонт'], ['docs', 'Документы']];
+  const TABS_SMETA = [['proekt', 'Смета'], ['brif', 'Бриф'], ['voprosy', 'Вопросы'], ['istoriya', 'История'], ['docs', 'Документы']];
   async function object(num, tab) {
     const j = await api('object', null, '&o=' + encodeURIComponent(num));
     if (j.auth === false) return loginView();
     if (!j.ok) { set(top('o') + `<div class="kab-card"><p>${esc(j.error)}</p><a href="#/">← Мои объекты</a></div>`); bindTop(); return; }
     const O = j.order, R = j.registry;
     const openQ = R ? R.items.filter(i => !i.closed && !i.answer).length : 0;
-    let h = top('o') + `<p class="kab-mut"><a href="#/">← Мои объекты</a></p><div class="kab-kick">${esc(O.kindTitle)} · ${esc(O.number)}</div><h1>${esc(O.objectTitle)}</h1>` + steps(j.step) + nowBlock(j.next, true)
-      + '<nav class="kab-tabs" aria-label="Разделы объекта">' + TABS.map(([k, t]) => `<a href="#/o/${esc(O.number)}/${k}"${k === tab ? ' class="on" aria-current="page"' : ''}>${t}${k === 'voprosy' && openQ ? '<b>' + openQ + '</b>' : ''}</a>`).join('') + '</nav>';
-    h += ({ proekt: proekt, brif: () => '<div id="kabBrief"><p class="kab-mut">Загружаю…</p></div>', voprosy: voprosy, pravki: pravki, istoriya: istoriya, remont: remontTab, docs: () => '<div id="kabDocs"><p class="kab-mut">Загружаю…</p></div>' }[tab] || proekt)(j);
+    let h = top('o') + `<p class="kab-mut"><a href="#/">← Мои объекты</a></p><div class="kab-kick">${esc(O.kindTitle)} · ${esc(O.number)}</div><h1>${esc(O.objectTitle)}</h1>` + steps(j.step, O.kind) + nowBlock(j.next, true)
+      + '<nav class="kab-tabs" aria-label="Разделы объекта">' + (O.kind === 'smeta' ? TABS_SMETA : TABS).map(([k, t]) => `<a href="#/o/${esc(O.number)}/${k}"${k === tab ? ' class="on" aria-current="page"' : ''}>${t}${k === 'voprosy' && openQ ? '<b>' + openQ + '</b>' : ''}</a>`).join('') + '</nav>';
+    if (O.kind === 'smeta' && !['proekt', 'brif', 'voprosy', 'istoriya', 'docs'].includes(tab)) tab = 'proekt';
+    h += ({ proekt: O.kind === 'smeta' ? smetaTab : proekt, brif: () => '<div id="kabBrief"><p class="kab-mut">Загружаю…</p></div>', voprosy: voprosy, pravki: pravki, istoriya: istoriya, remont: remontTab, docs: () => '<div id="kabDocs"><p class="kab-mut">Загружаю…</p></div>' }[tab] || proekt)(j);
     set(h); bindTop(); bindObject(j, tab);
     // активные вкладка и шаг — в видимой зоне ленты (на телефоне ленты прокручиваются вбок); страницу по вертикали не двигаем
     for (const [box, sel] of [['.kab-tabs', 'a.on'], ['.kab-steps', 'li.on']]) { const b = root.querySelector(box), e = b && b.querySelector(sel); if (e) b.scrollLeft = e.offsetLeft - (b.clientWidth - e.offsetWidth) / 2; }
@@ -233,6 +238,26 @@
     if (!ex && !st) return '';
     return `<div class="kab-card kab-status">${st ? `<p><b>${esc(st.title)}</b>${st.text ? ' — ' + esc(st.text) : ''} <span class="kab-mut">· ${esc(dt(st.at))}</span></p>` : ''}${ex ? `<p>Ожидаем к <b>${esc(ex.label)}</b>${ex.late ? ' <span class="kab-tag r">срок сдвинулся</span>' : ''}${ex.note ? '<br><span class="kab-mut">' + esc(ex.note) + '</span>' : ''}${ex.late ? '<br><span class="kab-mut">Мы напишем, когда будет точная дата.</span>' : ''}</p>` : ''}</div>`;
   };
+
+  // заказ «только смета»: статус, бриф, оплата, готовые файлы, лента — без альбома, правок и ремонта
+  function smetaTab(j) {
+    const O = j.order, B = j.brief, A = ((j.pay && j.pay.addons) || {}).smeta || {}, S = A.solo || {};
+    const x = (j.options || []).find(o => o.key === 'smeta');
+    let files;
+    if (x && x.status === 'delivered') files = `<p><span class="kab-tag ok">Готова</span> ${esc(dt(x.deliveredAt))}</p><div class="kab-row">${x.files.map(f => `<a class="btn sm" href="${API}kabinet.php?a=ofile&o=${encodeURIComponent(O.number)}&opt=smeta&f=${encodeURIComponent(f.name)}&dl=1" download>${esc(f.label)}</a>`).join('')}</div><p class="kab-mut">${esc(A.priceNote || 'Цены ориентировочные, на дату расчёта')}.</p>`;
+    else if (x && x.status === 'paid') files = `<p><span class="kab-tag g">В работе</span> Считаем смету. ${esc(S.term ? 'Срок — ' + S.term : '')}. Файлы появятся здесь, письмо придёт на почту.</p>`;
+    else files = '<p class="kab-empty">Файлы появятся здесь после оплаты и расчёта: PDF для чтения и таблица для закупки.</p>';
+    const accur = S.accuracyList ? `<details class="kab-det"><summary>Насколько точна смета</summary><ul class="kab-ul">${S.accuracyList.map(t => '<li>' + esc(t) + '</li>').join('')}</ul><p class="kab-mut">${esc(S.noCheck || '')}.</p></details>` : '';
+    const inc = A.includes ? `<details class="kab-det"><summary>Что входит в смету</summary><ul class="kab-ul">${A.includes.map(t => '<li><b>' + esc(t[0]) + ':</b> ' + esc(t[1]) + '</li>').join('')}</ul><ul class="kab-ul">${(A.features || []).map(t => '<li>' + esc(t) + '</li>').join('')}</ul><p class="kab-mut">Формат: ${esc(A.format || '')}.</p></details>` : '';
+    const msgs = j.lenta.slice().reverse();
+    return statusCard(j) + `<div class="kab-grid">
+      <div class="kab-card"><h3>Заказ</h3><p>Квартира${B.area ? ', ' + String(B.area).replace('.', ',') + ' м²' : ''}</p><p class="kab-mut">Отправлен ${esc(dt(B.sent))}, файлов: ${B.files}.</p><a class="btn ghost sm" href="#/o/${esc(O.number)}/brif">Посмотреть и догрузить файлы</a></div>
+      <div class="kab-card"><h3>Оплата</h3>${payCard(j, O)}</div>
+      <div class="kab-card" data-smeta-files><h3>Смета на материалы</h3>${files}${accur}${inc}</div>
+    </div>
+    <div class="kab-card"><h3>Лента заказа</h3>${msgs.length ? '<div class="kab-msgs">' + msgs.map(m => `<div class="kab-msg ${m.mine ? 'mine' : ''}">${esc(m.text)}<small>${esc(m.who)} · ${esc(dt(m.at))}</small></div>`).join('') + '</div>' : '<p class="kab-empty">Напишите нам, если есть вопрос по смете.</p>'}
+      <form id="kabMsg"><textarea class="kab-in" name="text" rows="2" placeholder="Сообщение студии"></textarea><div class="kab-row"><button class="btn sm" type="submit">Отправить</button></div><p class="kab-err" role="alert"></p></form></div>`;
+  }
 
   function proekt(j) {
     const O = j.order, B = j.brief, rel = j.releases, last = rel[rel.length - 1];
@@ -305,15 +330,16 @@
     const num = j.order.number, r = await api('brief', null, '&o=' + encodeURIComponent(num));
     if (!r.ok) { el.innerHTML = '<div class="kab-card"><p>' + esc(r.error || 'Не получилось загрузить бриф') + '</p></div>'; return; }
     const V = r.view, rows = rs => '<dl class="kab-dl">' + rs.map(x => `<dt>${esc(x[0])}</dt><dd${x[2] === 'unknown' ? ' class="kab-mut"' : ''}>${esc(x[1])}</dd>`).join('') + '</dl>';
-    let h = `<div class="kab-card"><h3>Отправлено ${esc(dt(r.sent))}</h3><p class="kab-mut">Так ваш бриф видит дизайнер. Если что-то изменилось — напишите в ленте заказа или дополните ниже.</p></div>`;
-    h += V.sections.map(sc => `<details class="kab-card kab-det" ${['object', 'story'].includes(sc.id) ? 'open' : ''}><summary><b>${esc(sc.title)}</b></summary>${sc.text ? '<p class="kab-story">' + esc(sc.text) + '</p>' : ''}${sc.rows.length ? rows(sc.rows) : ''}</details>`).join('');
-    const SETS = [['life', 'Жизнь в квартире'], ['tech', 'Двери, свет и электрика'], ['home', 'Дом и ремонт']];
+    let h = `<div class="kab-card"><h3>Отправлено ${esc(dt(r.sent))}</h3><p class="kab-mut">${V.kind === 'smeta' ? 'Так ваш заказ видим мы' : 'Так ваш бриф видит дизайнер'}. Если что-то изменилось — напишите в ленте заказа или дополните ниже.</p></div>`;
+    h += V.sections.map(sc => `<details class="kab-card kab-det" ${['object', 'story', 'smeta-mode'].includes(sc.id) ? 'open' : ''}><summary><b>${esc(sc.title)}</b></summary>${sc.text ? '<p class="kab-story">' + esc(sc.text) + '</p>' : ''}${sc.rows.length ? rows(sc.rows) : ''}</details>`).join('');
+    const SOLO = V.kind === 'smeta';   // бриф сметы: шагов «жизнь / двери и свет / дом и ремонт» нет
+    const SETS = SOLO ? [] : [['life', 'Жизнь в квартире'], ['tech', 'Двери, свет и электрика'], ['home', 'Дом и ремонт']];
     const missing = SETS.filter(([k]) => !V[k] || !V[k].present || V[k].info.skipped);
     for (const [k, t] of SETS) {
       const S = V[k]; if (!S || !S.present || !S.groups.length) continue;
       h += `<details class="kab-card kab-det"><summary><b>${esc(t)}</b> <span class="kab-mut">· ответов: ${S.info.answered}</span></summary>${S.groups.map(g => `<h4>${esc(g.title)}</h4>${rows(g.rows)}`).join('')}</details>`;
     }
-    h += `<div class="kab-card"><h3>Дополнительные вопросы</h3>${missing.length ? `<p class="kab-mut">Не заполнено: ${missing.map(([, t]) => '«' + esc(t) + '»').join(', ')}. Это необязательно — но чем больше мы знаем, тем меньше уточнений на обмере.</p>` : '<p class="kab-mut">Все необязательные шаги заполнены. Можно поправить ответы.</p>'}<a class="btn sm" href="../brief.html?add=${encodeURIComponent(j.remont.rt)}">${missing.length ? 'Ответить на дополнительные вопросы' : 'Изменить ответы'}</a></div>`;
+    if (!SOLO) h += `<div class="kab-card"><h3>Дополнительные вопросы</h3>${missing.length ? `<p class="kab-mut">Не заполнено: ${missing.map(([, t]) => '«' + esc(t) + '»').join(', ')}. Это необязательно — но чем больше мы знаем, тем меньше уточнений на обмере.</p>` : '<p class="kab-mut">Все необязательные шаги заполнены. Можно поправить ответы.</p>'}<a class="btn sm" href="../brief.html?add=${encodeURIComponent(j.remont.rt)}">${missing.length ? 'Ответить на дополнительные вопросы' : 'Изменить ответы'}</a></div>`;
     const fl = r.files || [];
     h += `<div class="kab-card"><h3>Файлы (${fl.length})</h3>${fl.length ? '<ul class="kab-files">' + fl.map(f => {
       const u = `${API}kabinet.php?a=bfile&o=${encodeURIComponent(num)}&s=${encodeURIComponent(f.src)}&n=${encodeURIComponent(f.name)}`;
