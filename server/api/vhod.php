@@ -47,7 +47,12 @@ switch ($a) {
             elseif (kab_email_ok($email)) { $_SESSION['guest_email'] = $email; $allowUnknown = true; }   // заказ без почты: привязка после кода
         }
         $dev = kab_code_send($email, $allowUnknown);
-        linea_json(['ok' => true, 'sent' => true, 'text' => 'Если эта почта есть у нас, код уже в письме. Проверьте «Спам», если письма нет 2 минуты.'] + ($dev !== '' ? ['devCode' => $dev] : []));
+        // письма на сервере выключены (config brig_mail_enabled) — код не придёт никому; честно говорим «напишите нам», а не оставляем тупик.
+        // Это состояние сервера, а не почты, поэтому ответ по-прежнему не выдаёт, есть ли такая почта у нас.
+        $mailOff = empty(linea_cfg()['brig_mail_enabled']);   // только настройка сервера — одинаково для любой почты
+        linea_json(['ok' => true, 'sent' => !$mailOff, 'mailOff' => $mailOff, 'resendIn' => 60,
+            'text' => $mailOff ? 'Письма с кодами пока не отправляются. Напишите нам в WhatsApp +7 925 733-86-40 или на optteem@mail.ru — откроем доступ вручную.'
+                : 'Если эта почта есть у нас, код уже в письме. Проверьте «Спам», если письма нет 2 минуты.'] + ($dev !== '' ? ['devCode' => $dev] : []));
     }
     case 'verify': {
         $g = kab_guest_order();

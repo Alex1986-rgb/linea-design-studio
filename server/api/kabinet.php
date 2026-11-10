@@ -4,8 +4,11 @@
  * по старой ссылке (только этот заказ, только просмотр). Значимые действия — kab_require_fresh_for_order() (код не старше 12 часов).
  *   GET  ?a=objects                     — мои объекты: шаг, «сейчас от вас нужно»
  *   GET  ?a=object&o=<номер>            — объект: заказ, оплата, сроки, альбом и версии, вопросы К-N, правки, ремонт, лента
+ *   GET  ?a=brief&o=                    — бриф читаемо (разделы, «Жизнь в квартире», «Дом и ремонт») и файлы заказа
+ *   GET  ?a=bfile&o=&s=zip|extra&n=     — скачать файл заказа
  *   GET  ?a=docs | notices | profile
  *   GET  ?a=file&o=&v=&f=album.pdf|registry.json · ?a=file&pd=<id> (выгрузка) · ?a=doc&o=&kind=protocol
+ *   POST ?a=upload (multipart: o, files[], q?) — догрузить файлы к заказу или к ответу на вопрос · later {o,id} — «отвечу позже»
  *   POST ?a=pay {o} · answer {o,id,option,text} · decide {o,id,decision,text} · accept_album {o,ver} · msg {o,text}
  *        profile {name,phone} · prefs {groups,digest} · consent_revoke {id} · pd {kind,note} · device_end {id} · notices_read
  */
@@ -59,6 +62,77 @@ function kb_lenta(array $o): array
         brig_all("SELECT who, text, at FROM events WHERE order_id = ? AND who IN ('kab:client','kab:linea') ORDER BY id DESC LIMIT 100", [(int)$o['id']]));
 }
 
+/** Плановая дата следующего шага. */
+function kb_expected(array $o): ?array
+{
+    if (empty($o['expected_at'])) { return null; }
+    return ['date' => substr((string)$o['expected_at'], 0, 10), 'label' => kab_date_ru((string)$o['expected_at']), 'note' => (string)($o['expected_note'] ?? ''),
+        'late' => strtotime(substr((string)$o['expected_at'], 0, 10) . ' 23:59:59') < kab_time()];
+}
+
+/** Круги правок: сколько входит в цену (config rounds → terms-client.json), сколько использовано. */
+function kb_rounds(array $o, array $reviews): ?array
+{
+    $max = linea_cfg()['rounds'] ?? (kab_terms_client()['rounds'] ?? null);
+    if (!is_int($max) || $max < 1) { return null; }
+    return ['used' => count($reviews), 'max' => $max, 'left' => max(0, $max - count($reviews))];
+}
+
+/** Срок ответа на вопросы К-N: от даты выпуска версии, answer_days рабочих дней (config, по умолчанию 2). */
+function kb_answer_by(array $o, ?array $reg): ?string
+{
+    if (!$reg) { return null; }
+    foreach (kab_releases($o) as $r) {
+        if ($r['ver'] === $reg['ver']) { return substr(kab_wd_add((string)($r['published_at'] ?? $r['date'] ?? linea_now()), (int)(linea_cfg()['answer_days'] ?? 2)), 0, 10); }
+    }
+    return null;
+}
+
+/** «Отвечу позже»: отметки в orders/<номер>/deferred.json — вне answers.json, чтобы не считаться ответом. */
+function kb_deferred(array $o): array
+{
+    $f = kab_order_dir($o) . '/deferred.json';
+    $j = is_file($f) ? json_decode((string)file_get_contents($f), true) : null;
+    return is_array($j) ? $j : [];
+}
+
+/** Единая история заказа: статусы, оплата, выпуски, вопросы, правки, сообщения, догрузки — одной лентой, новые сверху. */
+function kb_history(array $o): array
+{
+    $h = [];
+    $add = function (?string $at, string $kind, string $title, string $text = '', string $who = 'studio') use (&$h) { if ($at) { $h[] = ['at' => $at, 'kind' => $kind, 'title' => $title, 'text' => $text, 'who' => $who]; } };
+    $add((string)$o['created_at'], 'brief', 'Бриф отправлен', 'Заказ ' . $o['number'] . ' создан.', 'client');
+    if ($o['amount_confirmed_at'] && $o['amount_kop']) { $add((string)$o['amount_confirmed_at'], 'money', 'Сумма подтверждена', brig_rub((int)$o['amount_kop'])); }
+    if ($o['invoice_at']) { $add((string)$o['invoice_at'], 'money', 'Счёт выставлен', 'Реквизиты — в счёте, отправленном на почту.'); }
+    if ($o['paid_at']) { $add((string)$o['paid_at'], 'money', 'Оплата получена', brig_rub((int)$o['amount_kop']) . ' — работа начата.'); }
+    if ($o['delivered_at']) { $add((string)$o['delivered_at'], 'status', 'Финальный альбом выдан'); }
+    foreach (kab_releases($o) as $r) { $add((string)($r['published_at'] ?? $r['date'] ?? ''), 'album', 'Вышла версия «' . ($r['title'] ?? $r['ver']) . '»' . (!empty($r['final']) ? ' — финальная' : ''), implode('; ', array_slice((array)($r['changes'] ?? []), 0, 4))); }
+    foreach (kab_answers($o)['items'] as $id => $a) {
+        $add((string)($a['at'] ?? ''), 'answer', ($a['decision'] ?? '') === 'agree' ? 'Вы согласовали решение ' . $id : (($a['decision'] ?? '') === 'disagree' ? 'Вы предложили своё по ' . $id : 'Вы ответили на вопрос ' . $id), trim((string)($a['option'] ?? '') . ' ' . (string)($a['text'] ?? '')), 'client');
+    }
+    foreach (brig_all("SELECT at, version FROM signatures WHERE order_id = ? AND doc_kind = 'album_accept'", [(int)$o['id']]) as $s) { $add((string)$s['at'], 'sign', 'Вы приняли альбом ' . $s['version'], 'Акт сдачи-приёмки подписан кодом из письма.', 'client'); }
+    foreach (kab_reviews($o) as $r) {
+        $add($r['at'], 'review', 'Вы отправили правки ' . $r['number'], $r['count'] . ' ' . kab_plural($r['count'], 'метка', 'метки', 'меток'), 'client');
+        if ($r['reply'] !== '' || !in_array($r['status'], ['Получены', ''], true)) { $add($r['at'], 'review', 'Ответ на правки ' . $r['number'] . ': ' . $r['status'], $r['reply']); }
+    }
+    foreach (brief_extra_index($o) as $x) { $add((string)$x['at'], 'file', 'Вы догрузили файл', (string)($x['orig'] ?? '') . (!empty($x['q']) ? ' (к вопросу ' . $x['q'] . ')' : ''), 'client'); }
+    foreach (brig_all("SELECT who, text, at FROM events WHERE order_id = ? AND who IN ('stage','kab:client','kab:linea') ORDER BY id", [(int)$o['id']]) as $e) {
+        if ($e['who'] === 'stage') { $add((string)$e['at'], 'stage', mb_substr((string)$e['text'], 0, 120)); }
+        else { $add((string)$e['at'], 'msg', $e['who'] === 'kab:client' ? 'Вы написали студии' : 'Сообщение от LINEA', (string)$e['text'], $e['who'] === 'kab:client' ? 'client' : 'studio'); }
+    }
+    usort($h, fn($a, $b) => strcmp((string)$b['at'], (string)$a['at']));
+    return array_slice($h, 0, 120);
+}
+
+/** Последний этап, записанный студией (кнопки этапов в админке) — для строки «Сейчас». */
+function kb_stage(array $o): ?array
+{
+    $e = brig_one("SELECT text, at FROM events WHERE order_id = ? AND who = 'stage' AND text NOT LIKE 'Плановая дата%' ORDER BY id DESC LIMIT 1", [(int)$o['id']]);
+    if (!$e) { return null; }
+    [$t, $rest] = array_pad(explode('. ', (string)$e['text'], 2), 2, '');
+    return ['title' => $t, 'text' => $rest, 'at' => $e['at']];
+}
+
 function kb_object(array $o, ?array $c): array
 {
     $reg = kab_registry($o);
@@ -68,11 +142,16 @@ function kb_object(array $o, ?array $c): array
         'prelim' => !empty($r['prelim']), 'url' => (string)($r['url'] ?? ''), 'project' => (string)($r['project'] ?? ''), 'pdf' => $r['hasPdf'], 'changes' => array_values((array)($r['changes'] ?? [])),
         'accepted' => (bool)db_val("SELECT 1 FROM signatures WHERE order_id = ? AND doc_kind = 'album_accept' AND version = ?", [(int)$o['id'], $r['ver']])], kab_releases($o));
     $rv = array_map(fn($r) => array_diff_key($r, ['_f' => 1]), kab_reviews($o));
-    $rounds = linea_cfg()['rounds'] ?? null;
     $rm = kab_remont($o);
+    $by = kb_answer_by($o, $reg);
+    $def = kb_deferred($o);
+    $extra = brief_extra_index($o);
+    if ($reg) { $items = array_map(fn($i) => $i + ['later' => isset($def[$i['id']]) && empty($i['answer']), 'files' => array_values(array_map(fn($x) => $x['orig'] ?? '', array_filter($extra, fn($x) => ($x['q'] ?? null) === $i['id'])))], $items); }
     return ['ok' => true, 'order' => linea_public_order($o) + ['objectTitle' => kb_obj_title($o), 'confirmedEmail' => $c !== null],
         'next' => kab_next_action($o), 'step' => kab_step($o), 'brief' => kb_brief($o), 'releases' => $rel,
-        'registry' => $reg ? ['ver' => $reg['ver'], 'items' => $items] : null, 'reviews' => $rv, 'rounds' => is_int($rounds) ? ['used' => count($rv), 'max' => $rounds] : null,
+        'registry' => $reg ? ['ver' => $reg['ver'], 'items' => $items, 'answerBy' => $by] : null, 'reviews' => $rv, 'rounds' => kb_rounds($o, $rv),
+        'expected' => kb_expected($o), 'pay' => kab_pay_info($o), 'history' => kb_history($o), 'stage' => kb_stage($o),
+        'termsCall' => kab_terms_client()['call'] ?? null,
         'remont' => ['eligible' => kab_remont_eligible($o), 'chooseAfter' => brig_terms()['choose_after'], 'hasRequest' => (bool)$rm['request'],
             'jobStatus' => $rm['job']['status'] ?? null, 'rt' => $o['token']],
         'lenta' => kb_lenta($o), 'guest' => $c === null, 'fresh' => kab_fresh()];
@@ -131,6 +210,18 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'GET') {
             linea_json(['ok' => true, 'objects' => $list, 'unread' => $unread, 'guest' => $c === null, 'name' => $c['name'] ?? null]);
         }
         case 'object': linea_json(kb_object(kb_order((string)($_GET['o'] ?? '')), $c));
+        case 'brief': {
+            $o = kb_order((string)($_GET['o'] ?? ''));
+            $idx = brief_extra_index($o);
+            linea_json(['ok' => true, 'view' => brief_view(brief_load($o)), 'files' => array_map(fn($f) => ['src' => $f['src'], 'name' => $f['name'], 'orig' => $f['orig'] ?? $f['name'], 'size' => $f['size'], 'at' => $f['at'], 'img' => $f['img'], 'q' => $f['q'] ?? null], brief_files($o)),
+                'maxMb' => (int)linea_cfg()['max_upload_mb'], 'maxFiles' => BRIEF_EXTRA_MAX_FILES, 'extra' => count($idx), 'sent' => (string)$o['created_at']]);
+        }
+        case 'bfile': {
+            $o = kb_order((string)($_GET['o'] ?? ''));
+            $src = (string)($_GET['s'] ?? ''); $nm = (string)($_GET['n'] ?? '');
+            if (!array_filter(brief_files($o), fn($f) => $f['src'] === $src && $f['name'] === $nm)) { linea_fail('Файл не найден', 404); }
+            brief_file_send($o, $src, $nm, !empty($_GET['inl']));
+        }
         case 'docs': {
             $orders = kb_orders($c, $g);
             if (isset($_GET['o'])) { $orders = [kb_order((string)$_GET['o'])]; }
@@ -211,6 +302,36 @@ $in = brig_input();
 $num = (string)($in['o'] ?? '');
 
 switch ($a) {
+    case 'upload': {
+        $o = kb_order($num);
+        kab_require_fresh_for_order($o);
+        if (in_array($o['status'], ['cancelled', 'refunded'], true)) { linea_fail('Заказ закрыт — напишите нам, если нужно что-то добавить', 409); }
+        if (!linea_rate('kabupload', 30)) { linea_fail('Слишком много загрузок — подождите немного', 429); }
+        $q = linea_str($in['q'] ?? '', 20);
+        if ($q !== '') {
+            $reg = kab_registry($o);
+            if (!$reg || !array_filter($reg['items'], fn($i) => $i['id'] === $q)) { linea_fail('Такого вопроса нет', 404); }
+        }
+        $r = brief_extra_save($o, $q ?: null);
+        if (!$r['saved']) { linea_fail(implode('. ', $r['errors']) ?: 'Файл не сохранился'); }
+        linea_event((int)$o['id'], 'client', 'Догружены файлы: ' . count($r['saved']) . ($q !== '' ? ' (к вопросу ' . $q . ')' : '') . ' — ' . implode(', ', array_map(fn($x) => $x['orig'], $r['saved'])));
+        brig_admin_notify('Клиент догрузил файлы: ' . $o['number'], count($r['saved']) . ' шт.' . ($q !== '' ? ', к вопросу ' . $q : ''), brig_link('api/panel.php?s=order&o=' . rawurlencode($o['number']) . '&tab=brif'), (bool)$o['test']);
+        linea_json(['ok' => true, 'saved' => count($r['saved']), 'errors' => $r['errors']]);
+    }
+    case 'later': {
+        $o = kb_order($num);
+        kab_require_fresh_for_order($o);
+        $reg = kab_registry($o);
+        $id = linea_str($in['id'] ?? '', 20);
+        if (!$reg || !array_filter($reg['items'], fn($i) => $i['id'] === $id && !$i['closed'])) { linea_fail('Вопрос не найден или уже закрыт', 404); }
+        $f = kab_order_dir($o) . '/deferred.json';
+        $d = kb_deferred($o);
+        if (empty($in['undo'])) { $d[$id] = linea_now(); } else { unset($d[$id]); }
+        linea_mkdir(kab_order_dir($o));
+        file_put_contents($f, json_encode($d, JSON_UNESCAPED_UNICODE), LOCK_EX); @chmod($f, 0600);
+        if (empty($in['undo'])) { linea_event((int)$o['id'], 'client', 'Ответ на ' . $id . ' отложен клиентом'); }
+        linea_json(kb_object(linea_order_by_number($o['number']), $c));
+    }
     case 'pay': {
         $o = kb_order($num);
         kab_require_fresh_for_order($o);
@@ -236,6 +357,8 @@ switch ($a) {
             if ($opt !== '' && !in_array($opt, $item['options'], true)) { linea_fail('Такого варианта нет'); }
             if ($opt === '' && $text === '') { linea_fail('Выберите вариант или напишите ответ'); }
             $rec += ['option' => $opt, 'text' => $text];
+            $att = array_values(array_map(fn($x) => $x['name'], array_filter(brief_extra_index($o), fn($x) => ($x['q'] ?? null) === $id)));
+            if ($att) { $rec['files'] = $att; }
             linea_event((int)$o['id'], 'client', 'Ответ на ' . $id . ': ' . trim($opt . ' ' . $text));
         } else {
             $dec = (string)($in['decision'] ?? '');
@@ -246,6 +369,7 @@ switch ($a) {
             linea_event((int)$o['id'], 'client', ($dec === 'agree' ? 'Согласовано решение ' : 'Не согласен с решением ') . $id . ($text !== '' ? ': ' . $text : ''));
         }
         kab_answers_put($o, $id, $rec);
+        if (isset(kb_deferred($o)[$id])) { $d = kb_deferred($o); unset($d[$id]); file_put_contents(kab_order_dir($o) . '/deferred.json', json_encode($d)); }
         brig_admin_notify('Клиент ответил: ' . $o['number'], $id . ' — ' . ($a === 'answer' ? 'ответ' : 'решение'), brig_link('api/panel.php?s=order&o=' . rawurlencode($o['number']) . '&tab=voprosy'), (bool)$o['test']);
         linea_json(kb_object(linea_order_by_number($o['number']), $c));
     }

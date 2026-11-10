@@ -37,6 +37,13 @@ const BRIG_MAIL = [
     'sign_code' => ['LINEA · код подписи: {doc}', "Код для подписи документа «{doc}» на сайте LINEA: {code}\n\nКод действует 15 минут. Версия документа: SHA-256 {hash}…\nЕсли вы не подписываете документ — никому не сообщайте код и напишите нам."],
 ];
 
+/** Копия письма в файл — только для проверок (env LINEA_MAIL_OUTBOX=1 и только на маке/локальном сервере). Боевой сервер этого файла не пишет. */
+function linea_mail_outbox(string $to, string $key, string $subject, string $text, string $html): void
+{
+    if (!getenv('LINEA_MAIL_OUTBOX') || !(PHP_SAPI === 'cli' || linea_local())) { return; }
+    @file_put_contents(linea_private() . '/mail-outbox.jsonl', json_encode(['at' => date('c'), 'to' => $to, 'key' => $key, 'subject' => $subject, 'text' => $text, 'html' => $html], JSON_UNESCAPED_UNICODE) . "\n", FILE_APPEND | LOCK_EX);
+}
+
 /** @return 'sent' | 'dry' | 'failed' */
 function brig_mail(string $to, string $key, array $vars, bool $test): string
 {
@@ -48,7 +55,7 @@ function brig_mail(string $to, string $key, array $vars, bool $test): string
     $subj = strtr($subj, $subjRep); $body = strtr($body, $rep);
     $cfg = linea_cfg();
     $dry = $test || empty($cfg['brig_mail_enabled']) || getenv('LINEA_MAIL_DRY') || !filter_var($to, FILTER_VALIDATE_EMAIL);
-    if ($dry) { linea_log('brig-mail.log', 'DRY ' . ($test ? '[test] ' : '') . $key . ' · ' . $subj); return 'dry'; }
+    if ($dry) { linea_log('brig-mail.log', 'DRY ' . ($test ? '[test] ' : '') . $key . ' · ' . $subj); linea_mail_outbox($to, $key, $subj, $body, ''); return 'dry'; }
     $from = trim((string)$cfg['mail_from']) ?: 'no-reply@' . (string)parse_url(linea_base(), PHP_URL_HOST);   // не из заголовка Host запроса
     $headers = implode("\r\n", ['From: LINEA <' . $from . '>', 'MIME-Version: 1.0', 'Content-Type: text/plain; charset=UTF-8', 'Content-Transfer-Encoding: 8bit']);
     $ok = @mail($to, '=?UTF-8?B?' . base64_encode($subj) . '?=', $body, $headers, '-f' . $from);

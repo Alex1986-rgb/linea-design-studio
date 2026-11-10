@@ -388,4 +388,13 @@ return [
         "ALTER TABLE orders ADD COLUMN paid_receipt {BOOL} NOT NULL DEFAULT 0",
         "ALTER TABLE adm_devices ADD COLUMN pw_tag {SHORT}",
     ],
+    // 09.11.2026 — доработка кабинета (docs/plans/2026-11-09-kabinet-adminka-dorabotka.md): плановая дата следующего шага заказа
+    // (ставит админка, видно в кабинете и в письмах) и очередь писем «сводкой раз в день» (notices.mail_state: 0 — письмо не нужно/ушло сразу,
+    // 1 — ждёт сводки, 2 — ушло в сводке).
+    9 => [
+        "ALTER TABLE orders ADD COLUMN expected_at {KEY}",
+        "ALTER TABLE orders ADD COLUMN expected_note {KEY}",
+        "ALTER TABLE notices ADD COLUMN mail_state {INT} NOT NULL DEFAULT 0",
+        "CREATE INDEX notices_mail ON notices(mail_state)",
+    ],
 ];

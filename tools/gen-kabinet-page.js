@@ -19,7 +19,7 @@ ${SHELL.head(u, { title, desc: 'Кабинет клиента LINEA: дизай�
 <meta name="robots" content="noindex, nofollow">
 <meta name="referrer" content="no-referrer">
 <link rel="stylesheet" href="${u}css/brigady.css?v=2">
-<link rel="stylesheet" href="${u}css/kabinet.css?v=4">
+<link rel="stylesheet" href="${u}css/kabinet.css?v=5">
 </head>
 <body class="kab-body">
 ${SHELL.header(u, null)}
@@ -50,9 +50,9 @@ ${SHELL.header(u, null)}
 </div>
 
 ${SHELL.footer(u, null)}
-<script type="application/json" id="kabTerms">${JSON.stringify({ call: SHELL.TERMS.call.title + '. ' + SHELL.TERMS.call.line, areaRecalc: SHELL.TERMS.areaRecalc, roundsText: SHELL.TERMS.roundsText, rounds: SHELL.TERMS.rounds, wa: 'https://wa.me/79257338640', mail: 'optteem@mail.ru' })}</script>
+<script type="application/json" id="kabTerms">${JSON.stringify({ call: SHELL.TERMS.call.title + '. ' + SHELL.TERMS.call.line, areaRecalc: SHELL.TERMS.areaRecalc, roundsText: SHELL.TERMS.roundsText, rounds: SHELL.TERMS.rounds, reqLine: SHELL.TERMS.reqLine, line: SHELL.TERMS.line, term: SHELL.TERMS.term, notIncluded: SHELL.TERMS.notIncluded, briefAddon: false, wa: 'https://wa.me/79257338640', mail: 'optteem@mail.ru' })}</script>
 <script src="${u}js/kabinet-remont.js?v=1"></script>
-<script src="${u}js/kabinet.js?v=3"></script>
+<script src="${u}js/kabinet.js?v=4"></script>
 </body>
 </html>
 `;
@@ -69,7 +69,7 @@ ${SHELL.head(u, { title: 'Кабинет бригады — LINEA', desc: 'Ка�
 <meta name="robots" content="noindex, nofollow">
 <meta name="referrer" content="no-referrer">
 <link rel="stylesheet" href="${u}css/brigady.css?v=3">
-<link rel="stylesheet" href="${u}css/kabinet.css?v=4">
+<link rel="stylesheet" href="${u}css/kabinet.css?v=5">
 </head>
 <body class="kab-body">
 ${SHELL.header(u, 'brigadam')}
@@ -103,3 +103,18 @@ for (const [dir, title] of [['kabinet', 'Кабинет — LINEA'], ['vhod', '�
 fs.mkdirSync(path.join(root, 'brigada'), { recursive: true });
 fs.writeFileSync(path.join(root, 'brigada', 'index.html'), brigadaPage('../', `${SHELL.BASE}/brigada/`));
 console.log('site/brigada/index.html — собрано');
+
+// Условия для сервера (письма, расшифровка суммы, карточка оплаты): ЕДИНСТВЕННЫЙ источник — TERMS (tools/site-shell.js);
+// сервер читает этот файл и сам условия не придумывает. Пересобирается этим же скриптом; --check в конце сверяет.
+const T = SHELL.TERMS, P0 = T.packs[0];
+const termsClient = {
+  _note: 'Генерируется tools/gen-kabinet-page.js из TERMS (site-shell.js). Руками не править.',
+  rate: P0.rate, min: P0.min, minArea: T.minArea, rounds: T.rounds, roundsText: T.roundsText,
+  line: T.line.replace(/\u00a0/g, ' '), term: T.term, start: T.start, areaRecalc: T.areaRecalc, prelim: T.prelim,
+  reqLine: T.reqLine, requisites: T.requisites, notIncluded: T.notIncluded,
+  call: { channel: T.call.channel, title: T.call.title, line: T.call.line },
+  pages: { refund: 'oplata/', offer: 'oferta/', soglasie: 'soglasie/', price: 'price/' },
+};
+const tcFile = path.join(__dirname, '..', 'server', 'api', 'lib', 'terms-client.json');
+fs.writeFileSync(tcFile, JSON.stringify(termsClient, null, 1) + '\n');
+console.log('server/api/lib/terms-client.json — собрано');

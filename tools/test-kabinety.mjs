@@ -38,7 +38,7 @@ const DSN = MYSQL || 'sqlite:' + path.join(PRIV, 'linea.sqlite');
 const sql = q => JSON.parse(execFileSync('php', ['-r', '$p = new PDO($argv[1], $argv[2], ""); $p->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION); $s = $p->query($argv[3]); echo json_encode($s && $s->columnCount() ? $s->fetchAll(PDO::FETCH_ASSOC) : []);', DSN, MYSQL ? MUSER : '', q]).toString() || '[]');
 const ins = (t, row) => { const k = Object.keys(row); sql(`INSERT INTO ${t} (${k.join(',')}) VALUES (${k.map(x => row[x] === null ? 'NULL' : typeof row[x] === 'number' ? row[x] : "'" + String(row[x]).replace(/'/g, "''") + "'").join(',')})`); return +sql(`SELECT MAX(id) id FROM ${t}`)[0].id; };
 const ts = (days = 0) => new Date(Date.now() - days * 86400e3 + 3 * 3600e3).toISOString().slice(0, 19).replace('T', ' ');
-const cron = (env = {}) => execFileSync('php', [path.join(ROOT, 'server/tools/cron.php'), '--private=' + PRIV], { env: { ...process.env, LINEA_MAIL_DRY: '1', ...env } }).toString();
+const cron = (env = {}) => execFileSync('php', [path.join(ROOT, 'server/tools/cron.php'), '--private=' + PRIV], { env: { ...process.env, LINEA_MAIL_DRY: '1', LINEA_MAIL_OUTBOX: '1', ...env } }).toString();
 
 const FX = path.join(PRIV, '_fx'); fs.mkdirSync(FX);
 const mkBrief = (email, name) => { const b = { meta: { test: true, service: 'kvartira' }, client: { name, phone: '+7 900 000-00-0' + name.length, email, consent: { personalData: true, portfolio: true, edition: '27.10.2026', at: new Date().toISOString() } }, object: { type: 'квартира', area: 64, address: 'Москва, тестовая ул., 1' } };
@@ -51,7 +51,7 @@ fs.writeFileSync(path.join(FX, 'registry.json'), JSON.stringify({ items: [
 ] }));
 
 const srv = spawn('php', ['-d', 'opcache.enable=0', '-S', `127.0.0.1:${PORT}`, '-t', path.join(ROOT, 'site'), path.join(ROOT, 'tools/dev-router.php')],
-  { env: { ...process.env, LINEA_PRIVATE: PRIV, LINEA_MAIL_DRY: '1' }, stdio: ['ignore', 'ignore', KEEP ? fs.openSync(path.join(PRIV, '_server.log'), 'a') : 'pipe'], detached: KEEP });
+  { env: { ...process.env, LINEA_PRIVATE: PRIV, LINEA_MAIL_DRY: '1', LINEA_MAIL_OUTBOX: '1' }, stdio: ['ignore', 'ignore', KEEP ? fs.openSync(path.join(PRIV, '_server.log'), 'a') : 'pipe'], detached: KEEP });
 let srvErr = ''; if (!KEEP) srv.stderr.on('data', d => { srvErr += d; }); else srv.unref();
 process.on('exit', () => { if (!KEEP) srv.kill(); });
 for (let i = 0; i < 50; i++) { try { await fetch(BASE + '/api/ping.php'); break; } catch { await new Promise(r => setTimeout(r, 100)); } }

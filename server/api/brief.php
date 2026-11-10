@@ -134,7 +134,10 @@ if ($email !== '' && filter_var($email, FILTER_VALIDATE_EMAIL)) {
         foreach (['pd' => 'Обработка персональных данных'] + (str_contains($consentText, 'портфолио: да') ? ['portfolio' => 'Показ в портфолио'] : []) as $k => $_) {
             db_insert('consents', ['account_id' => $accId, 'order_id' => $id, 'kind' => $k, 'edition' => (string)($consent['edition'] ?? '—'), 'given_at' => $now, 'ip' => linea_ip(), 'text' => $consentText]);
         }
-        kab_notice($accId, $id, 'proekt', 'Бриф ' . $number . ' получен. ' . ($amount ? 'Сумма — ' . brig_rub((int)$amount) . '.' : 'Сумму подтвердим в течение рабочего дня.'), '#/o/' . $number);
+        // письмо-подтверждение сразу: номер, сумма (или «подтвердим»), что дальше, ссылка в кабинет. Аккаунта ещё нет (account_id = 0) —
+        // колокольчика нет, но письмо уходит на почту из брифа (критик кабинета 09.11.2026, находка 2)
+        $oNew = linea_order_by_number($number);
+        if ($oNew) { kab_notify_order($oNew, kab_ev('brief', $oNew)); }
     } catch (Throwable $e) { linea_log('error.log', 'brief kabinet: ' . $e->getMessage()); }
 }
 linea_event($id, 'site', 'Бриф получен с сайта: ' . $count . ' файлов, ' . round((int)$f['size'] / 1048576, 1) . ' МБ' . ($test ? ' (тест)' : ''));

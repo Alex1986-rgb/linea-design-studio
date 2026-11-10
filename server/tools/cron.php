@@ -16,6 +16,8 @@
  *   8. Второй чек «полный расчёт» по выданным заказам, если при выдаче онлайн-касса не ответила (только при yk_receipt и только для
  *      заказов, оплаченных с чеком онлайн-кассы — orders.paid_receipt; пауза час, после суток — «выбить вручную»).
  *   9. Сверка возвратов с ЮKassa: висящие «в пути» и созданные без ответа API (yk_refund_reconcile).
+ *  10. Сводка раз в день (с 9 утра) клиентам, выбравшим «сводкой раз в день»: одно письмо со всем накопленным (kab_digest_send).
+ *  11. Напоминание о вопросах К-N: срок ответа прошёл, вопросы без ответа — одно письмо на версию альбома (kab_once).
  *   Отметка последнего прогона — linea-private/cron.last (её видит ping.php с токеном мониторинга).
  * Время для проверок можно сдвинуть: env LINEA_NOW="ГГГГ-ММ-ДД ЧЧ:ММ:СС". Вывод — сводка строкой (для журнала cron).
  */
@@ -113,6 +115,25 @@ if (yk_ready()) {
     foreach (brig_all("SELECT DISTINCT o.* FROM orders o JOIN pay_ops p ON p.order_id = o.id WHERE p.kind = 'refund' AND (p.status IN ('pending','sent') OR (p.status = 'failed' AND p.provider_id IS NULL AND p.created_at > ?))", [date('Y-m-d H:i:s', $now - 48 * 3600)]) as $o) {
         $sum['refunds'] += yk_refund_reconcile($o);
     }
+}
+
+// 10. сводка раз в день
+$sum['digest'] = kab_digest_send($now, in_array('--digest-now', $argv, true));
+
+// 11. напоминание: срок ответа на вопросы прошёл
+$sum['qremind'] = 0;
+require_once $api . '/lib/brig-notify.php';
+foreach (brig_all("SELECT * FROM orders WHERE status = 'paid' AND pd_purged_at IS NULL") as $o) {
+    $reg = kab_registry($o);
+    if (!$reg) { continue; }
+    $ans = kab_answers($o)['items'];
+    $open = array_filter($reg['items'], fn($i) => !$i['closed'] && $i['kind'] === 'question' && empty($ans[$i['id']]));
+    if (!$open) { continue; }
+    $rel = array_values(array_filter(kab_releases($o), fn($r) => $r['ver'] === $reg['ver']))[0] ?? null;
+    $by = substr(kab_wd_add((string)($rel['published_at'] ?? $rel['date'] ?? linea_now()), (int)(linea_cfg()['answer_days'] ?? 2)), 0, 10);
+    if ($by >= date('Y-m-d', $now) || !kab_once('qrem-' . $o['number'] . '-' . $reg['ver'])) { continue; }
+    kab_notify_order($o, kab_ev('questions', $o, ['count' => count($open), 'deadline' => $by]), 'qrem-' . $o['number'] . '-' . $reg['ver']);
+    $sum['qremind']++;
 }
 
 @file_put_contents(linea_private() . '/cron.last', date('Y-m-d H:i:s') . ' ' . json_encode($sum));

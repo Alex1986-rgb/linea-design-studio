@@ -17,6 +17,8 @@ declare(strict_types=1);
 if (realpath((string)($_SERVER['SCRIPT_FILENAME'] ?? '')) === __FILE__) { http_response_code(404); exit; }
 
 require_once __DIR__ . '/brig.php';
+require_once __DIR__ . '/kab-mail.php';
+require_once __DIR__ . '/brief-view.php';
 
 const KAB_GUEST_HOURS = 12;
 const KAB_REMEMBER_DAYS = 30;
@@ -266,14 +268,14 @@ function kab_order_access(string $number): ?array
 
 // ───────────────────────── уведомления в кабинете
 
-/** Уведомление клиенту заказа (колокольчик). $ukey — защита от повторов таймеров. */
-function kab_notice(int $accountId, ?int $orderId, string $grp, string $text, string $link = '', string $ukey = ''): void
+/** Уведомление клиенту заказа (колокольчик). $ukey — защита от повторов таймеров. $mailState: 1 — письмо ждёт сводки раз в день. @return int id или 0 */
+function kab_notice(int $accountId, ?int $orderId, string $grp, string $text, string $link = '', string $ukey = '', int $mailState = 0): int
 {
-    if ($accountId <= 0) { return; }
+    if ($accountId <= 0) { return 0; }   // заказ без аккаунта (клиент ещё не входил кодом): колокольчика нет, письмо уходит отдельно (kab_notify_order)
     try {
-        db_insert('notices', ['account_id' => $accountId, 'order_id' => $orderId, 'grp' => isset(KAB_GROUPS[$grp]) ? $grp : 'proekt', 'text' => mb_substr($text, 0, 1000),
-            'link' => mb_substr($link, 0, 180) ?: null, 'at' => date('Y-m-d H:i:s', kab_time()), 'ukey' => $ukey !== '' ? mb_substr($ukey, 0, 180) : null]);
-    } catch (PDOException $e) { /* уже есть с этим ukey */ }
+        return db_insert('notices', ['account_id' => $accountId, 'order_id' => $orderId, 'grp' => isset(KAB_GROUPS[$grp]) ? $grp : 'proekt', 'text' => mb_substr($text, 0, 1000),
+            'link' => mb_substr($link, 0, 180) ?: null, 'at' => date('Y-m-d H:i:s', kab_time()), 'ukey' => $ukey !== '' ? mb_substr($ukey, 0, 180) : null, 'mail_state' => $mailState]);
+    } catch (PDOException $e) { return 0; /* уже есть с этим ukey */ }
 }
 
 function kab_notice_order(array $o, string $grp, string $text, string $link = '', string $ukey = ''): void
@@ -422,7 +424,7 @@ function kab_next_action(array $o): array
     if ($o['status'] === 'cancelled') { return ['text' => 'Заказ отменён', 'btn' => null, 'href' => null, 'who' => 'none']; }
     if ($o['status'] === 'refunded') { return ['text' => 'Оплата возвращена. Если остались вопросы — напишите нам', 'btn' => null, 'href' => null, 'who' => 'none']; }
     if ($o['status'] === 'new' || ($o['status'] === 'awaiting_payment' && !$pub['amount'])) {
-        return ['text' => 'Проверяем бриф — сумму подтвердим в течение рабочего дня', 'btn' => null, 'href' => null, 'who' => 'studio'];
+        return ['text' => 'Проверяем бриф — сумму подтвердим в течение рабочего дня' . (kab_expected_line($o) ? '. ' . kab_expected_line($o) : ''), 'btn' => null, 'href' => null, 'who' => 'studio'];
     }
     if ($o['status'] === 'awaiting_payment') {
         if (!empty($pub['canPay'])) { return ['text' => 'Оплатите проект — работа начнётся сразу после оплаты', 'btn' => 'Оплатить ' . brig_rub((int)$o['amount_kop']), 'href' => $base . '/proekt', 'act' => 'pay', 'who' => 'client']; }
@@ -438,7 +440,7 @@ function kab_next_action(array $o): array
         if ($dec) { return ['text' => 'Согласуйте ' . count($dec) . ' ' . kab_plural(count($dec), 'решение', 'решения', 'решений') . ' проектировщика', 'btn' => 'Посмотреть решения', 'href' => $base . '/voprosy', 'who' => 'client']; }
     }
     $rel = kab_releases($o);
-    if ($o['status'] === 'paid' && !$rel) { return ['text' => 'Делаем первый вариант проекта. Как будет готов — напишем на почту', 'btn' => null, 'href' => null, 'who' => 'studio']; }
+    if ($o['status'] === 'paid' && !$rel) { return ['text' => 'Делаем первый вариант проекта. ' . (kab_expected_line($o) ?: 'Как будет готов — напишем на почту'), 'btn' => null, 'href' => null, 'who' => 'studio']; }
     if ($o['status'] === 'paid') {
         $last = end($rel);
         return ['text' => 'Посмотрите альбом и отметьте правки, если что-то хотите изменить', 'btn' => 'Открыть альбом', 'href' => $base . '/proekt', 'act' => 'album', 'who' => 'client', 'ver' => $last['ver']];

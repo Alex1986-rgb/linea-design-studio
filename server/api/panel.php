@@ -31,6 +31,17 @@ session_start();
 if (empty($_SESSION['adm'])) { header('Location: admin.php'); exit; }
 brig_db();
 
+/** Что случилось с письмом клиенту — словами для строки результата. */
+const ADM_MAIL_WORD = ['sent' => 'отправлено', 'dry' => 'в журнале (письма на сервере выключены или заказ тестовый)', 'queued' => 'будет в сводке за сутки (так настроил клиент)',
+    'skipped' => 'не отправлено: клиент отключил эту группу писем', 'none' => 'не отправлено: у заказа нет почты', 'failed' => 'не ушло — ошибка почты, смотрите журнал'];
+/** Этапы работы над проектом: кнопка в карточке заказа = запись в историю клиента + письмо. Текст можно поправить до отправки. */
+const ADM_STAGES = [
+    'start' => ['Работа начата', 'Работа над проектом началась', 'Мы приступили к работе: изучаем бриф и план, проверяем размеры и собираем планировочное решение.'],
+    'first' => ['Готовим первый вариант', 'Готовим первый вариант проекта', 'Планировка согласована внутри студии, расставляем мебель и собираем первые листы альбома.'],
+    'check' => ['Проверка перед отправкой', 'Проверяем первый вариант перед отправкой', 'Первый вариант собран — сверяем листы с вашим брифом и нормами, чтобы вы получили проверенный комплект.'],
+    'wait' => ['Ждём ответы клиента', 'Ждём ваши ответы', 'Чтобы двигаться дальше, нам нужны ваши ответы на вопросы в кабинете. Без них финальный альбом выпустить нельзя.'],
+    'final' => ['Готовим финальный альбом', 'Готовим финальный альбом', 'Все ответы получены. Вносим решения в комплект и готовим финальную версию альбома.'],
+];
 const ADM_ROLE_RIGHTS = ['moderator' => ['brigade-check', 'brigade-warn', 'signal-mark', 'dispute-msg', 'review-hide']];
 /** Право на действие: админ — всё; модератор (будущее) — список ADM_ROLE_RIGHTS. */
 function adm_can(string $action): bool
@@ -76,7 +87,8 @@ function adm_page(string $title, string $body, string $s, string $msg = ''): nev
         . '.st{display:inline-block;padding:1px 8px;border-radius:10px;font-size:12px;background:#eee}.st.w{background:#fbe7c4}.st.g{background:#cfe9d5}.st.r{background:#f3c9bd}'
         . '.mut{color:var(--mut);font-size:13px}.msg{background:#fff6d8;padding:8px 12px;margin:0 0 12px;border:1px solid #efd98f}.warn{background:#fbe1d8;padding:8px 12px;margin:0 0 12px;border:1px solid #e4a68f}'
         . '.tabs{display:flex;gap:4px;flex-wrap:wrap;margin:0 0 12px}.tabs a{padding:6px 12px;background:#fff;border:1px solid var(--line);text-decoration:none;color:var(--ink);font-size:14px}.tabs a.on{background:#1d1b18;color:#fff}'
-        . '.scroll{overflow-x:auto}pre{white-space:pre-wrap;background:#faf8f4;padding:10px;font-size:13px;max-height:420px;overflow:auto}.test{color:#b4462b;font-weight:600}'
+        . '.scroll{overflow-x:auto}pre{white-space:pre-wrap;background:#faf8f4;padding:10px;font-size:13px;max-height:420px;overflow:auto}
+.test{color:#b4462b;font-weight:600}tr.hotrow td{background:#fdf0ea}b.late{color:#b4462b}.pv{background:#faf8f4;border:1px solid var(--line);padding:8px 12px;margin:4px 0 10px;font-size:13px;white-space:pre-wrap}.th{max-width:120px;max-height:90px;border:1px solid var(--line);display:block}.fgrid{display:flex;gap:10px;flex-wrap:wrap}.fgrid div{width:140px;font-size:12px;word-break:break-all}.unk{color:#8a6d00;font-size:12px}'
         . 'ul.todo{list-style:none;padding:0;margin:0}ul.todo li{background:#fff;border:1px solid var(--line);border-left:4px solid #c29a5b;padding:8px 12px;margin:0 0 6px}ul.todo li.hot{border-left-color:#b4462b}'
         . '@media(max-width:820px){.lay{grid-template-columns:1fr}nav.side{position:static;height:auto;display:flex;overflow-x:auto;white-space:nowrap;padding:6px}nav.side .lg{display:none}nav.side a{padding:8px 10px}'
         . 'main{padding:12px}main table{display:block;overflow-x:auto}.hide-m{display:none}form.inl{display:flex;width:100%}form.inl input:not([type=checkbox]):not([type=hidden]),form.inl textarea,form.inl select{width:100%}th,td{padding:6px;font-size:13px}}</style></head><body><div class="lay"><nav class="side" aria-label="Разделы админки"><div class="lg">LINEA</div>' . $menu
@@ -90,6 +102,15 @@ if (isset($_GET['file'])) {
     $f = brig_one('SELECT * FROM br_files WHERE id = ?', [(int)$_GET['file']]);
     if (!$f) { http_response_code(404); exit; }
     brig_send_file($f);
+}
+// ── файл брифа заказа (из архива или догруженный клиентом): ?of=<zip|extra>&on=<имя>&o=<номер>[&inl=1]
+if (isset($_GET['of'], $_GET['o'])) {
+    $fo = linea_order_by_number((string)$_GET['o']);
+    if (!$fo) { http_response_code(404); exit; }
+    $known = array_filter(brief_files($fo), fn($f) => $f['src'] === (string)$_GET['of'] && $f['name'] === (string)($_GET['on'] ?? ''));
+    if (!$known) { http_response_code(404); exit; }
+    brig_audit('admin', 'brief-file', 'order ' . $fo['number'], substr((string)$_GET['on'], 0, 80));
+    brief_file_send($fo, (string)$_GET['of'], (string)$_GET['on'], !empty($_GET['inl']));
 }
 // ── CSV-экспорт (спецификация 5.12): без паспортных данных и без контактов клиентов; ячейки «= + - @ таб CR» — с префиксом «'» (CSV-инъекции)
 const ADM_CSV = ['deals' => 'Сделки', 'payments' => 'Оплаты по сделкам (реестр)', 'ledger' => 'Проводки вознаграждения', 'invoices' => 'Счета', 'brigades' => 'Бригады', 'signals' => 'Сигналы обхода'];
@@ -144,11 +165,12 @@ if (($_SERVER['REQUEST_METHOD'] ?? '') === 'POST') {
                 $set = ['status' => $to] + ($to === 'paid' && !$o['paid_at'] ? ['paid_at' => $now, 'paid_by' => 'вручную: ' . ($reason ?: 'админка')] : []) + ($to === 'delivered' ? ['delivered_at' => $now] : []);
                 $oupd($set);
                 linea_event((int)$o['id'], 'admin', 'Статус: ' . (LINEA_STATUS[$to] ?? $to) . ($reason ? ' — ' . $reason : ''));
-                $txt = ['paid' => 'Оплата получена — работа над проектом началась.', 'delivered' => 'Финальный альбом выдан. Теперь можно подобрать бригаду на ремонт — это необязательно.',
-                    'cancelled' => 'Заказ отменён: ' . $reason, 'refunded' => 'Оплата возвращена: ' . $reason, 'awaiting_payment' => 'Заказ ждёт оплаты.'][$to] ?? '';
-                kab_notice_order($o, $to === 'refunded' || $to === 'paid' ? 'dengi' : 'proekt', $txt);
+                // письмо клиенту: оплата получена / альбом выдан / заказ отменён — с настройками клиента и шаблоном (lib/kab-mail.php)
+                $evName = ['paid' => 'paid', 'delivered' => 'delivered', 'cancelled' => 'cancelled'][$to] ?? '';
+                if ($evName !== '') { $mr = kab_notify_order($o, kab_ev($evName, $o, ['reason' => $reason])); }
+                else { kab_notice_order($o, 'proekt', ['refunded' => 'Оплата возвращена: ' . $reason, 'awaiting_payment' => 'Заказ ждёт оплаты.'][$to] ?? ''); }
                 brig_audit($WHO, 'order-status', 'order ' . $o['number'], $to . ($reason ? ': ' . $reason : ''));
-                $msg = 'Статус изменён.';
+                $msg = 'Статус изменён.' . (isset($mr) ? ' Письмо клиенту: ' . ADM_MAIL_WORD[$mr['mail']] . '.' : '');
                 if ($to === 'delivered') {   // 54-ФЗ: второй чек «полный расчёт» (только при yk_receipt; не ушёл — повторит cron)
                     $rc = yk_full_receipt($o, $WHO);
                     if ($rc['done']) { brig_audit($WHO, 'order-receipt2', 'order ' . $o['number']); $msg .= ' Второй чек «полный расчёт» отправлен.'; }
@@ -163,17 +185,17 @@ if (($_SERVER['REQUEST_METHOD'] ?? '') === 'POST') {
                 $old = $o['amount_kop'];
                 $oupd(['amount_kop' => $kop, 'amount_confirmed_at' => $now] + ($o['status'] === 'new' ? ['status' => 'awaiting_payment'] : []) + ((int)$old !== $kop && $o['payment_url'] ? ['payment_url' => null, 'payment_created_at' => null] : []));
                 linea_event((int)$o['id'], 'admin', 'Сумма подтверждена по плану: ' . $rub($kop));
-                kab_notice_order($o, 'dengi', 'Сумма проекта подтверждена: ' . $rub($kop) . '. Можно оплачивать.');
+                $mr = kab_notify_order($o, kab_ev('amount', $o));
                 brig_audit($WHO, 'order-amount', 'order ' . $o['number'], $rub($old) . ' → ' . $rub($kop));
-                $msg = 'Сумма сохранена и подтверждена.'; break;
+                $msg = 'Сумма сохранена и подтверждена. Письмо клиенту: ' . ADM_MAIL_WORD[$mr['mail']] . '.'; break;
             }
             case 'o_invoice': {
                 if (!$o || !$need((int)$o['amount_kop'] > 0, 'Сначала сумма')) { break; }
                 $oupd(['invoice_at' => $now]);
                 linea_event((int)$o['id'], 'admin', 'Счёт выставлен');
-                kab_notice_order($o, 'dengi', 'Счёт на оплату ' . $rub($o['amount_kop']) . ' отправлен на почту.');
+                $mr = kab_notify_order($o, kab_ev('invoice', $o));
                 brig_audit($WHO, 'order-invoice', 'order ' . $o['number']);
-                $msg = 'Отмечено: счёт выставлен.'; break;
+                $msg = 'Отмечено: счёт выставлен. Письмо клиенту: ' . ADM_MAIL_WORD[$mr['mail']] . '. Сам счёт с реквизитами вы отправляете отдельно.'; break;
             }
             case 'o_refund': {
                 if (!$o) { break; }
@@ -198,7 +220,7 @@ if (($_SERVER['REQUEST_METHOD'] ?? '') === 'POST') {
                 $o = linea_order_by_number($o['number']);
                 yk_op_put($o, 'refund', 'manual-' . $o['number'] . '-' . bin2hex(random_bytes(4)), $kop, 'manual', $reason, $WHO);
                 linea_event((int)$o['id'], 'admin', 'Возврат ' . $rub($kop) . ($full ? ' (полный)' : ' (частичный)') . ': ' . $reason . '. Отмечен вручную — провести в кабинете онлайн-оплаты / банке и выбить чек возврата');
-                kab_notice_order($o, 'dengi', 'Оформлен возврат ' . $rub($kop) . '. Деньги вернутся тем же способом, каким вы платили.');
+                kab_notify_order($o, kab_ev('refund', $o, ['sum' => $rub($kop)]));
                 brig_audit($WHO, 'order-refund', 'order ' . $o['number'], $rub($kop) . ': ' . $reason);
                 $msg = 'Возврат отмечен. Деньги — через кабинет онлайн-оплаты или банк, чек возврата — там же.'; break;
             }
@@ -222,10 +244,16 @@ if (($_SERVER['REQUEST_METHOD'] ?? '') === 'POST') {
                 }
                 file_put_contents($dir . '/meta.json', json_encode($meta, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT));
                 linea_event((int)$o['id'], 'admin', 'Опубликована версия альбома ' . $ver . ($meta['final'] ? ' (финальная)' : ''));
-                kab_notice_order($o, 'proekt', 'Вышла версия альбома «' . $meta['title'] . '»' . ($meta['final'] ? ' — финальная' : '') . '. Откройте и посмотрите.', '#/o/' . $o['number'] . '/proekt');
+                $reg2 = is_file($dir . '/registry.json') ? json_decode((string)file_get_contents($dir . '/registry.json'), true) : null;
+                $nq = 0;
+                foreach ((array)($reg2['items'] ?? []) as $it) { if (is_array($it) && empty($it['closed']) && in_array($it['kind'] ?? 'question', ['question', 'conflict'], true) && empty($it['proposed'])) { $nq++; } }
+                $dl = $nq ? kab_wd_add($now, (int)(linea_cfg()['answer_days'] ?? 2)) : null;
+                $rl = ($rt = kab_terms_client()['rounds'] ?? null) ? max(0, (int)$rt - count(kab_reviews($o))) : null;
+                $mr = kab_notify_order($o, kab_ev('release', $o, ['title' => $meta['title'], 'final' => $meta['final'], 'prelim' => $meta['prelim'], 'questions' => $nq, 'deadline' => $dl,
+                    'roundsLeft' => $rl, 'changes' => $meta['changes'] ? 'Что изменилось: ' . implode('; ', array_slice($meta['changes'], 0, 6)) . '.' : '']));
                 if (is_file($dir . '/registry.json')) { kab_notice_order($o, 'voprosy', 'К альбому есть вопросы и решения на согласование — ответьте в кабинете.', '#/o/' . $o['number'] . '/voprosy', 'reg-' . $o['number'] . '-' . $ver); }
                 brig_audit($WHO, 'release', 'order ' . $o['number'], $ver . ($meta['final'] ? ' final' : ''));
-                $msg = 'Версия ' . $ver . ' опубликована клиенту.'; break;
+                $msg = 'Версия ' . $ver . ' опубликована клиенту. Письмо: ' . ADM_MAIL_WORD[$mr['mail']] . '.'; break;
             }
             case 'o_release_hide': {
                 if (!$o) { break; }
@@ -261,9 +289,9 @@ if (($_SERVER['REQUEST_METHOD'] ?? '') === 'POST') {
                 $j['status'] = linea_str($_POST['status'] ?? '', 60) ?: 'В работе';
                 $j['reply'] = linea_str($_POST['reply'] ?? '', 2000);
                 file_put_contents($rv['_f'], json_encode($j, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT));
-                kab_notice_order($o, 'voprosy', 'Правки ' . $num . ': ' . $j['status'] . ($j['reply'] !== '' ? ' — ' . mb_substr($j['reply'], 0, 200) : ''), '#/o/' . $o['number'] . '/pravki');
+                $mr = kab_notify_order($o, kab_ev('review', $o, ['number' => $num, 'status' => $j['status'], 'reply' => $j['reply']]));
                 brig_audit($WHO, 'review-status', 'order ' . $o['number'], $num . ': ' . $j['status']);
-                $msg = 'Статус правок сохранён.'; break;
+                $msg = 'Статус правок сохранён. Письмо клиенту: ' . ADM_MAIL_WORD[$mr['mail']] . '.'; break;
             }
             case 'o_msg': {
                 if (!$o) { break; }
@@ -271,11 +299,35 @@ if (($_SERVER['REQUEST_METHOD'] ?? '') === 'POST') {
                 if (!$need($t !== '', 'Пустое сообщение')) { break; }
                 linea_event((int)$o['id'], !empty($_POST['private']) ? 'admin-note' : 'kab:linea', $t);
                 if (empty($_POST['private'])) {
-                    kab_notice_order($o, 'proekt', 'Сообщение от LINEA: ' . mb_substr($t, 0, 300));
-                    if (kab_email_ok((string)$o['email'])) { brig_mail((string)$o['email'], 'kab_notice', ['subject' => 'сообщение по заказу ' . $o['number'], 'text' => $t, 'link' => brig_link('kabinet/#/o/' . $o['number'])], (bool)$o['test']); }
+                    $mr = kab_notify_order($o, kab_ev('message', $o, ['text' => $t]));
                 }
                 brig_audit($WHO, !empty($_POST['private']) ? 'order-note' : 'order-msg', 'order ' . $o['number']);
-                $msg = !empty($_POST['private']) ? 'Заметка сохранена (клиент её не видит).' : 'Сообщение отправлено в кабинет и на почту.'; break;
+                $msg = !empty($_POST['private']) ? 'Заметка сохранена (клиент её не видит).' : 'Сообщение отправлено в кабинет. Письмо: ' . ADM_MAIL_WORD[$mr['mail']] . '.'; break;
+            }
+            case 'o_stage': {
+                $st = ADM_STAGES[(string)($_POST['stage'] ?? '')] ?? null;
+                if (!$o || !$need((bool)$st, 'Неизвестный этап')) { break; }
+                $text = linea_str($_POST['text'] ?? '', 1500) ?: $st[2];
+                $exp = trim((string)($_POST['expected_at'] ?? ''));
+                if ($exp !== '' && !$need((bool)preg_match('/^\d{4}-\d{2}-\d{2}$/', $exp) && strtotime($exp) !== false, 'Плановая дата — в формате ГГГГ-ММ-ДД')) { break; }
+                $set = ['expected_note' => linea_str($_POST['expected_note'] ?? '', 120) ?: null];
+                $set['expected_at'] = $exp !== '' ? $exp : (!empty($_POST['expected_keep']) ? $o['expected_at'] : null);
+                $oupd($set);
+                linea_event((int)$o['id'], 'stage', $st[1] . '. ' . $text);
+                $ev = kab_ev('stage', $o, ['title' => $st[1], 'text' => $text]);
+                if (!empty($_POST['send'])) { $mr = kab_notify_order($o, $ev); }
+                else { kab_notice_order($o, 'proekt', $ev['text']); $mr = ['mail' => 'none']; }
+                brig_audit($WHO, 'order-stage', 'order ' . $o['number'], (string)$_POST['stage'] . ($exp ? ' до ' . $exp : ''));
+                $msg = 'Этап «' . $st[0] . '» записан в историю клиента. Письмо: ' . (!empty($_POST['send']) ? ADM_MAIL_WORD[$mr['mail']] : 'не отправлялось (галочка снята)') . '.'; break;
+            }
+            case 'o_expected': {
+                if (!$o) { break; }
+                $exp = trim((string)($_POST['expected_at'] ?? ''));
+                if ($exp !== '' && !$need((bool)preg_match('/^\d{4}-\d{2}-\d{2}$/', $exp) && strtotime($exp) !== false, 'Плановая дата — в формате ГГГГ-ММ-ДД')) { break; }
+                $oupd(['expected_at' => $exp !== '' ? $exp : null, 'expected_note' => linea_str($_POST['expected_note'] ?? '', 120) ?: null]);
+                linea_event((int)$o['id'], 'stage', $exp !== '' ? 'Плановая дата следующего шага: ' . kab_date_ru($exp) . ($_POST['expected_note'] ? ' (' . linea_str($_POST['expected_note'], 120) . ')' : '') : 'Плановая дата снята');
+                brig_audit($WHO, 'order-expected', 'order ' . $o['number'], $exp ?: 'снята');
+                $msg = $exp !== '' ? 'Плановая дата сохранена — клиент видит её в кабинете и в письмах.' : 'Плановая дата снята.'; break;
             }
             case 'o_token': {
                 if (!$o || !$need($reason !== '', 'Укажите причину перевыпуска')) { break; }
@@ -518,6 +570,61 @@ function adm_todo(): array
     return $out;
 }
 
+// ───────────────────────── очередь «Ждут нас»: заказ → что сделать → сколько ждёт
+
+/** «5 ч», «2 дн.» — сколько прошло. */
+function adm_ago(int $since, int $now): string
+{
+    $m = max(0, intdiv($now - $since, 60));
+    return $m < 60 ? 'меньше часа' : ($m < 1440 ? intdiv($m, 60) . ' ч' : intdiv($m, 1440) . ' дн.');
+}
+/** Ждёт больше рабочего дня? (выходные не считаются) */
+function adm_hot(int $since, int $now): bool
+{
+    $wd = kab_wd_between(date('Y-m-d H:i:s', $since), $now);
+    return $wd >= 2 || ($wd === 1 && date('Hi', $since) <= date('Hi', $now));
+}
+/**
+ * Что от нас ждёт заказ прямо сейчас. @return ?array{what:string,since:int,tab:string,hot:bool}
+ * Первое подходящее правило: сумма → счёт → сообщение клиента → правки → ответы клиента → первый вариант → напоминание об оплате.
+ */
+function adm_wait(array $o): ?array
+{
+    $now = kab_time();
+    $ts = fn($v) => $v ? (int)strtotime((string)$v) : 0;
+    $mk = fn(string $what, int $since, string $tab) => ['what' => $what, 'since' => $since, 'tab' => $tab, 'hot' => adm_hot($since, $now)];
+    if (in_array($o['status'], ['cancelled', 'refunded'], true)) { return null; }
+    $lastC = (string)db_val("SELECT MAX(at) FROM events WHERE order_id = ? AND who = 'kab:client'", [(int)$o['id']]);
+    $lastL = (string)db_val("SELECT MAX(at) FROM events WHERE order_id = ? AND who IN ('kab:linea')", [(int)$o['id']]);
+    if ($lastC !== '' && $lastC > $lastL) { return $mk('Ответить клиенту (сообщение в кабинете)', $ts($lastC), 'lenta'); }
+    if ($o['status'] === 'new' || ($o['status'] === 'awaiting_payment' && !$o['amount_confirmed_at'] && !(int)$o['amount_kop'])) { return $mk('Подтвердить сумму', $ts($o['created_at']), 'dengi'); }
+    if ($o['status'] === 'awaiting_payment' && !$o['amount_confirmed_at'] && !linea_amount_ok($o)) { return $mk('Сверить площадь по плану и подтвердить сумму', $ts($o['created_at']), 'dengi'); }
+    if ($o['status'] === 'awaiting_payment') {
+        $pub = linea_public_order($o);
+        if (!$pub['canPay'] && !$o['invoice_at']) { return $mk('Выставить счёт', $ts($o['amount_confirmed_at'] ?: $o['created_at']), 'dengi'); }
+        return null;   // ждём оплату от клиента
+    }
+    foreach (kab_reviews($o) as $r) { if ($r['status'] === 'Получены' || $r['status'] === '') { return $mk('Разобрать правки ' . $r['number'], $ts($r['at']), 'pravki'); } }
+    if ($o['status'] === 'paid') {
+        $rel = kab_releases($o, true);
+        if (!$rel) { return $mk('Сделать первый вариант' . (!empty($o['expected_at']) ? ' (план — до ' . kab_date_ru((string)$o['expected_at']) . ')' : ''), $ts($o['paid_at']), 'vypuski'); }
+        $af = kab_order_dir($o) . '/answers.json';
+        $lastRel = max(array_map(fn($r) => $ts($r['published_at'] ?? $r['date'] ?? ''), $rel));
+        if (is_file($af) && filemtime($af) > $lastRel) { return $mk('Клиент ответил на вопросы — выпустить версию', (int)filemtime($af), 'voprosy'); }
+    }
+    return null;
+}
+/** Очередь для дашборда: боевые заказы, кто дольше ждёт — выше. */
+function adm_queue(): array
+{
+    $out = [];
+    foreach (brig_all("SELECT * FROM orders WHERE test = 0 AND status NOT IN ('cancelled','refunded') ORDER BY id") as $o) {
+        if ($w = adm_wait($o)) { $out[] = ['o' => $o] + $w; }
+    }
+    usort($out, fn($a, $b) => [$b['hot'], $a['since']] <=> [$a['hot'], $b['since']]);
+    return $out;
+}
+
 // ───────────────────────── разделы
 switch ($s) {
     case 'dash': {
@@ -527,7 +634,10 @@ switch ($s) {
         $cnt = fn(string $q, array $a = []) => (int)db_val($q, $a);
         $todo = adm_todo();
         $kp = fn($v, $t, $href = '') => '<div class="kpi">' . ($href ? '<a href="' . $href . '">' : '') . '<b>' . $v . '</b><span>' . $t . '</span>' . ($href ? '</a>' : '') . '</div>';
-        $body = '<h1>Требует действия</h1>' . ($todo ? '<ul class="todo">' . implode('', array_map(fn($x) => '<li' . ($x['hot'] ? ' class="hot"' : '') . '><a href="' . $h($x['href']) . '">' . $h($x['text']) . '</a></li>', $todo)) . '</ul>' : '<p class="box">Всё сделано — срочного нет.</p>')
+        $q = adm_queue(); $nowT = kab_time();
+        $qRows = implode('', array_map(fn($x) => '<tr' . ($x['hot'] ? ' class="hotrow"' : '') . '><td><a href="panel.php?s=order&o=' . rawurlencode($x['o']['number']) . '&tab=' . $x['tab'] . '">' . $h($x['o']['number']) . '</a><div class="mut">' . $h($x['o']['name']) . '</div></td><td>' . $h($x['what']) . '</td><td>' . ($x['hot'] ? '<b class="late">' . $h(adm_ago($x['since'], $nowT)) . '</b> — больше рабочего дня' : $h(adm_ago($x['since'], $nowT))) . '</td></tr>', $q));
+        $body = '<h1>Ждут нас</h1>' . ($q ? '<div class="scroll"><table><tr><th>Заказ</th><th>Что сделать</th><th>Ждёт</th></tr>' . $qRows . '</table></div>' : '<p class="box">Заказы клиентов никого не ждут — очередь пуста.</p>')
+            . '<h1 style="margin-top:22px">Требует действия</h1>' . ($todo ? '<ul class="todo">' . implode('', array_map(fn($x) => '<li' . ($x['hot'] ? ' class="hot"' : '') . '><a href="' . $h($x['href']) . '">' . $h($x['text']) . '</a></li>', $todo)) . '</ul>' : '<p class="box">Всё сделано — срочного нет.</p>')
             . '<h2>Проекты</h2><div class="grid">'
             . $kp($cnt("SELECT COUNT(*) FROM orders WHERE test = 0 AND created_at > ?", [date('Y-m-d H:i:s', time() - 7 * 86400)]), 'новых брифов за 7 дней', 'panel.php?s=orders')
             . $kp($cnt("SELECT COUNT(*) FROM orders WHERE test = 0 AND status = 'awaiting_payment'"), 'ждут оплаты', 'panel.php?s=orders&st=awaiting_payment')
@@ -547,20 +657,54 @@ switch ($s) {
     }
     case 'orders': {
         $st = (string)($_GET['st'] ?? ''); $q = trim((string)($_GET['q'] ?? ''));
+        $who = in_array($_GET['who'] ?? '', ['us', 'client'], true) ? (string)$_GET['who'] : '';
+        $from = preg_match('/^\d{4}-\d{2}-\d{2}$/', (string)($_GET['from'] ?? '')) ? (string)$_GET['from'] : '';
+        $to = preg_match('/^\d{4}-\d{2}-\d{2}$/', (string)($_GET['to'] ?? '')) ? (string)$_GET['to'] : '';
+        $sort = in_array($_GET['sort'] ?? '', ['new', 'old', 'wait', 'sum'], true) ? (string)$_GET['sort'] : 'new';
+        $page = max(1, (int)($_GET['p'] ?? 1)); $per = 25;
         $w = []; $args = [];
         if (isset(LINEA_STATUS[$st])) { $w[] = 'status = ?'; $args[] = $st; }
         if ($q !== '') { $w[] = '(number LIKE ? OR LOWER(email) LIKE ? OR phone LIKE ? OR name LIKE ?)'; array_push($args, "%$q%", '%' . mb_strtolower($q) . '%', "%$q%", "%$q%"); }
+        if ($from !== '') { $w[] = 'created_at >= ?'; $args[] = $from . ' 00:00:00'; }
+        if ($to !== '') { $w[] = 'created_at <= ?'; $args[] = $to . ' 23:59:59'; }
+        $nowT = kab_time();
+        $all = [];
+        foreach (brig_all('SELECT * FROM orders ' . ($w ? 'WHERE ' . implode(' AND ', $w) : '') . ' ORDER BY id DESC LIMIT 3000', $args) as $o) {
+            $wt = adm_wait($o);
+            $nx = kab_next_action($o);
+            $waitUs = $wt !== null || $nx['who'] === 'studio';
+            $waitClient = $wt === null && $nx['who'] === 'client';
+            if ($who === 'us' && !$waitUs) { continue; }
+            if ($who === 'client' && !$waitClient) { continue; }
+            $all[] = ['o' => $o, 'nx' => $nx, 'wt' => $wt];
+        }
+        usort($all, function ($x, $y) use ($sort) {
+            return match ($sort) {
+                'old' => (int)$x['o']['id'] <=> (int)$y['o']['id'],
+                'sum' => (int)$y['o']['amount_kop'] <=> (int)$x['o']['amount_kop'],
+                'wait' => [$x['wt'] === null, $x['wt']['since'] ?? 0] <=> [$y['wt'] === null, $y['wt']['since'] ?? 0],
+                default => (int)$y['o']['id'] <=> (int)$x['o']['id'],
+            };
+        });
+        $total = count($all); $pages = max(1, (int)ceil($total / $per)); $page = min($page, $pages);
         $rows = '';
-        foreach (brig_all('SELECT * FROM orders ' . ($w ? 'WHERE ' . implode(' AND ', $w) : '') . ' ORDER BY id DESC LIMIT 300', $args) as $o) {
-            $nx = kab_next_action($o); $rm = kab_remont($o);
-            $rows .= '<tr><td><a href="panel.php?s=order&o=' . rawurlencode($o['number']) . '">' . $h($o['number']) . '</a>' . ($o['test'] ? ' <span class="test">тест</span>' : '') . '<div class="mut">' . $h(substr((string)$o['created_at'], 0, 16)) . '</div></td>'
+        foreach (array_slice($all, ($page - 1) * $per, $per) as $x) {
+            $o = $x['o']; $nx = $x['nx']; $wt = $x['wt']; $rm = kab_remont($o);
+            $wcell = $wt ? ($wt['hot'] ? '<b class="late">' : '') . $h($wt['what']) . ' · ' . $h(adm_ago($wt['since'], $nowT)) . ($wt['hot'] ? '</b>' : '') : '<span class="mut">ждём: ' . ['client' => 'клиента', 'studio' => 'от нас', 'brigade' => 'бригаду', 'none' => '—'][$nx['who']] . '</span>';
+            $rows .= '<tr' . ($wt && $wt['hot'] ? ' class="hotrow"' : '') . '><td><a href="panel.php?s=order&o=' . rawurlencode($o['number']) . '">' . $h($o['number']) . '</a>' . ($o['test'] ? ' <span class="test">тест</span>' : '') . '<div class="mut">' . $h(substr((string)$o['created_at'], 0, 16)) . '</div></td>'
                 . '<td>' . $h($o['name']) . '<div class="mut hide-m">' . $h($o['email']) . '</div></td><td class="hide-m">' . $h(LINEA_KINDS[$o['kind']] ?? $o['kind']) . ($o['area'] ? ', ' . $h($o['area']) . ' м²' : '') . '</td>'
-                . '<td>' . $rub($o['amount_kop']) . '</td><td><span class="st">' . $h(LINEA_STATUS[$o['status']] ?? $o['status']) . '</span><div class="mut">ждём: ' . ['client' => 'клиента', 'studio' => 'от нас', 'brigade' => 'бригаду', 'none' => '—'][$nx['who']] . '</div></td>'
+                . '<td>' . $rub($o['amount_kop']) . '</td><td><span class="st">' . $h(LINEA_STATUS[$o['status']] ?? $o['status']) . '</span><div>' . $wcell . '</div></td>'
                 . '<td class="hide-m">' . ($rm['job'] ? 'сделка: ' . $h(BRIG_JOB_STATUS[$rm['job']['status']] ?? '') : ($rm['request'] ? 'подбор' : '—')) . '</td></tr>';
         }
-        $flt = '<form method="get" class="inl"><input type="hidden" name="s" value="orders"><select name="st"><option value="">все статусы</option>' . implode('', array_map(fn($k, $t) => '<option value="' . $k . '"' . ($k === $st ? ' selected' : '') . '>' . $h($t) . '</option>', array_keys(LINEA_STATUS), LINEA_STATUS))
-            . '</select><input name="q" value="' . $h($q) . '" placeholder="номер, почта, телефон"><button>Найти</button></form>';
-        adm_page('Заказы', '<h1>Заказы проектов</h1>' . $flt . '<div class="scroll"><table><tr><th>Номер</th><th>Клиент</th><th class="hide-m">Вид</th><th>Сумма</th><th>Статус</th><th class="hide-m">Ремонт</th></tr>' . ($rows ?: '<tr><td colspan="6">Пусто</td></tr>') . '</table></div>', 'orders', $msg);
+        $sel = fn(string $name, array $opts, string $cur) => '<select name="' . $name . '">' . implode('', array_map(fn($k, $t) => '<option value="' . $h($k) . '"' . ((string)$k === $cur ? ' selected' : '') . '>' . $h($t) . '</option>', array_keys($opts), $opts)) . '</select>';
+        $flt = '<form method="get" class="inl"><input type="hidden" name="s" value="orders">' . $sel('st', ['' => 'все статусы'] + LINEA_STATUS, $st)
+            . $sel('who', ['' => 'все', 'us' => 'ждём нас', 'client' => 'ждём клиента'], $who)
+            . ' с <input type="date" name="from" value="' . $h($from) . '"> по <input type="date" name="to" value="' . $h($to) . '">'
+            . $sel('sort', ['new' => 'сначала новые', 'old' => 'сначала старые', 'wait' => 'дольше всех ждут нас', 'sum' => 'по сумме'], $sort)
+            . '<input name="q" value="' . $h($q) . '" placeholder="номер, почта, телефон"><button>Показать</button></form>';
+        $qs = fn(int $pg) => 'panel.php?' . http_build_query(['s' => 'orders', 'st' => $st, 'who' => $who, 'from' => $from, 'to' => $to, 'sort' => $sort, 'q' => $q, 'p' => $pg]);
+        $pager = '<p class="mut">Найдено: ' . $total . '. Страница ' . $page . ' из ' . $pages . ($page > 1 ? ' · <a href="' . $h($qs($page - 1)) . '">← назад</a>' : '') . ($page < $pages ? ' · <a href="' . $h($qs($page + 1)) . '">вперёд →</a>' : '') . '</p>';
+        adm_page('Заказы', '<h1>Заказы проектов</h1>' . $flt . $pager . '<div class="scroll"><table><tr><th>Номер</th><th>Клиент</th><th class="hide-m">Вид</th><th>Сумма</th><th>Статус / что ждём</th><th class="hide-m">Ремонт</th></tr>' . ($rows ?: '<tr><td colspan="6">Пусто</td></tr>') . '</table></div>' . $pager, 'orders', $msg);
     }
     case 'order': {
         $o = linea_order_by_number((string)($_GET['o'] ?? ''));
@@ -580,13 +724,47 @@ switch ($s) {
                 $b = '<div class="box"><p>' . $h(LINEA_KINDS[$o['kind']] ?? $o['kind']) . ' · ' . $h($o['object_type']) . ($o['area'] ? ', ' . $h($o['area']) . ' м²' : '') . ' · сумма <b>' . $rub($o['amount_kop']) . '</b>' . ($o['amount_confirmed_at'] ? ' (подтверждена)' : ' (не подтверждена)') . '</p>'
                     . '<p>' . $h($o['name']) . ' · ' . $h($o['phone']) . ' · ' . $h($o['email']) . ($o['contact'] ? ' · связь: ' . $h($o['contact']) : '') . '</p>'
                     . '<p class="mut">Создан ' . $d($o['created_at']) . ' · оплачен ' . $d($o['paid_at']) . ' · выдан ' . $d($o['delivered_at']) . ' · аккаунт клиента: ' . ($o['account_id'] ? '<a href="panel.php?s=client&id=' . (int)$o['account_id'] . '">#' . (int)$o['account_id'] . '</a>' : 'нет') . '</p>'
-                    . implode('', array_map(fn($to) => $form('o_status', $H + ['to' => $to], in_array($to, ['cancelled', 'refunded', 'paid'], true) ? $reasonIn : '', '→ ' . (LINEA_STATUS[$to] ?? $to), in_array($to, ['cancelled', 'refunded'], true) ? 'lt' : ''), $tos)) . '</div>';
+                    . implode('', array_map(fn($to) => $form('o_status', $H + ['to' => $to], in_array($to, ['cancelled', 'refunded', 'paid'], true) ? $reasonIn : '', '→ ' . (LINEA_STATUS[$to] ?? $to), in_array($to, ['cancelled', 'refunded'], true) ? 'lt' : ''), $tos))
+                    // какое письмо уйдёт клиенту при смене статуса — видно до нажатия кнопки
+                    . implode('', array_map(function ($to) use ($o, $h) {
+                        $en = ['paid' => 'paid', 'delivered' => 'delivered', 'cancelled' => 'cancelled'][$to] ?? '';
+                        if ($en === '') { return ''; }
+                        [$subj, $txt] = kab_ev_render($o, kab_ev($en, $o, ['reason' => '(причина, которую вы укажете)']));
+                        return '<details><summary class="mut">Письмо клиенту при «' . $h(LINEA_STATUS[$to] ?? $to) . '»</summary><div class="pv"><b>' . $h($subj) . "</b>\n\n" . $h($txt) . '</div></details>';
+                    }, $tos)) . '</div>'
+                    . '<h2>Плановая дата следующего шага</h2><div class="box"><p class="mut">Клиент видит её в кабинете («Сейчас») и в письмах. Сейчас: <b>' . ($o['expected_at'] ? $h(kab_date_ru((string)$o['expected_at'], true)) . ($o['expected_note'] ? ' — ' . $h($o['expected_note']) : '') : 'не задана') . '</b></p>'
+                    . $form('o_expected', $H, '<input type="date" name="expected_at" value="' . $h(substr((string)$o['expected_at'], 0, 10)) . '"><input name="expected_note" size="30" placeholder="что будет к этой дате (например, первый вариант)" value="' . $h($o['expected_note']) . '">', 'Сохранить дату', 'lt') . '</div>'
+                    . '<h2>Этап работы — записать в историю клиента и написать ему</h2><div class="box"><p class="mut">Текст можно поправить перед отправкой; письмо уйдёт с учётом настроек клиента (группа «Проект»). Снимите галочку, чтобы только записать этап в историю.</p>'
+                    . implode('', array_map(function ($k, $st) use ($o, $h, $form, $H) {
+                        [$subj, $txt] = kab_ev_render($o, kab_ev('stage', $o, ['title' => $st[1], 'text' => $st[2]]));
+                        return '<div style="margin:0 0 10px">' . $form('o_stage', $H + ['stage' => $k], '<textarea name="text" rows="3" cols="60">' . $h($st[2]) . '</textarea><br>до <input type="date" name="expected_at" value="' . $h(substr((string)$o['expected_at'], 0, 10)) . '"><input name="expected_note" size="22" placeholder="к дате: что будет" value="' . $h($o['expected_note']) . '">'
+                            . '<label><input type="checkbox" name="send" value="1" checked> письмо клиенту</label>', $st[0]) . '<details><summary class="mut">Письмо, которое уйдёт</summary><div class="pv"><b>' . $h($subj) . "</b>\n\n" . $h($txt) . '</div></details></div>';
+                    }, array_keys(ADM_STAGES), ADM_STAGES)) . '</div>';
                 break;
             }
             case 'brif': {
-                $bf = kab_order_dir($o) . '/brief.json';
-                $b = '<div class="box"><a href="admin.php?dl=' . rawurlencode($num) . '">Скачать архив брифа</a><pre>' . $h(is_file($bf) ? json_encode(json_decode((string)file_get_contents($bf), true), JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT) : 'нет brief.json') . '</pre>'
-                    . '<p class="mut">Папку клиента (clients/&lt;slug&gt;) создаём на маке: <code>/new-client</code> с этим брифом — сервер проект не собирает.</p></div>';
+                $bj = brief_load($o);
+                $v = brief_view($bj);
+                $tbl = fn(array $rows) => '<table>' . implode('', array_map(fn($r) => '<tr><th style="width:34%;font-weight:500">' . $h($r[0]) . '</th><td>' . $h($r[1]) . (($r[2] ?? '') === 'unknown' ? ' <span class="unk">· спросить на обмере</span>' : '') . '</td></tr>', $rows)) . '</table>';
+                $b = '<div class="box"><a href="admin.php?dl=' . rawurlencode($num) . '"><b>Скачать архив брифа (ZIP)</b></a> · <a href="panel.php?s=order&o=' . rawurlencode($num) . '&tab=brif&raw=1">сырой brief.json</a></div>';
+                foreach ($v['sections'] as $sec) {
+                    $b .= '<h2>' . $h($sec['title']) . '</h2><div class="box">' . ($sec['text'] !== '' ? '<p style="white-space:pre-wrap">' . $h($sec['text']) . '</p>' : '') . ($sec['rows'] ? $tbl($sec['rows']) : '') . '</div>';
+                }
+                foreach (['life' => 'Жизнь в квартире', 'home' => 'Дом и ремонт'] as $k => $t) {
+                    $x = $v[$k];
+                    if (!$x['present']) { $b .= '<h2>' . $t . '</h2><p class="box mut">Клиент этот шаг не открывал (в брифе его нет).</p>'; continue; }
+                    $b .= '<h2>' . $t . '</h2><p class="mut">' . ($x['info']['skipped'] ? 'Клиент пропустил этот шаг.' : 'Отвечено вопросов: ' . (int)$x['info']['answered'] . ' из ' . (int)$x['info']['total'] . '.') . '</p>';
+                    foreach ($x['groups'] as $g) { $b .= '<div class="box"><b>' . $h($g['title']) . '</b>' . $tbl($g['rows']) . '</div>'; }
+                }
+                // файлы: из архива брифа и догруженные клиентом из кабинета
+                $files = brief_files($o); $fh = '';
+                foreach ($files as $f) {
+                    $u = 'panel.php?of=' . $f['src'] . '&o=' . rawurlencode($num) . '&on=' . rawurlencode($f['name']);
+                    $fh .= '<div>' . ($f['img'] ? '<a href="' . $h($u) . '"><img class="th" loading="lazy" src="' . $h($u . '&inl=1') . '" alt=""></a>' : '') . '<a href="' . $h($u) . '">' . $h($f['name']) . '</a><br><span class="mut">' . round($f['size'] / 1024) . ' КБ' . ($f['src'] === 'extra' ? ' · догружено клиентом ' . $d($f['at']) : '') . '</span></div>';
+                }
+                $b .= '<h2>Файлы (' . count($files) . ')</h2><div class="box">' . ($fh ? '<div class="fgrid">' . $fh . '</div>' : 'Файлов нет.') . '</div>';
+                $b .= '<p class="mut">Дальше — на маке: <code>node tools/order-pull.mjs ' . $h($num) . ' --private=…</code> собирает clients/&lt;slug&gt;/brief.json вместе с life/home и файлами; запуск конвейера — <code>/new-client</code>. Сервер проект не собирает.</p>';
+                if (!empty($_GET['raw'])) { $b = '<div class="box"><pre>' . $h(json_encode($bj, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT)) . '</pre></div>'; }
                 break;
             }
             case 'dengi': {
