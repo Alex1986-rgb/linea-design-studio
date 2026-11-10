@@ -76,7 +76,7 @@ w('about/index.html', page({
   ],
   body: `<section class="proof"><div class="wrap">
   <div><b>1 человек</b><span>ведёт проект от брифа до выдачи</span></div>
-  <div><b>до 48 часов</b><span>первый вариант альбома от оплаты и плана; готовый проект — после ваших ответов и обмера</span></div>
+  <div><b>${TERMS.days}</b><span>проект от оплаты и плана с размерами; с вопросами или обмером альбом выходит «ПРЕДВАРИТЕЛЬНО», перевыпуск — тоже за ${TERMS.days}</span></div>
   <div><b>после оплаты</b><span>начинается работа; цена за м² фиксирована</span></div>
   <div><b>${plural(TOTAL_SHEETS, 'лист', 'листа', 'листов')}</b><span>в ${ALB.length} альбомах, открытых целиком</span></div>
 </div></section>
@@ -211,7 +211,7 @@ w('contacts/index.html', page({
       <tr><th>Канал</th><th>Куда</th><th>Когда отвечаем</th></tr>
       <tr><td>Телефон</td><td><a href="tel:${AUTHOR.tel}">${AUTHOR.phone}</a></td><td>ежедневно, 10:00–21:00 МСК</td></tr>
       <tr><td>Почта</td><td><a href="mailto:${AUTHOR.email}">${AUTHOR.email}</a></td><td>в течение дня, с вложениями любого объёма</td></tr>
-      <tr><td>Бриф</td><td><a href="../brief.html">заполняется на сайте, можно голосом</a>; ${TERMS.intake.contactsRow}</td><td>${TERMS.sumShort}; первый вариант альбома — до 48 часов от оплаты и плана</td></tr>
+      <tr><td>Бриф</td><td><a href="../brief.html">заполняется на сайте, можно голосом</a>; ${TERMS.intake.contactsRow}</td><td>${TERMS.sumShort}; проект — ${TERMS.daysShort}</td></tr>
       <tr><td>Правки</td><td>голосом прямо на листах альбома</td><td>кнопка «Правка к этому листу» — на каждой странице PDF</td></tr>
     </table>
   </div>

@@ -60,6 +60,7 @@ for (const file of ['index.html', 'brief.html'].filter(f => !ONLY || f === ONLY)
   if (file === 'brief.html') {
     const T = SHELL.TERMS, rub = T.rub;
     const region = (name, html) => { out = out.replace(new RegExp(`<!-- terms:${name} -->[\\s\\S]*?<!-- /terms:${name} -->`), `<!-- terms:${name} -->${html}<!-- /terms:${name} -->`); };
+    out = out.replace(/(<meta property="og:description" content=")[^"]*(">)/, `$1Три шага, около 5 минут: план, картинки и пара слов — можно голосом. От ${rub(T.packs[0].rate)}/м², сумму знаете до оплаты; проект — ${T.daysShort}.$2`);
     region('brief-lead', `${T.brief.line}. Цена ${T.fromLine}; ${T.sumShort}.`);
     region('brief-next', `<h3>Что будет дальше</h3><ol>${T.brief.next.map(x => `<li>${x}</li>`).join('')}</ol><p>${T.intake.brief}.</p><p class="pre-call"><b>${T.call.title}.</b> ${T.call.line}</p>`);
     const json = JSON.stringify({ packs: T.packs.map(p => ({ key: p.key, name: p.name, rate: p.rate, min: p.min })), minArea: T.minArea, areaRecalc: T.areaRecalc });

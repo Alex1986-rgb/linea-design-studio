@@ -33,7 +33,7 @@ const banner = (up, fixed) => fixed
   : `${MARK}<div style="position:relative;${BOX}">`
     + `<b>Архив: первая версия программы (август 2026).</b> Визуализации с планом не сверены, по комплекту не строят — страница оставлена для сравнения. `
     + `<a href="${up}portfolio-hub/" style="color:#ebdca8">Альбомы нового формата →</a></div>${END}`;
-const cta = up => `<div class="cta"><h3>Свой проект — в новом формате</h3><p>${TERMS.how}. Первый вариант проекта — до 48 часов от оплаты и получения плана с размерами (дом — до 72). ${TERMS.prelim.split('. ')[0]}.</p>`
+const cta = up => `<div class="cta"><h3>Свой проект — в новом формате</h3><p>${TERMS.how}. Проект — за ${TERMS.daysFrom} (срок зависит от площади и полноты данных). ${TERMS.prelim.split('. ')[0]}.</p>`
   + `<a class="btn" href="${up}brief.html">Заполнить бриф</a> <a class="btn ghost" href="${up}portfolio-hub/">Альбомы нового формата</a></div>`;
 
 // обещания первой версии → как есть на самом деле
