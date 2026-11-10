@@ -76,7 +76,7 @@ w('about/index.html', page({
   ],
   body: `<section class="proof"><div class="wrap">
   <div><b>1 человек</b><span>ведёт проект от брифа до выдачи</span></div>
-  <div><b>до 48 часов</b><span>первый вариант проекта квартиры от оплаты и плана</span></div>
+  <div><b>до 48 часов</b><span>первый вариант альбома от оплаты и плана; готовый проект — после ваших ответов и обмера</span></div>
   <div><b>после оплаты</b><span>начинается работа; цена за м² фиксирована</span></div>
   <div><b>${plural(TOTAL_SHEETS, 'лист', 'листа', 'листов')}</b><span>в ${ALB.length} альбомах, открытых целиком</span></div>
 </div></section>
@@ -89,6 +89,34 @@ w('about/index.html', page({
     <div class="cta-row">
       <a class="btn ghost" href="tel:${AUTHOR.tel}">${AUTHOR.phone}</a>
       <a class="btn ghost" href="mailto:${AUTHOR.email}">${AUTHOR.email}</a>
+    </div>
+  </div>
+</section>
+
+<section class="blk" id="chestno">
+  <div class="wrap">
+    <div class="kicker">Кто делает — честно</div>
+    <h2>Что можно проверить сегодня, а чего пока нет</h2>
+    <!-- TODO (Александр): фото автора и краткий опыт (годы работы, реальные объекты) — подставить, когда будут; сами не придумываем -->
+    <div class="pas-grid">
+      <div class="pas-col good">
+        <h3>Подтверждается</h3>
+        <ul>
+          <li>Фамилия автора — в основной надписи (штампе) каждого листа</li>
+          <li>${ALB.length} альбомов открыты целиком: можно проверить каждый лист до оплаты</li>
+          <li>Цена, состав и условия — на странице «<a href="../price/">Цена и условия</a>»; ${TERMS.sumShort}</li>
+          <li>${esc(TERMS.refundLine)}</li>
+        </ul>
+      </div>
+      <div class="pas-col">
+        <h3>Пока нет — и мы об этом говорим</h3>
+        <ul>
+          <li>Отзывов клиентов: проекты на сайте демонстрационные, цитат мы не выдумываем</li>
+          <li>Подписей нормоконтролёра и проверяющих на листах: за других мы не расписываемся</li>
+          <li>Реквизитов исполнителя на сайте: ${esc(TERMS.reqLine)}</li>
+          <li>Договора-оферты в окончательной редакции: пока черновик, условия — на странице заказа до оплаты</li>
+        </ul>
+      </div>
     </div>
   </div>
 </section>
@@ -170,7 +198,7 @@ w('contacts/index.html', page({
   desc: D(`Контакты LINEA: ${AUTHOR.name}, телефон ${AUTHOR.phone}, почта ${AUTHOR.email}. ${TERMS.intake.contactsDesc}`, 'contacts'),
   h1: 'Контакты',
   crumb: 'Контакты',
-  lead: 'Быстрее всего — бриф: ' + TERMS.brief.what + ', ' + TERMS.brief.time + '. Сумму считаем по вашей площади до оплаты, работа начинается после оплаты. Если удобнее сначала поговорить — звоните или пишите напрямую автору проектов.',
+  lead: 'Быстрее всего — бриф: ' + TERMS.brief.what + ' (' + TERMS.brief.honest + '). ' + TERMS.sumLine + '; работа начинается после оплаты. Если удобнее сначала поговорить — звоните или пишите напрямую автору проектов.',
   jsonld: [
     crumbsLd([['LINEA', BASE + '/'], ['Контакты', BASE + '/contacts/']]),
     { '@context': 'https://schema.org', '@type': 'ContactPage', mainEntity: { '@type': 'Person', name: AUTHOR.name, jobTitle: AUTHOR.role, telephone: AUTHOR.tel, email: AUTHOR.email } }
@@ -183,7 +211,7 @@ w('contacts/index.html', page({
       <tr><th>Канал</th><th>Куда</th><th>Когда отвечаем</th></tr>
       <tr><td>Телефон</td><td><a href="tel:${AUTHOR.tel}">${AUTHOR.phone}</a></td><td>ежедневно, 10:00–21:00 МСК</td></tr>
       <tr><td>Почта</td><td><a href="mailto:${AUTHOR.email}">${AUTHOR.email}</a></td><td>в течение дня, с вложениями любого объёма</td></tr>
-      <tr><td>Бриф</td><td><a href="../brief.html">заполняется на сайте, можно голосом</a>; ${TERMS.intake.contactsRow}</td><td>сумму по вашей площади называем в течение рабочего дня; первый вариант проекта квартиры — до 48 часов от оплаты и плана</td></tr>
+      <tr><td>Бриф</td><td><a href="../brief.html">заполняется на сайте, можно голосом</a>; ${TERMS.intake.contactsRow}</td><td>${TERMS.sumShort}; первый вариант альбома — до 48 часов от оплаты и плана</td></tr>
       <tr><td>Правки</td><td>голосом прямо на листах альбома</td><td>кнопка «Правка к этому листу» — на каждой странице PDF</td></tr>
     </table>
   </div>

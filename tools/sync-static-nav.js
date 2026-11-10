@@ -42,22 +42,25 @@ for (const file of ['index.html', 'brief.html'].filter(f => !ONLY || f === ONLY)
   const menuJs = SHELL.footer('', null).match(/<script>[\s\S]*<\/script>/)[0];
   if (!/querySelector\('\.burger'\)/.test(out)) out = out.replace('</body>', menuJs + '\n</body>');
 
-  // подвал: колонка ссылок (вторая), контакты автора не трогаем
-  const links = SHELL.SECTIONS.map(s => `<a href="${s.href}">${s.title}</a>`)
-    .concat(SHELL.FOOTER_EXTRA.map(s => `<a href="${s.href}">${s.title}</a>`)).join(' · ');
-  const line = `<p><a href="brief.html">Бриф</a> · ${links}${EXTRA[file] || ''}</p>`;
-  if (/<p><a href="brief\.html">Бриф<\/a>/.test(out)) {
-    out = out.replace(/<p><a href="brief\.html">Бриф<\/a>[\s\S]*?<\/p>/, line);
+  // подвал: сгруппированные ссылки (блок <!-- fnav -->), контакты автора не трогаем
+  const nav = `<!-- fnav -->${SHELL.footerNav('', null)}<!-- /fnav -->${EXTRA[file] || ''}`;
+  if (/<!-- fnav -->[\s\S]*?<!-- \/fnav -->/.test(out)) {
+    out = out.replace(/<!-- fnav -->[\s\S]*?<!-- \/fnav -->/, nav);
+  } else if (/<p><a href="brief\.html">Бриф<\/a>/.test(out)) {
+    out = out.replace(/<p><a href="brief\.html">Бриф<\/a>[\s\S]*?<\/p>/, nav);
   } else {
     // на брифе колонки ссылок не было вовсе — вставляем перед копирайтом
-    out = out.replace(/<div>©\s*LINEA studio, 2026<\/div>/, `<div>${line}<p>© LINEA studio, 2026</p></div>`);
+    out = out.replace(/<div>©\s*LINEA studio, 2026<\/div>/, `<div class="f-links">${nav}<p>© LINEA studio, 2026</p></div>`);
   }
+  out = out.replace(/<div>(\s*)<!-- fnav -->/, '<div class="f-links">$1<!-- fnav -->');
+  // версия CSS — та же, что у всех страниц (иначе новая шапка и подвал на этих двух страницах остаются без стилей из кэша)
+  out = out.replace(/css\/main\.css\?v=\d+/, `css/main.css?${SHELL.CSSV}`);
 
   // бриф: строка-описание, «что будет дальше» и ставки — из TERMS (tools/site-shell.js), руками в brief.html не правятся
   if (file === 'brief.html') {
     const T = SHELL.TERMS, rub = T.rub;
     const region = (name, html) => { out = out.replace(new RegExp(`<!-- terms:${name} -->[\\s\\S]*?<!-- /terms:${name} -->`), `<!-- terms:${name} -->${html}<!-- /terms:${name} -->`); };
-    region('brief-lead', `${T.brief.line}. От ${rub(T.packs[0].rate)}/м²; сумму знаете до оплаты.`);
+    region('brief-lead', `${T.brief.line}. Цена ${T.fromLine}; ${T.sumShort}.`);
     region('brief-next', `<h3>Что будет дальше</h3><ol>${T.brief.next.map(x => `<li>${x}</li>`).join('')}</ol><p>${T.intake.brief}.</p><p class="pre-call"><b>${T.call.title}.</b> ${T.call.line}</p>`);
     const json = JSON.stringify({ packs: T.packs.map(p => ({ key: p.key, name: p.name, rate: p.rate, min: p.min })), minArea: T.minArea, areaRecalc: T.areaRecalc });
     const tag = `<script type="application/json" id="briefTerms">${json}</script>`;

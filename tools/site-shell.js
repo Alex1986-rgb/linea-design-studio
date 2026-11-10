@@ -36,19 +36,18 @@ const SITE_DEFAULT = 'domain';
 const SITE = process.env.LINEA_SITE || SITE_DEFAULT;
 if (!process.env.LINEA_BASE && !SITE_BASES[SITE]) throw new Error(`LINEA_SITE=${SITE}: нет такого адреса (${Object.keys(SITE_BASES).join('|')})`);
 const BASE = String(process.env.LINEA_BASE || SITE_BASES[SITE]).replace(/\/+$/, '');
-const CSSV = 'v=37';
+const CSSV = 'v=38';
 
-// Разделы сайта в порядке меню. Добавили раздел — правится только здесь.
-// menu: false — раздел живёт в подвале и крошках, но не в шапке (шапка
-// должна помещаться в один ряд на ширине от 1180).
+// Разделы сайта. Добавили раздел — правится только здесь (подвал и крошки берут список отсюда).
+// menu: false — раздел не выводится в шапку (с 09.11.2026 в шапке только HEADER ниже, остальное — в подвале по группам).
 const SECTIONS = [
-  { key: 'portfolio', title: 'Портфолио', href: 'portfolio-hub/' },
-  { key: 'catalog', title: 'Каталог', href: 'catalog/' },
-  { key: 'gost', title: 'Документация', href: 'gost/' },
-  { key: 'cases', title: 'Кейсы', href: 'cases/' },
-  { key: 'compare', title: 'Сравнение', href: 'compare/' },
-  { key: 'style', title: 'Стили', href: 'style/' },
-  { key: 'journal', title: 'Журнал', href: 'journal/' },
+  { key: 'portfolio', title: 'Портфолио', href: 'portfolio-hub/', menu: false },
+  { key: 'catalog', title: 'Каталог', href: 'catalog/', menu: false },
+  { key: 'gost', title: 'Документация', href: 'gost/', menu: false },
+  { key: 'cases', title: 'Кейсы', href: 'cases/', menu: false },
+  { key: 'compare', title: 'Сравнение', href: 'compare/', menu: false },
+  { key: 'style', title: 'Стили', href: 'style/', menu: false },
+  { key: 'journal', title: 'Журнал', href: 'journal/', menu: false },
   { key: 'stories', title: 'Истории', href: 'stories/', menu: false },
   { key: 'reviews', title: 'Отзывы', href: 'reviews/', menu: false },
   // «Ремонт по проекту» (31.10.2026): клиентам — подбор бригады (проверка документов) к готовому проекту; бригадам — условия и регистрация
@@ -56,6 +55,16 @@ const SECTIONS = [
   { key: 'brigadam', title: 'Бригадам', href: 'brigadam/', menu: false },
 ];
 const MENU = SECTIONS.filter(s => s.menu !== false);
+
+// ── Шапка (решение 09.11.2026, критик сайта): четыре понятных пункта человеку без опыта ремонта + «Войти» и кнопка брифа.
+// Каталог, документация, кейсы, сравнение, стили, журнал, бригадам — в подвале, сгруппированно (страницы и адреса целы).
+// on — ключи разделов (аргумент active у header), при которых пункт подсвечен.
+const HEADER = [
+  { title: 'Примеры', href: 'portfolio-hub/', on: ['portfolio', 'cases', 'stories', 'style'] },
+  { title: 'Цена', href: 'price/', on: ['price'] },
+  { title: 'Как работаем', href: 'process/', on: ['process'] },
+  { title: 'Вопросы', href: 'faq/', on: ['faq'] },
+];
 
 // Описание для сниппета: длиннее ~160 знаков поисковик всё равно обрежет,
 // причём в произвольном месте. Режем сами — по границе слова.
@@ -69,25 +78,26 @@ function clamp(str, n) {
 
 const esc = s => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 
-// active — key раздела: его ссылка ведёт на './' (мы уже внутри)
+// active — key раздела: подсвечивает пункт шапки (HEADER.on)
 function header(u, active) {
-  const links = MENU.map(s =>
-    `      <a href="${s.key === active ? './' : u + s.href}"${s.key === active ? ' aria-current="page"' : ''}>${s.title}</a>`
+  const cur = HEADER.find(h => h.on.includes(active));
+  const links = HEADER.map(h =>
+    `      <a href="${u + h.href}"${h === cur ? ' aria-current="page"' : ''}>${h.title}</a>`
   ).join('\n');
   return `<header class="site">
   <div class="nav">
     <a class="logo" href="${u || './'}">LINE<i>A</i></a>
-    <nav class="links">
+    <nav class="links" aria-label="Главное меню">
 ${links}
     </nav>
     <a class="nav-in" href="${u}vhod/">Войти</a>
-    <a class="btn sm" href="${u}brief.html">Заполнить бриф</a>
+    <a class="btn sm nav-cta" href="${u}brief.html"><span class="t-long">Заполнить бриф</span><span class="t-short">Бриф</span></a>
     <button class="burger" type="button" aria-label="Меню" aria-expanded="false"><i></i><i></i><i></i></button>
   </div>
 </header>
 <div class="mnav" hidden>
   <nav>
-${MENU.map(x => `    <a href="${x.key === active ? './' : u + x.href}">${x.title}</a>`).join('\n')}
+${HEADER.map(x => `    <a href="${u + x.href}">${x.title}</a>`).join('\n')}
   </nav>
   <div class="mnav-cta">
     <a class="btn" href="${u}brief.html">Заполнить бриф</a>
@@ -162,8 +172,9 @@ const TERMS = {
   start: 'Проект начинается после оплаты',
   // площадь в брифе обязательна (01.11.2026): сумма видна сразу на странице заказа; что будет, если план покажет другую площадь
   areaRecalc: 'Сумма посчитана по площади из брифа. Если по плану площадь окажется другой, пересчитаем по той же ставке и согласуем разницу с вами до начала работы.',
-  how: 'Вы присылаете бриф — мы называем сумму по вашей площади и срок, вы оплачиваете, после оплаты начинаем работу',
-  term: 'первый вариант проекта квартиры — до 48 часов от оплаты и получения плана с размерами',
+  how: 'Вы присылаете бриф — сумма уже посчитана по вашей площади, мы подтверждаем её в заказе, вы оплачиваете, после оплаты начинаем работу',
+  // срок: «48 часов» — это ПЕРВЫЙ вариант с пометкой, а не готовый проект. Срока готового проекта в условиях нет — числа не придумываем (ждём решения Александра)
+  term: 'через 48 часов от оплаты и получения плана с размерами — первый вариант альбома с пометкой «ПРЕДВАРИТЕЛЬНО»; готовый проект — после ваших ответов и обмера',
   roundsText: ROUNDS ? `${ROUNDS} ${ROUNDS === 1 ? 'круг' : ROUNDS < 5 ? 'круга' : 'кругов'} правок входят в цену` : 'число кругов правок называем до оплаты — оно будет в договоре',
   // что такое пометка «ПРЕДВАРИТЕЛЬНО» — одной фразой (снимается сама, когда закрыт реестр вопросов: gost-draft engine/paper.js → releaseState)
   prelim: 'Комплект выпускается с пометкой «ПРЕДВАРИТЕЛЬНО», пока по объекту открыты вопросы к вам (лист «Открытые вопросы» в начале альбома) и не сделан контрольный обмер. По такому комплекту не строят: после ваших ответов и обмера перевыпускаем его без пометки.',
@@ -175,6 +186,22 @@ const TERMS = {
   // дома и ландшафт с 06.11.2026 не предлагаем — строка пустая
   onRequest: '',
 };
+
+// ── Единые формулировки цены и суммы (09.11.2026, критик сайта: «цена без минимума», «сумму знаете» против «назовём в течение дня») ──
+// Цена везде одним видом — TERMS.fromLine; про сумму — TERMS.sumLine / sumShort. Руками в генераторы не вписывать.
+// Приём устроен так: площадь в брифе обязательна, сумма = ставка × площадь (не меньше минимума) считается сразу
+// (калькулятор на сайте, страница заказа); подтверждаем её в заказе. Если на сервере цена не задана (null), заказ покажет «уточняется» —
+// формулировки ниже честны в обоих режимах: ставка публичная, подтверждение — до оплаты.
+TERMS.fromLine = `от ${rub(PACKS[0].min)} (${rub(PACKS[0].rate)}/м²)`;
+TERMS.fromLineLong = `от ${rub(PACKS[0].min)} (${rub(PACKS[0].rate)}/м², минимальный заказ — как за ${MIN_AREA} м²)`;
+TERMS.sumLine = `Сумма считается сразу по площади из брифа: ${rub(PACKS[0].rate)}/м² × площадь, не меньше ${rub(PACKS[0].min)}. Подтверждаем её в заказе до оплаты`;
+TERMS.sumShort = 'сумма считается сразу по площади и подтверждается в заказе до оплаты';
+TERMS.timeFirst = 'Через 48 часов от оплаты и плана с размерами — первый вариант альбома с пометкой «ПРЕДВАРИТЕЛЬНО»; готовый проект — после ваших ответов и обмера';
+// Гарантии (блок на главной): только то, что уже закреплено в условиях
+TERMS.refundLine = 'До начала работы возвращаем всю сумму; после — за вычетом того, что к этому моменту фактически сделано';
+TERMS.docsLine = 'Электронный чек после оплаты; условия и реквизиты исполнителя — на странице заказа до оплаты';
+// Картинки визуализаций (плашка, 09.11.2026): что именно они подтверждают
+TERMS.renderNote = 'Визуализации — картинки, сверенные с чертежом (мебель, двери, сантехника и свет как на плане), а не фотографии готового ремонта';
 
 // ── «Ремонт по проекту»: условия бригад — ЕДИНСТВЕННЫЙ источник для страниц сайта ─────────────────────────────────────
 // Источник — server/api/lib/brig-terms.json (его же читает сервер); BRIG_TERMS_DEFAULT в boot.php — только запасные значения.
@@ -272,14 +299,16 @@ TERMS.intakeOnline = INTAKE_ONLINE;
 // через tools/sync-static-nav.js (метки <!-- terms:brief -->). Фразу «как уходит бриф» по-прежнему даёт только TERMS.intake.
 TERMS.brief = {
   time: 'около 5 минут',
+  // честная длина (09.11.2026): основное короткое, дальше необязательные блоки вопросов — brief.html, шаги «Жизнь в квартире», «Двери, свет и электрика», «Дом»
+  honest: 'основное — около 5 минут, дополнительные вопросы — по желанию',
   steps: ['План квартиры', 'Что нравится', 'Расскажите словами'],
   // одна фраза: что нужно от клиента
   what: 'план, картинки, которые нравятся, и рассказ своими словами',
-  line: 'Бриф — три шага, около 5 минут: план, картинки, которые нравятся, и рассказ своими словами (можно голосом)',
-  short: 'бриф — 3 шага, около 5 минут',
+  line: 'Бриф: план, картинки, которые нравятся, и рассказ своими словами (можно голосом) — основное около 5 минут, дополнительные вопросы по желанию',
+  short: 'бриф — основное за 5 минут, остальное по желанию',
   // «что будет дальше» — три пункта на последнем шаге брифа (и где нужно — на страницах)
   next: [
-    'Называем сумму по вашей площади и срок — до начала работы',
+    'Сумма уже посчитана по вашей площади — подтверждаем её в заказе до оплаты',
     'Вы оплачиваете — после оплаты начинаем работу',
     TERMS.term[0].toUpperCase() + TERMS.term.slice(1),
   ],
@@ -297,7 +326,7 @@ TERMS.call = {
     + (CALL_CHANNEL ? `Выберите удобный канал: ${CALL_CHANNEL.title}.` : 'Свяжемся по почте или телефону из брифа.'),
 };
 
-const beta = u => `<div class="beta">От ${rub(PACKS[0].rate)}/м² · цена за м² фиксирована · работа после оплаты · <a href="${u}price/">условия</a> · <a href="${u}brief.html">заполнить бриф</a></div>`;
+const beta = u => `<div class="beta">Дизайн-проект квартиры ${TERMS.fromLine}<span class="b-x"> · работа начинается после оплаты</span> · <a href="${u}price/">цена и условия</a><span class="b-x"> · <a href="${u}brief.html">заполнить бриф</a></span></div>`;
 
 const sticky = u => `<div class="sticky-cta">
   <a class="btn" href="${u}brief.html">Заполнить бриф</a>
@@ -331,7 +360,7 @@ function ofertaRef(up, text, { before = '', after = '', draft = 'условия 
 const FUNNEL = [
   { key: 'look', title: 'Посмотреть', text: 'альбомы целиком, лист за листом', href: 'portfolio-hub/', on: ['portfolio', 'cases', 'stories', 'reviews', 'style'] },
   { key: 'check', title: 'Сравнить', text: 'состав, сроки и условия с рынком', href: 'compare/', on: ['compare', 'catalog', 'journal'] },
-  { key: 'start', title: 'Начать', text: `${TERMS.brief.short}, от ${rub(PACKS[0].rate)}/м², сумму знаете до оплаты`, href: 'brief.html', on: [] },
+  { key: 'start', title: 'Начать', text: `${TERMS.brief.short}; ${TERMS.fromLine}, сумма — до оплаты`, href: 'brief.html', on: [] },
 ];
 function funnel(u, active) {
   const cur = FUNNEL.findIndex(f => f.on.includes(active));
@@ -353,19 +382,19 @@ ${FUNNEL.map((f, i) => `    <a class="fstep${i === i0 ? ' on' : ''}${i < i0 ? ' 
 // Срок везде один (решение студии): проект квартиры — до 48 часов от оплаты и получения плана с размерами.
 function ctaBlock(u, active, opts = {}) {
   const step = FUNNEL.find(f => f.on.includes(active));
-  const term = 'Первый вариант проекта квартиры — до 48 часов от оплаты и получения плана с размерами';
+  const term = TERMS.timeFirst;
   let kicker = 'Дальше', h = 'Свой проект — с того же места',
-    sub = `${TERMS.brief.line}. От ${rub(PACKS[0].rate)}/м², минимальный заказ ${rub(PACKS[0].min)}; работа начинается после оплаты. ${term}.`,
+    sub = `${TERMS.brief.line}. Цена ${TERMS.fromLine}; ${TERMS.sumShort}. Работа начинается после оплаты. ${term}.`,
     second = `<a class="btn ghost" href="${u}portfolio-hub/">Посмотреть альбомы</a>`;
   if (step && step.key === 'look') {
     kicker = 'Понравилось?';
     h = 'Теперь сравните — потом решайте';
-    sub = 'Не верьте на слово даже нам: рядом таблица, где то же самое разложено против планировщиков, студий и бюро. А бриф займёт ' + TERMS.brief.time + ', когда решите.';
+    sub = 'Не верьте на слово даже нам: рядом таблица, где то же самое разложено против планировщиков, студий и бюро. А бриф — ' + TERMS.brief.honest + ', когда решите.';
     second = `<a class="btn ghost" href="${u}compare/">Сравнить с рынком</a>`;
   } else if (step && step.key === 'check') {
     kicker = 'Всё сходится?';
-    h = 'Тогда дальше — бриф, ' + TERMS.brief.time;
-    sub = 'План, картинки, которые нравятся, и пара слов о том, как вы живёте. Сумму по вашей площади называем до начала работы; проект начинается после оплаты.';
+    h = 'Тогда дальше — бриф: основное за ' + TERMS.brief.time.replace('около ', '');
+    sub = 'План, картинки, которые нравятся, и пара слов о том, как вы живёте. ' + TERMS.sumLine + '; проект начинается после оплаты.';
     second = `<a class="btn ghost" href="${u}portfolio-hub/">Ещё раз взглянуть на альбомы</a>`;
   }
   return `<section class="blk cta-blk">
@@ -385,9 +414,25 @@ function ctaBlock(u, active, opts = {}) {
 </section>`;
 }
 
+// Подвал: все разделы сайта сгруппированы (решение 09.11.2026 — из шапки убрано всё, кроме четырёх пунктов).
+// Группы — единственный список; sync-static-nav.js переносит тот же блок в index.html и brief.html (метки <!-- fnav -->).
+const FOOT_GROUPS = [
+  ['Примеры', [['Портфолио', 'portfolio-hub/', 'portfolio'], ['Кейсы', 'cases/', 'cases'], ['Истории', 'stories/', 'stories'], ['Стили интерьера', 'style/', 'style'], ['Отзывы', 'reviews/', 'reviews']]],
+  ['Цена и условия', [['Цена и что входит', 'price/'], ['Как работаем', 'process/'], ['Вопросы и ответы', 'faq/'], ['Каталог услуг', 'catalog/', 'catalog'], ['Сравнение с рынком', 'compare/', 'compare'], ['Оплата', 'oplata/']]],
+  ['Документация', [['Что такое альбом чертежей', 'gost/', 'gost'], ['Чек-лист приёмки', 'checklist/'], ['Журнал', 'journal/', 'journal']]],
+  ['Студия', [['О студии', 'about/'], ['Контакты', 'contacts/'], ['Бриф', 'brief.html'], ['Ремонт по проекту', 'remont/', 'remont'], ['Бригадам', 'brigadam/', 'brigadam']]],
+  ['Документы', [['Обработка данных', 'policy/'], ['Согласие на обработку данных', 'soglasie/'], ['Договор-оферта', 'oferta/'], ['Карта сайта', 'sitemap/']]],
+];
+function footerNav(u, active) {
+  const groups = FOOT_GROUPS.map(([h, items]) => {
+    const list = items.filter(it => !(OFERTA_DRAFT && it[1] === 'oferta/'))
+      .map(([t, href, key]) => `<a href="${key && key === active ? './' : u + href}">${t}</a>`).join('');
+    return `<div><h4>${h}</h4>${list}</div>`;
+  }).join('');
+  return `<nav class="fnav" aria-label="Все разделы сайта">${groups}</nav>`;
+}
+
 function footer(u, active) {
-  const links = SECTIONS.map(s => `<a href="${s.key === active ? './' : u + s.href}">${s.title}</a>`)
-    .concat(FOOTER_EXTRA.map(s => `<a href="${u + s.href}">${s.title}</a>`)).join(' · ');
   return `${funnel(u, active)}
 
 <a class="to-top" href="#" aria-label="Наверх">↑</a>
@@ -399,8 +444,8 @@ function footer(u, active) {
       <p>Дизайн-проект квартиры по вашему плану:<br>чертежи, визуализации и смета в двух альбомах.<br>Программа чертит, автор проверяет решения.</p>
       <p>${AUTHOR.role} <b>${AUTHOR.name}</b><br><a href="tel:${AUTHOR.tel}">${AUTHOR.phone}</a> · <a href="mailto:${AUTHOR.email}">${AUTHOR.email}</a></p>
     </div>
-    <div>
-      <p><a href="${u}brief.html">Бриф</a> · ${links}</p>
+    <div class="f-links">
+      <!-- fnav -->${footerNav(u, active)}<!-- /fnav -->
       <p>© LINEA studio, 2026</p>
     </div>
   </div>
@@ -471,10 +516,9 @@ ${ogImageTags(ogImage || OG_DEFAULT)}
 <meta name="twitter:card" content="summary_large_image">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><defs><linearGradient id='g' x1='0' y1='0' x2='1' y2='1'><stop offset='0' stop-color='%23EBDCA8'/><stop offset='.5' stop-color='%23C9A45F'/><stop offset='1' stop-color='%238F6B33'/></linearGradient></defs><rect width='100' height='100' fill='%230F0E0C'/><text x='50' y='70' font-size='56' text-anchor='middle' fill='url(%23g)' font-family='Georgia'>L</text><rect x='66' y='62' width='10' height='10' transform='rotate(45 71 67)' fill='%231E6E57' stroke='%23C9A45F' stroke-width='2'/></svg>">
 <link rel="apple-touch-icon" href="${BASE}/apple-touch-icon.png">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,500;0,600;1,500&family=Inter:wght@400;600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="${u}css/main.css?${CSSV}">${extra || ''}`;
+${/^https?:/.test(u) ? '' : `<link rel="preload" href="${u}assets/fonts/inter-n-cyrillic.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="${u}assets/fonts/playfair-display-n-cyrillic.woff2" as="font" type="font/woff2" crossorigin>
+`}<link rel="stylesheet" href="${u}css/main.css?${CSSV}">${extra || ''}`;
 
 // страница-переход со старого адреса (дома убраны с сайта 06.11.2026): noindex, canonical и мгновенный переход
 function movedPage(u, toRel, title) {
@@ -489,4 +533,4 @@ function movedPage(u, toRel, title) {
 }
 
 module.exports = {
-  movedPage, OFERTA_DRAFT, ofertaRef, TERMS, BRIG_TERMS, INTAKE, intakeOnline, swapIntake, AUTHOR, BASE, SITE, SITE_BASES, SITE_DOMAIN_RU, CSSV, SECTIONS, FOOTER_EXTRA, FUNNEL, funnel, ctaBlock, crumbsBar, crumbsAuto, pic, esc, clamp, header, footer, beta, sticky, crumbsLd, head };
+  movedPage, OFERTA_DRAFT, ofertaRef, FOOT_GROUPS, footerNav, HEADER, TERMS, BRIG_TERMS, INTAKE, intakeOnline, swapIntake, AUTHOR, BASE, SITE, SITE_BASES, SITE_DOMAIN_RU, CSSV, SECTIONS, FOOTER_EXTRA, FUNNEL, funnel, ctaBlock, crumbsBar, crumbsAuto, pic, esc, clamp, header, footer, beta, sticky, crumbsLd, head };

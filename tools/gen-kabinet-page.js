@@ -27,6 +27,7 @@ ${SHELL.header(u, null)}
 <main class="kab" id="kab" aria-live="polite">
   <div class="wrap"><p class="kab-load">Открываем кабинет…</p></div>
 </main>
+<p class="hint" style="text-align:center;margin:0 auto 40px;padding:0 5vw;max-width:560px">Нет заказа? Кабинет откроется после заполнения брифа — <a href="${u}brief.html">заполнить бриф</a>.</p>
 
 <nav class="kab-tabbar" id="kabBar" hidden aria-label="Разделы кабинета">
   <a href="#/" data-r="o"><span aria-hidden="true">▦</span>Объекты</a>

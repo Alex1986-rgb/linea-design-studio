@@ -790,7 +790,7 @@ ${cmp}${mcmp}${cmpJs}${ribbon}${voice}${check}${honesty}
       <h2>Такой же альбом на ваш объект</h2>
       <div class="stats">
         <div><b>~5 мин</b><span>бриф: план, картинки, пара слов</span></div>
-        <div><b>от ${SHELL.TERMS.rate('proekt')}</b><span>минимальный заказ ${SHELL.TERMS.minSum('proekt')}</span></div>
+        <div><b>${SHELL.TERMS.fromLine}</b><span>${SHELL.TERMS.sumShort}</span></div>
         <div><b>до ${a.house ? 72 : 48} ч</b><span>первый вариант ${a.house ? 'проекта дома' : 'проекта квартиры'} — от оплаты и получения плана с размерами</span></div>
       </div>
       <p class="g-note">${SHELL.TERMS.start}: <a href="../../oplata/">как платить</a>, ${SHELL.ofertaRef('../../', 'договоре-оферте', { before: 'условия — в ' })}.
