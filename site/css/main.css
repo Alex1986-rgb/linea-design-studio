@@ -1,4 +1,11 @@
 /* LINEA · премиальная тёмная тема студии */
+/* Шрифты — свои (09.11.2026): Playfair Display и Inter, SIL OFL, файлы в assets/fonts/. Раньше тянулись с Google Fonts — лишний запрос к чужому серверу на каждой странице. */
+@font-face{font-family:'Inter';font-style:normal;font-weight:400 600;font-display:swap;src:url(../assets/fonts/inter-n-cyrillic.woff2) format('woff2');unicode-range:U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116}
+@font-face{font-family:'Inter';font-style:normal;font-weight:400 600;font-display:swap;src:url(../assets/fonts/inter-n-latin.woff2) format('woff2');unicode-range:U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD}
+@font-face{font-family:'Playfair Display';font-style:italic;font-weight:500;font-display:swap;src:url(../assets/fonts/playfair-display-i-cyrillic.woff2) format('woff2');unicode-range:U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116}
+@font-face{font-family:'Playfair Display';font-style:italic;font-weight:500;font-display:swap;src:url(../assets/fonts/playfair-display-i-latin.woff2) format('woff2');unicode-range:U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD}
+@font-face{font-family:'Playfair Display';font-style:normal;font-weight:500 600;font-display:swap;src:url(../assets/fonts/playfair-display-n-cyrillic.woff2) format('woff2');unicode-range:U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116}
+@font-face{font-family:'Playfair Display';font-style:normal;font-weight:500 600;font-display:swap;src:url(../assets/fonts/playfair-display-n-latin.woff2) format('woff2');unicode-range:U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD}
 :root{
   --bg:#0F0E0C; --bg2:#14120E; --panel:#1B1812; --line:#2E2921;
   /* --dim осветлён с #6D675C: тот давал контраст 3,45:1 на графите — ниже AA
@@ -154,7 +161,7 @@ details.raw pre{max-height:320px;overflow:auto;font-size:11px;color:var(--mut);b
    читается как видео, но грузится как последовательность картинок
    и работает без автоплея и звука.
    ============================================================ */
-.film{position:relative;height:420vh;background:#0F0E0C}
+.film{position:relative;height:300vh;background:#0F0E0C}
 .film .screen{position:sticky;top:0;height:100vh;overflow:hidden}
 .film canvas{position:absolute;inset:0;width:100%;height:100%;display:block}
 .film .veil{position:absolute;inset:0;background:linear-gradient(90deg,#0F0E0Cfa 0%,#0F0E0Ceb 44%,#0F0E0C73 78%,#0F0E0C40 100%),linear-gradient(180deg,#0F0E0Ccc 0%,#0F0E0C00 26%,#0F0E0C00 62%,#0F0E0Ce0 100%)}
@@ -175,10 +182,15 @@ details.raw pre{max-height:320px;overflow:auto;font-size:11px;color:var(--mut);b
 .film .stats{display:flex;gap:34px;flex-wrap:wrap;color:#C9C2B4;font-size:12.5px}
 .film .stats b{display:block;font-family:'Playfair Display',Georgia,serif;font-size:26px;color:#F4EFE6;line-height:1.1}
 @media (max-width:820px){
-  .film{height:320vh}
+  /* телефон (09.11.2026): вместо фильма по прокрутке (320vh пустой прокрутки) — один кадр и один оффер высотой по содержимому */
+  .film{height:auto}
+  .film .screen{position:relative;height:auto;overflow:hidden}
   .film .veil{background:linear-gradient(180deg,#0F0E0Cf2 0%,#0F0E0Cc0 50%,#0F0E0Cf0 100%)}
-  .film .frame-cap{bottom:112px}
-  .film .stats{gap:18px}
+  .film .stage{position:relative;inset:auto;display:block;padding:34px 0 30px}
+  .film .scenes{min-height:0}
+  .film .scene{display:none;position:static;opacity:1;transform:none;pointer-events:auto}
+  .film .scene:first-child{display:block}
+  .film .dots,.film .hint,.film .progress,.film .frame-cap,.film .stats{display:none}
 }
 /* Пользователь просил меньше движения — показываем один кадр и не трогаем скролл */
 @media (prefers-reduced-motion:reduce){
@@ -287,7 +299,8 @@ details.raw pre{max-height:320px;overflow:auto;font-size:11px;color:var(--mut);b
 
 /* плитки кейсов и историй */
 .tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(320px,100%),1fr));gap:22px;margin-top:8px}
-.tiles.two{grid-template-columns:repeat(auto-fit,minmax(340px,1fr))}
+.tiles.two{grid-template-columns:repeat(auto-fit,minmax(min(340px,100%),1fr))}
+.tiles>*{min-width:0}
 .tile{display:block;border:1px solid var(--line);border-radius:4px;overflow:hidden;background:var(--panel);color:var(--ink);transition:.28s}
 .tile:hover{border-color:#4a4132;transform:translateY(-3px)}
 .tile img{width:100%;height:230px;object-fit:cover;display:block}
@@ -949,3 +962,57 @@ header.site .nav>.btn.sm{white-space:nowrap;flex:none}
 .mnav{justify-content:flex-start;padding-top:150px;overflow-y:auto}
 
 /*cab36*/
+
+/* ═══════════ v38 · путь к заказу: шапка, подвал, телефон (09.11.2026) ═══════════ */
+.t-short{display:none}
+@media (max-width:560px){.beta{font-size:12.5px;padding:8px 12px;line-height:1.35}.beta .b-x{display:none}}
+.nav .links{gap:30px}
+/* подвал: разделы сайта группами */
+footer.site .cols{align-items:flex-start}
+footer.site .cols>div:first-child{flex:0 1 300px;min-width:0}
+footer.site .f-links{flex:1 1 560px;min-width:0}
+.fnav{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:26px 30px;margin-bottom:26px}
+.fnav h4{margin:0 0 10px;font:600 11.5px/1.3 var(--sans);letter-spacing:.16em;text-transform:uppercase;color:var(--gold)}
+.fnav a{display:block;padding:5px 0;line-height:1.35;color:var(--mut);overflow-wrap:anywhere}
+.fnav a:hover{color:var(--ink)}
+/* плашка у визуализаций: что именно они подтверждают */
+.render-note{margin:14px 0 0;padding:12px 16px;border-left:2px solid var(--gold);background:#C29A5B14;color:var(--mut);font-size:13.5px;line-height:1.55;border-radius:0 4px 4px 0}
+.render-note b{color:var(--ink);font-weight:600}
+@media (max-width:980px){
+  header.site .nav>.btn.sm.nav-cta{display:inline-flex;margin-left:auto}
+  .nav .nav-in{margin-left:0}
+  .nav{flex-wrap:nowrap;gap:14px}
+}
+@media (max-width:760px){
+  /* шапка телефона: логотип, одна кнопка, бургер. «Войти» и меню — за бургером */
+  .nav{gap:12px;row-gap:0;padding:12px 5vw}
+  .nav .nav-in{display:none}
+  .logo{font-size:22px;letter-spacing:4px}
+  .nav .btn.sm.nav-cta{padding:0 16px;min-height:44px;align-items:center;justify-content:center}
+  .burger{width:44px;height:44px;padding:11px 11px;flex:none}
+  .burger.on i:nth-child(1){transform:translateY(8.7px) rotate(45deg)}
+  .burger.on i:nth-child(3){transform:translateY(-8.7px) rotate(-45deg)}
+  /* липкая панель: подписи не режутся, кнопки не меньше 44 px */
+  .sticky-cta{gap:8px;padding:8px 62px calc(8px + env(safe-area-inset-bottom)) 12px}   /* справа — место под кнопку «наверх» */
+  .sticky-cta .btn{flex:1 1 0;min-width:0;min-height:46px;padding:8px 6px;font-size:12.5px;letter-spacing:.02em;line-height:1.15;
+    display:flex;align-items:center;justify-content:center;white-space:normal}
+  .sticky-cta .btn:first-child{flex:1.5 1 0}
+  .btn,.btn.sm{min-height:44px}
+  .btn.sm{display:inline-flex;align-items:center;justify-content:center}
+  /* таблицы: подписи переносятся, а то, что всё равно шире экрана, прокручивается внутри таблицы, а не двигает страницу */
+  .tbl{display:block;max-width:100%;overflow-x:auto}
+  .tbl th{white-space:normal;padding-right:10px}
+  .tbl td{padding-right:10px;overflow-wrap:anywhere}
+  .fnav{grid-template-columns:1fr 1fr;gap:20px 18px}
+  .fnav a{padding:11px 0}
+  footer.site .cols>div:first-child{flex:1 1 100%}
+}
+@media (max-width:520px){
+  .t-long{display:none}
+  .t-short{display:inline}
+}
+@media (max-width:380px){
+  .logo{font-size:20px;letter-spacing:3px}
+  .nav{gap:8px}
+  .nav .btn.sm.nav-cta{padding:0 12px}
+}

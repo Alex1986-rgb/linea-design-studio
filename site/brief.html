@@ -21,7 +21,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,500;0,600;1,500&family=Inter:wght@400;600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/main.css?v=37">
+<link rel="stylesheet" href="css/main.css?v=38">
 <style>
 /* бриф 31.10.2026: три шага + отправка, каждый — на один экран телефона */
 .bh{padding:34px 0 8px}
@@ -236,29 +236,23 @@ details.more ol{margin:6px 0 10px;padding-left:20px;color:var(--mut);font-size:1
 <header class="site">
   <div class="nav">
     <a class="logo" href="./">LINE<i>A</i></a>
-    <nav class="links">
-      <a href="portfolio-hub/">Портфолио</a>
-      <a href="catalog/">Каталог</a>
-      <a href="gost/">Документация</a>
-      <a href="cases/">Кейсы</a>
-      <a href="compare/">Сравнение</a>
-      <a href="style/">Стили</a>
-      <a href="journal/">Журнал</a>
+    <nav class="links" aria-label="Главное меню">
+      <a href="portfolio-hub/">Примеры</a>
+      <a href="price/">Цена</a>
+      <a href="process/">Как работаем</a>
+      <a href="faq/">Вопросы</a>
     </nav>
     <a class="nav-in" href="vhod/">Войти</a>
-    <a class="btn sm" href="brief.html">Заполнить бриф</a>
+    <a class="btn sm nav-cta" href="brief.html"><span class="t-long">Заполнить бриф</span><span class="t-short">Бриф</span></a>
     <button class="burger" type="button" aria-label="Меню" aria-expanded="false"><i></i><i></i><i></i></button>
   </div>
 </header>
 <div class="mnav" hidden>
   <nav>
-    <a href="portfolio-hub/">Портфолио</a>
-    <a href="catalog/">Каталог</a>
-    <a href="gost/">Документация</a>
-    <a href="cases/">Кейсы</a>
-    <a href="compare/">Сравнение</a>
-    <a href="style/">Стили</a>
-    <a href="journal/">Журнал</a>
+    <a href="portfolio-hub/">Примеры</a>
+    <a href="price/">Цена</a>
+    <a href="process/">Как работаем</a>
+    <a href="faq/">Вопросы</a>
   </nav>
   <div class="mnav-cta">
     <a class="btn" href="brief.html">Заполнить бриф</a>
@@ -271,7 +265,7 @@ details.more ol{margin:6px 0 10px;padding-left:20px;color:var(--mut);font-size:1
   <div class="wrap">
     <div class="kicker">Бриф на дизайн-проект</div>
     <h1>План, картинки и пара слов — всё</h1>
-    <p class="lead" id="lead"><!-- terms:brief-lead -->Бриф — три шага, около 5 минут: план, картинки, которые нравятся, и рассказ своими словами (можно голосом). От 2 000 ₽/м²; сумму знаете до оплаты.<!-- /terms:brief-lead --></p>
+    <p class="lead" id="lead"><!-- terms:brief-lead -->Бриф: план, картинки, которые нравятся, и рассказ своими словами (можно голосом) — основное около 5 минут, дополнительные вопросы по желанию. Цена от 80 000 ₽ (2 000 ₽/м²); сумма считается сразу по площади и подтверждается в заказе до оплаты.<!-- /terms:brief-lead --></p>
     <div class="prog" id="prog" hidden>
       <div class="prog-t"><b id="progStep">Шаг 1 из 7</b><span id="progName">План квартиры</span></div>
       <div class="saved" id="savedMark" aria-live="off"></div>
@@ -422,7 +416,7 @@ details.more ol{margin:6px 0 10px;padding-left:20px;color:var(--mut);font-size:1
     <label class="chk"><input type="checkbox" id="cConsent" aria-describedby="consentErr"><span>Даю согласие на обработку персональных данных на условиях <a href="soglasie/" target="_blank" rel="noopener">согласия</a> и <a href="policy/" target="_blank" rel="noopener">политики</a> <b>— обязательно</b></span></label>
     <p class="err" id="consentErr" role="alert"></p>
     <label class="chk"><input type="checkbox" id="cPortfolio"><span>Можно показать проект в портфолио LINEA — без имени, контактов и адреса <span class="hint">(по желанию)</span></span></label>
-    <div class="next3" id="next3"><!-- terms:brief-next --><h3>Что будет дальше</h3><ol><li>Называем сумму по вашей площади и срок — до начала работы</li><li>Вы оплачиваете — после оплаты начинаем работу</li><li>Первый вариант проекта квартиры — до 48 часов от оплаты и получения плана с размерами</li></ol><p>Бриф уходит в студию одной кнопкой — сразу открывается страница заказа с номером.</p><p class="pre-call"><b>Поговорим до оплаты.</b> Короткий звонок или переписка: обсудим ваш план за 15 минут. Свяжемся по почте или телефону из брифа.</p><!-- /terms:brief-next --></div>
+    <div class="next3" id="next3"><!-- terms:brief-next --><h3>Что будет дальше</h3><ol><li>Сумма уже посчитана по вашей площади — подтверждаем её в заказе до оплаты</li><li>Вы оплачиваете — после оплаты начинаем работу</li><li>Через 48 часов от оплаты и получения плана с размерами — первый вариант альбома с пометкой «ПРЕДВАРИТЕЛЬНО»; готовый проект — после ваших ответов и обмера</li></ol><p>Бриф уходит в студию одной кнопкой — сразу открывается страница заказа с номером.</p><p class="pre-call"><b>Поговорим до оплаты.</b> Короткий звонок или переписка: обсудим ваш план за 15 минут. Свяжемся по почте или телефону из брифа.</p><!-- /terms:brief-next --></div>
     <button class="btn send" id="send" type="button">Собрать бриф</button>
     <div id="upBar" hidden style="height:6px;background:rgba(201,164,95,.18);border-radius:3px;overflow:hidden;margin:12px 0 4px"><i style="display:block;height:100%;width:0;background:#C9A45F;transition:width .2s"></i></div>
     <p class="hint" id="upState" role="status" aria-live="polite" hidden></p>
@@ -453,7 +447,7 @@ details.more ol{margin:6px 0 10px;padding-left:20px;color:var(--mut);font-size:1
 </form>
 
 <a class="to-top" href="#" aria-label="Наверх">↑</a>
-<footer class="site"><div class="wrap cols"><div><div class="logo">LINE<i>A</i></div><p>дизайнер-архитектор <b>Кырлан Александр</b><br><a href="tel:+79257338640">+7 925 733-86-40</a> · <a href="mailto:optteem@mail.ru">optteem@mail.ru</a></p></div><div><p><a href="brief.html">Бриф</a> · <a href="portfolio-hub/">Портфолио</a> · <a href="catalog/">Каталог</a> · <a href="gost/">Документация</a> · <a href="cases/">Кейсы</a> · <a href="compare/">Сравнение</a> · <a href="style/">Стили</a> · <a href="journal/">Журнал</a> · <a href="stories/">Истории</a> · <a href="reviews/">Отзывы</a> · <a href="remont/">Ремонт по проекту</a> · <a href="brigadam/">Бригадам</a> · <a href="price/">Условия</a> · <a href="process/">Процесс</a> · <a href="faq/">FAQ</a> · <a href="about/">О студии</a> · <a href="contacts/">Контакты</a> · <a href="checklist/">Чек-лист приёмки</a> · <a href="sitemap/">Карта сайта</a> · <a href="oplata/">Оплата</a> · <a href="policy/">Обработка данных</a> · <a href="soglasie/">Согласие на обработку данных</a></p><p>© LINEA studio, 2026</p></div></div></footer>
+<footer class="site"><div class="wrap cols"><div><div class="logo">LINE<i>A</i></div><p>дизайнер-архитектор <b>Кырлан Александр</b><br><a href="tel:+79257338640">+7 925 733-86-40</a> · <a href="mailto:optteem@mail.ru">optteem@mail.ru</a></p></div><div class="f-links"><!-- fnav --><nav class="fnav" aria-label="Все разделы сайта"><div><h4>Примеры</h4><a href="portfolio-hub/">Портфолио</a><a href="cases/">Кейсы</a><a href="stories/">Истории</a><a href="style/">Стили интерьера</a><a href="reviews/">Отзывы</a></div><div><h4>Цена и условия</h4><a href="price/">Цена и что входит</a><a href="process/">Как работаем</a><a href="faq/">Вопросы и ответы</a><a href="catalog/">Каталог услуг</a><a href="compare/">Сравнение с рынком</a><a href="oplata/">Оплата</a></div><div><h4>Документация</h4><a href="gost/">Что такое альбом чертежей</a><a href="checklist/">Чек-лист приёмки</a><a href="journal/">Журнал</a></div><div><h4>Студия</h4><a href="about/">О студии</a><a href="contacts/">Контакты</a><a href="brief.html">Бриф</a><a href="remont/">Ремонт по проекту</a><a href="brigadam/">Бригадам</a></div><div><h4>Документы</h4><a href="policy/">Обработка данных</a><a href="soglasie/">Согласие на обработку данных</a><a href="sitemap/">Карта сайта</a></div></nav><!-- /fnav --><p>© LINEA studio, 2026</p></div></div></footer>
 
 <script type="application/json" id="briefTerms">{"packs":[{"key":"proekt","name":"Проект с визуализациями","rate":2000,"min":80000}],"minArea":40,"areaRecalc":"Сумма посчитана по площади из брифа. Если по плану площадь окажется другой, пересчитаем по той же ставке и согласуем разницу с вами до начала работы."}</script>
 <script src="js/brief-life.js?v=4"></script>

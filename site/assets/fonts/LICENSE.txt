@@ -1,0 +1,4 @@
+Шрифты Playfair Display (авторы: Claus Eggers Sørensen) и Inter (авторы: The Inter Project Authors)
+распространяются по лицензии SIL Open Font License 1.1 (https://openfontlicense.org): допускается свободное
+использование, в том числе коммерческое, встраивание в сайт и раздача вместе с сайтом.
+Файлы woff2 (подмножества cyrillic и latin, вариативные по насыщенности) получены из Google Fonts 09.11.2026.
