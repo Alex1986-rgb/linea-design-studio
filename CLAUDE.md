@@ -165,6 +165,11 @@ push без ручного запуска отработал `success`. Стат
 - Автоприёмки этапа молчанием НЕТ (юрист: потребитель) — cron `server/tools/cron.php` только напоминает и сигналит. Сроки в рабочих днях — таблица `holidays`.
 - Проверки: `node tools/test-kabinety.mjs [--mysql=<dsn>]`, скриншоты — `--until=shots` + `tools/shots-kabinety.mjs`. Отчёт — `docs/reports/2026-11-01-kabinety.md`.
 
+### Опция «Смета на материалы» (с 09.11.2026)
+- Дополнение к дизайн-проекту квартиры: **100 ₽/м², не меньше 5 000 ₽** (50 м² = 5 000 ₽), отдельная строка оплаты. Единственный источник цены, состава, срока и «чего нет» — `tools/site-shell.js` → `TERMS.addons.smeta` (сайт, бриф, письма, `terms-client.json`); серверный дубль — `config.prices.smeta` в копейках (`server/config.example.php`; нет ключа — «сумма уточняется», сервис не падает). Боевой config при выкладке дополнить самому.
+- Страница `site/smeta/` (в `gen-more-pages.js`; пример таблицы — настоящие строки демо-альбома `gost-lineademo`, листы 102 и 105), строка в `/price/` и калькуляторе, абзац на главной (`home:price`), `/process/`, `/faq/`, подвал; `catalog/smeta-i-komplektatsiya.html` остаётся описанием сметы внутри альбома и ссылается на `/smeta/`.
+- Бриф: галочка `#cSmeta` → `brief.options.smeta`. Сервер: миграция 10 (`order_options`), `server/api/lib/options.php`; пока проект ждёт оплаты, опция идёт в тот же платёж ЮKassa отдельной строкой чека (`metadata.opts`), позже — отдельным платежом (`yk_option_payment_for`, `metadata.proj=0`). Кабинет: две строки оплаты, «Добавить», блок выдачи; админка: карточка заказа → «Опции заказа» (сумма, счёт, оплата вручную, выдача PDF + xlsx/csv), значок и фильтр в списке, очередь «Ждут нас». Файлы — `linea-private/orders/<номер>/options/smeta/`. Мост: `order-pull.mjs` → `order.json.smeta`; сам расчёт делает движок GOST-DRAFT (отчёт `docs/reports/2026-11-09-opciya-smeta-materialov.md`). Проверки — `tools/test-kabinety.mjs` (шаг 18) и `tools/test-units.php` (оплата через макет API).
+
 ## Канон чертежей
 Правила самих чертежей — `docs/cad-canon.md` (нормативная база СПДС/ЕСКД с пунктами, анатомия листа, чек-листы по каждому типу листа, нормируемые зазоры). Регламент работы — навык `cad-drawings`. Роли: агент `draftsman` (правит движок), `cad-normcontrol` (нормоконтроль), `cad-acceptance` (приёмка перед выдачей).
 
