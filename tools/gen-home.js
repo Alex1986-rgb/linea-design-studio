@@ -260,7 +260,8 @@ ${STEPS.map(([ic, h, p, href, lk], i) => `      <div class="h-step"><span class=
         <p class="hint" style="margin-top:12px">${esc(TERMS.sumLine)}. Для сравнения: полный проект с визуализациями в ${esc(TERMS.market.city.replace('Москва', 'Москве'))} обычно стоит ${TERMS.market.full} ₽/м² (выборка открытых прайсов на ${TERMS.market.date}, ориентир). <a href="price/#primer">Посчитать свою площадь</a> · <a href="compare/">сравнение с рынком</a></p></div>
       <div class="card"><h3>Что не входит</h3>
         <ul>${TERMS.notIncluded.map(x => `<li>${esc(cap1(x))}</li>`).join('')}</ul></div>
-    </div>`);
+    </div>
+    <p class="hint" style="margin-top:16px"><b>+ ${esc(TERMS.addons.smeta.title)} ${esc(TERMS.addons.smeta.fromLine)}</b> — ${esc(TERMS.addons.smeta.what)}. Опция к проекту, оплачивается отдельно. <a href="smeta/">Что входит и сколько стоит</a></p>`);
 
   /* --- гарантии и правки: только то, что закреплено в условиях --- */
   region('guarantees', `    <div class="kicker">Гарантии и правки</div>

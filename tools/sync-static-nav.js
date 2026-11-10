@@ -63,7 +63,10 @@ for (const file of ['index.html', 'brief.html'].filter(f => !ONLY || f === ONLY)
     out = out.replace(/(<meta property="og:description" content=")[^"]*(">)/, `$1Три шага, около 5 минут: план, картинки и пара слов — можно голосом. От ${rub(T.packs[0].rate)}/м², сумму знаете до оплаты; проект — ${T.daysShort}.$2`);
     region('brief-lead', `${T.brief.line}. Цена ${T.fromLine}; ${T.sumShort}.`);
     region('brief-next', `<h3>Что будет дальше</h3><ol>${T.brief.next.map(x => `<li>${x}</li>`).join('')}</ol><p>${T.intake.brief}.</p><p class="pre-call"><b>${T.call.title}.</b> ${T.call.line}</p>`);
-    const json = JSON.stringify({ packs: T.packs.map(p => ({ key: p.key, name: p.name, rate: p.rate, min: p.min })), minArea: T.minArea, areaRecalc: T.areaRecalc });
+    const AS = T.addons.smeta;
+    // опция «Смета на материалы»: галочка на шаге с суммой (js/brief.js читает ставки из briefTerms.addons)
+    region('brief-smeta', `<label class="chk addon" id="addonSmeta"><input type="checkbox" id="cSmeta" aria-describedby="smetaHelp"><span><b>Добавить смету на материалы — <span id="smetaSum">${AS.fromLine}</span></b> <span class="hint">(по желанию, отдельная строка оплаты)</span><span class="hint" id="smetaHelp" style="display:block;margin-top:4px">${AS.what[0].toUpperCase() + AS.what.slice(1)}. ${AS.priceNoteShort[0].toUpperCase() + AS.priceNoteShort.slice(1)}. <a href="smeta/" target="_blank" rel="noopener">Что входит</a></span></span></label>`);
+    const json = JSON.stringify({ packs: T.packs.map(p => ({ key: p.key, name: p.name, rate: p.rate, min: p.min })), minArea: T.minArea, areaRecalc: T.areaRecalc, addons: T.addonsPublic() });
     const tag = `<script type="application/json" id="briefTerms">${json}</script>`;
     if (/<script type="application\/json" id="briefTerms">[\s\S]*?<\/script>/.test(out)) out = out.replace(/<script type="application\/json" id="briefTerms">[\s\S]*?<\/script>/, tag);
     else out = out.replace(/<script src="js\/brief\.js/, `${tag}\n<script src="js/brief.js`);

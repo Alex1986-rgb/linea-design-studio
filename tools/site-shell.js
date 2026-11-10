@@ -207,6 +207,73 @@ TERMS.docsLine = 'Электронный чек после оплаты; усл�
 // Картинки визуализаций (плашка, 09.11.2026): что именно они подтверждают
 TERMS.renderNote = 'Визуализации — картинки, сверенные с чертежом (мебель, двери, сантехника и свет как на плане), а не фотографии готового ремонта';
 
+// ── Опция «Смета на материалы» (решение Александра 09.11.2026): ДОПОЛНЕНИЕ к дизайн-проекту, отдельная строка оплаты.
+// ЕДИНСТВЕННЫЙ источник цены и формулировок опции: страницы (smeta/, price/, главная, бриф, кабинет) берут всё отсюда.
+// Те же ставки (в копейках) — в linea-private/config.php на сервере (server/config.example.php → prices.smeta): менять оба.
+// Обещаем только перечисленное в includes; закупку, доставку, скидки магазинов, смету РАБОТ бригады и «точную цену ремонта» — не обещаем (excludes).
+const ADDON_SMETA = {
+  key: 'smeta',
+  title: 'Смета на материалы',
+  short: 'Смета на материалы',
+  rate: 100,          // ₽ за м²
+  min: 5000,          // минимум, ₽ (как за 50 м²)
+};
+ADDON_SMETA.minArea = ADDON_SMETA.min / ADDON_SMETA.rate;
+// сумма опции: ставка × площадь, но не меньше минимума (рубли)
+ADDON_SMETA.sum = area => Math.max(ADDON_SMETA.min, Math.round(ADDON_SMETA.rate * area));
+ADDON_SMETA.rateText = `${rub(ADDON_SMETA.rate)}/м²`;
+ADDON_SMETA.minText = rub(ADDON_SMETA.min);
+ADDON_SMETA.fromLine = `от ${rub(ADDON_SMETA.min)} (${rub(ADDON_SMETA.rate)}/м²)`;
+ADDON_SMETA.line = `${rub(ADDON_SMETA.rate)}/м² площади квартиры, не меньше ${rub(ADDON_SMETA.min)} (${ADDON_SMETA.minArea} м² — ${rub(ADDON_SMETA.min)})`;
+ADDON_SMETA.nav = `Смета на материалы ${ADDON_SMETA.fromLine}`;
+// одной фразой: что это
+ADDON_SMETA.what = 'список покупок на весь ремонт с количеством: сколько чего купить, с запасом, и что заказывать заранее';
+ADDON_SMETA.how = 'Отметьте опцию в брифе или добавьте её позже в кабинете. Оплачивается отдельной строкой, дизайн-проект она не заменяет';
+ADDON_SMETA.later = 'Не отметили в брифе — добавьте в кабинете в любой момент после заказа проекта';
+// срок — только через TERMS.days (1–3 суток): вместе с проектом; при докупке позже — от оплаты опции
+ADDON_SMETA.term = `вместе с проектом — в те же ${TERMS.days}`;
+ADDON_SMETA.termLater = `если проект уже выпущен — ${TERMS.days} от оплаты опции`;
+ADDON_SMETA.termLine = `Смета выходит ${ADDON_SMETA.term}; ${ADDON_SMETA.termLater}`;
+// что входит: [раздел, что в нём]
+ADDON_SMETA.includes = [
+  ['Чистовая отделка', 'краска, обои, плитка и керамогранит, напольные покрытия, плинтус, двери — с количеством и упаковкой'],
+  ['Черновые материалы', 'штукатурка, шпаклёвка, грунт, стяжка или наливной пол, гипсокартон и профиль, клей, затирка, гидроизоляция'],
+  ['Электрика', 'кабель по сечениям, подрозетники, механизмы (розетки и выключатели), автоматы щита'],
+  ['Сантехника', 'трубы, фитинги, приборы'],
+];
+ADDON_SMETA.features = [
+  'по помещениям и сводно по всей квартире',
+  'с запасом на подрезку и бой',
+  'с ориентировочной ценой за единицу и итогом',
+  'с пометкой, что и когда заказывать заранее (долгие позиции)',
+];
+ADDON_SMETA.format = 'PDF для чтения и печати и таблица (xlsx или csv) — для расчёта и закупки';
+// чего в смете нет — честно
+ADDON_SMETA.excludes = [
+  'закупка и доставка — материалы вы покупаете сами или через бригаду',
+  'скидки магазинов и подбор поставщика под вашу цену',
+  'смета работ бригады — работы считаются отдельно, в предложениях бригад',
+  '«точная цена ремонта»: цены материалов ориентировочные на дату расчёта и не являются офертой магазинов',
+];
+ADDON_SMETA.priceNote = 'Цены материалов ориентировочные, на дату расчёта; это не оферта магазинов — перед покупкой цены уточняйте';
+ADDON_SMETA.priceNoteShort = 'цены ориентировочные, на дату расчёта';
+// schema.org Offer: цена «от» = минимум, ставка за м² — в UnitPriceSpecification
+ADDON_SMETA.offer = url => ({
+  '@type': 'Offer', name: ADDON_SMETA.title, url, price: String(ADDON_SMETA.min), priceCurrency: 'RUB',
+  priceSpecification: { '@type': 'UnitPriceSpecification', price: String(ADDON_SMETA.rate), priceCurrency: 'RUB', unitCode: 'MTK', unitText: 'м²',
+    referenceQuantity: { '@type': 'QuantitativeValue', value: 1, unitCode: 'MTK', unitText: 'м²' } },
+  eligibleQuantity: { '@type': 'QuantitativeValue', minValue: ADDON_SMETA.minArea, unitCode: 'MTK', unitText: 'м²' },
+  description: `Ставка ${rub(ADDON_SMETA.rate)} за м²; минимум — ${rub(ADDON_SMETA.min)} (как за ${ADDON_SMETA.minArea} м²). Заказывается вместе с дизайн-проектом квартиры или позже`,
+});
+TERMS.addons = { smeta: ADDON_SMETA };
+// проект + опция = итого (рубли), для /price/ и калькуляторов
+TERMS.totalWith = (area, ...keys) => TERMS.sum('proekt', area) + keys.reduce((n, k) => n + TERMS.addons[k].sum(area), 0);
+// в клиентский JSON (бриф, кабинет): без функций
+TERMS.addonsPublic = () => Object.fromEntries(Object.entries(TERMS.addons).map(([k, a]) => [k, {
+  key: a.key, title: a.title, rate: a.rate, min: a.min, minArea: a.minArea, rateText: a.rateText, minText: a.minText, line: a.line, what: a.what, how: a.how, later: a.later,
+  termLine: a.termLine, includes: a.includes, features: a.features, format: a.format, excludes: a.excludes, priceNote: a.priceNote,
+}]));
+
 // ── «Ремонт по проекту»: условия бригад — ЕДИНСТВЕННЫЙ источник для страниц сайта ─────────────────────────────────────
 // Источник — server/api/lib/brig-terms.json (его же читает сервер); BRIG_TERMS_DEFAULT в boot.php — только запасные значения.
 // Решение Александра 01.11.2026: платы за отклик, лид и допуск нет. Удержание сделки на платформе — сервис «Сделка через LINEA» и листы по запросу
@@ -422,7 +489,7 @@ function ctaBlock(u, active, opts = {}) {
 // Группы — единственный список; sync-static-nav.js переносит тот же блок в index.html и brief.html (метки <!-- fnav -->).
 const FOOT_GROUPS = [
   ['Примеры', [['Портфолио', 'portfolio-hub/', 'portfolio'], ['Кейсы', 'cases/', 'cases'], ['Истории', 'stories/', 'stories'], ['Стили интерьера', 'style/', 'style'], ['Отзывы', 'reviews/', 'reviews']]],
-  ['Цена и условия', [['Цена и что входит', 'price/'], ['Как работаем', 'process/'], ['Вопросы и ответы', 'faq/'], ['Каталог услуг', 'catalog/', 'catalog'], ['Сравнение с рынком', 'compare/', 'compare'], ['Оплата', 'oplata/']]],
+  ['Цена и условия', [['Цена и что входит', 'price/'], ['Смета на материалы', 'smeta/', 'smeta'], ['Как работаем', 'process/'], ['Вопросы и ответы', 'faq/'], ['Каталог услуг', 'catalog/', 'catalog'], ['Сравнение с рынком', 'compare/', 'compare'], ['Оплата', 'oplata/']]],
   ['Документация', [['Что такое альбом чертежей', 'gost/', 'gost'], ['Чек-лист приёмки', 'checklist/'], ['Журнал', 'journal/', 'journal']]],
   ['Студия', [['О студии', 'about/'], ['Контакты', 'contacts/'], ['Бриф', 'brief.html'], ['Ремонт по проекту', 'remont/', 'remont'], ['Бригадам', 'brigadam/', 'brigadam']]],
   ['Документы', [['Обработка данных', 'policy/'], ['Согласие на обработку данных', 'soglasie/'], ['Договор-оферта', 'oferta/'], ['Карта сайта', 'sitemap/']]],

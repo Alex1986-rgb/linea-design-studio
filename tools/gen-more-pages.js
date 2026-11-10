@@ -308,6 +308,7 @@ w('process/index.html', page({
     </div>
     <p class="sub" style="margin-top:26px">Состав полного альбома по фактическим разделам: ${SECTIONS_FACT.join('; ')}.</p>
     <p class="hint">${esc(TERMS.prelim)}</p>
+    <p class="hint" style="margin-top:10px">Нужен ещё и список покупок на весь ремонт? <a href="../smeta/">${esc(TERMS.addons.smeta.title)}</a> — опция к проекту, ${esc(TERMS.addons.smeta.fromLine)}: отмечаете в брифе или добавляете позже в кабинете, оплата отдельной строкой.</p>
   </div>
 </section>
 
@@ -354,8 +355,10 @@ const PACK_BASE = ['полный рабочий альбом по ГОСТ (у �
   'спецификация и смета по чертежам',
   'визуализации помещений, сверенные с планом'];
 const RULE_EX = [40, 60, 80];
-const exRows = RULE_EX.map(a => `<tr><td>${a} м²</td><td>${TERMS.rub(TERMS.sum('proekt', a))}</td></tr>`).join('');
-const offersLd = ['Дизайн-проект квартиры'].flatMap(n => TERMS.offers(n, `${BASE}/brief.html`));
+const AS = TERMS.addons.smeta;
+const exRows = [...RULE_EX, 50, 100].sort((a, b) => a - b).filter((a, i, l) => l.indexOf(a) === i)
+  .map(a => `<tr><td>${a} м²</td><td>${TERMS.rub(TERMS.sum('proekt', a))}</td><td>${TERMS.rub(AS.sum(a))}</td><td>${TERMS.rub(TERMS.totalWith(a, 'smeta'))}</td></tr>`).join('');
+const offersLd = [...['Дизайн-проект квартиры'].flatMap(n => TERMS.offers(n, `${BASE}/brief.html`)), AS.offer(`${BASE}/smeta/`)];
 w('price/index.html', page({
   file: 'price/index.html',
   sec: 'compare',
@@ -424,16 +427,20 @@ w('price/index.html', page({
     <h2>Сколько это будет для вашей площади</h2>
     <div class="scroll-x">
       <table class="tbl">
-        <tr><th>Площадь</th><th>«${PR.proekt.name}»</th></tr>
+        <tr><th>Площадь</th><th>«${PR.proekt.name}»</th><th>+ ${esc(AS.title)}</th><th>Итого, проект и смета</th></tr>
         ${exRows}
       </table>
     </div>
-    <p class="hint" style="margin-top:14px">Сумма = ставка × площадь, но не меньше минимального заказа: ${TERMS.minSum('proekt')} (как за ${TERMS.minArea} м²).</p>
+    <p class="hint" style="margin-top:14px">Сумма проекта = ставка × площадь, но не меньше минимального заказа: ${TERMS.minSum('proekt')} (как за ${TERMS.minArea} м²). <a href="../smeta/">${esc(AS.title)}</a> — необязательная опция к проекту, ${esc(AS.line)}; оплачивается отдельной строкой.</p>
     <div class="calc" data-pcalc style="margin-top:22px">
       <div class="calc-row"><span>Площадь, м²</span>
         <input type="number" inputmode="decimal" min="10" max="1000" step="0.1" value="60" data-area aria-label="Площадь, м²" style="width:110px;padding:8px 10px;font:inherit;text-align:right;border:1px solid var(--line,#444);background:transparent;color:inherit;border-radius:8px"></div>
+      <label class="calc-row" style="cursor:pointer"><span>Добавить «${esc(AS.title)}» — ${esc(AS.fromLine)}</span>
+        <input type="checkbox" data-smeta aria-label="Добавить смету на материалы" style="width:22px;height:22px"></label>
       <div class="calc-out">
         <div><b data-sum-proekt>—</b><span>«${PR.proekt.name}»</span></div>
+        <div data-smeta-box hidden><b data-sum-smeta>—</b><span>${esc(AS.title)}</span></div>
+        <div data-total-box hidden><b data-sum-total>—</b><span>итого</span></div>
       </div>
       <p class="hint" data-pnote></p>
       <div class="cta-row"><a class="btn" href="../brief.html">Оформить заказ — бриф</a></div>
@@ -443,16 +450,20 @@ w('price/index.html', page({
 <script>
 (function () {
   var root = document.querySelector('[data-pcalc]'); if (!root) return;
-  var R = { proekt: [${PR.proekt.rate}, ${PR.proekt.min}] };
-  var inp = root.querySelector('[data-area]');
+  var R = { proekt: [${PR.proekt.rate}, ${PR.proekt.min}], smeta: [${AS.rate}, ${AS.min}] };
+  var inp = root.querySelector('[data-area]'), chk = root.querySelector('[data-smeta]');
   function fmt(n) { return String(Math.round(n)).replace(/\\B(?=(\\d{3})+(?!\\d))/g, ' ') + ' ₽'; }
   function render() {
     var a = parseFloat(String(inp.value).replace(',', '.'));
     if (!(a > 0)) { root.querySelector('[data-sum-proekt]').textContent = '—'; root.querySelector('[data-pnote]').textContent = 'Введите площадь.'; return; }
     ['proekt'].forEach(function (k) { root.querySelector('[data-sum-' + k + ']').textContent = fmt(Math.max(R[k][1], R[k][0] * a)); });
+    var sp = Math.max(R.proekt[1], R.proekt[0] * a), sm = Math.max(R.smeta[1], Math.round(R.smeta[0] * a)), on = chk.checked;
+    root.querySelector('[data-sum-smeta]').textContent = fmt(sm);
+    root.querySelector('[data-smeta-box]').hidden = !on; root.querySelector('[data-total-box]').hidden = !on;
+    root.querySelector('[data-sum-total]').textContent = fmt(sp + sm);
     root.querySelector('[data-pnote]').textContent = a < ${TERMS.minArea} ? 'Площадь меньше ${TERMS.minArea} м² — действует минимальный заказ.' : 'Ставка × площадь.';
   }
-  inp.addEventListener('input', render); render();
+  inp.addEventListener('input', render); chk.addEventListener('change', render); render();
 })();
 </script>
 
@@ -588,6 +599,7 @@ const FAQ = [
     + 'конструкций не берём: это работа организаций с допуском. Если несущие не определены, это вынесено в открытые вопросы.'],
   ['Смета — это точная цена ремонта?', 'Это ориентировочный расчёт на дату выпуска: объёмы взяты из чертежей, цены — на момент расчёта. Материалы дорожают и дешевеют, '
     + 'поэтому перед закупкой цены нужно сверить. Офертой смета не является.'],
+  ['Можно ли заказать отдельно смету на материалы?', `Да, как опцию к дизайн-проекту: ${TERMS.addons.smeta.line}. Это перечень материалов с количеством, запасом и ориентировочной ценой по помещениям и сводно — список покупок на весь ремонт. Отметьте её в брифе или добавьте позже в кабинете; оплачивается отдельной строкой. Без проекта не продаём: количества берутся из чертежей. Подробно — на странице «Смета на материалы».`],
   ['Нужен ли выезд на объект?', 'Проект делается удалённо — достаточно плана с размерами и фото. Контрольный обмер на объекте нужен перед закупкой и работами: '
     + 'что именно померить и проверить, написано в задании на обмер внутри альбома.'],
   ['Кто ведёт проект?', `${AUTHOR.role[0].toUpperCase() + AUTHOR.role.slice(1)} ${AUTHOR.name}. Его фамилия стоит в основной надписи листов; телефон и почта — на странице контактов и внизу каждой страницы сайта.`],
@@ -802,9 +814,192 @@ w('oferta/index.html', page({
 </section>`
 }));
 
+/* ---------------------------------------------------------- смета на материалы (опция) */
+// Опция к дизайн-проекту (решение Александра 09.11.2026). Цена, состав, «чего нет» и срок — site-shell.js → TERMS.addons.smeta.
+// Пример таблицы — настоящие строки спецификации материалов (лист 102) и сводной сметы (лист 105) демо-альбома gost-lineademo.
+const SMETA_EX = [
+  // [раздел или null, позиция, к заказу, цена за ед., сумма, пометка]
+  ['Полы и облицовка'],
+  [null, 'Инженерная доска, дуб, рабочий слой 4 мм', '46,20 м²', '4 513', '208 501', 'запас 7 %, до целой упаковки'],
+  [null, 'Керамогранит 600×600 мм под травертин', '6,12 м² (17 шт)', '1 800', '11 016', 'запас 10 %, подрезка'],
+  [null, 'Керамогранит 600×1200 и 1200×600 мм', '49,68 м² (69 шт)', '3 500', '173 880', 'запас 10 %, подрезка'],
+  ['Сухие смеси и гидроизоляция'],
+  [null, 'Клей плиточный цементный C2 TE S1', '12 мешков по 25 кг', '1 800', '21 600', 'расход 1,5 кг/м² на 1 мм слоя'],
+  [null, 'Затирка цементная CG2WA', '2 упаковки по 2 кг', '1 000', '2 000', 'цвет — по колерной карте'],
+  [null, 'Гидроизоляция обмазочная, 2 слоя', '11,29 м² + 10 %', 'по ТУ', '—', 'расход — по паспорту материала'],
+  ['Покраска и плинтус'],
+  [null, 'Краска Tikkurila Euro Power 7, банка 2,7 л', '19 банок', '3 510', '66 690', 'колеровка по NCS'],
+  [null, 'Краска Farrow &amp; Ball Modern Emulsion, 2,5 л', '2 банки', '5 800', '11 600', 'акцентные стены'],
+  [null, 'Плинтус напольный МДФ под покраску', '24 шт', '368', '8 832', ''],
+  ['Заказывать заранее'],
+  [null, 'Двери скрытого монтажа с коробом под покраску', '4 шт', 'по КП', '—', 'поставка около 30 дней'],
+  [null, 'Кухонный гарнитур по проекту кухни', '1 комплект', 'по КП', '—', 'изготовление 4–8 недель от замера'],
+];
+const SMETA_EX_SUM = '504 119';
+const SMETA_AREAS = [30, 50, 60, 80, 100];
+const SMETA_FAQ = [
+  ['Что я получу?', `Отдельный документ — перечень всех материалов по проекту с количеством: чистовая отделка, черновые материалы, электрика, сантехника. По помещениям и сводно, с запасом на подрезку и бой, с ориентировочной ценой за единицу и итогом и с пометкой, что заказывать заранее. Формат: ${AS.format}.`],
+  ['Сколько стоит и как считается?', `${AS.line}. Площадь берётся из брифа; если по плану она окажется другой, пересчитаем по той же ставке и согласуем разницу. Оплачивается отдельной строкой, дизайн-проект в эту сумму не входит.`],
+  ['Как быстро будет готово?', `${AS.termLine}. Срок — от оплаты и плана с размерами; если по объекту остались вопросы, смета выходит с пометкой «ПРЕДВАРИТЕЛЬНО» и пересчитывается вместе с проектом.`],
+  ['Чем это отличается от сметы в альбоме?', 'В альбоме — листы формата A3 по ГОСТ: ведомость объёмов, спецификация и сводная смета, привязанные к чертежам. Опция — тот же расчёт в виде отдельного документа для закупки: по помещениям и сводно, с запасом, упаковкой и сроком заказа, в PDF и в таблице, которую удобно вести при покупках.'],
+  ['Это точная цена ремонта?', `Нет. ${AS.priceNote}. В смете материалов нет работ бригады — работы считаются отдельно, в предложениях бригад на странице «Ремонт по проекту».`],
+  ['Вы закупаете и доставляете материалы?', 'Нет. Закупку и доставку мы не делаем и скидок магазинов не обещаем: вы покупаете сами или через бригаду. Смета нужна, чтобы знать, что и сколько покупать, и не переплатить за лишнее.'],
+  ['Можно ли заказать без дизайн-проекта?', 'Нет. Количества берутся из чертежей проекта: без них смета снова превращается в цену за метр. Опция отмечается в брифе вместе с проектом или добавляется позже в кабинете.'],
+  ['Изменили планировку — смета изменится?', 'Да, если правка вносится в проект: объёмы считаются из тех же данных, что и чертежи, поэтому при перевыпуске проекта смета пересчитывается. Круги правок проекта входят в его цену.'],
+];
+const smetaRows = SMETA_EX.map(r => r.length === 1
+  ? `<tr class="grp"><td colspan="5"><b>${r[0]}</b></td></tr>`
+  : `<tr><td>${r[1]}</td><td>${r[2]}</td><td class="num">${r[3]}</td><td class="num">${r[4]}</td><td>${r[5]}</td></tr>`).join('\n        ');
+w('smeta/index.html', page({
+  file: 'smeta/index.html',
+  sec: 'compare',
+  title: `Смета на материалы для ремонта ${AS.fromLine} | LINEA`,
+  desc: `Список покупок на весь ремонт: материалы с количеством, запасом и ценой, по помещениям. Опция к дизайн-проекту квартиры, ${AS.fromLine}.`,
+  h1: 'Смета на материалы — список покупок на весь ремонт',
+  crumb: 'Опция к проекту',
+  lead: `Перечень всех материалов по вашему проекту с количеством: сколько краски, плитки, кабеля и труб купить, с запасом на подрезку и что заказывать заранее. Чтобы не переплатить и не докупать в спешке. Опция к дизайн-проекту: ${AS.line}.`,
+  jsonld: [
+    crumbsLd([['LINEA', BASE + '/'], ['Условия', BASE + '/price/'], [AS.title, BASE + '/smeta/']]),
+    { '@context': 'https://schema.org', '@type': 'Service', name: AS.title, serviceType: 'Смета на материалы для ремонта квартиры',
+      description: `${AS.what}. Опция к дизайн-проекту квартиры.`, areaServed: 'RU', url: `${BASE}/smeta/`,
+      provider: { '@type': 'ProfessionalService', name: 'LINEA', url: BASE + '/', telephone: AUTHOR.tel, email: AUTHOR.email },
+      offers: AS.offer(`${BASE}/smeta/`) },
+    { '@context': 'https://schema.org', '@type': 'FAQPage', mainEntity: SMETA_FAQ.map(f => ({ '@type': 'Question', name: f[0], acceptedAnswer: { '@type': 'Answer', text: f[1] } })) },
+  ],
+  body: `<section class="proof"><div class="wrap">
+  <div><b>${esc(AS.fromLine)}</b><span>опция к проекту, отдельная строка оплаты</span></div>
+  <div><b>${esc(TERMS.days)}</b><span>вместе с проектом</span></div>
+  <div><b>PDF и таблица</b><span>xlsx или csv</span></div>
+  <div><b>по помещениям</b><span>и сводно по квартире</span></div>
+</div></section>
+
+<section class="blk">
+  <div class="wrap">
+    <div class="kicker">Зачем она нужна</div>
+    <h2>Один список вместо десяти походов в магазин</h2>
+    <p class="sub">Это список покупок на весь ремонт с количеством: в нём написано, сколько мешков клея, банок краски, метров кабеля и труб нужно именно вашей квартире. Бригада может считать «на глаз» и закладывать лишнее; магазин продаёт ровно столько, сколько попросите. Со сметой вы просите столько, сколько нужно, и не докупаете в спешке на середине ремонта.</p>
+    <ul class="checklist">
+      <li>хотите закупать сами и понимать бюджет материалов до начала ремонта</li>
+      <li>сравниваете предложения бригад и хотите проверить их количества</li>
+      <li>нужно знать, какие позиции ждать неделями, и заказать их вовремя</li>
+    </ul>
+  </div>
+</section>
+
+<section class="blk">
+  <div class="wrap">
+    <div class="kicker">Что входит</div>
+    <h2>Четыре раздела материалов</h2>
+    <div class="scroll-x">
+      <table class="tbl">
+        <tr><th>Раздел</th><th>Что в нём</th></tr>
+        ${AS.includes.map(i => `<tr><td>${esc(i[0])}</td><td>${esc(i[1])}</td></tr>`).join('\n        ')}
+      </table>
+    </div>
+    <p class="sub" style="margin-top:18px">В каждом документе:</p>
+    <ul class="checklist">${AS.features.map(f => `<li>${esc(f)}</li>`).join('')}</ul>
+    <p class="hint" style="margin-top:12px">Формат: ${esc(AS.format)}. ${esc(AS.priceNote)}.</p>
+  </div>
+</section>
+
+<section class="blk" id="primer-tablicy">
+  <div class="wrap">
+    <div class="kicker">Пример оформления</div>
+    <h2>Как выглядят строки</h2>
+    <p class="sub">Фрагмент из демо-альбома «<a href="../portfolio/gost-lineademo/">Квартира 56 м²</a>»: позиции, количества и пометки взяты из его спецификации материалов и сводной сметы (листы 102 и 105). Готовый документ опции собирается так же, но по всему проекту, по помещениям и сводно.</p>
+    <div class="scroll-x">
+      <table class="tbl">
+        <tr><th>Материал</th><th>К заказу</th><th>Цена за ед., ₽</th><th>Сумма, ₽</th><th>Пометка</th></tr>
+        ${smetaRows}
+        <tr><td><b>Итого по строкам с ценой</b></td><td></td><td></td><td class="num"><b>${SMETA_EX_SUM}</b></td><td>без позиций «по ТУ» и «по КП»</td></tr>
+      </table>
+    </div>
+    <p class="hint" style="margin-top:14px">Пример оформления, не ваша смета. Количества — из демо-альбома, выпуск которого предварительный. Цены — ориентир по открытым прайсам Москвы на 21.09.2026 (часть сверена 06.10.2026), нижняя граница; это не оферта магазинов, и перед покупкой цены нужно уточнить. Позиции «по ТУ» считаются по паспорту материала, «по КП» — по предложению поставщика.</p>
+  </div>
+</section>
+
+<section class="blk" id="stoimost">
+  <div class="wrap">
+    <div class="kicker">Сколько стоит</div>
+    <h2>${esc(AS.rateText)}, не меньше ${esc(AS.minText)}</h2>
+    <div class="scroll-x">
+      <table class="tbl">
+        <tr><th>Площадь</th><th>${esc(AS.title)}</th><th>Проект</th><th>Проект и смета</th></tr>
+        ${SMETA_AREAS.map(a => `<tr><td>${a} м²</td><td>${TERMS.rub(AS.sum(a))}</td><td>${TERMS.rub(TERMS.sum('proekt', a))}</td><td>${TERMS.rub(TERMS.totalWith(a, 'smeta'))}</td></tr>`).join('\n        ')}
+      </table>
+    </div>
+    <p class="hint" style="margin-top:14px">${esc(AS.line)}. Минимум действует для квартир до ${AS.minArea} м². Стоимость дизайн-проекта — отдельно, <a href="../price/">на странице условий</a>.</p>
+    <div class="calc" data-scalc style="margin-top:22px">
+      <div class="calc-row"><span>Площадь, м²</span>
+        <input type="number" inputmode="decimal" min="10" max="1000" step="0.1" value="60" data-area aria-label="Площадь, м²" style="width:110px;padding:8px 10px;font:inherit;text-align:right;border:1px solid var(--line,#444);background:transparent;color:inherit;border-radius:8px"></div>
+      <div class="calc-out">
+        <div><b data-s-smeta>—</b><span>${esc(AS.title)}</span></div>
+        <div><b data-s-total>—</b><span>проект и смета вместе</span></div>
+      </div>
+      <p class="hint" data-s-note></p>
+      <div class="cta-row"><a class="btn" href="../brief.html">Заполнить бриф и отметить смету</a></div>
+    </div>
+  </div>
+</section>
+<script>
+(function () {
+  var root = document.querySelector('[data-scalc]'); if (!root) return;
+  var inp = root.querySelector('[data-area]');
+  var P = [${PR.proekt.rate}, ${PR.proekt.min}], S = [${AS.rate}, ${AS.min}];
+  function fmt(n) { return String(Math.round(n)).replace(/\\B(?=(\\d{3})+(?!\\d))/g, ' ') + ' ₽'; }
+  function render() {
+    var a = parseFloat(String(inp.value).replace(',', '.')), ns = root.querySelector('[data-s-note]');
+    if (!(a > 0)) { root.querySelector('[data-s-smeta]').textContent = '—'; root.querySelector('[data-s-total]').textContent = '—'; ns.textContent = 'Введите площадь.'; return; }
+    var s = Math.max(S[1], Math.round(S[0] * a)), p = Math.max(P[1], Math.round(P[0] * a));
+    root.querySelector('[data-s-smeta]').textContent = fmt(s); root.querySelector('[data-s-total]').textContent = fmt(p + s);
+    ns.textContent = a * S[0] < S[1] ? 'Действует минимум для сметы: ' + fmt(S[1]) + '.' : 'Ставка × площадь.';
+  }
+  inp.addEventListener('input', render); render();
+})();
+</script>
+
+<section class="blk">
+  <div class="wrap">
+    <div class="kicker">Как заказать</div>
+    <h2>Три шага, оплата отдельной строкой</h2>
+    <ol class="g-steps">
+      <li><h3>Отметьте в брифе</h3><p>На шаге с суммой стоит галочка «Добавить смету на материалы» — сумма пересчитается сразу. Забыли — не страшно.</p></li>
+      <li><h3>Или добавьте позже</h3><p>${esc(AS.later)}: кнопка «Добавить смету на материалы» в карточке оплаты. Дизайн-проект при этом уже может быть выпущен.</p></li>
+      <li><h3>Получите в кабинете</h3><p>${esc(AS.termLine)}. Файлы (${esc(AS.format)}) появятся в кабинете, письмо придёт на почту.</p></li>
+    </ol>
+    <p class="hint">${esc(AS.how)}. Без дизайн-проекта опция не продаётся: количества берутся из его чертежей.</p>
+  </div>
+</section>
+
+<section class="blk">
+  <div class="wrap">
+    <div class="kicker">Честно</div>
+    <h2>Чего в смете нет</h2>
+    <div class="pas-grid">
+      <div class="pas-col good"><h3>В смете есть</h3><ul>${AS.features.map(f => `<li>${esc(f[0].toUpperCase() + f.slice(1))}</li>`).join('')}<li>${esc(AS.priceNote)}</li></ul></div>
+      <div class="pas-col"><h3>Чего нет</h3><ul>${AS.excludes.map(f => `<li>${esc(f[0].toUpperCase() + f.slice(1))}</li>`).join('')}</ul></div>
+    </div>
+    <p class="hint" style="margin-top:16px">Состав сметы внутри альбома (ведомость объёмов, спецификация, сводная смета листами A3) описан в <a href="../catalog/smeta-i-komplektatsiya.html">каталоге услуг</a>; опция даёт тот же расчёт отдельным рабочим документом для закупки. Работы бригады считают сами бригады: <a href="../remont/">«Ремонт по проекту»</a>.</p>
+  </div>
+</section>
+
+<section class="blk">
+  <div class="wrap">
+    <div class="kicker">Частые вопросы</div>
+    <h2>Коротко</h2>
+    ${SMETA_FAQ.map((f, i) => `<details${i === 0 ? ' open' : ''}><summary>${esc(f[0])}</summary><p>${esc(f[1])}</p></details>`).join('\n    ')}
+    <div class="cta-row" style="margin-top:30px">
+      <a class="btn" href="../brief.html">Заполнить бриф — ${TERMS.brief.time}</a>
+      <a class="btn ghost" href="../price/">Цена проекта</a>
+      <a class="btn ghost" href="../portfolio/gost-lineademo/">Демо-альбом, из которого пример</a>
+    </div>
+  </div>
+</section>`
+}));
+
 /* ---------------------------------------------------------- карта сайта */
 const MAP = [
-  ['Услуги', [['Каталог услуг', 'catalog/'], ['Дизайн-проект квартиры', 'catalog/dizayn-proekt-kvartiry.html'], ['Только рабочая документация', 'catalog/rabochaya-dokumentatsiya.html'], ['Планировочное решение', 'catalog/planirovochnoe-reshenie.html'], ['Визуализации', 'catalog/vizualizatsii.html'], ['Смета и комплектация', 'catalog/smeta-i-komplektatsiya.html'], ['Стоимость и условия', 'price/'], ['Оплата', 'oplata/'], ...(OFERTA_DRAFT ? [] : [['Договор-оферта', 'oferta/']])]],
+  ['Услуги', [['Каталог услуг', 'catalog/'], ['Дизайн-проект квартиры', 'catalog/dizayn-proekt-kvartiry.html'], ['Только рабочая документация', 'catalog/rabochaya-dokumentatsiya.html'], ['Планировочное решение', 'catalog/planirovochnoe-reshenie.html'], ['Визуализации', 'catalog/vizualizatsii.html'], ['Смета и комплектация', 'catalog/smeta-i-komplektatsiya.html'], ['Стоимость и условия', 'price/'], ['Смета на материалы', 'smeta/'], ['Оплата', 'oplata/'], ...(OFERTA_DRAFT ? [] : [['Договор-оферта', 'oferta/']])]],
   ['Работы', [['Портфолио', 'portfolio-hub/'], ...CARDS.map(c => [c.name, `portfolio/${c.slug}/`]), ['Кейсы', 'cases/']]],
   ['Разобраться', [['Сравнение с рынком', 'compare/'], ['Как проходит работа', 'process/'], ['Вопросы и ответы', 'faq/'], ['Журнал', 'journal/'], ['Состав дизайн-проекта', 'journal/sostav-dizayn-proekta.html'], ['Развёртки стен', 'journal/razvertki-sten.html'], ['Электрика в проекте', 'journal/elektrika-v-proekte.html'], ['Пирог пола', 'journal/pirog-pola.html'], ['Смета ремонта', 'journal/smeta-remonta.html']]],
   ['Стили', [['Все стили', 'style/'], ['Джапанди', 'style/japandi.html'], ['Скандинавский', 'style/scandi.html'], ['Минимализм', 'style/minimal.html'], ['Современный', 'style/modern.html'], ['Неоклассика', 'style/neoclassic.html'], ['Лофт', 'style/loft.html']]],

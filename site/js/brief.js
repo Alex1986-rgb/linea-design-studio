@@ -30,6 +30,9 @@
   // ставки — из TERMS (sync-static-nav.js пишет <script id="briefTerms">); запасные значения — на случай старой копии страницы
   let T = { packs: [{ key: 'proekt', name: 'Проект с визуализациями', rate: 2000, min: 80000 }], minArea: 40 };
   try { const el = $('briefTerms'); if (el) T = JSON.parse(el.textContent); } catch (e) {}
+  // опция «Смета на материалы» (tools/site-shell.js → TERMS.addons.smeta): галочка на шаге с суммой; запасные значения — на случай старой копии страницы
+  const SM = (T.addons && T.addons.smeta) || { key: 'smeta', title: 'Смета на материалы', rate: 100, min: 5000 };
+  const smetaSum = a => Math.max(SM.min, Math.round(SM.rate * a));
   // стили — только для «подробностей» и прихода со страницы стиля (brief.html?style=japandi); ключи читает site-brief.js
   const STYLES = [['studio', 'на усмотрение студии'], ['japandi', 'Джапанди'], ['scandi', 'Скандинавский'], ['minimal', 'Минимализм'], ['modern', 'Современный'],
     ['neoclassic', 'Неоклассика'], ['loft', 'Лофт'], ['retro', 'Ретро, середина века'], ['chalet', 'Загородный, шале']];
@@ -270,7 +273,11 @@
       $('priceLead').textContent = `Сумма за ${String(a).replace('.', ',')} м²`;
       $('pk0').textContent = rubF(Math.max(P[0].min, P[0].rate * a));
       $('priceNote').textContent = `${rubF(P[0].rate)} за м², визуализации входят в цену` + (a < T.minArea ? `; меньше ${T.minArea} м² — минимальный заказ` : '') + '. ' + (T.areaRecalc || '');
+      if ($('smetaSum')) $('smetaSum').textContent = rubF(smetaSum(a));
+      if ($('totalRow')) { $('totalRow').hidden = !$('cSmeta').checked; $('pkTotal').textContent = rubF(Math.max(P[0].min, P[0].rate * a) + smetaSum(a)); }
     } else {
+      if ($('smetaSum')) $('smetaSum').textContent = `от ${rubF(SM.min)} (${rubF(SM.rate)}/м²)`;
+      if ($('totalRow')) $('totalRow').hidden = true;
       $('priceLead').textContent = 'Ставка за м²';
       $('pk0').textContent = rubF(P[0].rate) + '/м²';
       $('priceNote').textContent = `Минимальный заказ — как за ${T.minArea} м² (${rubF(P[0].min)}). Укажите площадь на первом шаге — сумма появится сразу.`;
@@ -338,6 +345,8 @@
       style: { key, title: st ? st[1] : key, byStudio: key === 'studio', colors: '', avoidColors: L && L.avoidColorsText ? L.avoidColorsText() : '', liked: [...liked], disliked: [],
         links: val('stRefs').split(/[\s,]+/).map(s => s.trim()).filter(s => /^https?:\/\//.test(s)) },
       budget: budgetClass(A.budget),
+      // опции заказа (необязательные, отдельная строка оплаты): сервер считает сумму по своему конфигу, цифра ниже — то, что видел клиент
+      options: $('cSmeta') && $('cSmeta').checked ? { smeta: true, smetaSumRub: num(val('objArea')) ? smetaSum(num(val('objArea'))) : null } : { smeta: false },
       answers: A,
       life: L ? L.out(lifeSkipped) : undefined,
       tech: TE ? TE.out(techSkipped) : undefined,
@@ -354,7 +363,7 @@
     clearTimeout(saveT);
     saveT = setTimeout(() => {
       const b = collect();
-      const d = { v: 3, fields: {}, kind: kind(), pack: pack(), needSurvey: $('needSurvey').checked, liked: [...liked], rooms: b.rooms, step: Math.min(step, SEND), ds: 4,
+      const d = { v: 3, fields: {}, kind: kind(), pack: pack(), needSurvey: $('needSurvey').checked, smeta: !!($('cSmeta') && $('cSmeta').checked), liked: [...liked], rooms: b.rooms, step: Math.min(step, SEND), ds: 4,
         life: L ? L.out(false) : null, lifeSkipped, tech: TE ? TE.out(false) : null, techSkipped, home: H ? H.out(false) : null, homeSkipped, files: b.files };
       FIELDS.forEach(id => { d.fields[id] = val(id); });
       try {
@@ -374,6 +383,7 @@
     if (!d || d.v !== 3) return 0;
     FIELDS.forEach(id => { if ($(id) && d.fields && d.fields[id] != null) $(id).value = d.fields[id]; });
     $('needSurvey').checked = !!d.needSurvey;
+    if ($('cSmeta')) $('cSmeta').checked = !!d.smeta;   // старые черновики без опции читаются: галочка снята
     if (L && d.life) L.restore(d.life);
     if (TE && d.tech) TE.restore(d.tech);
     if (H && d.home) H.restore(d.home);
@@ -446,12 +456,14 @@
     return true;
   }
   $('cConsent').addEventListener('change', () => { if ($('cConsent').checked) setErr('consentErr', '', $('cConsent')); });
+  if ($('cSmeta')) $('cSmeta').addEventListener('change', () => { if (step === SEND && !ADDMODE) price(); });
 
   function summaryText(b) {
     const o = b.object, L = [];
     L.push('Бриф LINEA — ' + (b.client.name || 'клиент') + (b.client.phone ? ', ' + b.client.phone : '') + (b.client.email ? ', ' + b.client.email : ''));
     L.push('Объект: ' + o.type + (o.area ? ', ' + o.area + ' м²' : '') + (o.address ? ', ' + o.address : '') + (o.needSurvey ? ' — плана нет, нужен обмер' : ''));
     L.push('Пакет: ' + T.packs[0].name);
+    if (b.options && b.options.smeta) L.push('Опция: ' + SM.title + (b.options.smetaSumRub ? ' — ' + rubF(b.options.smetaSumRub) : '') + ' (отдельная строка оплаты)');
     if (o.state) L.push('Состояние: ' + o.state);
     if (o.ceilingHeight) L.push('Потолки: ' + o.ceilingHeight + ' м');
     if (b.rooms.length) L.push('Помещения: ' + b.rooms.map(r => r.name + (r.width && r.length ? ' ' + r.width + '×' + r.length + ' м' : '') + (r.level != null ? ' (' + r.level + ' эт.)' : '')).join('; '));
