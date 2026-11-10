@@ -22,7 +22,7 @@ const cap = s => s[0].toUpperCase() + s.slice(1);
 
 const u = '../../';
 const title = `Смета на материалы отдельным заказом — ${AS.fromLine} | LINEA`;
-const desc = `Смета на материалы по вашему проекту или плану: площадь, план с размерами, готовый проект либо ответы «что где» — и список покупок на весь ремонт. ${AS.fromLine}.`;
+const desc = `Смета на материалы по вашему проекту или плану: площадь, план с размерами, готовый проект либо ответы «что где» — и список черновых материалов на весь ремонт с расчётом в каждой строке. ${AS.fromLine}.`;
 const canonical = `${BASE}/${SO.url}`;
 const ld = { '@context': 'https://schema.org', '@graph': [
   { '@type': 'WebPage', name: 'Заказ сметы на материалы', url: canonical, isPartOf: { '@type': 'WebSite', name: 'LINEA', url: BASE + '/' } },
@@ -199,7 +199,7 @@ ${SHELL.header(u, null)}
       <p class="sz-err" id="szProjErr" role="alert"></p>
       <div class="sz-note"><b>Какие листы нужны.</b> ${esc(cap(SO.needProject[0]))}. ${esc(SO.noCheck)}.</div>
       <label class="t" for="szNoteP">Что учесть <span style="text-transform:none;letter-spacing:0">— по желанию</span></label>
-      <textarea id="szNoteP" rows="3" placeholder="Например: ванную уже заказали, плитку для неё считать не нужно"></textarea>
+      <textarea id="szNoteP" rows="3" placeholder="Например: стены неровные, штукатурка слоем 30 мм; стяжка 50 мм"></textarea>
     </div>
 
     <div id="szAnswers" hidden>
@@ -224,7 +224,7 @@ ${SHELL.header(u, null)}
           <p class="qw" style="margin-top:6px">Зачем спрашиваем: что убираем, а что остаётся — это меняет объём черновых материалов.</p></div>
       </div>
       <label class="t" for="szNoteA">Что учесть <span style="text-transform:none;letter-spacing:0">— по желанию</span></label>
-      <textarea id="szNoteA" rows="3" placeholder="Например: кухня-гостиная, на кухне плитка только фартуком"></textarea>
+      <textarea id="szNoteA" rows="3" placeholder="Например: штукатурка слоем 30 мм, стяжка 50 мм; на кухне плитка только фартуком"></textarea>
     </div>
   </section>
 
