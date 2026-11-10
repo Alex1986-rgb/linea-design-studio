@@ -18,10 +18,9 @@
 <meta name="twitter:card" content="summary_large_image">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><defs><linearGradient id='g' x1='0' y1='0' x2='1' y2='1'><stop offset='0' stop-color='%23EBDCA8'/><stop offset='.5' stop-color='%23C9A45F'/><stop offset='1' stop-color='%238F6B33'/></linearGradient></defs><rect width='100' height='100' fill='%230F0E0C'/><text x='50' y='70' font-size='56' text-anchor='middle' fill='url(%23g)' font-family='Georgia'>L</text><rect x='66' y='62' width='10' height='10' transform='rotate(45 71 67)' fill='%231E6E57' stroke='%23C9A45F' stroke-width='2'/></svg>">
 <link rel="apple-touch-icon" href="https://xn-----6kccjicviedfr1b2cbishm8w.xn--p1ai/apple-touch-icon.png">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,500;0,600;1,500&family=Inter:wght@400;600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="../css/main.css?v=37">
+<link rel="preload" href="../assets/fonts/inter-n-cyrillic.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="../assets/fonts/playfair-display-n-cyrillic.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="../css/main.css?v=38">
 <link rel="stylesheet" href="../css/brigady.css?v=2">
 <meta name="robots" content="noindex, nofollow">
 
@@ -30,29 +29,23 @@
 <header class="site">
   <div class="nav">
     <a class="logo" href="../">LINE<i>A</i></a>
-    <nav class="links">
-      <a href="../portfolio-hub/">Портфолио</a>
-      <a href="../catalog/">Каталог</a>
-      <a href="../gost/">Документация</a>
-      <a href="../cases/">Кейсы</a>
-      <a href="../compare/">Сравнение</a>
-      <a href="../style/">Стили</a>
-      <a href="../journal/">Журнал</a>
+    <nav class="links" aria-label="Главное меню">
+      <a href="../portfolio-hub/">Примеры</a>
+      <a href="../price/">Цена</a>
+      <a href="../process/">Как работаем</a>
+      <a href="../faq/">Вопросы</a>
     </nav>
     <a class="nav-in" href="../vhod/">Войти</a>
-    <a class="btn sm" href="../brief.html">Заполнить бриф</a>
+    <a class="btn sm nav-cta" href="../brief.html"><span class="t-long">Заполнить бриф</span><span class="t-short">Бриф</span></a>
     <button class="burger" type="button" aria-label="Меню" aria-expanded="false"><i></i><i></i><i></i></button>
   </div>
 </header>
 <div class="mnav" hidden>
   <nav>
-    <a href="../portfolio-hub/">Портфолио</a>
-    <a href="../catalog/">Каталог</a>
-    <a href="../gost/">Документация</a>
-    <a href="../cases/">Кейсы</a>
-    <a href="../compare/">Сравнение</a>
-    <a href="../style/">Стили</a>
-    <a href="../journal/">Журнал</a>
+    <a href="../portfolio-hub/">Примеры</a>
+    <a href="../price/">Цена</a>
+    <a href="../process/">Как работаем</a>
+    <a href="../faq/">Вопросы</a>
   </nav>
   <div class="mnav-cta">
     <a class="btn" href="../brief.html">Заполнить бриф</a>
@@ -86,7 +79,7 @@
     <a class="fstep" href="../brief.html">
       <span class="fnum">03</span>
       <span class="ftitle">Начать</span>
-      <span class="ftext">бриф — 3 шага, около 5 минут, от 2 000 ₽/м², сумму знаете до оплаты</span>
+      <span class="ftext">бриф — основное за 5 минут, остальное по желанию; от 80 000 ₽ (2 000 ₽/м²), сумма — до оплаты</span>
     </a>
   </div>
 </section>
@@ -100,8 +93,8 @@
       <p>Дизайн-проект квартиры по вашему плану:<br>чертежи, визуализации и смета в двух альбомах.<br>Программа чертит, автор проверяет решения.</p>
       <p>дизайнер-архитектор <b>Кырлан Александр</b><br><a href="tel:+79257338640">+7 925 733-86-40</a> · <a href="mailto:optteem@mail.ru">optteem@mail.ru</a></p>
     </div>
-    <div>
-      <p><a href="../brief.html">Бриф</a> · <a href="../portfolio-hub/">Портфолио</a> · <a href="../catalog/">Каталог</a> · <a href="../gost/">Документация</a> · <a href="../cases/">Кейсы</a> · <a href="../compare/">Сравнение</a> · <a href="../style/">Стили</a> · <a href="../journal/">Журнал</a> · <a href="../stories/">Истории</a> · <a href="../reviews/">Отзывы</a> · <a href="./">Ремонт по проекту</a> · <a href="../brigadam/">Бригадам</a> · <a href="../price/">Условия</a> · <a href="../process/">Процесс</a> · <a href="../faq/">FAQ</a> · <a href="../about/">О студии</a> · <a href="../contacts/">Контакты</a> · <a href="../checklist/">Чек-лист приёмки</a> · <a href="../sitemap/">Карта сайта</a> · <a href="../oplata/">Оплата</a> · <a href="../policy/">Обработка данных</a> · <a href="../soglasie/">Согласие на обработку данных</a></p>
+    <div class="f-links">
+      <!-- fnav --><nav class="fnav" aria-label="Все разделы сайта"><div><h4>Примеры</h4><a href="../portfolio-hub/">Портфолио</a><a href="../cases/">Кейсы</a><a href="../stories/">Истории</a><a href="../style/">Стили интерьера</a><a href="../reviews/">Отзывы</a></div><div><h4>Цена и условия</h4><a href="../price/">Цена и что входит</a><a href="../process/">Как работаем</a><a href="../faq/">Вопросы и ответы</a><a href="../catalog/">Каталог услуг</a><a href="../compare/">Сравнение с рынком</a><a href="../oplata/">Оплата</a></div><div><h4>Документация</h4><a href="../gost/">Что такое альбом чертежей</a><a href="../checklist/">Чек-лист приёмки</a><a href="../journal/">Журнал</a></div><div><h4>Студия</h4><a href="../about/">О студии</a><a href="../contacts/">Контакты</a><a href="../brief.html">Бриф</a><a href="./">Ремонт по проекту</a><a href="../brigadam/">Бригадам</a></div><div><h4>Документы</h4><a href="../policy/">Обработка данных</a><a href="../soglasie/">Согласие на обработку данных</a><a href="../sitemap/">Карта сайта</a></div></nav><!-- /fnav -->
       <p>© LINEA studio, 2026</p>
     </div>
   </div>
