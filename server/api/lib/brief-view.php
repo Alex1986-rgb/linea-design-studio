@@ -102,8 +102,9 @@ function brief_view(array $b): array
     $f = is_array($b['files'] ?? null) ? $b['files'] : [];
     $add('files', 'Файлы по списку брифа', [['План', implode(', ', (array)($f['plans'] ?? []))], ['Фото квартиры', implode(', ', (array)($f['photos'] ?? []))], ['Фото «как сейчас» (шаг «Дом и ремонт»)', implode(', ', (array)($f['now'] ?? []))]]);
     $life = brief_set_view('life', $b['life'] ?? null);
+    $tech = brief_set_view('tech', $b['tech'] ?? null);
     $home = brief_set_view('home', $b['home'] ?? null);
-    return ['sections' => $s, 'life' => $life, 'home' => $home];
+    return ['sections' => $s, 'life' => $life, 'tech' => $tech, 'home' => $home];
 }
 
 /** Плоский текст сводки (для письма студии и order-pull). */
@@ -115,7 +116,7 @@ function brief_view_text(array $v): string
         if ($s['text'] !== '') { $out[] = $s['text']; }
         foreach ($s['rows'] as $r) { $out[] = $r[0] . ': ' . $r[1]; }
     }
-    foreach (['life' => 'Жизнь в квартире', 'home' => 'Дом и ремонт'] as $k => $t) {
+    foreach (['life' => 'Жизнь в квартире', 'tech' => 'Двери, свет и электрика', 'home' => 'Дом и ремонт'] as $k => $t) {
         if (empty($v[$k]['present'])) { continue; }
         $out[] = "== " . $t . ($v[$k]['info']['skipped'] ? ' (пропущен клиентом)' : ' — ответов: ' . $v[$k]['info']['answered']);
         foreach ($v[$k]['groups'] as $g) { $out[] = '-- ' . $g['title']; foreach ($g['rows'] as $r) { $out[] = $r[0] . ': ' . $r[1]; } }

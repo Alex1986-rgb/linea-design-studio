@@ -98,6 +98,50 @@
   .kab-now p.big{font-size:17px}
 }
 
+/* ── доработка 09.11: статус и срок, оплата с расшифровкой, бриф, история, круги правок */
+.kab-stepn{display:none;margin:12px 0 6px;font-size:14px;color:var(--gold2)}
+.kab-status{border-left:3px solid var(--gold)}
+.kab-status p:last-child{margin-bottom:0}
+.kab-formula{font-size:14.5px}
+.kab-legal{font-size:13px;margin-top:10px}
+.kab-det summary{cursor:pointer;min-height:44px;display:flex;align-items:center;gap:6px}
+.kab-det[open]>summary{margin-bottom:8px}
+.kab-ul{margin:0 0 10px;padding-left:18px;font-size:14.5px;line-height:1.55}
+.kab-story{white-space:pre-wrap;background:var(--bg2);border-radius:4px;padding:12px 14px;font-size:15px}
+.kab-dl{display:grid;grid-template-columns:minmax(120px,32%) 1fr;gap:6px 16px;margin:0 0 10px;font-size:14.5px}
+.kab-dl dt{color:var(--mut)}
+.kab-dl dd{margin:0;overflow-wrap:anywhere}
+.kab h4{font-size:13px;letter-spacing:1.5px;text-transform:uppercase;color:var(--gold);margin:16px 0 8px;font-weight:600}
+.kab-files{list-style:none;margin:0 0 12px;padding:0;display:grid;gap:10px}
+.kab-files li{display:flex;gap:12px;align-items:center;font-size:14.5px;min-width:0}
+.kab-files li>div{min-width:0;overflow-wrap:anywhere}
+.kab-files img{width:64px;height:64px;object-fit:cover;border-radius:4px;border:1px solid var(--line);display:block}
+.kab-ico{width:64px;height:64px;display:flex;align-items:center;justify-content:center;background:var(--bg2);border-radius:4px;font-size:24px;flex:0 0 auto}
+.kab-file{cursor:pointer;position:relative}
+.kab-file:focus-within{outline:2px solid #c29a5b88;outline-offset:2px}
+.kab-qtools{margin-top:8px}
+.kab-rounds{display:flex;gap:12px;align-items:center;flex-wrap:wrap;font-size:14px;margin-top:6px}
+.kab-dots{display:flex;gap:6px}
+.kab-dots i{width:14px;height:14px;border-radius:50%;border:2px solid var(--gold);display:block}
+.kab-dots i.on{background:var(--gold)}
+.kab-hd{font-size:13px;letter-spacing:1.5px;text-transform:uppercase;color:var(--gold);margin:18px 0 8px;font-weight:600}
+.kab-hd:first-child{margin-top:0}
+.kab-he{display:flex;gap:12px;align-items:flex-start;padding:9px 0;border-bottom:1px solid var(--line);font-size:14.5px}
+.kab-he:last-child{border-bottom:0}
+.kab-he>.kab-tag{flex:0 0 96px;text-align:center;margin:2px 0 0}
+.kab-he>div{min-width:0;overflow-wrap:anywhere}
+.kab-he small{display:block;margin-top:2px;font-size:12px}
+.kab-he.mine b{color:var(--gold2)}
+@media (max-width:760px){
+  .kab-stepn{display:block}
+  .kab-steps{display:none}
+  .kab-dl{grid-template-columns:1fr;gap:2px}
+  .kab-dl dt{margin-top:8px;font-size:13px}
+  .kab-he{flex-direction:column;gap:4px}
+  .kab-he>.kab-tag{flex:0 0 auto;text-align:left}
+  .kab-qtools .btn,.kab-file{width:100%;justify-content:center;text-align:center}
+}
+
 /* ── кабинет бригады (site/brigada/): левое меню на компьютере, нижняя панель на телефоне; цели нажатия ≥ 48 px */
 .brg .bx-wrap{max-width:1120px}
 .brg-top{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;margin:0 0 16px}

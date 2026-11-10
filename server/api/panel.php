@@ -750,7 +750,7 @@ switch ($s) {
                 foreach ($v['sections'] as $sec) {
                     $b .= '<h2>' . $h($sec['title']) . '</h2><div class="box">' . ($sec['text'] !== '' ? '<p style="white-space:pre-wrap">' . $h($sec['text']) . '</p>' : '') . ($sec['rows'] ? $tbl($sec['rows']) : '') . '</div>';
                 }
-                foreach (['life' => 'Жизнь в квартире', 'home' => 'Дом и ремонт'] as $k => $t) {
+                foreach (['life' => 'Жизнь в квартире', 'tech' => 'Двери, свет и электрика', 'home' => 'Дом и ремонт'] as $k => $t) {
                     $x = $v[$k];
                     if (!$x['present']) { $b .= '<h2>' . $t . '</h2><p class="box mut">Клиент этот шаг не открывал (в брифе его нет).</p>'; continue; }
                     $b .= '<h2>' . $t . '</h2><p class="mut">' . ($x['info']['skipped'] ? 'Клиент пропустил этот шаг.' : 'Отвечено вопросов: ' . (int)$x['info']['answered'] . ' из ' . (int)$x['info']['total'] . '.') . '</p>';

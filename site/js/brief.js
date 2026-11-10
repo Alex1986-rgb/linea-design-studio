@@ -19,6 +19,9 @@
   const SECURE = location.protocol === 'https:' || /^(localhost|127\.0\.0\.1|\[::1\])$/.test(location.hostname);
   const API = (SECURE || TEST) ? ((document.querySelector('meta[name="linea-api"]') || {}).content || '') : '';
   const MAX_MB = 100;
+  // brief.html?add=<токен заказа> (из кабинета): только необязательные шаги, ответы уходят как дополнение к заказу (api/brief-add.php)
+  const ADD = (qs.get('add') || '').trim().slice(0, 80);
+  const ADDMODE = !!ADD && !!API;
   const NAMES = ['План квартиры', 'Что нравится', 'Расскажите словами', 'Жизнь в квартире', 'Двери, свет и электрика', 'Дом и ремонт', 'Куда прислать проект'];
   // шаги LIFE, TECH и HOME необязательны и идут после главного «словами» (09.11.2026): быт, двери и электрика, вопросы прораба — js/brief-life.js
   const STORY = 2, LIFE = 3, TECH = 4, HOME = 5, SEND = 6, DONE = 7;
@@ -67,11 +70,17 @@
     $('next').textContent = step === HOME ? 'К отправке →' : 'Дальше →';
     $('skipNote').textContent = step === 1 ? 'Ничего не подходит — просто нажмите «Дальше».' : opt ? 'Можно ответить на часть вопросов или нажать «Пропустить шаг».'
       : step === STORY ? 'Можно коротко: пара фраз уже помогает. Дальше — три необязательных шага с вопросами, их можно пропустить.' : '';
-    if (step === SEND) { price(); recap(); }
+    if (step === SEND && !ADDMODE) { price(); recap(); }
     if (focus) {
       const h = document.querySelector(`.panel[data-step="${step}"] h2`);
       if (h) { h.tabIndex = -1; h.focus({ preventScroll: true }); }
       $('prog').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+    if (ADDMODE) {
+      $('progStep').textContent = step === SEND ? 'Остался один клик' : `Шаг ${step - LIFE + 1} из 3`;
+      $('progSeg').innerHTML = [LIFE, TECH, HOME].map(i => `<i class="opt ${i <= step ? 'on' : ''}"></i>`).join('');
+      $('progLen').textContent = step === SEND ? '' : 'Отвечайте на сколько хочется — всё необязательно. Ответы дополнят ваш бриф, ничего не потеряется.';
+      $('prev').hidden = step <= LIFE; $('next').hidden = step >= SEND; $('next').textContent = step === HOME ? 'Дальше →' : 'Дальше →';
     }
     if (ready) save();
   }
@@ -341,6 +350,7 @@
   const FIELDS = ['objArea', 'story', 'objH', 'objState', 'objAddr', 'stKey', 'qBudget', 'stRefs', 'cName', 'cPhone', 'cEmail'];
   let saveT = 0;
   function save() {
+    if (ADDMODE) return;   // черновик основного брифа не трогаем
     clearTimeout(saveT);
     saveT = setTimeout(() => {
       const b = collect();
@@ -358,6 +368,7 @@
   document.addEventListener('input', save);
   document.addEventListener('change', save);
   function restore() {
+    if (ADDMODE) return LIFE;
     let d = null;
     try { d = JSON.parse(localStorage.getItem(KEY) || 'null'); } catch (e) {}
     if (!d || d.v !== 3) return 0;
@@ -605,6 +616,40 @@
     $('zipInfo').textContent = f.name + ' · ' + sizeText(f.size);
   };
 
-  show(start, false);
+  // ── режим «дополнение к заказу»
+  if (ADDMODE) {
+    document.title = 'Дополнить бриф — LINEA';
+    const k = document.querySelector('.bh .kicker'), h1 = document.querySelector('.bh h1'), lead = $('lead');
+    if (k) k.textContent = 'Дополнение к брифу'; if (h1) h1.textContent = 'Ответы на дополнительные вопросы';
+    if (lead) lead.textContent = 'Эти вопросы необязательны. То, что вы уже ответили, сохранено и показано ниже — можно поправить или дополнить. Контакты и план менять не нужно.';
+    const sendP = document.querySelector('.panel[data-step="6"]');
+    [...sendP.children].forEach(c => { if (c.tagName !== 'H2') c.hidden = true; });
+    $('h4s').textContent = 'Отправить дополнение';
+    sendP.insertAdjacentHTML('beforeend', '<div id="addBox"><p class="hint">Ответы добавятся к вашему заказу, дизайнер увидит их в брифе. Новых писем и звонков это не вызовет.</p><button class="btn send" id="addSend" type="button">Отправить дополнение</button><p class="err" id="addErr" role="alert"></p><p class="okmsg" id="addOk" hidden role="status">Спасибо! Ответы добавлены к заказу. <a id="addBack" href="../kabinet/">Вернуться в кабинет</a></p></div>');
+    const nowQ = document.querySelector('#homeBox ~ .lq'); if (nowQ) nowQ.hidden = true;
+    const bar = document.querySelector('.beta'); if (bar) bar.hidden = true;
+    const body = () => ({ t: ADD, life: L && L.answered() ? L.out(false) : null, tech: TE && TE.answered() ? TE.out(false) : null, home: H && H.answered() ? H.out(false) : null });
+    $('addSend').onclick = async () => {
+      const b = body(), er = $('addErr'); er.textContent = '';
+      if (!b.life && !b.tech && !b.home) { er.textContent = 'Отметьте хотя бы один вариант — или вернитесь в кабинет.'; return; }
+      $('addSend').disabled = true;
+      try {
+        const r = await fetch(API + 'brief-add.php' + (TEST ? '?test=1' : ''), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(b) });
+        const j = await r.json().catch(() => ({}));
+        if (!j.ok) { er.textContent = j.error || 'Не получилось отправить — попробуйте ещё раз или напишите нам.'; $('addSend').disabled = false; return; }
+        $('addSend').hidden = true; $('addOk').hidden = false; $('addOk').focus && 0;
+      } catch (e) { er.textContent = 'Нет связи с сервером — попробуйте ещё раз.'; $('addSend').disabled = false; }
+    };
+    fetch(API + 'brief-add.php?t=' + encodeURIComponent(ADD) + (TEST ? '&test=1' : '')).then(r => r.json()).then(j => {
+      if (!j.ok) throw new Error(j.error || 'Заказ не найден');
+      if (L && j.life) L.restore(j.life); if (TE && j.tech) TE.restore(j.tech); if (H && j.home) H.restore(j.home);
+      $('addBack').href = '../kabinet/#/o/' + encodeURIComponent(j.number) + '/proekt';
+    }).catch(e => {
+      $('wiz').innerHTML = '<div class="panel"><h2>Не открылось</h2><p class="err">' + esc(e.message || 'Не удалось загрузить заказ') + '. Откройте дополнение из кабинета заказа ещё раз.</p></div>';
+      $('prog').hidden = true; $('nav').hidden = true;
+    });
+  }
+
+  show(ADDMODE ? LIFE : start, false);
   ready = true;
 })();

@@ -9,7 +9,7 @@ const path = require('path');
 const ROOT = path.resolve(__dirname, '..');
 global.window = {}; global.document = { activeElement: null };
 require(path.join(ROOT, 'site/js/brief-life.js'));
-const sets = [['life', 'Жизнь в квартире', window.LineaLife], ['home', 'Дом и ремонт', window.LineaHome]];
+const sets = [['life', 'Жизнь в квартире', window.LineaLife], ['tech', 'Двери, свет и электрика', window.LineaTech], ['home', 'Дом и ремонт', window.LineaHome]];
 const out = { _note: 'Генерируется tools/gen-brief-dict.js из site/js/brief-life.js. Руками не править.' };
 for (const [key, title, S] of sets) {
   out[key] = { title, total: S.total, groups: S.G.map(g => ({ k: g.k, t: g.t, q: g.q.map(q => ({
@@ -25,4 +25,4 @@ if (process.argv.includes('--check')) {
   console.log('словарь брифа совпадает с каталогом'); process.exit(0);
 }
 fs.writeFileSync(file, next);
-console.log(`server/api/lib/brief-dict.json: life ${out.life.total}, home ${out.home.total} вопросов`);
+console.log(`server/api/lib/brief-dict.json: life ${out.life.total}, tech ${out.tech.total}, home ${out.home.total} вопросов`);

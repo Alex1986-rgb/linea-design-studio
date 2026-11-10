@@ -469,6 +469,57 @@ try {
     ok(det.j?.mode === 'manual' && det.j.tls && det.j.proxy?.remote_addr === '127.0.0.1' && det.j.proxy.remote_is_trusted === true && det.j.db?.schema >= 7 && det.j.cron_last, 'с токеном: режим, TLS, какой REMOTE_ADDR видит PHP и доверен ли он, версия схемы, последний cron');
     fs.writeFileSync(cfgPath, cfg0);
   }
+
+  step('17. Доработка 09.11: словарь брифа, дополнение к брифу, срок и статус, оплата с расшифровкой, «отвечу позже», файлы к вопросу');
+  {
+    // словарь не отстаёт от каталога вопросов (brief-life.js): три набора — жизнь, двери/свет/электрика, дом и ремонт
+    let dictOk = true; try { execFileSync('node', [path.join(ROOT, 'tools/gen-brief-dict.js'), '--check'], { stdio: 'pipe' }); } catch { dictOk = false; }
+    ok(dictOk, 'словарь брифа (lib/brief-dict.json) совпадает с каталогом js/brief-life.js (gen-brief-dict --check)');
+    const dict = JSON.parse(fs.readFileSync(path.join(ROOT, 'server/api/lib/brief-dict.json'), 'utf8'));
+    ok(dict.life?.total > 0 && dict.tech?.total > 0 && dict.home?.total > 0, 'в словаре три набора: life, tech («Двери, свет и электрика»), home');
+    const setAns = key => { const g = dict[key].groups[0], q = g.q.find(x => x.o && Object.keys(x.o).length) || g.q[0]; const v = q.o ? Object.keys(q.o)[0] : 'текст';
+      return { o: { version: 1, answered: 1, skipped: false, [g.k]: { [q.k]: q.ask === 'multi' ? [v] : v } }, label: q.o ? q.o[v] : v, q: q.l }; };
+    const C = actor('clientC'); mkBrief('carla@example.test', 'Карла');
+    const bC = await brief(C, 'Карла'); const NC = bC.number, TC = bC.token;
+    await C.login('carla@example.test');
+    ok((await C.req('GET', `/api/brief-add.php?t=${TC}`)).j?.ok, 'brief-add: токен заказа открывает форму дополнения (GET)');
+    ok((await X.req('GET', '/api/brief-add.php?t=' + 'f'.repeat(32))).code === 404, 'brief-add: чужой/неверный токен — 404');
+    ok((await C.req('POST', '/api/brief-add.php', { json: { t: TC, tech: { answered: 0, skipped: true } } })).code === 400, 'brief-add: пустое/пропущенное дополнение не принимается');
+    const T1 = setAns('tech'), L1 = setAns('life');
+    const add = await C.req('POST', '/api/brief-add.php', { json: { t: TC, tech: T1.o, life: L1.o, home: null } });
+    ok(add.j?.ok && add.j.saved.join() === 'life,tech', 'brief-add: ответы шагов «Жизнь» и «Двери, свет и электрика» добавлены', add.text);
+    const saved = JSON.parse(fs.readFileSync(path.join(PRIV, 'orders', NC, 'brief.json'), 'utf8'));
+    ok(saved.tech?.answered === 1 && saved.client?.email === 'carla@example.test' && saved.object?.area === 64, 'в brief.json появился tech, контакты и объект не тронуты');
+    ok(fs.readdirSync(path.join(PRIV, 'orders', NC, 'dopolnenie')).some(f => f.startsWith('brief-до-')), 'прежняя версия брифа сохранена рядом (dopolnenie/brief-до-…)');
+    const bv = await C.req('GET', `/api/kabinet.php?a=brief&o=${NC}`);
+    const tg = bv.j?.view?.tech?.groups || [];
+    ok(bv.j?.ok && tg.length && JSON.stringify(tg).includes(T1.label) && bv.j.view.tech.present, 'кабинет: вкладка «Бриф» показывает шаг «Двери, свет и электрика» человеческими словами', bv.text.slice(0, 200));
+    const av = await admin.req('GET', `/api/panel.php?s=order&o=${NC}&tab=brif`, { raw: true });
+    ok(av.text.includes('Двери, свет и электрика') && av.text.includes(T1.label), 'админка: читаемый бриф показывает новый шаг и ответ');
+    // срок, статус, оплата с расшифровкой
+    await panel({ act: 'o_amount', o: NC, rub: 128000 });
+    await panel({ act: 'o_expected', o: NC, expected_at: '2099-01-15', expected_note: 'первый вариант' });
+    let oc = await C.req('GET', `/api/kabinet.php?a=object&o=${NC}`);
+    ok(oc.j.expected?.date === '2099-01-15' && /первый вариант/.test(oc.j.expected.note) && !oc.j.expected.late, 'клиент видит плановую дату и пояснение к ней');
+    ok(oc.j.pay?.formula && /64/.test(oc.j.pay.formula) && oc.j.pay.includes.length && oc.j.pay.refund && typeof oc.j.pay.requisitesSet === 'boolean', 'оплата с расшифровкой: формула суммы, что входит, возврат, реквизиты');
+    ok(Array.isArray(oc.j.history) && oc.j.history.some(e => /Бриф отправлен/.test(e.title)), 'единая история заказа содержит «Бриф отправлен»');
+    await panel({ act: 'o_expected', o: NC, expected_at: '2020-01-01', expected_note: '' });
+    oc = await C.req('GET', `/api/kabinet.php?a=object&o=${NC}`);
+    ok(oc.j.expected?.late === true, 'просроченная плановая дата помечена late');
+    // «отвечу позже» и файл к вопросу
+    await panel({ act: 'o_status', o: NC, to: 'paid', reason: 'тест 17' });
+    await panel({ act: 'o_release', o: NC, ver: 'v1', title: 'Первый вариант', prelim: 1, project: 'gost-kv3k', changes: 'Первая версия', pdf: { file: path.join(FX, 'album.pdf'), type: 'application/pdf' }, registry: { file: path.join(FX, 'registry.json'), type: 'application/json' } });
+    const lt = await C.req('POST', '/api/kabinet.php?a=later', { json: { o: NC, id: 'К-2' } });
+    ok(lt.j?.registry?.items?.find(i => i.id === 'К-2')?.later === true && lt.j.registry.answerBy, '«Отвечу позже»: вопрос помечен, срок ответа показан');
+    const un = await C.req('POST', '/api/kabinet.php?a=later', { json: { o: NC, id: 'К-2', undo: true } });
+    ok(un.j?.registry?.items?.find(i => i.id === 'К-2')?.later === false, '«Вернуть в работу» снимает отметку');
+    const up = await C.req('POST', '/api/kabinet.php?a=upload', { form: { o: NC, q: 'К-2', files: { file: path.join(FX, 'album.pdf'), type: 'application/pdf' } } });
+    ok(up.j?.ok && up.j.saved === 1, 'файл к вопросу К-2 принят', up.text.slice(0, 200));
+    oc = await C.req('GET', `/api/kabinet.php?a=object&o=${NC}`);
+    ok(oc.j.registry.items.find(i => i.id === 'К-2').files.length === 1, 'файл виден у вопроса К-2');
+    const kjs2 = fs.readFileSync(path.join(ROOT, 'site/js/kabinet.js'), 'utf8'), bjs = fs.readFileSync(path.join(ROOT, 'site/js/brief.js'), 'utf8');
+    ok(/IntersectionObserver/.test(kjs2) && /brif.*История|истор/i.test(kjs2) && /brief\.html\?add=/.test(kjs2) && /ADDMODE/.test(bjs), 'интерфейс: липкая кнопка по IntersectionObserver, вкладки «Бриф» и «История», вход brief.html?add=');
+  }
 } catch (e) { if (e !== 'stop') ok(false, 'исключение: ' + (e.stack || e)); }
 
 if (srvErr.match(/Fatal|Parse error|Warning|Deprecated/)) console.log('\nПредупреждения PHP:\n' + srvErr.split('\n').filter(l => /Fatal|Parse|Warning|Deprecated/.test(l)).slice(0, 10).join('\n'));

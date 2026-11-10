@@ -19,7 +19,7 @@ ${SHELL.head(u, { title, desc: 'Кабинет клиента LINEA: дизай�
 <meta name="robots" content="noindex, nofollow">
 <meta name="referrer" content="no-referrer">
 <link rel="stylesheet" href="${u}css/brigady.css?v=2">
-<link rel="stylesheet" href="${u}css/kabinet.css?v=5">
+<link rel="stylesheet" href="${u}css/kabinet.css?v=6">
 </head>
 <body class="kab-body">
 ${SHELL.header(u, null)}
@@ -52,7 +52,7 @@ ${SHELL.header(u, null)}
 ${SHELL.footer(u, null)}
 <script type="application/json" id="kabTerms">${JSON.stringify({ call: SHELL.TERMS.call.title + '. ' + SHELL.TERMS.call.line, areaRecalc: SHELL.TERMS.areaRecalc, roundsText: SHELL.TERMS.roundsText, rounds: SHELL.TERMS.rounds, reqLine: SHELL.TERMS.reqLine, line: SHELL.TERMS.line, term: SHELL.TERMS.term, notIncluded: SHELL.TERMS.notIncluded, briefAddon: false, wa: 'https://wa.me/79257338640', mail: 'optteem@mail.ru' })}</script>
 <script src="${u}js/kabinet-remont.js?v=1"></script>
-<script src="${u}js/kabinet.js?v=4"></script>
+<script src="${u}js/kabinet.js?v=5"></script>
 </body>
 </html>
 `;
@@ -69,7 +69,7 @@ ${SHELL.head(u, { title: 'Кабинет бригады — LINEA', desc: 'Ка�
 <meta name="robots" content="noindex, nofollow">
 <meta name="referrer" content="no-referrer">
 <link rel="stylesheet" href="${u}css/brigady.css?v=3">
-<link rel="stylesheet" href="${u}css/kabinet.css?v=5">
+<link rel="stylesheet" href="${u}css/kabinet.css?v=6">
 </head>
 <body class="kab-body">
 ${SHELL.header(u, 'brigadam')}

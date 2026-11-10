@@ -131,7 +131,7 @@
     const btn = nx.btn ? (nx.act === 'pay' ? `<button class="btn" type="button" data-pay>${esc(nx.btn)}</button>` : `<a class="btn" href="${esc(nx.href)}">${esc(nx.btn)}</a>`) : '';
     return `<div class="kab-card kab-now ${nx.who === 'client' ? '' : 'studio'}"><div class="kab-kick">${nx.who === 'client' ? 'Сейчас от вас нужно' : 'Сейчас'}</div><p class="big">${esc(nx.text)}</p>${nx.blocker ? '<p><span class="kab-tag r">Нужно для финального альбома</span></p>' : ''}${btn ? (sticky ? '<div class="kab-sticky-src">' + btn + '</div>' : btn) : ''}</div>`;
   }
-  const steps = n => '<ol class="kab-steps" aria-label="Шаги проекта">' + STEPS.map((s, i) => `<li class="${i < n ? 'done' : i === n ? 'on' : ''}">${esc(s)}</li>`).join('') + '</ol>';
+  const steps = n => `<p class="kab-stepn">Шаг ${n + 1} из ${STEPS.length} · ${esc(STEPS[n] || '')}</p>` + '<ol class="kab-steps" aria-label="Шаги проекта">' + STEPS.map((s, i) => `<li class="${i < n ? 'done' : i === n ? 'on' : ''}">${esc(s)}</li>`).join('') + '</ol>';
 
   // ── мои объекты
   async function objects() {
@@ -154,7 +154,7 @@
     <div class="kab-next ${o.next.who === 'client' ? '' : 'studio'}">${o.next.who === 'client' ? '<b>Нужно от вас:</b> ' : ''}${esc(o.next.text)}</div></a>`;
 
   // ── объект
-  const TABS = [['proekt', 'Проект'], ['voprosy', 'Вопросы'], ['pravki', 'Правки'], ['remont', 'Ремонт'], ['docs', 'Документы']];
+  const TABS = [['proekt', 'Проект'], ['brif', 'Бриф'], ['voprosy', 'Вопросы'], ['pravki', 'Правки'], ['istoriya', 'История'], ['remont', 'Ремонт'], ['docs', 'Документы']];
   async function object(num, tab) {
     const j = await api('object', null, '&o=' + encodeURIComponent(num));
     if (j.auth === false) return loginView();
@@ -163,36 +163,54 @@
     const openQ = R ? R.items.filter(i => !i.closed && !i.answer).length : 0;
     let h = top('o') + `<p class="kab-mut"><a href="#/">← Мои объекты</a></p><div class="kab-kick">${esc(O.kindTitle)} · ${esc(O.number)}</div><h1>${esc(O.objectTitle)}</h1>` + steps(j.step) + nowBlock(j.next, true)
       + '<nav class="kab-tabs" aria-label="Разделы объекта">' + TABS.map(([k, t]) => `<a href="#/o/${esc(O.number)}/${k}"${k === tab ? ' class="on" aria-current="page"' : ''}>${t}${k === 'voprosy' && openQ ? '<b>' + openQ + '</b>' : ''}</a>`).join('') + '</nav>';
-    h += ({ proekt: proekt, voprosy: voprosy, pravki: pravki, remont: remontTab, docs: () => '<div id="kabDocs"><p class="kab-mut">Загружаю…</p></div>' }[tab] || proekt)(j);
+    h += ({ proekt: proekt, brif: () => '<div id="kabBrief"><p class="kab-mut">Загружаю…</p></div>', voprosy: voprosy, pravki: pravki, istoriya: istoriya, remont: remontTab, docs: () => '<div id="kabDocs"><p class="kab-mut">Загружаю…</p></div>' }[tab] || proekt)(j);
     set(h); bindTop(); bindObject(j, tab);
     // активные вкладка и шаг — в видимой зоне ленты (на телефоне ленты прокручиваются вбок); страницу по вертикали не двигаем
     for (const [box, sel] of [['.kab-tabs', 'a.on'], ['.kab-steps', 'li.on']]) { const b = root.querySelector(box), e = b && b.querySelector(sel); if (e) b.scrollLeft = e.offsetLeft - (b.clientWidth - e.offsetWidth) / 2; }
     // главная кнопка — липкая на телефоне
     const src = root.querySelector('.kab-sticky-src');
-    if (src && matchMedia('(max-width:760px)').matches) { const st = document.createElement('div'); st.className = 'kab-sticky'; st.innerHTML = src.innerHTML; src.remove(); root.appendChild(st); bindPay(j); }
+    // (на телефоне) липкая копия главной кнопки показывается, только пока настоящая кнопка ушла с экрана — иначе две одинаковые кнопки
+    if (src && matchMedia('(max-width:760px)').matches) {
+      const st = document.createElement('div'); st.className = 'kab-sticky'; st.hidden = true; st.innerHTML = src.innerHTML; root.appendChild(st); bindPay(j);
+      if ('IntersectionObserver' in window) new IntersectionObserver(es => { st.hidden = es[0].isIntersecting; }).observe(src); else st.hidden = false;
+    }
     if (tab === 'remont') { const box = document.getElementById('ordRemont'); if (box && window.lineaRemont && (j.remont.eligible || j.remont.hasRequest)) window.lineaRemont(box, j.remont.rt, API); }
     if (tab === 'docs') docsInto(document.getElementById('kabDocs'), O.number);
+    if (tab === 'brif') briefInto(document.getElementById('kabBrief'), j);
   }
+
+  const payCard = (j, O) => {
+    const P = j.pay || {};
+    let pay = '';
+    if (O.status === 'awaiting_payment' || O.status === 'new') {
+      pay = O.amount ? `<div class="ord-sum" style="font-family:var(--serif);font-size:28px;color:var(--gold)">${rub(O.amount)}</div>${P.formula ? `<p class="kab-mut kab-formula">${esc(P.formula)}</p>` : O.area ? `<p class="kab-mut">${String(O.area).replace('.', ',')} м² по брифу</p>` : ''}${O.amountConfirmed === false ? '<p class="kab-mut">' + esc(T.areaRecalc || '') + '</p>' : ''}`
+        + (O.canPay ? '<button class="btn" type="button" data-pay>Оплатить картой или СБП</button>' : O.invoiced ? '<p>Счёт отправлен на почту — оплатите по реквизитам из счёта.</p>' : '<p class="kab-mut">Счёт на оплату пришлём на почту.</p>')
+        : '<p>Сумму пересчитаем по плану и подтвердим в течение рабочего дня.</p>';
+      if (P.includes && P.includes.length) pay += `<details class="kab-det"><summary>Что входит в стоимость</summary><ul class="kab-ul">${P.includes.map(x => '<li>' + esc(x) + '</li>').join('')}</ul>${P.notIncluded && P.notIncluded.length ? '<p class="kab-mut">Не входит:</p><ul class="kab-ul">' + P.notIncluded.map(x => '<li>' + esc(x) + '</li>').join('') + '</ul>' : ''}</details>`;
+      pay += `<p class="kab-mut kab-legal">${P.requisites ? esc(P.requisites) + '. ' : ''}<a href="../${esc(P.refund || 'oplata/')}" target="_blank" rel="noopener">Оплата и возврат</a> · <a href="../${esc(P.offer || 'oferta/')}" target="_blank" rel="noopener">Оферта</a></p>`;
+      if (j.termsCall || T.call) pay += '<p class="kab-mut">' + esc(j.termsCall || T.call) + '</p>';
+    } else if (O.paidAt) pay = `<p><span class="kab-tag ok">Оплачено</span> ${O.amount ? rub(O.amount) : ''} · ${esc(dt(O.paidAt))}</p>${P.formula ? `<p class="kab-mut">${esc(P.formula)}</p>` : ''}<p class="kab-mut">Чек об оплате — в письме сервиса онлайн-оплаты; копия — в «Документах».</p>`;
+    else pay = `<p>${esc(O.statusText)}</p>`;
+    return pay;
+  };
+  const statusCard = j => {
+    const ex = j.expected, st = j.stage;
+    if (!ex && !st) return '';
+    return `<div class="kab-card kab-status">${st ? `<p><b>${esc(st.title)}</b>${st.text ? ' — ' + esc(st.text) : ''} <span class="kab-mut">· ${esc(dt(st.at))}</span></p>` : ''}${ex ? `<p>Ожидаем к <b>${esc(ex.label)}</b>${ex.late ? ' <span class="kab-tag r">срок сдвинулся</span>' : ''}${ex.note ? '<br><span class="kab-mut">' + esc(ex.note) + '</span>' : ''}${ex.late ? '<br><span class="kab-mut">Мы напишем, когда будет точная дата.</span>' : ''}</p>` : ''}</div>`;
+  };
 
   function proekt(j) {
     const O = j.order, B = j.brief, rel = j.releases, last = rel[rel.length - 1];
     const R = j.registry, open = R ? R.items.filter(i => !i.closed && !i.answer) : [];
-    let pay = '';
-    if (O.status === 'awaiting_payment' || O.status === 'new') {
-      pay = O.amount ? `<div class="ord-sum" style="font-family:var(--serif);font-size:28px;color:var(--gold)">${rub(O.amount)}</div>${O.area ? `<p class="kab-mut">${String(O.area).replace('.', ',')} м² по брифу</p>` : ''}${O.amountConfirmed === false ? '<p class="kab-mut">' + esc(T.areaRecalc || '') + '</p>' : ''}`
-        + (O.canPay ? '<button class="btn" type="button" data-pay>Оплатить картой или СБП</button>' : O.invoiced ? '<p>Счёт отправлен на почту — оплатите по реквизитам из счёта.</p>' : '<p class="kab-mut">Счёт на оплату пришлём на почту.</p>')
-        : '<p>Сумму пересчитаем по плану и подтвердим в течение рабочего дня.</p>';
-      if (T.call) pay += '<p class="kab-mut">' + esc(T.call) + '</p>';
-    } else if (O.paidAt) pay = `<p><span class="kab-tag ok">Оплачено</span> ${O.amount ? rub(O.amount) : ''} · ${esc(dt(O.paidAt))}</p><p class="kab-mut">Чек об оплате — в письме сервиса онлайн-оплаты; копия — в «Документах».</p>`;
-    else pay = `<p>${esc(O.statusText)}</p>`;
+    const pay = payCard(j, O);
     const album = last ? `<p><b>${esc(last.title)}</b> · ${esc(day(last.date))} ${last.prelim ? '<span class="kab-tag g">Предварительный — для обсуждения</span>' : ''}${last.final ? '<span class="kab-tag ok">Финальный — для стройки</span>' : ''}</p>
         <div class="kab-row">${last.url && /^(https?:\/\/|\/|\.\.?\/)/i.test(last.url) ? `<a class="btn sm" href="${esc(last.url)}" target="_blank" rel="noopener">Открыть альбом</a>` : ''}${last.pdf ? `<a class="btn ghost sm" href="${API}kabinet.php?a=file&o=${encodeURIComponent(O.number)}&v=${encodeURIComponent(last.ver)}&f=album.pdf" target="_blank" rel="noopener">Скачать PDF</a>` : ''}</div>
         ${last.final && !last.accepted ? `<div class="kab-row"><button class="btn ghost sm" type="button" data-accept="${esc(last.ver)}">Принять альбом (акт сдачи-приёмки)</button></div>` : ''}${last.final && last.accepted ? '<p class="kab-ok">Альбом принят</p>' : ''}`
       : `<p class="kab-empty">Альбом появится здесь, как только будет готов первый вариант. Мы напишем на почту.</p>`;
     const vers = rel.length > 1 ? `<div class="kab-card"><h3>Версии альбома</h3><ul class="kab-list">${rel.slice().reverse().map(r => `<li><div><b>${esc(r.title)}</b> <span class="kab-mut">${esc(day(r.date))}</span>${r.changes.length ? '<div class="kab-mut">Что изменилось: ' + r.changes.map(esc).join('; ') + '</div>' : ''}</div>${r.url ? `<a href="${esc(r.url)}" target="_blank" rel="noopener">Открыть</a>` : ''}</li>`).join('')}</ul></div>` : '';
     const msgs = j.lenta.slice().reverse();
-    return `<div class="kab-grid">
-      <div class="kab-card"><h3>Бриф</h3><p>${esc(B.objectType || 'Объект')}${B.area ? ', ' + String(B.area).replace('.', ',') + ' м²' : ''}${B.rooms.length ? ' · ' + B.rooms.length + ' помещ.' : ''}</p>${B.style ? '<p class="kab-mut">Стиль: ' + esc(B.style) + '</p>' : ''}<p class="kab-mut">Отправлен ${esc(dt(B.sent))}, файлов: ${B.files}. Дополнить — сообщением ниже.</p></div>
+    return statusCard(j) + `<div class="kab-grid">
+      <div class="kab-card"><h3>Бриф</h3><p>${esc(B.objectType || 'Объект')}${B.area ? ', ' + String(B.area).replace('.', ',') + ' м²' : ''}${B.rooms.length ? ' · ' + B.rooms.length + ' помещ.' : ''}</p>${B.style ? '<p class="kab-mut">Стиль: ' + esc(B.style) + '</p>' : ''}<p class="kab-mut">Отправлен ${esc(dt(B.sent))}, файлов: ${B.files}.</p><a class="btn ghost sm" href="#/o/${esc(O.number)}/brif">Посмотреть и дополнить</a></div>
       <div class="kab-card"><h3>Оплата</h3>${pay}</div>
       <div class="kab-card"><h3>Альбом</h3>${album}</div>
       <div class="kab-card"><h3>Вопросы к вам</h3>${R ? (open.length ? `<p>Открыто: <b>${open.length}</b>, отвечено: ${R.items.length - open.length}</p><a class="btn sm" href="#/o/${esc(O.number)}/voprosy">Ответить</a>` : '<p class="kab-empty">Все вопросы отвечены. Спасибо!</p>') : '<p class="kab-empty">Вопросов нет — всё понятно из брифа.</p>'}</div>
@@ -208,17 +226,19 @@
     if (!R) return '<div class="kab-card"><p class="kab-empty">Вопросов к вам нет — всё понятно из брифа. Если появятся, напишем на почту.</p></div>';
     const items = R.items.filter(i => qFilter === 'done' ? i.answer || i.closed : !i.answer && !i.closed && (qFilter === 'q' ? i.kind === 'question' || i.kind === 'conflict' : i.kind === 'decision' || i.kind === 'change'));
     const n = k => R.items.filter(i => !i.answer && !i.closed && (k === 'q' ? i.kind === 'question' || i.kind === 'conflict' : i.kind === 'decision' || i.kind === 'change')).length;
-    let h = `<div class="kab-chips" role="tablist"><button type="button" data-qf="q" class="${qFilter === 'q' ? 'on' : ''}">Вопросы (${n('q')})</button><button type="button" data-qf="d" class="${qFilter === 'd' ? 'on' : ''}">Решения (${n('d')})</button><button type="button" data-qf="done" class="${qFilter === 'done' ? 'on' : ''}">Отвечено</button></div>`;
+    let h = (R.answerBy && !R.items.every(i => i.answer || i.closed) ? `<div class="kab-card kab-status"><p>Просим ответить до <b>${esc(day(R.answerBy))}</b>, чтобы не сдвигать срок. Нужно время или документ — нажмите «Отвечу позже», вопрос не пропадёт.</p></div>` : '') + `<div class="kab-chips" role="tablist"><button type="button" data-qf="q" class="${qFilter === 'q' ? 'on' : ''}">Вопросы (${n('q')})</button><button type="button" data-qf="d" class="${qFilter === 'd' ? 'on' : ''}">Решения (${n('d')})</button><button type="button" data-qf="done" class="${qFilter === 'done' ? 'on' : ''}">Отвечено</button></div>`;
     if (!items.length) h += '<div class="kab-card"><p class="kab-empty">' + (qFilter === 'done' ? 'Пока ничего не отвечено.' : 'Здесь пусто — всё отвечено.') + '</p></div>';
     h += items.map(i => {
       const dec = i.kind === 'decision' || i.kind === 'change';
       const a = i.answer;
       const done = a ? `<p class="kab-ok">${a.decision === 'agree' ? 'Вы согласовали' : a.decision === 'disagree' ? 'Вы предложили своё: ' + esc(a.text) : 'Ваш ответ: ' + esc([a.option, a.text].filter(Boolean).join(' — '))} · ${esc(dt(a.at))}</p>` : i.closed ? '<p class="kab-ok">Учтено в проекте</p>' : '';
+      const files = (i.files || []).length ? `<p class="kab-mut">Приложено: ${i.files.map(esc).join(', ')}</p>` : '';
+      const tools = a || i.closed ? '' : `<div class="kab-row kab-qtools"><button class="btn ghost sm" type="button" data-later="${esc(i.id)}"${i.later ? ' data-undo="1"' : ''}>${i.later ? 'Вернуть в работу' : 'Отвечу позже'}</button>${dec ? '' : `<label class="btn ghost sm kab-file">Приложить фото или файл<input type="file" multiple hidden data-qup="${esc(i.id)}" accept="image/*,.pdf,.dwg,.dxf"></label>`}</div>`;
       const form = a || i.closed ? '' : dec
         ? `<div class="kab-row"><button class="btn sm" type="button" data-agree="${esc(i.id)}">Согласовать</button></div><details><summary class="kab-mut">Не согласен — предложить своё</summary><textarea class="kab-in" data-dt="${esc(i.id)}" rows="2" placeholder="Что предлагаете вместо этого"></textarea><div class="kab-row"><button class="btn ghost sm" type="button" data-disagree="${esc(i.id)}">Отправить</button></div></details>`
         : `${i.options.length ? '<div class="kab-opts">' + i.options.map(o => `<button type="button" data-opt="${esc(i.id)}" data-v="${esc(o)}">${esc(o)}</button>`).join('') + '</div>' : ''}<textarea class="kab-in" data-at="${esc(i.id)}" rows="2" placeholder="Свой ответ (необязательно, если выбрали вариант)"></textarea><div class="kab-row"><button class="btn sm" type="button" data-ans="${esc(i.id)}">Ответить</button></div>`;
       return `<div class="kab-card kab-q ${i.blocker ? 'blk' : ''} ${dec ? 'dec' : ''}"><div class="kab-kick">${esc(i.id)}${dec ? ' · решение проектировщика' : ''}</div>${i.blocker ? '<span class="kab-tag r">Нужно для финала</span>' : ''}
-        <p>${esc(i.text)}</p>${i.why ? '<p class="kab-mut">Почему: ' + esc(i.why) + '</p>' : ''}${i.sheet ? '<p class="kab-mut">Лист: ' + esc(i.sheet) + '</p>' : ''}${i.cost ? '<p class="kab-mut">Влияние на смету: ' + esc(i.cost) + '</p>' : ''}${done}${form}<p class="kab-err" role="alert"></p></div>`;
+        ${i.later && !a ? '<span class="kab-tag g">Отвечу позже</span>' : ''}<p>${esc(i.text)}</p>${i.why ? '<p class="kab-mut">Почему: ' + esc(i.why) + '</p>' : ''}${i.sheet ? '<p class="kab-mut">Лист: ' + esc(i.sheet) + '</p>' : ''}${i.cost ? '<p class="kab-mut">Влияние на смету: ' + esc(i.cost) + '</p>' : ''}${done}${form}${files}${tools}<p class="kab-err" role="alert"></p></div>`;
     }).join('');
     return h + `<p class="kab-mut">Ответ можно изменить, пока не вышла следующая версия альбома — напишите в ленту заказа. Протокол ответов — в «Документах».</p>`;
   }
@@ -227,10 +247,55 @@
     const O = j.order, last = j.releases[j.releases.length - 1];
     const href = last && last.project ? `../review.html?p=${encodeURIComponent(last.project)}&t=${encodeURIComponent(j.remont.rt)}` : '';
     let h = `<div class="kab-card"><h3>Правки по листам</h3><p>Откройте любой лист и нажмите на место, которое хотите изменить, — напишите, что поменять.</p>${href ? `<a class="btn sm" href="${href}" target="_blank" rel="noopener">Отметить правку на листе</a>` : '<p class="kab-mut">Отмечать правки можно, когда выйдет первый вариант альбома.</p>'}
-      <p class="kab-mut">${esc(T.roundsText || '')}${j.rounds ? ' · использовано ' + j.rounds.used + ' из ' + j.rounds.max : ''}</p></div>`;
+      <p class="kab-mut">${esc((j.pay && j.pay.roundsText) || T.roundsText || '')}</p>${j.rounds ? `<div class="kab-rounds" aria-label="Круги правок"><div class="kab-dots">${Array.from({ length: j.rounds.max }, (_, k) => `<i class="${k < j.rounds.used ? 'on' : ''}"></i>`).join('')}</div><span>Использовано ${j.rounds.used} из ${j.rounds.max}${j.rounds.left ? ' · осталось ' + j.rounds.left : ' · дальше — по согласованию со студией'}</span></div>` : ''}</div>`;
     if (!j.reviews.length) return h + '<div class="kab-card"><p class="kab-empty">Правок пока нет.</p></div>';
     return h + j.reviews.map(r => `<div class="kab-card"><div class="kab-kick">${esc(r.number)} · ${esc(dt(r.at))}</div><p><span class="kab-tag ${/Учтен/.test(r.status) ? 'ok' : /Не прин/.test(r.status) ? 'r' : 'g'}">${esc(r.status)}</span> ${r.count} ${r.count === 1 ? 'метка' : 'меток'}</p>
       ${r.reply ? '<p>Ответ студии: ' + esc(r.reply) + '</p>' : ''}<details><summary class="kab-mut">Что отмечено</summary><ul class="kab-list">${r.notes.map(n => `<li><div>${esc(n.text)}<div class="kab-mut">${esc(n.file)}</div></div></li>`).join('')}</ul></details></div>`).join('');
+  }
+
+  const HK = { brief: 'Бриф', money: 'Оплата', status: 'Статус', album: 'Альбом', answer: 'Ответ', sign: 'Подпись', review: 'Правки', file: 'Файл', stage: 'Этап', msg: 'Сообщение' };
+  function istoriya(j) {
+    const H = j.history || [];
+    if (!H.length) return '<div class="kab-card"><p class="kab-empty">История появится, как только в заказе что-то произойдёт.</p></div>';
+    let last = '';
+    return '<div class="kab-card kab-hist">' + H.map(e => {
+      const d = day(String(e.at).slice(0, 10)), head = d !== last ? `<h3 class="kab-hd">${esc(d)}</h3>` : ''; last = d;
+      return `${head}<div class="kab-he ${e.who === 'client' ? 'mine' : ''}"><span class="kab-tag${e.kind === 'money' ? ' g' : ''}">${esc(HK[e.kind] || 'Событие')}</span><div><b>${esc(e.title)}</b>${e.text ? '<div class="kab-mut">' + esc(e.text) + '</div>' : ''}<small class="kab-mut">${esc(dt(e.at))}</small></div></div>`;
+    }).join('') + '</div>';
+  }
+
+  // ── вкладка «Бриф»: ответы человеческими словами, файлы, догрузка, доп. вопросы
+  async function briefInto(el, j) {
+    const num = j.order.number, r = await api('brief', null, '&o=' + encodeURIComponent(num));
+    if (!r.ok) { el.innerHTML = '<div class="kab-card"><p>' + esc(r.error || 'Не получилось загрузить бриф') + '</p></div>'; return; }
+    const V = r.view, rows = rs => '<dl class="kab-dl">' + rs.map(x => `<dt>${esc(x[0])}</dt><dd${x[2] === 'unknown' ? ' class="kab-mut"' : ''}>${esc(x[1])}</dd>`).join('') + '</dl>';
+    let h = `<div class="kab-card"><h3>Отправлено ${esc(dt(r.sent))}</h3><p class="kab-mut">Так ваш бриф видит дизайнер. Если что-то изменилось — напишите в ленте заказа или дополните ниже.</p></div>`;
+    h += V.sections.map(sc => `<details class="kab-card kab-det" ${['object', 'story'].includes(sc.id) ? 'open' : ''}><summary><b>${esc(sc.title)}</b></summary>${sc.text ? '<p class="kab-story">' + esc(sc.text) + '</p>' : ''}${sc.rows.length ? rows(sc.rows) : ''}</details>`).join('');
+    const SETS = [['life', 'Жизнь в квартире'], ['tech', 'Двери, свет и электрика'], ['home', 'Дом и ремонт']];
+    const missing = SETS.filter(([k]) => !V[k] || !V[k].present || V[k].info.skipped);
+    for (const [k, t] of SETS) {
+      const S = V[k]; if (!S || !S.present || !S.groups.length) continue;
+      h += `<details class="kab-card kab-det"><summary><b>${esc(t)}</b> <span class="kab-mut">· ответов: ${S.info.answered}</span></summary>${S.groups.map(g => `<h4>${esc(g.title)}</h4>${rows(g.rows)}`).join('')}</details>`;
+    }
+    h += `<div class="kab-card"><h3>Дополнительные вопросы</h3>${missing.length ? `<p class="kab-mut">Не заполнено: ${missing.map(([, t]) => '«' + esc(t) + '»').join(', ')}. Это необязательно — но чем больше мы знаем, тем меньше уточнений на обмере.</p>` : '<p class="kab-mut">Все необязательные шаги заполнены. Можно поправить ответы.</p>'}<a class="btn sm" href="../brief.html?add=${encodeURIComponent(j.remont.rt)}">${missing.length ? 'Ответить на дополнительные вопросы' : 'Изменить ответы'}</a></div>`;
+    const fl = r.files || [];
+    h += `<div class="kab-card"><h3>Файлы (${fl.length})</h3>${fl.length ? '<ul class="kab-files">' + fl.map(f => {
+      const u = `${API}kabinet.php?a=bfile&o=${encodeURIComponent(num)}&s=${encodeURIComponent(f.src)}&n=${encodeURIComponent(f.name)}`;
+      return `<li>${f.img ? `<a href="${u}" target="_blank" rel="noopener"><img src="${u}&inl=1" alt="" loading="lazy" width="64" height="64"></a>` : '<span class="kab-ico" aria-hidden="true">📄</span>'}<div><a href="${u}" target="_blank" rel="noopener">${esc(f.orig || f.name)}</a><div class="kab-mut">${Math.max(1, Math.round(f.size / 1024))} КБ · ${esc(dt(f.at))}${f.q ? ' · к вопросу ' + esc(f.q) : ''}</div></div></li>`; }).join('') + '</ul>' : '<p class="kab-empty">Файлов нет.</p>'}
+      <form id="kabUp"><label class="btn ghost sm kab-file">Догрузить план или фото<input type="file" name="files" multiple hidden accept="image/*,.pdf,.dwg,.dxf,.heic"></label> <span class="kab-mut" id="kabUpN"></span>
+      <p class="kab-mut">До ${r.maxFiles} файлов за раз, каждый до ${r.maxMb} МБ. Загрузка подтверждается кодом из письма.</p><p class="kab-err" role="alert"></p></form></div>`;
+    el.innerHTML = h;
+    const f = el.querySelector('#kabUp'); if (f) f.querySelector('input').onchange = async e => { const er = f.querySelector('.kab-err'); er.textContent = ''; if (e.target.files.length) { const x = await upload(num, e.target.files, '', er); if (x) object(num, 'brif'); } };
+  }
+  // догрузка файлов (multipart): при needCode — окно кода и повтор
+  async function upload(num, fl, q, errEl) {
+    const go = async () => { const fd = new FormData(); fd.append('o', num); if (q) fd.append('q', q); [...fl].forEach(x => fd.append('files[]', x)); fd.append('csrf', ME.csrf || '');
+      try { const r = await fetch(API + 'kabinet.php?a=upload', { method: 'POST', credentials: 'same-origin', headers: { 'X-CSRF': ME.csrf || '' }, body: fd }); return await r.json(); } catch { return { ok: false, error: 'Нет связи с сервером' }; } };
+    let j = await go();
+    if (j.needCode && await needCode()) j = await go();
+    if (!j.ok) { if (errEl) errEl.textContent = j.error || 'Не получилось загрузить'; return false; }
+    if (j.errors && j.errors.length && errEl) errEl.textContent = j.errors.join('. ');
+    return true;
   }
 
   function remontTab(j) {
@@ -257,6 +322,8 @@
       const r = await act('answer', { o: num, id, option: opt ? opt.dataset.v : '', text: q(`[data-at="${CSS.escape(id)}"]`).value }, errOf(b));
       if (r.ok) object(num, 'voprosy');
     });
+    qa('[data-later]').forEach(b => b.onclick = async () => { const r = await act('later', { o: num, id: b.dataset.later, undo: !!b.dataset.undo }, errOf(b)); if (r.ok) object(num, 'voprosy'); });
+    qa('[data-qup]').forEach(inp => inp.onchange = async () => { if (!inp.files.length) return; if (await upload(num, inp.files, inp.dataset.qup, errOf(inp))) object(num, 'voprosy'); });
     qa('[data-agree]').forEach(b => b.onclick = async () => { const r = await act('decide', { o: num, id: b.dataset.agree, decision: 'agree' }, errOf(b)); if (r.ok) object(num, 'voprosy'); });
     qa('[data-disagree]').forEach(b => b.onclick = async () => { const id = b.dataset.disagree; const r = await act('decide', { o: num, id, decision: 'disagree', text: q(`[data-dt="${CSS.escape(id)}"]`).value }, errOf(b)); if (r.ok) object(num, 'voprosy'); });
   }
