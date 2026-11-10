@@ -2,7 +2,8 @@
 //   1. План квартиры — файл или камера, площадь (обязательно — по ней считается сумма), «плана нет»
 //   2. Что нравится — свои картинки или ♥ на кадрах галереи (assets/refs/refs.json)
 //   3. Расскажите словами — одно поле, 🎤 (Web Speech API), чипы-заготовки; подробности (помещения, стиль…) — под «Добавить подробности»
-//   +  необязательно (09.11.2026 — после «словами»): «Жизнь в квартире» (life) и «Дом и ремонт» (home) — каталоги js/brief-life.js
+//   +  необязательно (09.11.2026 — после «словами»): «Жизнь в квартире» (life), «Двери, свет и электрика» (tech) и «Дом и ремонт» (home) — каталоги js/brief-life.js
+//   Единая шкала «Шаг N из 7»: пять шагов с вопросами идут по порядку, три необязательных помечены в названии и пунктиром на полосе.
 //   4. Контакты, сводка из 5–6 пунктов для проверки, согласие, цена по площади, что дальше → отправка
 // Формат заказа прежний: архив brief.json + brief.txt + plan/* + referensy/* (+ referensy-galereya.txt). brief.json читают
 // api/brief.php, tools/brief-intake.js и gost-draft tools/site-brief.js — поля collect() сохранены (rooms может быть пустым).
@@ -18,10 +19,11 @@
   const SECURE = location.protocol === 'https:' || /^(localhost|127\.0\.0\.1|\[::1\])$/.test(location.hostname);
   const API = (SECURE || TEST) ? ((document.querySelector('meta[name="linea-api"]') || {}).content || '') : '';
   const MAX_MB = 100;
-  const NAMES = ['План квартиры', 'Что нравится', 'Расскажите словами', 'Жизнь в квартире', 'Дом и ремонт', 'Куда прислать проект'];
-  // шаги LIFE и HOME необязательны и идут после главного «словами» (09.11.2026): вопросы о быте и вопросы прораба — js/brief-life.js
-  const STORY = 2, LIFE = 3, HOME = 4, SEND = 5, DONE = 6;
-  const L = window.LineaLife, H = window.LineaHome;
+  const NAMES = ['План квартиры', 'Что нравится', 'Расскажите словами', 'Жизнь в квартире', 'Двери, свет и электрика', 'Дом и ремонт', 'Куда прислать проект'];
+  // шаги LIFE, TECH и HOME необязательны и идут после главного «словами» (09.11.2026): быт, двери и электрика, вопросы прораба — js/brief-life.js
+  const STORY = 2, LIFE = 3, TECH = 4, HOME = 5, SEND = 6, DONE = 7;
+  const L = window.LineaLife, H = window.LineaHome, TE = window.LineaTech;
+  const OPTIONAL = [LIFE, TECH, HOME];
   // ставки — из TERMS (sync-static-nav.js пишет <script id="briefTerms">); запасные значения — на случай старой копии страницы
   let T = { packs: [{ key: 'proekt', name: 'Проект с визуализациями', rate: 2000, min: 80000 }], minArea: 40 };
   try { const el = $('briefTerms'); if (el) T = JSON.parse(el.textContent); } catch (e) {}
@@ -49,9 +51,13 @@
   function show(n, focus) {
     step = n;
     document.querySelectorAll('#wiz .panel').forEach(p => { p.hidden = +p.dataset.step !== step; });
-    $('progStep').textContent = step <= STORY ? `Шаг ${step + 1} из 3` : step === LIFE ? 'Дополнительно, 1 из 2' : step === HOME ? 'Дополнительно, 2 из 2' : step === SEND ? 'Последний шаг' : 'Готово';
-    $('progName').textContent = (NAMES[step] || 'Отправка') + (step === LIFE || step === HOME ? ' · можно пропустить' : '');
-    $('progBar').style.width = Math.round(((step + 1) / (SEND + 1)) * 100) + '%';
+    const opt = OPTIONAL.includes(step);
+    $('progStep').textContent = step === DONE ? 'Готово' : `Шаг ${step + 1} из ${SEND + 1}`;
+    $('progName').textContent = (NAMES[step] || 'Отправка') + (opt ? ' · необязательно' : '');
+    $('progSeg').innerHTML = Array.from({ length: SEND + 1 }, (_, i) => `<i class="${OPTIONAL.includes(i) ? 'opt ' : ''}${i <= step ? 'on' : ''}"></i>`).join('');
+    $('progLen').textContent = step < LIFE ? 'Основное — около 5 минут. Дальше три необязательных блока вопросов: их можно пройти сейчас или оставить на потом.'
+      : opt ? 'Основное уже готово. Эти вопросы необязательны: ответьте на сколько хочется — остальное решим вместе на обмере. Черновик сохраняется.'
+      : step === SEND ? 'Остался последний шаг: контакты и согласие.' : '';
     $('stepLive').textContent = $('progStep').textContent + ': ' + $('progName').textContent;
     $('nav').hidden = step === DONE;
     $('nav').classList.toggle('last', step === SEND);
@@ -59,8 +65,8 @@
     document.body.classList.toggle('stepped', step > 0);
     $('next').hidden = step >= SEND;
     $('next').textContent = step === HOME ? 'К отправке →' : 'Дальше →';
-    $('skipNote').textContent = step === 1 ? 'Ничего не подходит — просто нажмите «Дальше».' : step === LIFE || step === HOME ? 'Можно ответить на часть вопросов или нажать «Пропустить шаг».'
-      : step === STORY ? 'Можно коротко: пара фраз уже помогает. Дальше — два необязательных шага с вопросами, их можно пропустить.' : '';
+    $('skipNote').textContent = step === 1 ? 'Ничего не подходит — просто нажмите «Дальше».' : opt ? 'Можно ответить на часть вопросов или нажать «Пропустить шаг».'
+      : step === STORY ? 'Можно коротко: пара фраз уже помогает. Дальше — три необязательных шага с вопросами, их можно пропустить.' : '';
     if (step === SEND) { price(); recap(); }
     if (focus) {
       const h = document.querySelector(`.panel[data-step="${step}"] h2`);
@@ -153,10 +159,15 @@
 
   // ── «Жизнь в квартире» и «Дом и ремонт»: каталоги из js/brief-life.js; «Пропустить» помечает шаг пропущенным
   let lifeSkipped = false, homeSkipped = false;
+  let techSkipped = false;
   if (L) {
     L.mount($('lifeBox'), () => { lifeSkipped = false; save(); });
-    $('skipLife').onclick = () => { lifeSkipped = !L.answered(); show(HOME, true); };
-  } else { $('lifeBox').hidden = true; $('skipLife').textContent = 'Дальше'; $('skipLife').onclick = () => show(HOME, true); }
+    $('skipLife').onclick = () => { lifeSkipped = !L.answered(); show(TECH, true); };
+  } else { $('lifeBox').hidden = true; $('skipLife').textContent = 'Дальше'; $('skipLife').onclick = () => show(TECH, true); }
+  if (TE) {
+    TE.mount($('techBox'), () => { techSkipped = false; save(); });
+    $('skipTech').onclick = () => { techSkipped = !TE.answered(); show(HOME, true); };
+  } else { $('techBox').hidden = true; $('skipTech').textContent = 'Дальше'; $('skipTech').onclick = () => show(HOME, true); }
   if (H) {
     H.mount($('homeBox'), () => { homeSkipped = false; save(); });
     $('skipHome').onclick = () => { homeSkipped = !H.answered(); show(SEND, true); };
@@ -320,6 +331,7 @@
       budget: budgetClass(A.budget),
       answers: A,
       life: L ? L.out(lifeSkipped) : undefined,
+      tech: TE ? TE.out(techSkipped) : undefined,
       home: H ? H.out(homeSkipped) : undefined
     };
   }
@@ -332,8 +344,8 @@
     clearTimeout(saveT);
     saveT = setTimeout(() => {
       const b = collect();
-      const d = { v: 3, fields: {}, kind: kind(), pack: pack(), needSurvey: $('needSurvey').checked, liked: [...liked], rooms: b.rooms, step: Math.min(step, SEND), ds: 3,
-        life: L ? L.out(false) : null, lifeSkipped, home: H ? H.out(false) : null, homeSkipped, files: b.files };
+      const d = { v: 3, fields: {}, kind: kind(), pack: pack(), needSurvey: $('needSurvey').checked, liked: [...liked], rooms: b.rooms, step: Math.min(step, SEND), ds: 4,
+        life: L ? L.out(false) : null, lifeSkipped, tech: TE ? TE.out(false) : null, techSkipped, home: H ? H.out(false) : null, homeSkipped, files: b.files };
       FIELDS.forEach(id => { d.fields[id] = val(id); });
       try {
         localStorage.setItem(KEY, JSON.stringify(d));
@@ -352,11 +364,14 @@
     FIELDS.forEach(id => { if ($(id) && d.fields && d.fields[id] != null) $(id).value = d.fields[id]; });
     $('needSurvey').checked = !!d.needSurvey;
     if (L && d.life) L.restore(d.life);
+    if (TE && d.tech) TE.restore(d.tech);
     if (H && d.home) H.restore(d.home);
-    lifeSkipped = !!d.lifeSkipped; homeSkipped = !!d.homeSkipped;
-    // номера шагов в старых черновиках: без ds — 2 «словами», 3 «контакты»; ds 2 — 2 «жизнь», 3 «словами», 4 «контакты»
+    lifeSkipped = !!d.lifeSkipped; techSkipped = !!d.techSkipped; homeSkipped = !!d.homeSkipped;
+    // номера шагов в старых черновиках: без ds — 2 «словами», 3 «контакты»; ds 2 — 2 «жизнь», 3 «словами», 4 «контакты»;
+    // ds 3 — 3 «жизнь», 4 «дом и ремонт», 5 «контакты» (шага «Двери, свет и электрика» ещё не было)
     if (!d.ds) d.step = { 2: STORY, 3: SEND }[d.step] ?? d.step;
     else if (d.ds === 2) d.step = { 2: LIFE, 3: STORY, 4: SEND }[d.step] ?? d.step;
+    else if (d.ds === 3) d.step = { 4: HOME, 5: SEND }[d.step] ?? d.step;
     (d.liked || []).forEach(id => liked.add(id));
     (d.rooms || []).forEach(addRoom);
     if ((d.rooms || []).length || d.fields.objH || d.fields.objState || d.fields.objAddr) $('more').open = true;
@@ -391,6 +406,10 @@
     item('Что нравится и что нет', look + (no ? '. Не хотите: ' + no : ''), 1);
     const must = [b.answers.must, b.answers.kitchen && 'кухня: ' + b.answers.kitchen, b.answers.storage && 'хранение: ' + b.answers.storage, b.answers.wfh].filter(Boolean).map(cut).join('; ');
     item('Обязательно учесть', must || (b.story ? 'по вашему рассказу' : 'пока ничего — можно дописать в рассказе'), STORY);
+    if (TE && TE.answered()) {
+      const td = [lp(TE, 'doors', 'kind').length && 'двери: ' + lc(lp(TE, 'doors', 'kind')).map(x => x.replace(/:.*/, '')).join(', '), lp(TE, 'light', 'temp')[0] && 'свет: ' + lc(lp(TE, 'light', 'temp'))[0].replace(/:.*/, ''), lp(TE, 'smarthome', 'level')[0] && 'умный дом: ' + lc(lp(TE, 'smarthome', 'level'))[0].replace(/:.*/, ''), lp(TE, 'low', 'router')[0] && 'роутер: ' + lc(lp(TE, 'low', 'router'))[0]].filter(Boolean);
+      item('Двери, свет и электрика', td.join('; ') || 'ответы сохранены', TECH);
+    }
     const eng = [lp(H, 'power', 'kw')[0] && 'мощность ' + lp(H, 'power', 'kw')[0], lp(H, 'water', 'gas')[0] && 'газ: ' + lc(lp(H, 'water', 'gas'))[0], lc(lp(H, 'works', 'replan')).join(', '), lp(H, 'works', 'keep').length && 'оставляем: ' + lc(lp(H, 'works', 'keep')).join(', ')].filter(Boolean).join('; ');
     item('Дом и ремонт', eng || 'не заполнено — уточним на обмере', HOME);
     const when = [b.answers.timeline, b.answers.budget && 'бюджет: ' + b.answers.budget].filter(Boolean).join('; ');
@@ -427,6 +446,7 @@
     if (b.rooms.length) L.push('Помещения: ' + b.rooms.map(r => r.name + (r.width && r.length ? ' ' + r.width + '×' + r.length + ' м' : '') + (r.level != null ? ' (' + r.level + ' эт.)' : '')).join('; '));
     if (b.story) L.push('Своими словами: ' + b.story.replace(/\n+/g, ' / '));
     if (b.life && b.life.text && b.life.text.length) { L.push('Жизнь в квартире:'); b.life.text.forEach(x => L.push('· ' + x)); }
+    if (b.tech && b.tech.text && b.tech.text.length) { L.push('Двери, свет и электрика:'); b.tech.text.forEach(x => L.push('· ' + x)); }
     if (b.home && b.home.text && b.home.text.length) { L.push('Дом и ремонт:'); b.home.text.forEach(x => L.push('· ' + x)); }
     if (!b.style.byStudio) L.push('Стиль: ' + b.style.title);
     if (b.style.liked.length) L.push('Кадры галереи: нравится ' + b.style.liked.length);
@@ -536,6 +556,9 @@
 
   let archive = null, lastBrief = null;
   if (API) $('send').textContent = 'Отправить бриф';
+  // способ отправки показываем один: без приёмника (GitHub Pages, http) фраза «одной кнопкой» из блока «Что будет дальше» неверна — прячем её;
+  // как уйдёт архив, скажет экран после «Собрать бриф» (текст там — про «Поделиться» и скачивание)
+  if (!API) document.querySelectorAll('#next3 p').forEach(p => { if (/одной кнопкой/.test(p.textContent)) p.hidden = true; });
   $('send').onclick = async () => {
     if (!checkContacts()) return;
     const btn = $('send'), old = btn.textContent;

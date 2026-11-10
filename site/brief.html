@@ -162,6 +162,45 @@ details.more ol{margin:6px 0 10px;padding-left:20px;color:var(--mut);font-size:1
 .recap li b{color:var(--gold2);font-weight:600}
 .recap .fix{margin-left:6px;min-height:32px;font-size:13px}
 .recap .rk{display:block;color:var(--mut);font-size:13px}
+
+/* третья редакция (09.11.2026): единая шкала шагов, подсказки, иконки вариантов, примеры плана и рассказа */
+.prog-len{margin:8px 0 0;font-size:13px;line-height:1.45;color:var(--mut);max-width:760px}
+.prog-t i{font-style:normal;color:var(--gold2);margin-left:6px}
+.prog-seg{display:flex;gap:3px;margin-top:8px}
+.prog-seg i{flex:1;height:5px;border-radius:3px;background:var(--line)}
+.prog-seg i.on{background:var(--gold)}
+.prog-seg i.opt{background:repeating-linear-gradient(90deg,var(--line) 0 4px,transparent 4px 7px)}
+.prog-seg i.opt.on{background:var(--gold)}
+.ex{margin:12px 0 0;padding:10px 14px;border-left:2px solid var(--gold);background:#c29a5b0d;border-radius:0 6px 6px 0;font-size:13px;line-height:1.5;color:var(--mut)}
+.ex b{color:var(--gold2);font-weight:600}
+.planex{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:14px 0 0}
+.pe{margin:0;border:1px solid var(--line);border-radius:8px;overflow:hidden;background:#c29a5b06;min-width:0}
+.pe svg{display:block;width:100%;height:auto}
+.pe-bg{fill:#17140f;stroke:none}
+.pe-w{fill:none;stroke:#d8cfbf;stroke-width:1.6}
+.pe-d{fill:none;stroke:var(--gold);stroke-width:.8}
+.pe-t{font:6px var(--sans,sans-serif);fill:var(--gold2);text-anchor:middle}
+.pe-glare{fill:#fff;opacity:.45;filter:blur(2px)}
+.pe-cut{fill:var(--bg,#0f0e0c)}
+.pe figcaption{padding:8px 10px 10px;font-size:12px;line-height:1.45;color:var(--mut)}
+.pe figcaption b{display:block;font-size:13px;margin-bottom:2px}
+.pe.ok figcaption b{color:#9fcf9f}
+.pe.bad figcaption b{color:#e8a87c}
+.qlh{display:flex;align-items:baseline;justify-content:space-between;gap:10px}
+.qlh .ql{flex:1;min-width:0}
+.qi{flex:none;border:0;background:none;padding:6px 0 6px 6px;min-height:32px;color:var(--gold);font-size:12px;cursor:pointer;text-decoration:underline;text-underline-offset:3px;font-family:inherit}
+.qi[aria-expanded=true]{color:var(--gold2)}
+.qi:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
+.qh{margin:0 0 8px;padding:8px 12px;border-left:2px solid var(--gold);background:#c29a5b0d;border-radius:0 6px 6px 0;font-size:13px;line-height:1.5;color:var(--ink)}
+.gd{margin:0;padding:12px 14px 0;font-size:13px;line-height:1.5;color:var(--mut)}
+.lprog-row{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}
+.lprog-row .hall{padding:0;min-height:28px;font-size:12px}
+.lcs.ic{display:grid;grid-template-columns:repeat(auto-fill,minmax(112px,1fr));gap:8px}
+.lcs.ic .lc{border-radius:10px;min-height:88px}
+.lc.t{display:flex;flex-direction:column;align-items:center;justify-content:flex-start;gap:6px;text-align:center;padding:10px 8px}
+.lc.t .ci{display:block;line-height:0;color:var(--gold)}
+.lc.t[aria-pressed=true] .ci{color:var(--gold2)}
+.lc.unk.t{justify-content:center;min-height:88px}
 @media(max-width:600px){
   .bh{padding:14px 0 0}
   .bh .kicker{display:none}
@@ -170,6 +209,11 @@ details.more ol{margin:6px 0 10px;padding-left:20px;color:var(--mut);font-size:1
   .bh .lead{display:none}
   .stepped .bh h1{display:none}
   .prog{margin-top:10px}
+  .prog-len{font-size:12px}
+  .lcs.ic{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .planex{gap:8px}
+  .pe figcaption{font-size:11.5px;padding:6px 8px 8px}
+  .qh{font-size:13px}
   #wiz .panel{padding:18px 16px}
   #wiz .panel h2{font-size:22px}
   .up{min-height:88px;padding:12px}
@@ -179,7 +223,7 @@ details.more ol{margin:6px 0 10px;padding-left:20px;color:var(--mut);font-size:1
   .f-row{margin-top:10px}
   .wiz-nav .btn{padding:13px 14px}
   .srow{flex-direction:column;gap:2px}
-  #wiz .panel[data-step="5"] .field{margin-bottom:12px}
+  #wiz .panel[data-step="6"] .field{margin-bottom:12px}
   #wiz .field label{margin-bottom:5px}
   .price{padding:10px 14px;margin-bottom:12px}
   .price p{margin-top:4px}
@@ -229,10 +273,11 @@ details.more ol{margin:6px 0 10px;padding-left:20px;color:var(--mut);font-size:1
     <h1>План, картинки и пара слов — всё</h1>
     <p class="lead" id="lead"><!-- terms:brief-lead -->Бриф — три шага, около 5 минут: план, картинки, которые нравятся, и рассказ своими словами (можно голосом). От 2 000 ₽/м²; сумму знаете до оплаты.<!-- /terms:brief-lead --></p>
     <div class="prog" id="prog" hidden>
-      <div class="prog-t"><b id="progStep">Шаг 1 из 3</b><span id="progName">План квартиры</span></div>
+      <div class="prog-t"><b id="progStep">Шаг 1 из 7</b><span id="progName">План квартиры</span></div>
       <div class="saved" id="savedMark" aria-live="off"></div>
-      <div class="prog-bar" aria-hidden="true"><i id="progBar" style="width:33%"></i></div>
+      <div class="prog-seg" id="progSeg" aria-hidden="true"></div>
     </div>
+    <p class="prog-len" id="progLen">Основное — около 5 минут. Дальше три необязательных блока вопросов: их можно пройти сейчас или оставить на потом.</p>
     <p class="sr-only" id="stepLive" aria-live="polite"></p>
   </div>
 </section>
@@ -250,6 +295,16 @@ details.more ol{margin:6px 0 10px;padding-left:20px;color:var(--mut);font-size:1
     <div class="cam up-wrap"><label for="camPlan"><span aria-hidden="true">📷</span> Сфотографировать план</label>
       <input type="file" id="camPlan" accept="image/*" capture="environment"></div>
     <p class="hint" id="planHint" style="margin:10px 0 0">План застройщика, БТИ или листок от руки — лишь бы читались размеры.</p>
+    <div class="planex" aria-label="Примеры плана">
+      <figure class="pe ok">
+        <svg viewBox="0 0 120 84" role="img" aria-label="Хороший план: виден целиком, прямо, с размерами"><rect x="1" y="1" width="118" height="82" rx="4" class="pe-bg"/><path d="M14 14h92v56H14z M14 40h40 M54 14v26 M54 52h52 M80 52v18" class="pe-w"/><path d="M14 9h92M14 8v3M106 8v3" class="pe-d"/><text x="60" y="8" class="pe-t">5200</text><path d="M111 14v56M110 14h3M110 70h3" class="pe-d"/><text x="116" y="44" class="pe-t" transform="rotate(90 116 44)">3300</text></svg>
+        <figcaption><b>Хороший план</b><span>Виден целиком, снят прямо сверху. Размеры читаются. Подойдёт PDF застройщика или БТИ, чёткое фото листа.</span></figcaption>
+      </figure>
+      <figure class="pe bad">
+        <svg viewBox="0 0 120 84" role="img" aria-label="Плохой план: под углом, обрезан, без размеров, со вспышкой"><rect x="1" y="1" width="118" height="82" rx="4" class="pe-bg"/><g transform="rotate(-9 60 42) translate(10 4)"><path d="M10 14h80v56H10 M10 40h36 M46 14v26" class="pe-w"/></g><circle cx="86" cy="24" r="14" class="pe-glare"/><rect x="96" y="1" width="23" height="82" class="pe-cut"/></svg>
+        <figcaption><b>Плохой план</b><span>Под углом, с бликом или тенью, обрезан край, нет размеров. Мелкий скриншот с сайта риелтора тоже не поможет.</span></figcaption>
+      </figure>
+    </div>
     <ul class="thumbs" id="planList" aria-label="Загруженный план"></ul>
     <p class="err" id="planErr" role="alert"></p>
     <div class="f-row">
@@ -291,6 +346,7 @@ details.more ol{margin:6px 0 10px;padding-left:20px;color:var(--mut);font-size:1
       <label for="story" class="sr-only">Ваш рассказ: кто живёт, что мешает, что нужно</label>
       <textarea id="story" rows="7" aria-describedby="storyHint" placeholder="Как другу: кто живёт, что мешает сейчас, что обязательно должно быть. Можно надиктовать."></textarea>
     </div>
+    <p class="ex" id="storyEx"><b>Например:</b> «Живём вдвоём с мужем и котом, оба работаем из дома. Сейчас негде хранить вещи и тесная прихожая. Хотим светлую кухню-гостиную и спальню, где можно хорошо выспаться. Бюджет на ремонт — около 3 млн, въехать хотим к лету».</p>
     <div class="mic-row">
       <button type="button" class="mic" id="mic" aria-pressed="false" aria-describedby="micState"><span aria-hidden="true">🎤</span> <span id="micT">Надиктовать</span></button>
       <span class="mic-state" id="micState" role="status"></span>
@@ -318,13 +374,21 @@ details.more ol{margin:6px 0 10px;padding-left:20px;color:var(--mut);font-size:1
   <!-- 4. Жизнь в квартире (необязательно) -->
   <section class="panel" data-step="3" hidden aria-labelledby="hLife">
     <h2 id="hLife">Жизнь в квартире</h2>
-    <p class="hint">Необязательно, минут 5–7. Главные вопросы — сверху в каждой группе, остальные под «Ещё вопросы». Под каждым — зачем мы спрашиваем. Не уверены — «Не знаю — решит дизайнер».</p>
+    <p class="hint">Необязательно, минут 5–7. Главные вопросы — сверху в каждой группе, остальные под «Ещё вопросы». Под каждым — зачем мы спрашиваем, у многих есть «подсказка» с примером. Не уверены — «Не знаю — решит дизайнер».</p>
     <div id="lifeBox"></div>
     <p class="skip skipstep"><button type="button" class="btn ghost" id="skipLife">Пропустить шаг</button></p>
   </section>
 
-  <!-- 5. Дом и ремонт (необязательно) -->
-  <section class="panel" data-step="4" hidden aria-labelledby="hHome">
+  <!-- 5. Двери, свет и электрика (необязательно) -->
+  <section class="panel" data-step="4" hidden aria-labelledby="hTech">
+    <h2 id="hTech">Двери, свет и электрика</h2>
+    <p class="hint">Необязательно, минут 4–5. Это решения, которые нельзя добавить после отделки: двери, розетки, свет, интернет и умный дом. Главные вопросы — сверху в каждой группе. Не знаете — «Не знаю — решит дизайнер», у многих вопросов есть «подсказка».</p>
+    <div id="techBox"></div>
+    <p class="skip skipstep"><button type="button" class="btn ghost" id="skipTech">Пропустить шаг</button></p>
+  </section>
+
+  <!-- 6. Дом и ремонт (необязательно) -->
+  <section class="panel" data-step="5" hidden aria-labelledby="hHome">
     <h2 id="hHome">Дом и ремонт</h2>
     <p class="hint">Необязательно, минуты 3. Это вопросы прораба: дом, электричество, трубы, сроки и бюджет. Чего не знаете — отмечайте «уточним на обмере».</p>
     <div id="homeBox"></div>
@@ -340,8 +404,8 @@ details.more ol{margin:6px 0 10px;padding-left:20px;color:var(--mut);font-size:1
     <p class="skip skipstep"><button type="button" class="btn ghost" id="skipHome">Пропустить шаг</button></p>
   </section>
 
-  <!-- 6. Контакты и отправка -->
-  <section class="panel" data-step="5" hidden aria-labelledby="h4s">
+  <!-- 7. Контакты и отправка -->
+  <section class="panel" data-step="6" hidden aria-labelledby="h4s">
     <h2 id="h4s">Куда прислать проект</h2>
     <div class="recap" id="recap" hidden></div>
     <div class="price" id="price">
@@ -365,8 +429,8 @@ details.more ol{margin:6px 0 10px;padding-left:20px;color:var(--mut);font-size:1
     <div aria-hidden="true" style="position:absolute;left:-10000px;width:1px;height:1px;overflow:hidden"><label>Сайт <input type="text" id="hpWebsite" tabindex="-1" autocomplete="off"></label></div>
   </section>
 
-  <!-- 7. Готово (без приёмника на сервере: архив отправляет сам клиент) -->
-  <section class="panel result" data-step="6" hidden aria-labelledby="h5s">
+  <!-- 8. Готово (без приёмника на сервере: архив отправляет сам клиент) -->
+  <section class="panel result" data-step="7" hidden aria-labelledby="h5s">
     <h2 id="h5s">Бриф собран — отправьте его нам</h2>
     <p class="okmsg" id="sendMust">Нажмите кнопку — откроется «Поделиться»: выберите WhatsApp или Telegram и отправьте на <b>+7 925 733-86-40</b>.
       На компьютере архив скачается — пришлите его в <a href="https://wa.me/79257338640" target="_blank" rel="noopener">WhatsApp</a> или на <a href="mailto:optteem@mail.ru">optteem@mail.ru</a>: сам он к нам не уйдёт.</p>
@@ -392,8 +456,8 @@ details.more ol{margin:6px 0 10px;padding-left:20px;color:var(--mut);font-size:1
 <footer class="site"><div class="wrap cols"><div><div class="logo">LINE<i>A</i></div><p>дизайнер-архитектор <b>Кырлан Александр</b><br><a href="tel:+79257338640">+7 925 733-86-40</a> · <a href="mailto:optteem@mail.ru">optteem@mail.ru</a></p></div><div><p><a href="brief.html">Бриф</a> · <a href="portfolio-hub/">Портфолио</a> · <a href="catalog/">Каталог</a> · <a href="gost/">Документация</a> · <a href="cases/">Кейсы</a> · <a href="compare/">Сравнение</a> · <a href="style/">Стили</a> · <a href="journal/">Журнал</a> · <a href="stories/">Истории</a> · <a href="reviews/">Отзывы</a> · <a href="remont/">Ремонт по проекту</a> · <a href="brigadam/">Бригадам</a> · <a href="price/">Условия</a> · <a href="process/">Процесс</a> · <a href="faq/">FAQ</a> · <a href="about/">О студии</a> · <a href="contacts/">Контакты</a> · <a href="checklist/">Чек-лист приёмки</a> · <a href="sitemap/">Карта сайта</a> · <a href="oplata/">Оплата</a> · <a href="policy/">Обработка данных</a> · <a href="soglasie/">Согласие на обработку данных</a></p><p>© LINEA studio, 2026</p></div></div></footer>
 
 <script type="application/json" id="briefTerms">{"packs":[{"key":"proekt","name":"Проект с визуализациями","rate":2000,"min":80000}],"minArea":40,"areaRecalc":"Сумма посчитана по площади из брифа. Если по плану площадь окажется другой, пересчитаем по той же ставке и согласуем разницу с вами до начала работы."}</script>
-<script src="js/brief-life.js?v=3"></script>
-<script src="js/brief.js?v=54"></script>
+<script src="js/brief-life.js?v=4"></script>
+<script src="js/brief.js?v=55"></script>
 <script>
 (function () {
   var b = document.querySelector('.burger'), m = document.querySelector('.mnav');
