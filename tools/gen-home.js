@@ -299,7 +299,7 @@ ${cards.slice(0, 3).join('\n')}
   /* --- микроразметка: список проектов и организация --- */
   const B = SHELL.BASE;
   region('ld-list', `<script type="application/ld+json">
-${JSON.stringify({ '@context': 'https://schema.org', '@type': 'ItemList', name: 'Проекты LINEA в новом формате', itemListElement: ALB.map((a, i) => ({ '@type': 'ListItem', position: i + 1, name: `${a.card.name.replace(' · ', ', ')} — ${a.total} ${plural(a.total, 'лист', 'листа', 'листов')}`, url: `${B}/portfolio/${a.slug}/` })) })}
+${JSON.stringify({ '@context': 'https://schema.org', '@type': 'ItemList', name: 'Проекты LINEA', itemListElement: ALB.map((a, i) => ({ '@type': 'ListItem', position: i + 1, name: `${a.card.name.replace(' · ', ', ')} — ${a.total} ${plural(a.total, 'лист', 'листа', 'листов')}`, url: `${B}/portfolio/${a.slug}/` })) })}
 </script>`);
   const org = { '@context': 'https://schema.org', '@type': 'ProfessionalService', name: 'LINEA — студия дизайна интерьера', url: `${B}/`, image: `${B}/assets/og-home.jpg`,
     description: `Дизайн-проект интерьера квартиры: ${TERMS.brief.short}, альбом рабочей документации по ГОСТ с проверкой по правилам (планы, развёртки, электрика, сантехника, отделка, мебель, потолки), визуализации — только сверенные с планом. ${TERMS.how}; ${TERMS.term}.`,

@@ -1,16 +1,16 @@
 {
  "checked": true,
- "signed": 0,
- "prelim": 10,
- "rejected": 16,
- "accepted": 0,
+ "signed": 17,
+ "prelim": 0,
+ "rejected": 9,
+ "accepted": 17,
  "ribbon": [
   {
    "src": "assets/portfolio/gost-lineademo/room-living-wA.jpg",
    "alt": "Квартира 56 м² · джапанди — гостиная, визуализация",
    "w": 1200,
    "h": 800,
-   "state": "prelim",
+   "state": "signed",
    "name": "room-living-wA",
    "wall": "r1:A",
    "clay": {
@@ -24,7 +24,7 @@
    "alt": "Квартира 56 м² · джапанди — спальня, визуализация",
    "w": 1200,
    "h": 800,
-   "state": "prelim",
+   "state": "signed",
    "name": "room-bedroom-wA",
    "wall": "r2:A",
    "clay": {
@@ -38,7 +38,7 @@
    "alt": "Квартира 56 м² · джапанди — детская, визуализация",
    "w": 1200,
    "h": 800,
-   "state": "prelim",
+   "state": "signed",
    "name": "room-kids-wA",
    "wall": "r3:A",
    "clay": {
@@ -48,15 +48,29 @@
    }
   },
   {
-   "src": "assets/portfolio/gost-lineademo/room-bath-wB.jpg",
+   "src": "assets/portfolio/gost-lineademo/room-bath-wA.jpg",
    "alt": "Квартира 56 м² · джапанди — ванная, визуализация",
    "w": 1200,
    "h": 800,
-   "state": "prelim",
-   "name": "room-bath-wB",
-   "wall": "r4:B",
+   "state": "signed",
+   "name": "room-bath-wA",
+   "wall": "r4:A",
    "clay": {
-    "src": "assets/portfolio/gost-lineademo/clay-room-bath-wB.jpg",
+    "src": "assets/portfolio/gost-lineademo/clay-room-bath-wA.jpg",
+    "w": 1200,
+    "h": 800
+   }
+  },
+  {
+   "src": "assets/portfolio/gost-lineademo/room-hall-wA.jpg",
+   "alt": "Квартира 56 м² · джапанди — прихожая, визуализация",
+   "w": 1200,
+   "h": 800,
+   "state": "signed",
+   "name": "room-hall-wA",
+   "wall": "r5:A",
+   "clay": {
+    "src": "assets/portfolio/gost-lineademo/clay-room-hall-wA.jpg",
     "w": 1200,
     "h": 800
    }
@@ -71,20 +85,11 @@
    "wall": "top"
   },
   {
-   "src": "assets/portfolio/gost-lineademo/room-hall-wA.jpg",
-   "alt": "Квартира 56 м² · джапанди — прихожая, визуализация",
-   "w": 1200,
-   "h": 800,
-   "state": "rejected",
-   "name": "room-hall-wA",
-   "wall": "r5:A"
-  },
-  {
    "src": "assets/portfolio/gost-lineademo/room-living-wC.jpg",
    "alt": "Квартира 56 м² · джапанди — гостиная, визуализация",
    "w": 1200,
    "h": 800,
-   "state": "prelim",
+   "state": "signed",
    "name": "room-living-wC",
    "wall": "r1:C",
    "clay": {
@@ -98,7 +103,7 @@
    "alt": "Квартира 56 м² · джапанди — спальня, визуализация",
    "w": 1200,
    "h": 800,
-   "state": "prelim",
+   "state": "signed",
    "name": "room-bedroom-wB",
    "wall": "r2:B",
    "clay": {
@@ -112,7 +117,7 @@
    "alt": "Квартира 56 м² · джапанди — спальня, визуализация",
    "w": 1200,
    "h": 800,
-   "state": "prelim",
+   "state": "signed",
    "name": "room-bedroom-wC",
    "wall": "r2:C",
    "clay": {
@@ -122,11 +127,25 @@
    }
   },
   {
+   "src": "assets/portfolio/gost-lineademo/room-bedroom-wD.jpg",
+   "alt": "Квартира 56 м² · джапанди — спальня, визуализация",
+   "w": 1200,
+   "h": 800,
+   "state": "signed",
+   "name": "room-bedroom-wD",
+   "wall": "r2:D",
+   "clay": {
+    "src": "assets/portfolio/gost-lineademo/clay-room-bedroom-wD.jpg",
+    "w": 1200,
+    "h": 800
+   }
+  },
+  {
    "src": "assets/portfolio/gost-lineademo/room-kids-wB.jpg",
    "alt": "Квартира 56 м² · джапанди — детская, визуализация",
    "w": 1200,
    "h": 800,
-   "state": "prelim",
+   "state": "signed",
    "name": "room-kids-wB",
    "wall": "r3:B",
    "clay": {
@@ -140,7 +159,7 @@
    "alt": "Квартира 56 м² · джапанди — детская, визуализация",
    "w": 1200,
    "h": 800,
-   "state": "prelim",
+   "state": "signed",
    "name": "room-kids-wC",
    "wall": "r3:C",
    "clay": {
@@ -150,15 +169,85 @@
    }
   },
   {
+   "src": "assets/portfolio/gost-lineademo/room-kids-wD.jpg",
+   "alt": "Квартира 56 м² · джапанди — детская, визуализация",
+   "w": 1200,
+   "h": 800,
+   "state": "signed",
+   "name": "room-kids-wD",
+   "wall": "r3:D",
+   "clay": {
+    "src": "assets/portfolio/gost-lineademo/clay-room-kids-wD.jpg",
+    "w": 1200,
+    "h": 800
+   }
+  },
+  {
+   "src": "assets/portfolio/gost-lineademo/room-bath-wB.jpg",
+   "alt": "Квартира 56 м² · джапанди — ванная, визуализация",
+   "w": 1200,
+   "h": 800,
+   "state": "signed",
+   "name": "room-bath-wB",
+   "wall": "r4:B",
+   "clay": {
+    "src": "assets/portfolio/gost-lineademo/clay-room-bath-wB.jpg",
+    "w": 1200,
+    "h": 800
+   }
+  },
+  {
    "src": "assets/portfolio/gost-lineademo/room-bath-wC.jpg",
    "alt": "Квартира 56 м² · джапанди — ванная, визуализация",
    "w": 1200,
    "h": 800,
-   "state": "prelim",
+   "state": "signed",
    "name": "room-bath-wC",
    "wall": "r4:C",
    "clay": {
     "src": "assets/portfolio/gost-lineademo/clay-room-bath-wC.jpg",
+    "w": 1200,
+    "h": 800
+   }
+  },
+  {
+   "src": "assets/portfolio/gost-lineademo/room-hall-wB.jpg",
+   "alt": "Квартира 56 м² · джапанди — прихожая, визуализация",
+   "w": 1200,
+   "h": 800,
+   "state": "signed",
+   "name": "room-hall-wB",
+   "wall": "r5:B",
+   "clay": {
+    "src": "assets/portfolio/gost-lineademo/clay-room-hall-wB.jpg",
+    "w": 1200,
+    "h": 800
+   }
+  },
+  {
+   "src": "assets/portfolio/gost-lineademo/room-hall-wC.jpg",
+   "alt": "Квартира 56 м² · джапанди — прихожая, визуализация",
+   "w": 1200,
+   "h": 800,
+   "state": "signed",
+   "name": "room-hall-wC",
+   "wall": "r5:C",
+   "clay": {
+    "src": "assets/portfolio/gost-lineademo/clay-room-hall-wC.jpg",
+    "w": 1200,
+    "h": 800
+   }
+  },
+  {
+   "src": "assets/portfolio/gost-lineademo/room-hall-wD.jpg",
+   "alt": "Квартира 56 м² · джапанди — прихожая, визуализация",
+   "w": 1200,
+   "h": 800,
+   "state": "signed",
+   "name": "room-hall-wD",
+   "wall": "r5:D",
+   "clay": {
+    "src": "assets/portfolio/gost-lineademo/clay-room-hall-wD.jpg",
     "w": 1200,
     "h": 800
    }
@@ -182,33 +271,6 @@
    "wall": "r1:D"
   },
   {
-   "src": "assets/portfolio/gost-lineademo/room-bedroom-wD.jpg",
-   "alt": "Квартира 56 м² · джапанди — спальня, визуализация",
-   "w": 1200,
-   "h": 800,
-   "state": "rejected",
-   "name": "room-bedroom-wD",
-   "wall": "r2:D"
-  },
-  {
-   "src": "assets/portfolio/gost-lineademo/room-kids-wD.jpg",
-   "alt": "Квартира 56 м² · джапанди — детская, визуализация",
-   "w": 1200,
-   "h": 800,
-   "state": "rejected",
-   "name": "room-kids-wD",
-   "wall": "r3:D"
-  },
-  {
-   "src": "assets/portfolio/gost-lineademo/room-bath-wA.jpg",
-   "alt": "Квартира 56 м² · джапанди — ванная, визуализация",
-   "w": 1200,
-   "h": 800,
-   "state": "rejected",
-   "name": "room-bath-wA",
-   "wall": "r4:A"
-  },
-  {
    "src": "assets/portfolio/gost-lineademo/room-bath-wD.jpg",
    "alt": "Квартира 56 м² · джапанди — ванная, визуализация",
    "w": 1200,
@@ -216,33 +278,6 @@
    "state": "rejected",
    "name": "room-bath-wD",
    "wall": "r4:D"
-  },
-  {
-   "src": "assets/portfolio/gost-lineademo/room-hall-wB.jpg",
-   "alt": "Квартира 56 м² · джапанди — прихожая, визуализация",
-   "w": 1200,
-   "h": 800,
-   "state": "rejected",
-   "name": "room-hall-wB",
-   "wall": "r5:B"
-  },
-  {
-   "src": "assets/portfolio/gost-lineademo/room-hall-wC.jpg",
-   "alt": "Квартира 56 м² · джапанди — прихожая, визуализация",
-   "w": 1200,
-   "h": 800,
-   "state": "rejected",
-   "name": "room-hall-wC",
-   "wall": "r5:C"
-  },
-  {
-   "src": "assets/portfolio/gost-lineademo/room-hall-wD.jpg",
-   "alt": "Квартира 56 м² · джапанди — прихожая, визуализация",
-   "w": 1200,
-   "h": 800,
-   "state": "rejected",
-   "name": "room-hall-wD",
-   "wall": "r5:D"
   }
  ],
  "hero": {

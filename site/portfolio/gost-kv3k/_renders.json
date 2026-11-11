@@ -1,16 +1,16 @@
 {
  "checked": true,
- "signed": 0,
- "prelim": 13,
- "rejected": 22,
- "accepted": 0,
+ "signed": 14,
+ "prelim": 0,
+ "rejected": 21,
+ "accepted": 14,
  "ribbon": [
   {
    "src": "assets/portfolio/gost-kv3k/room-living-wC.jpg",
    "alt": "Трёхкомнатная квартира — гостиная, визуализация",
    "w": 1200,
    "h": 800,
-   "state": "prelim",
+   "state": "signed",
    "name": "room-living-wC",
    "wall": "r6:C",
    "clay": {
@@ -24,7 +24,7 @@
    "alt": "Трёхкомнатная квартира — спальня, визуализация",
    "w": 1200,
    "h": 800,
-   "state": "prelim",
+   "state": "signed",
    "name": "room-bedroom1-wB",
    "wall": "r1:B",
    "clay": {
@@ -38,7 +38,7 @@
    "alt": "Трёхкомнатная квартира — спальня, визуализация",
    "w": 1200,
    "h": 800,
-   "state": "prelim",
+   "state": "signed",
    "name": "room-bedroom2-wA",
    "wall": "r4:A",
    "clay": {
@@ -52,7 +52,7 @@
    "alt": "Трёхкомнатная квартира — ванная, визуализация",
    "w": 1200,
    "h": 800,
-   "state": "prelim",
+   "state": "signed",
    "name": "room-bath1-wB",
    "wall": "r2:B",
    "clay": {
@@ -66,7 +66,7 @@
    "alt": "Трёхкомнатная квартира — ванная, визуализация",
    "w": 1200,
    "h": 800,
-   "state": "prelim",
+   "state": "signed",
    "name": "room-bath2-wB",
    "wall": "r7:B",
    "clay": {
@@ -80,7 +80,7 @@
    "alt": "Трёхкомнатная квартира — прихожая, визуализация",
    "w": 1200,
    "h": 800,
-   "state": "prelim",
+   "state": "signed",
    "name": "room-hall-wC",
    "wall": "r5:C",
    "clay": {
@@ -94,7 +94,7 @@
    "alt": "Трёхкомнатная квартира — гардеробная, визуализация",
    "w": 1200,
    "h": 800,
-   "state": "prelim",
+   "state": "signed",
    "name": "room-wardrobe-wide",
    "wall": "r3:room",
    "clay": {
@@ -108,7 +108,7 @@
    "alt": "Трёхкомнатная квартира — холл, визуализация",
    "w": 1200,
    "h": 800,
-   "state": "prelim",
+   "state": "signed",
    "name": "room-corridor-wA",
    "wall": "r8:A",
    "clay": {
@@ -145,11 +145,25 @@
    "wall": ""
   },
   {
+   "src": "assets/portfolio/gost-kv3k/room-living-wD.jpg",
+   "alt": "Трёхкомнатная квартира — гостиная, визуализация",
+   "w": 1200,
+   "h": 800,
+   "state": "signed",
+   "name": "room-living-wD",
+   "wall": "r6:D",
+   "clay": {
+    "src": "assets/portfolio/gost-kv3k/clay-room-living-wD.jpg",
+    "w": 1200,
+    "h": 800
+   }
+  },
+  {
    "src": "assets/portfolio/gost-kv3k/room-bedroom2-wD.jpg",
    "alt": "Трёхкомнатная квартира — спальня, визуализация",
    "w": 1200,
    "h": 800,
-   "state": "prelim",
+   "state": "signed",
    "name": "room-bedroom2-wD",
    "wall": "r4:D",
    "clay": {
@@ -163,7 +177,7 @@
    "alt": "Трёхкомнатная квартира — ванная, визуализация",
    "w": 1200,
    "h": 800,
-   "state": "prelim",
+   "state": "signed",
    "name": "room-bath1-wC",
    "wall": "r2:C",
    "clay": {
@@ -177,7 +191,7 @@
    "alt": "Трёхкомнатная квартира — ванная, визуализация",
    "w": 1200,
    "h": 800,
-   "state": "prelim",
+   "state": "signed",
    "name": "room-bath1-wD",
    "wall": "r2:D",
    "clay": {
@@ -191,7 +205,7 @@
    "alt": "Трёхкомнатная квартира — ванная, визуализация",
    "w": 1200,
    "h": 800,
-   "state": "prelim",
+   "state": "signed",
    "name": "room-bath2-wC",
    "wall": "r7:C",
    "clay": {
@@ -205,7 +219,7 @@
    "alt": "Трёхкомнатная квартира — холл, визуализация",
    "w": 1200,
    "h": 800,
-   "state": "prelim",
+   "state": "signed",
    "name": "room-corridor-wC",
    "wall": "r8:C",
    "clay": {
@@ -240,15 +254,6 @@
    "state": "rejected",
    "name": "room-living-wB",
    "wall": "r6:B"
-  },
-  {
-   "src": "assets/portfolio/gost-kv3k/room-living-wD.jpg",
-   "alt": "Трёхкомнатная квартира — гостиная, визуализация",
-   "w": 1200,
-   "h": 800,
-   "state": "rejected",
-   "name": "room-living-wD",
-   "wall": "r6:D"
   },
   {
    "src": "assets/portfolio/gost-kv3k/room-bedroom1.jpg",

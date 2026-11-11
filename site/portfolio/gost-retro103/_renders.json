@@ -1,16 +1,16 @@
 {
  "checked": true,
- "signed": 0,
- "prelim": 19,
- "rejected": 7,
- "accepted": 0,
+ "signed": 20,
+ "prelim": 0,
+ "rejected": 6,
+ "accepted": 20,
  "ribbon": [
   {
    "src": "assets/portfolio/gost-retro103/room-living-wA.jpg",
    "alt": "Квартира 101 м² · ретро с авторской мебелью — гостиная, визуализация",
    "w": 1200,
    "h": 800,
-   "state": "prelim",
+   "state": "signed",
    "name": "room-living-wA",
    "wall": "r3:A",
    "clay": {
@@ -24,7 +24,7 @@
    "alt": "Квартира 101 м² · ретро с авторской мебелью — кухня-столовая, визуализация",
    "w": 1200,
    "h": 800,
-   "state": "prelim",
+   "state": "signed",
    "name": "room-kitchen-wB",
    "wall": "r5:B",
    "clay": {
@@ -38,7 +38,7 @@
    "alt": "Квартира 101 м² · ретро с авторской мебелью — спальня, визуализация",
    "w": 1200,
    "h": 800,
-   "state": "prelim",
+   "state": "signed",
    "name": "room-bedroom1-wD",
    "wall": "r8:D",
    "clay": {
@@ -48,15 +48,15 @@
    }
   },
   {
-   "src": "assets/portfolio/gost-retro103/room-bedroom2-wD.jpg",
+   "src": "assets/portfolio/gost-retro103/room-bedroom2-wA.jpg",
    "alt": "Квартира 101 м² · ретро с авторской мебелью — спальня, визуализация",
    "w": 1200,
    "h": 800,
-   "state": "prelim",
-   "name": "room-bedroom2-wD",
-   "wall": "r10:D",
+   "state": "signed",
+   "name": "room-bedroom2-wA",
+   "wall": "r10:A",
    "clay": {
-    "src": "assets/portfolio/gost-retro103/clay-room-bedroom2-wD.jpg",
+    "src": "assets/portfolio/gost-retro103/clay-room-bedroom2-wA.jpg",
     "w": 1200,
     "h": 800
    }
@@ -66,7 +66,7 @@
    "alt": "Квартира 101 м² · ретро с авторской мебелью — кабинет, визуализация",
    "w": 1200,
    "h": 800,
-   "state": "prelim",
+   "state": "signed",
    "name": "room-study-wA",
    "wall": "r1:A",
    "clay": {
@@ -80,7 +80,7 @@
    "alt": "Квартира 101 м² · ретро с авторской мебелью — ванная, визуализация",
    "w": 1200,
    "h": 800,
-   "state": "prelim",
+   "state": "signed",
    "name": "room-bath1-wC",
    "wall": "r6:C",
    "clay": {
@@ -94,7 +94,7 @@
    "alt": "Квартира 101 м² · ретро с авторской мебелью — прихожая, визуализация",
    "w": 1200,
    "h": 800,
-   "state": "prelim",
+   "state": "signed",
    "name": "room-hall-wA",
    "wall": "r4:A",
    "clay": {
@@ -108,7 +108,7 @@
    "alt": "Квартира 101 м² · ретро с авторской мебелью — гардеробная, визуализация",
    "w": 1200,
    "h": 800,
-   "state": "prelim",
+   "state": "signed",
    "name": "room-wardrobe-wide",
    "wall": "r7:room",
    "clay": {
@@ -122,7 +122,7 @@
    "alt": "Квартира 101 м² · ретро с авторской мебелью — холл, визуализация",
    "w": 1200,
    "h": 800,
-   "state": "prelim",
+   "state": "signed",
    "name": "room-corridor-wB",
    "wall": "r9:B",
    "clay": {
@@ -136,7 +136,7 @@
    "alt": "Квартира 101 м² · ретро с авторской мебелью — кладовая, визуализация",
    "w": 1200,
    "h": 800,
-   "state": "prelim",
+   "state": "signed",
    "name": "room-storage-wide",
    "wall": "r2:room",
    "clay": {
@@ -168,7 +168,7 @@
    "alt": "Квартира 101 м² · ретро с авторской мебелью — гостиная, визуализация",
    "w": 1200,
    "h": 800,
-   "state": "prelim",
+   "state": "signed",
    "name": "room-living-wC",
    "wall": "r3:C",
    "clay": {
@@ -182,7 +182,7 @@
    "alt": "Квартира 101 м² · ретро с авторской мебелью — кухня-столовая, визуализация",
    "w": 1200,
    "h": 800,
-   "state": "prelim",
+   "state": "signed",
    "name": "room-kitchen-wC",
    "wall": "r5:C",
    "clay": {
@@ -196,7 +196,7 @@
    "alt": "Квартира 101 м² · ретро с авторской мебелью — спальня, визуализация",
    "w": 1200,
    "h": 800,
-   "state": "prelim",
+   "state": "signed",
    "name": "room-bedroom1-wA",
    "wall": "r8:A",
    "clay": {
@@ -206,15 +206,29 @@
    }
   },
   {
-   "src": "assets/portfolio/gost-retro103/room-bedroom2-wB.jpg",
+   "src": "assets/portfolio/gost-retro103/room-bedroom1-wB.jpg",
    "alt": "Квартира 101 м² · ретро с авторской мебелью — спальня, визуализация",
    "w": 1200,
    "h": 800,
-   "state": "prelim",
-   "name": "room-bedroom2-wB",
-   "wall": "r10:B",
+   "state": "signed",
+   "name": "room-bedroom1-wB",
+   "wall": "r8:B",
    "clay": {
-    "src": "assets/portfolio/gost-retro103/clay-room-bedroom2-wB.jpg",
+    "src": "assets/portfolio/gost-retro103/clay-room-bedroom1-wB.jpg",
+    "w": 1200,
+    "h": 800
+   }
+  },
+  {
+   "src": "assets/portfolio/gost-retro103/room-bedroom2-wD.jpg",
+   "alt": "Квартира 101 м² · ретро с авторской мебелью — спальня, визуализация",
+   "w": 1200,
+   "h": 800,
+   "state": "signed",
+   "name": "room-bedroom2-wD",
+   "wall": "r10:D",
+   "clay": {
+    "src": "assets/portfolio/gost-retro103/clay-room-bedroom2-wD.jpg",
     "w": 1200,
     "h": 800
    }
@@ -224,7 +238,7 @@
    "alt": "Квартира 101 м² · ретро с авторской мебелью — спальня, визуализация",
    "w": 1200,
    "h": 800,
-   "state": "prelim",
+   "state": "signed",
    "name": "room-bedroom2-wC",
    "wall": "r10:C",
    "clay": {
@@ -234,25 +248,11 @@
    }
   },
   {
-   "src": "assets/portfolio/gost-retro103/room-study-wD.jpg",
-   "alt": "Квартира 101 м² · ретро с авторской мебелью — кабинет, визуализация",
-   "w": 1200,
-   "h": 800,
-   "state": "prelim",
-   "name": "room-study-wD",
-   "wall": "r1:D",
-   "clay": {
-    "src": "assets/portfolio/gost-retro103/clay-room-study-wD.jpg",
-    "w": 1200,
-    "h": 800
-   }
-  },
-  {
    "src": "assets/portfolio/gost-retro103/room-study-wB.jpg",
    "alt": "Квартира 101 м² · ретро с авторской мебелью — кабинет, визуализация",
    "w": 1200,
    "h": 800,
-   "state": "prelim",
+   "state": "signed",
    "name": "room-study-wB",
    "wall": "r1:B",
    "clay": {
@@ -266,7 +266,7 @@
    "alt": "Квартира 101 м² · ретро с авторской мебелью — ванная, визуализация",
    "w": 1200,
    "h": 800,
-   "state": "prelim",
+   "state": "signed",
    "name": "room-bath1-wD",
    "wall": "r6:D",
    "clay": {
@@ -280,11 +280,25 @@
    "alt": "Квартира 101 м² · ретро с авторской мебелью — ванная, визуализация",
    "w": 1200,
    "h": 800,
-   "state": "prelim",
+   "state": "signed",
    "name": "room-bath1-wB",
    "wall": "r6:B",
    "clay": {
     "src": "assets/portfolio/gost-retro103/clay-room-bath1-wB.jpg",
+    "w": 1200,
+    "h": 800
+   }
+  },
+  {
+   "src": "assets/portfolio/gost-retro103/room-hall-wB.jpg",
+   "alt": "Квартира 101 м² · ретро с авторской мебелью — прихожая, визуализация",
+   "w": 1200,
+   "h": 800,
+   "state": "signed",
+   "name": "room-hall-wB",
+   "wall": "r4:B",
+   "clay": {
+    "src": "assets/portfolio/gost-retro103/clay-room-hall-wB.jpg",
     "w": 1200,
     "h": 800
    }
@@ -308,31 +322,22 @@
    "wall": "r3:B"
   },
   {
-   "src": "assets/portfolio/gost-retro103/room-bedroom1-wB.jpg",
+   "src": "assets/portfolio/gost-retro103/room-bedroom2-wB.jpg",
    "alt": "Квартира 101 м² · ретро с авторской мебелью — спальня, визуализация",
    "w": 1200,
    "h": 800,
    "state": "rejected",
-   "name": "room-bedroom1-wB",
-   "wall": "r8:B"
+   "name": "room-bedroom2-wB",
+   "wall": "r10:B"
   },
   {
-   "src": "assets/portfolio/gost-retro103/room-bedroom2-wA.jpg",
-   "alt": "Квартира 101 м² · ретро с авторской мебелью — спальня, визуализация",
+   "src": "assets/portfolio/gost-retro103/room-study-wD.jpg",
+   "alt": "Квартира 101 м² · ретро с авторской мебелью — кабинет, визуализация",
    "w": 1200,
    "h": 800,
    "state": "rejected",
-   "name": "room-bedroom2-wA",
-   "wall": "r10:A"
-  },
-  {
-   "src": "assets/portfolio/gost-retro103/room-hall-wB.jpg",
-   "alt": "Квартира 101 м² · ретро с авторской мебелью — прихожая, визуализация",
-   "w": 1200,
-   "h": 800,
-   "state": "rejected",
-   "name": "room-hall-wB",
-   "wall": "r4:B"
+   "name": "room-study-wD",
+   "wall": "r1:D"
   }
  ],
  "hero": {

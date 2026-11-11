@@ -27,8 +27,8 @@
   "name": "cover-hero",
   "webp": "assets/portfolio/gost-retro103-hero.webp"
  },
- "visuals": 0,
- "visualsPrelim": 19,
+ "visuals": 20,
+ "visualsPrelim": 0,
  "studioSize": "7 МБ",
  "pdfSize": "10 МБ"
 }

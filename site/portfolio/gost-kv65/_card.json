@@ -27,8 +27,8 @@
   "name": "cover-hero",
   "webp": "assets/portfolio/gost-kv65-hero.webp"
  },
- "visuals": 0,
- "visualsPrelim": 16,
+ "visuals": 14,
+ "visualsPrelim": 0,
  "studioSize": "5 МБ",
  "pdfSize": "8 МБ"
 }
