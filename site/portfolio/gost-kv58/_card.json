@@ -9,9 +9,9 @@
  "area": "55,23 м²",
  "declared": "В исходных данных заказчика — 57,6 м²; по экспликации альбома (сумма помещений) — 55,23 м², она и стоит в названии.",
  "rooms": 6,
- "total": 87,
+ "total": 102,
  "blockers": 0,
- "issues": 130,
+ "issues": 163,
  "openQ": {
   "n": 7,
   "no": "06"
@@ -28,7 +28,7 @@
   "webp": "assets/portfolio/gost-kv58-hero.webp"
  },
  "visuals": 0,
- "visualsPrelim": 0,
+ "visualsPrelim": 9,
  "studioSize": "4 МБ",
  "pdfSize": "6 МБ"
 }

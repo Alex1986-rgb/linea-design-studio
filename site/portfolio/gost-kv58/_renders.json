@@ -1,79 +1,148 @@
 {
- "checked": false,
+ "checked": true,
  "signed": 0,
- "prelim": 0,
- "rejected": 11,
+ "prelim": 9,
+ "rejected": 2,
  "accepted": 0,
  "ribbon": [
   {
-   "src": "assets/portfolio/gost-kv58/room-living-wC.jpg",
+   "src": "assets/portfolio/gost-kv58/room-living-wB.jpg",
    "alt": "Квартира 55 м² · кухня-гостиная и спальня — гостиная, визуализация",
    "w": 1200,
    "h": 800,
-   "state": "rejected"
+   "state": "prelim",
+   "name": "room-living-wB",
+   "wall": "r1:B",
+   "clay": {
+    "src": "assets/portfolio/gost-kv58/clay-room-living-wB.jpg",
+    "w": 1200,
+    "h": 800
+   }
   },
   {
    "src": "assets/portfolio/gost-kv58/room-bedroom-wA.jpg",
    "alt": "Квартира 55 м² · кухня-гостиная и спальня — спальня, визуализация",
    "w": 1200,
    "h": 800,
-   "state": "rejected"
+   "state": "prelim",
+   "name": "room-bedroom-wA",
+   "wall": "r2:A",
+   "clay": {
+    "src": "assets/portfolio/gost-kv58/clay-room-bedroom-wA.jpg",
+    "w": 1200,
+    "h": 800
+   }
   },
   {
    "src": "assets/portfolio/gost-kv58/room-bath-wB.jpg",
    "alt": "Квартира 55 м² · кухня-гостиная и спальня — ванная, визуализация",
    "w": 1200,
    "h": 800,
-   "state": "rejected"
+   "state": "prelim",
+   "name": "room-bath-wB",
+   "wall": "r3:B",
+   "clay": {
+    "src": "assets/portfolio/gost-kv58/clay-room-bath-wB.jpg",
+    "w": 1200,
+    "h": 800
+   }
   },
   {
    "src": "assets/portfolio/gost-kv58/room-hall-wA.jpg",
    "alt": "Квартира 55 м² · кухня-гостиная и спальня — прихожая, визуализация",
    "w": 1200,
    "h": 800,
-   "state": "rejected"
+   "state": "prelim",
+   "name": "room-hall-wA",
+   "wall": "r5:A",
+   "clay": {
+    "src": "assets/portfolio/gost-kv58/clay-room-hall-wA.jpg",
+    "w": 1200,
+    "h": 800
+   }
   },
   {
    "src": "assets/portfolio/gost-kv58/room-wardrobe-wide.jpg",
    "alt": "Квартира 55 м² · кухня-гостиная и спальня — гардеробная, визуализация",
    "w": 1200,
    "h": 800,
-   "state": "rejected"
+   "state": "prelim",
+   "name": "room-wardrobe-wide",
+   "wall": "r6:room",
+   "clay": {
+    "src": "assets/portfolio/gost-kv58/clay-room-wardrobe-wide.jpg",
+    "w": 1200,
+    "h": 800
+   }
   },
   {
    "src": "assets/portfolio/gost-kv58/room-wc-wide.jpg",
    "alt": "Квартира 55 м² · кухня-гостиная и спальня — санузел, визуализация",
    "w": 1200,
    "h": 800,
-   "state": "rejected"
+   "state": "rejected",
+   "name": "room-wc-wide",
+   "wall": "r4:room"
   },
   {
-   "src": "assets/portfolio/gost-kv58/room-living-wD.jpg",
+   "src": "assets/portfolio/gost-kv58/room-living-wC.jpg",
    "alt": "Квартира 55 м² · кухня-гостиная и спальня — гостиная, визуализация",
    "w": 1200,
    "h": 800,
-   "state": "rejected"
+   "state": "prelim",
+   "name": "room-living-wC",
+   "wall": "r1:C",
+   "clay": {
+    "src": "assets/portfolio/gost-kv58/clay-room-living-wC.jpg",
+    "w": 1200,
+    "h": 800
+   }
   },
   {
    "src": "assets/portfolio/gost-kv58/room-bedroom-wB.jpg",
    "alt": "Квартира 55 м² · кухня-гостиная и спальня — спальня, визуализация",
    "w": 1200,
    "h": 800,
-   "state": "rejected"
+   "state": "prelim",
+   "name": "room-bedroom-wB",
+   "wall": "r2:B"
   },
   {
    "src": "assets/portfolio/gost-kv58/room-bath-wC.jpg",
    "alt": "Квартира 55 м² · кухня-гостиная и спальня — ванная, визуализация",
    "w": 1200,
    "h": 800,
-   "state": "rejected"
+   "state": "prelim",
+   "name": "room-bath-wC",
+   "wall": "r3:C",
+   "clay": {
+    "src": "assets/portfolio/gost-kv58/clay-room-bath-wC.jpg",
+    "w": 1200,
+    "h": 800
+   }
   },
   {
    "src": "assets/portfolio/gost-kv58/room-hall-wC.jpg",
    "alt": "Квартира 55 м² · кухня-гостиная и спальня — прихожая, визуализация",
    "w": 1200,
    "h": 800,
-   "state": "rejected"
+   "state": "prelim",
+   "name": "room-hall-wC",
+   "wall": "r5:C",
+   "clay": {
+    "src": "assets/portfolio/gost-kv58/clay-room-hall-wC.jpg",
+    "w": 1200,
+    "h": 800
+   }
+  },
+  {
+   "src": "assets/portfolio/gost-kv58/room-living-wD.jpg",
+   "alt": "Квартира 55 м² · кухня-гостиная и спальня — гостиная, визуализация",
+   "w": 1200,
+   "h": 800,
+   "state": "rejected",
+   "name": "room-living-wD",
+   "wall": "r1:D"
   }
  ],
  "hero": {

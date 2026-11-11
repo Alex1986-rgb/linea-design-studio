@@ -1,142 +1,272 @@
 {
- "checked": false,
+ "checked": true,
  "signed": 0,
- "prelim": 0,
- "rejected": 22,
+ "prelim": 13,
+ "rejected": 9,
  "accepted": 0,
  "ribbon": [
   {
-   "src": "assets/portfolio/gost-proekt2/room-living1-wB.jpg",
+   "src": "assets/portfolio/gost-proekt2/room-living1-wA.jpg",
    "alt": "Квартира с эркерами, 13 помещений — гостиная, визуализация",
    "w": 1200,
    "h": 800,
-   "state": "rejected"
+   "state": "prelim",
+   "name": "room-living1-wA",
+   "wall": "r1:A",
+   "clay": {
+    "src": "assets/portfolio/gost-proekt2/clay-room-living1-wA.jpg",
+    "w": 1200,
+    "h": 800
+   }
   },
   {
-   "src": "assets/portfolio/gost-proekt2/room-living2-wA.jpg",
-   "alt": "Квартира с эркерами, 13 помещений — гостиная, визуализация",
-   "w": 1200,
-   "h": 800,
-   "state": "rejected"
-  },
-  {
-   "src": "assets/portfolio/gost-proekt2/room-kitchen-wA.jpg",
+   "src": "assets/portfolio/gost-proekt2/room-kitchen-wB.jpg",
    "alt": "Квартира с эркерами, 13 помещений — кухня-столовая, визуализация",
    "w": 1200,
    "h": 800,
-   "state": "rejected"
+   "state": "prelim",
+   "name": "room-kitchen-wB",
+   "wall": "r6:B",
+   "clay": {
+    "src": "assets/portfolio/gost-proekt2/clay-room-kitchen-wB.jpg",
+    "w": 1200,
+    "h": 800
+   }
   },
   {
    "src": "assets/portfolio/gost-proekt2/room-kids1-wC.jpg",
    "alt": "Квартира с эркерами, 13 помещений — детская, визуализация",
    "w": 1200,
    "h": 800,
-   "state": "rejected"
+   "state": "prelim",
+   "name": "room-kids1-wC",
+   "wall": "r4:C",
+   "clay": {
+    "src": "assets/portfolio/gost-proekt2/clay-room-kids1-wC.jpg",
+    "w": 1200,
+    "h": 800
+   }
   },
   {
    "src": "assets/portfolio/gost-proekt2/room-kids2-wA.jpg",
    "alt": "Квартира с эркерами, 13 помещений — детская, визуализация",
    "w": 1200,
    "h": 800,
-   "state": "rejected"
-  },
-  {
-   "src": "assets/portfolio/gost-proekt2/room-bath-wB.jpg",
-   "alt": "Квартира с эркерами, 13 помещений — ванная, визуализация",
-   "w": 1200,
-   "h": 800,
-   "state": "rejected"
+   "state": "prelim",
+   "name": "room-kids2-wA",
+   "wall": "r9:A",
+   "clay": {
+    "src": "assets/portfolio/gost-proekt2/clay-room-kids2-wA.jpg",
+    "w": 1200,
+    "h": 800
+   }
   },
   {
    "src": "assets/portfolio/gost-proekt2/room-hall-wide.jpg",
    "alt": "Квартира с эркерами, 13 помещений — прихожая, визуализация",
    "w": 1200,
    "h": 800,
-   "state": "rejected"
+   "state": "prelim",
+   "name": "room-hall-wide",
+   "wall": "r7:room",
+   "clay": {
+    "src": "assets/portfolio/gost-proekt2/clay-room-hall-wide.jpg",
+    "w": 1200,
+    "h": 800
+   }
   },
   {
    "src": "assets/portfolio/gost-proekt2/room-wardrobe1-wide.jpg",
    "alt": "Квартира с эркерами, 13 помещений — гардеробная, визуализация",
    "w": 1200,
    "h": 800,
-   "state": "rejected"
+   "state": "prelim",
+   "name": "room-wardrobe1-wide",
+   "wall": "r8:room",
+   "clay": {
+    "src": "assets/portfolio/gost-proekt2/clay-room-wardrobe1-wide.jpg",
+    "w": 1200,
+    "h": 800
+   }
   },
   {
    "src": "assets/portfolio/gost-proekt2/room-wardrobe2-wide.jpg",
    "alt": "Квартира с эркерами, 13 помещений — гардеробная, визуализация",
    "w": 1200,
    "h": 800,
-   "state": "rejected"
+   "state": "prelim",
+   "name": "room-wardrobe2-wide",
+   "wall": "r12:room",
+   "clay": {
+    "src": "assets/portfolio/gost-proekt2/clay-room-wardrobe2-wide.jpg",
+    "w": 1200,
+    "h": 800
+   }
   },
   {
    "src": "assets/portfolio/gost-proekt2/room-balcony-wD.jpg",
    "alt": "Квартира с эркерами, 13 помещений — балкон, визуализация",
    "w": 1200,
    "h": 800,
-   "state": "rejected"
-  },
-  {
-   "src": "assets/portfolio/gost-proekt2/room-corridor-wA.jpg",
-   "alt": "Квартира с эркерами, 13 помещений — холл, визуализация",
-   "w": 1200,
-   "h": 800,
-   "state": "rejected"
-  },
-  {
-   "src": "assets/portfolio/gost-proekt2/room-wc-wide.jpg",
-   "alt": "Квартира с эркерами, 13 помещений — санузел, визуализация",
-   "w": 1200,
-   "h": 800,
-   "state": "rejected"
-  },
-  {
-   "src": "assets/portfolio/gost-proekt2/room-storage-wide.jpg",
-   "alt": "Квартира с эркерами, 13 помещений — кладовая, визуализация",
-   "w": 1200,
-   "h": 800,
-   "state": "rejected"
-  },
-  {
-   "src": "assets/portfolio/gost-proekt2/room-living1-wC.jpg",
-   "alt": "Квартира с эркерами, 13 помещений — гостиная, визуализация",
-   "w": 1200,
-   "h": 800,
-   "state": "rejected"
-  },
-  {
-   "src": "assets/portfolio/gost-proekt2/room-living1-wD.jpg",
-   "alt": "Квартира с эркерами, 13 помещений — гостиная, визуализация",
-   "w": 1200,
-   "h": 800,
-   "state": "rejected"
-  },
-  {
-   "src": "assets/portfolio/gost-proekt2/room-living2-wB.jpg",
-   "alt": "Квартира с эркерами, 13 помещений — гостиная, визуализация",
-   "w": 1200,
-   "h": 800,
-   "state": "rejected"
-  },
-  {
-   "src": "assets/portfolio/gost-proekt2/room-kids1-wD.jpg",
-   "alt": "Квартира с эркерами, 13 помещений — детская, визуализация",
-   "w": 1200,
-   "h": 800,
-   "state": "rejected"
-  },
-  {
-   "src": "assets/portfolio/gost-proekt2/room-kids2-wD.jpg",
-   "alt": "Квартира с эркерами, 13 помещений — детская, визуализация",
-   "w": 1200,
-   "h": 800,
-   "state": "rejected"
+   "state": "prelim",
+   "name": "room-balcony-wD",
+   "wall": "r13:D",
+   "clay": {
+    "src": "assets/portfolio/gost-proekt2/clay-room-balcony-wD.jpg",
+    "w": 1200,
+    "h": 800
+   }
   },
   {
    "src": "assets/portfolio/gost-proekt2/room-corridor-wC.jpg",
    "alt": "Квартира с эркерами, 13 помещений — холл, визуализация",
    "w": 1200,
    "h": 800,
-   "state": "rejected"
+   "state": "prelim",
+   "name": "room-corridor-wC",
+   "wall": "r5:C",
+   "clay": {
+    "src": "assets/portfolio/gost-proekt2/clay-room-corridor-wC.jpg",
+    "w": 1200,
+    "h": 800
+   }
+  },
+  {
+   "src": "assets/portfolio/gost-proekt2/room-wc-wide.jpg",
+   "alt": "Квартира с эркерами, 13 помещений — санузел, визуализация",
+   "w": 1200,
+   "h": 800,
+   "state": "prelim",
+   "name": "room-wc-wide",
+   "wall": "r10:room",
+   "clay": {
+    "src": "assets/portfolio/gost-proekt2/clay-room-wc-wide.jpg",
+    "w": 1200,
+    "h": 800
+   }
+  },
+  {
+   "src": "assets/portfolio/gost-proekt2/room-living2-wA.jpg",
+   "alt": "Квартира с эркерами, 13 помещений — гостиная, визуализация",
+   "w": 1200,
+   "h": 800,
+   "state": "rejected",
+   "name": "room-living2-wA",
+   "wall": "r11:A"
+  },
+  {
+   "src": "assets/portfolio/gost-proekt2/room-bath-wB.jpg",
+   "alt": "Квартира с эркерами, 13 помещений — ванная, визуализация",
+   "w": 1200,
+   "h": 800,
+   "state": "rejected",
+   "name": "room-bath-wB",
+   "wall": "r2:B"
+  },
+  {
+   "src": "assets/portfolio/gost-proekt2/room-storage-wide.jpg",
+   "alt": "Квартира с эркерами, 13 помещений — кладовая, визуализация",
+   "w": 1200,
+   "h": 800,
+   "state": "rejected",
+   "name": "room-storage-wide",
+   "wall": "r3:room"
+  },
+  {
+   "src": "assets/portfolio/gost-proekt2/room-living1-wB.jpg",
+   "alt": "Квартира с эркерами, 13 помещений — гостиная, визуализация",
+   "w": 1200,
+   "h": 800,
+   "state": "prelim",
+   "name": "room-living1-wB",
+   "wall": "r1:B",
+   "clay": {
+    "src": "assets/portfolio/gost-proekt2/clay-room-living1-wB.jpg",
+    "w": 1200,
+    "h": 800
+   }
+  },
+  {
+   "src": "assets/portfolio/gost-proekt2/room-living1-wC.jpg",
+   "alt": "Квартира с эркерами, 13 помещений — гостиная, визуализация",
+   "w": 1200,
+   "h": 800,
+   "state": "prelim",
+   "name": "room-living1-wC",
+   "wall": "r1:C",
+   "clay": {
+    "src": "assets/portfolio/gost-proekt2/clay-room-living1-wC.jpg",
+    "w": 1200,
+    "h": 800
+   }
+  },
+  {
+   "src": "assets/portfolio/gost-proekt2/room-kitchen-wD.jpg",
+   "alt": "Квартира с эркерами, 13 помещений — кухня-столовая, визуализация",
+   "w": 1200,
+   "h": 800,
+   "state": "prelim",
+   "name": "room-kitchen-wD",
+   "wall": "r6:D",
+   "clay": {
+    "src": "assets/portfolio/gost-proekt2/clay-room-kitchen-wD.jpg",
+    "w": 1200,
+    "h": 800
+   }
+  },
+  {
+   "src": "assets/portfolio/gost-proekt2/room-living1-wD.jpg",
+   "alt": "Квартира с эркерами, 13 помещений — гостиная, визуализация",
+   "w": 1200,
+   "h": 800,
+   "state": "rejected",
+   "name": "room-living1-wD",
+   "wall": "r1:D"
+  },
+  {
+   "src": "assets/portfolio/gost-proekt2/room-living2-wB.jpg",
+   "alt": "Квартира с эркерами, 13 помещений — гостиная, визуализация",
+   "w": 1200,
+   "h": 800,
+   "state": "rejected",
+   "name": "room-living2-wB",
+   "wall": "r11:B"
+  },
+  {
+   "src": "assets/portfolio/gost-proekt2/room-kitchen-wA.jpg",
+   "alt": "Квартира с эркерами, 13 помещений — кухня-столовая, визуализация",
+   "w": 1200,
+   "h": 800,
+   "state": "rejected",
+   "name": "room-kitchen-wA",
+   "wall": "r6:A"
+  },
+  {
+   "src": "assets/portfolio/gost-proekt2/room-kids1-wD.jpg",
+   "alt": "Квартира с эркерами, 13 помещений — детская, визуализация",
+   "w": 1200,
+   "h": 800,
+   "state": "rejected",
+   "name": "room-kids1-wD",
+   "wall": "r4:D"
+  },
+  {
+   "src": "assets/portfolio/gost-proekt2/room-kids2-wD.jpg",
+   "alt": "Квартира с эркерами, 13 помещений — детская, визуализация",
+   "w": 1200,
+   "h": 800,
+   "state": "rejected",
+   "name": "room-kids2-wD",
+   "wall": "r9:D"
+  },
+  {
+   "src": "assets/portfolio/gost-proekt2/room-corridor-wA.jpg",
+   "alt": "Квартира с эркерами, 13 помещений — холл, визуализация",
+   "w": 1200,
+   "h": 800,
+   "state": "rejected",
+   "name": "room-corridor-wA",
+   "wall": "r5:A"
   }
  ],
  "hero": {

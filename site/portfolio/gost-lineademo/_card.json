@@ -9,11 +9,11 @@
  "area": "56,37 м²",
  "declared": "",
  "rooms": 5,
- "total": 106,
- "blockers": 1,
- "issues": 83,
+ "total": 119,
+ "blockers": 0,
+ "issues": 107,
  "openQ": {
-  "n": 11,
+  "n": 12,
   "no": "06"
  },
  "preReview": "",
@@ -28,7 +28,7 @@
   "webp": "assets/portfolio/gost-lineademo-hero.webp"
  },
  "visuals": 0,
- "visualsPrelim": 0,
+ "visualsPrelim": 8,
  "studioSize": "6 МБ",
  "pdfSize": "9 МБ"
 }

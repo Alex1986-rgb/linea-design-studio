@@ -9,11 +9,11 @@
  "area": "102,67 м²",
  "declared": "",
  "rooms": 13,
- "total": 147,
- "blockers": 1,
- "issues": 152,
+ "total": 157,
+ "blockers": 0,
+ "issues": 171,
  "openQ": {
-  "n": 27,
+  "n": 28,
   "no": "07"
  },
  "preReview": "",
@@ -28,7 +28,7 @@
   "webp": "assets/portfolio/gost-proekt2-hero.webp"
  },
  "visuals": 0,
- "visualsPrelim": 0,
+ "visualsPrelim": 13,
  "studioSize": "9 МБ",
  "pdfSize": "13 МБ"
 }

@@ -9,12 +9,12 @@
  "area": "78,95 м²",
  "declared": "",
  "rooms": 8,
- "total": 122,
- "blockers": 3,
- "issues": 91,
+ "total": 131,
+ "blockers": 0,
+ "issues": 126,
  "openQ": {
   "n": 27,
-  "no": "06"
+  "no": "07"
  },
  "preReview": "",
  "hero": {
@@ -28,7 +28,7 @@
   "webp": "assets/portfolio/gost-kv3k-hero.webp"
  },
  "visuals": 0,
- "visualsPrelim": 0,
+ "visualsPrelim": 10,
  "studioSize": "6 МБ",
  "pdfSize": "11 МБ"
 }

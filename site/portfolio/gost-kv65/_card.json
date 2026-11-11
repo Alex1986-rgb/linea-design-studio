@@ -9,11 +9,11 @@
  "area": "65,24 м²",
  "declared": "",
  "rooms": 9,
- "total": 103,
- "blockers": 3,
- "issues": 201,
+ "total": 113,
+ "blockers": 1,
+ "issues": 226,
  "openQ": {
-  "n": 11,
+  "n": 13,
   "no": "06"
  },
  "preReview": "",
@@ -28,7 +28,7 @@
   "webp": "assets/portfolio/gost-kv65-hero.webp"
  },
  "visuals": 0,
- "visualsPrelim": 0,
+ "visualsPrelim": 15,
  "studioSize": "5 МБ",
  "pdfSize": "8 МБ"
 }
