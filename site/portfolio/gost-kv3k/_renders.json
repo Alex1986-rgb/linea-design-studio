@@ -1,8 +1,8 @@
 {
  "checked": true,
  "signed": 0,
- "prelim": 10,
- "rejected": 25,
+ "prelim": 13,
+ "rejected": 22,
  "accepted": 0,
  "ribbon": [
   {
@@ -90,6 +90,20 @@
    }
   },
   {
+   "src": "assets/portfolio/gost-kv3k/room-wardrobe-wide.jpg",
+   "alt": "Трёхкомнатная квартира — гардеробная, визуализация",
+   "w": 1200,
+   "h": 800,
+   "state": "prelim",
+   "name": "room-wardrobe-wide",
+   "wall": "r3:room",
+   "clay": {
+    "src": "assets/portfolio/gost-kv3k/clay-room-wardrobe-wide.jpg",
+    "w": 1200,
+    "h": 800
+   }
+  },
+  {
    "src": "assets/portfolio/gost-kv3k/room-corridor-wA.jpg",
    "alt": "Трёхкомнатная квартира — холл, визуализация",
    "w": 1200,
@@ -122,15 +136,6 @@
    "wall": ""
   },
   {
-   "src": "assets/portfolio/gost-kv3k/room-wardrobe-wide.jpg",
-   "alt": "Трёхкомнатная квартира — гардеробная, визуализация",
-   "w": 1200,
-   "h": 800,
-   "state": "rejected",
-   "name": "room-wardrobe-wide",
-   "wall": "r3:room"
-  },
-  {
    "src": "assets/portfolio/gost-kv3k/room-wc2.jpg",
    "alt": "Трёхкомнатная квартира — санузел, визуализация",
    "w": 1200,
@@ -138,6 +143,20 @@
    "state": "rejected",
    "name": "room-wc2",
    "wall": ""
+  },
+  {
+   "src": "assets/portfolio/gost-kv3k/room-bedroom2-wD.jpg",
+   "alt": "Трёхкомнатная квартира — спальня, визуализация",
+   "w": 1200,
+   "h": 800,
+   "state": "prelim",
+   "name": "room-bedroom2-wD",
+   "wall": "r4:D",
+   "clay": {
+    "src": "assets/portfolio/gost-kv3k/clay-room-bedroom2-wD.jpg",
+    "w": 1200,
+    "h": 800
+   }
   },
   {
    "src": "assets/portfolio/gost-kv3k/room-bath1-wC.jpg",
@@ -177,6 +196,20 @@
    "wall": "r7:C",
    "clay": {
     "src": "assets/portfolio/gost-kv3k/clay-room-bath2-wC.jpg",
+    "w": 1200,
+    "h": 800
+   }
+  },
+  {
+   "src": "assets/portfolio/gost-kv3k/room-corridor-wC.jpg",
+   "alt": "Трёхкомнатная квартира — холл, визуализация",
+   "w": 1200,
+   "h": 800,
+   "state": "prelim",
+   "name": "room-corridor-wC",
+   "wall": "r8:C",
+   "clay": {
+    "src": "assets/portfolio/gost-kv3k/clay-room-corridor-wC.jpg",
     "w": 1200,
     "h": 800
    }
@@ -254,15 +287,6 @@
    "wall": "r4:C"
   },
   {
-   "src": "assets/portfolio/gost-kv3k/room-bedroom2-wD.jpg",
-   "alt": "Трёхкомнатная квартира — спальня, визуализация",
-   "w": 1200,
-   "h": 800,
-   "state": "rejected",
-   "name": "room-bedroom2-wD",
-   "wall": "r4:D"
-  },
-  {
    "src": "assets/portfolio/gost-kv3k/room-hall.jpg",
    "alt": "Трёхкомнатная квартира — прихожая, визуализация",
    "w": 1200,
@@ -270,15 +294,6 @@
    "state": "rejected",
    "name": "room-hall",
    "wall": ""
-  },
-  {
-   "src": "assets/portfolio/gost-kv3k/room-corridor-wC.jpg",
-   "alt": "Трёхкомнатная квартира — холл, визуализация",
-   "w": 1200,
-   "h": 800,
-   "state": "rejected",
-   "name": "room-corridor-wC",
-   "wall": "r8:C"
   }
  ],
  "hero": {

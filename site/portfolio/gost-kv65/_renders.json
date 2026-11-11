@@ -1,8 +1,8 @@
 {
  "checked": true,
  "signed": 0,
- "prelim": 15,
- "rejected": 9,
+ "prelim": 16,
+ "rejected": 8,
  "accepted": 0,
  "ribbon": [
   {
@@ -164,6 +164,20 @@
    }
   },
   {
+   "src": "assets/portfolio/gost-kv65/room-kids-wD.jpg",
+   "alt": "Квартира 65 м² после реконструкции — детская, визуализация",
+   "w": 1200,
+   "h": 800,
+   "state": "prelim",
+   "name": "room-kids-wD",
+   "wall": "r9:D",
+   "clay": {
+    "src": "assets/portfolio/gost-kv65/clay-room-kids-wD.jpg",
+    "w": 1200,
+    "h": 800
+   }
+  },
+  {
    "src": "assets/portfolio/gost-kv65/room-bath-wD.jpg",
    "alt": "Квартира 65 м² после реконструкции — ванная, визуализация",
    "w": 1200,
@@ -263,15 +277,6 @@
    "state": "rejected",
    "name": "room-kids",
    "wall": ""
-  },
-  {
-   "src": "assets/portfolio/gost-kv65/room-kids-wD.jpg",
-   "alt": "Квартира 65 м² после реконструкции — детская, визуализация",
-   "w": 1200,
-   "h": 800,
-   "state": "rejected",
-   "name": "room-kids-wD",
-   "wall": "r9:D"
   },
   {
    "src": "assets/portfolio/gost-kv65/room-bath.jpg",

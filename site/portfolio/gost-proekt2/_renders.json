@@ -1,8 +1,8 @@
 {
  "checked": true,
  "signed": 0,
- "prelim": 13,
- "rejected": 9,
+ "prelim": 15,
+ "rejected": 7,
  "accepted": 0,
  "ribbon": [
   {
@@ -20,15 +20,29 @@
    }
   },
   {
-   "src": "assets/portfolio/gost-proekt2/room-kitchen-wB.jpg",
+   "src": "assets/portfolio/gost-proekt2/room-living2-wB.jpg",
+   "alt": "Квартира с эркерами, 13 помещений — гостиная, визуализация",
+   "w": 1200,
+   "h": 800,
+   "state": "prelim",
+   "name": "room-living2-wB",
+   "wall": "r11:B",
+   "clay": {
+    "src": "assets/portfolio/gost-proekt2/clay-room-living2-wB.jpg",
+    "w": 1200,
+    "h": 800
+   }
+  },
+  {
+   "src": "assets/portfolio/gost-proekt2/room-kitchen-wA.jpg",
    "alt": "Квартира с эркерами, 13 помещений — кухня-столовая, визуализация",
    "w": 1200,
    "h": 800,
    "state": "prelim",
-   "name": "room-kitchen-wB",
-   "wall": "r6:B",
+   "name": "room-kitchen-wA",
+   "wall": "r6:A",
    "clay": {
-    "src": "assets/portfolio/gost-proekt2/clay-room-kitchen-wB.jpg",
+    "src": "assets/portfolio/gost-proekt2/clay-room-kitchen-wA.jpg",
     "w": 1200,
     "h": 800
    }
@@ -146,15 +160,6 @@
    }
   },
   {
-   "src": "assets/portfolio/gost-proekt2/room-living2-wA.jpg",
-   "alt": "Квартира с эркерами, 13 помещений — гостиная, визуализация",
-   "w": 1200,
-   "h": 800,
-   "state": "rejected",
-   "name": "room-living2-wA",
-   "wall": "r11:A"
-  },
-  {
    "src": "assets/portfolio/gost-proekt2/room-bath-wB.jpg",
    "alt": "Квартира с эркерами, 13 помещений — ванная, визуализация",
    "w": 1200,
@@ -201,6 +206,20 @@
    }
   },
   {
+   "src": "assets/portfolio/gost-proekt2/room-kitchen-wB.jpg",
+   "alt": "Квартира с эркерами, 13 помещений — кухня-столовая, визуализация",
+   "w": 1200,
+   "h": 800,
+   "state": "prelim",
+   "name": "room-kitchen-wB",
+   "wall": "r6:B",
+   "clay": {
+    "src": "assets/portfolio/gost-proekt2/clay-room-kitchen-wB.jpg",
+    "w": 1200,
+    "h": 800
+   }
+  },
+  {
    "src": "assets/portfolio/gost-proekt2/room-kitchen-wD.jpg",
    "alt": "Квартира с эркерами, 13 помещений — кухня-столовая, визуализация",
    "w": 1200,
@@ -224,22 +243,13 @@
    "wall": "r1:D"
   },
   {
-   "src": "assets/portfolio/gost-proekt2/room-living2-wB.jpg",
+   "src": "assets/portfolio/gost-proekt2/room-living2-wA.jpg",
    "alt": "Квартира с эркерами, 13 помещений — гостиная, визуализация",
    "w": 1200,
    "h": 800,
    "state": "rejected",
-   "name": "room-living2-wB",
-   "wall": "r11:B"
-  },
-  {
-   "src": "assets/portfolio/gost-proekt2/room-kitchen-wA.jpg",
-   "alt": "Квартира с эркерами, 13 помещений — кухня-столовая, визуализация",
-   "w": 1200,
-   "h": 800,
-   "state": "rejected",
-   "name": "room-kitchen-wA",
-   "wall": "r6:A"
+   "name": "room-living2-wA",
+   "wall": "r11:A"
   },
   {
    "src": "assets/portfolio/gost-proekt2/room-kids1-wD.jpg",
