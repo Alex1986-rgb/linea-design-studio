@@ -1,9 +1,9 @@
 {
  "checked": true,
- "signed": 14,
+ "signed": 15,
  "prelim": 0,
- "rejected": 21,
- "accepted": 14,
+ "rejected": 10,
+ "accepted": 15,
  "ribbon": [
   {
    "src": "assets/portfolio/gost-kv3k/room-living-wC.jpg",
@@ -20,15 +20,15 @@
    }
   },
   {
-   "src": "assets/portfolio/gost-kv3k/room-bedroom1-wB.jpg",
+   "src": "assets/portfolio/gost-kv3k/room-bedroom1-wA.jpg",
    "alt": "Трёхкомнатная квартира — спальня, визуализация",
    "w": 1200,
    "h": 800,
    "state": "signed",
-   "name": "room-bedroom1-wB",
-   "wall": "r1:B",
+   "name": "room-bedroom1-wA",
+   "wall": "r1:A",
    "clay": {
-    "src": "assets/portfolio/gost-kv3k/clay-room-bedroom1-wB.jpg",
+    "src": "assets/portfolio/gost-kv3k/clay-room-bedroom1-wA.jpg",
     "w": 1200,
     "h": 800
    }
@@ -118,31 +118,13 @@
    }
   },
   {
-   "src": "assets/portfolio/gost-kv3k/room-kitchen.jpg",
-   "alt": "Трёхкомнатная квартира — кухня-столовая, визуализация",
+   "src": "assets/portfolio/gost-kv3k/3d-top.jpg",
+   "alt": "Трёхкомнатная квартира — вид сверху 3D",
    "w": 1200,
    "h": 800,
    "state": "rejected",
-   "name": "room-kitchen",
-   "wall": ""
-  },
-  {
-   "src": "assets/portfolio/gost-kv3k/room-bath.jpg",
-   "alt": "Трёхкомнатная квартира — ванная, визуализация",
-   "w": 1200,
-   "h": 800,
-   "state": "rejected",
-   "name": "room-bath",
-   "wall": ""
-  },
-  {
-   "src": "assets/portfolio/gost-kv3k/room-wc2.jpg",
-   "alt": "Трёхкомнатная квартира — санузел, визуализация",
-   "w": 1200,
-   "h": 800,
-   "state": "rejected",
-   "name": "room-wc2",
-   "wall": ""
+   "name": "3d-top",
+   "wall": "top"
   },
   {
    "src": "assets/portfolio/gost-kv3k/room-living-wD.jpg",
@@ -154,6 +136,20 @@
    "wall": "r6:D",
    "clay": {
     "src": "assets/portfolio/gost-kv3k/clay-room-living-wD.jpg",
+    "w": 1200,
+    "h": 800
+   }
+  },
+  {
+   "src": "assets/portfolio/gost-kv3k/room-bedroom1-wB.jpg",
+   "alt": "Трёхкомнатная квартира — спальня, визуализация",
+   "w": 1200,
+   "h": 800,
+   "state": "signed",
+   "name": "room-bedroom1-wB",
+   "wall": "r1:B",
+   "clay": {
+    "src": "assets/portfolio/gost-kv3k/clay-room-bedroom1-wB.jpg",
     "w": 1200,
     "h": 800
    }
@@ -229,24 +225,6 @@
    }
   },
   {
-   "src": "assets/portfolio/gost-kv3k/room-living.jpg",
-   "alt": "Трёхкомнатная квартира — гостиная, визуализация",
-   "w": 1200,
-   "h": 800,
-   "state": "rejected",
-   "name": "room-living",
-   "wall": ""
-  },
-  {
-   "src": "assets/portfolio/gost-kv3k/room-living-tv.jpg",
-   "alt": "Трёхкомнатная квартира — гостиная, визуализация",
-   "w": 1200,
-   "h": 800,
-   "state": "rejected",
-   "name": "room-living-tv",
-   "wall": ""
-  },
-  {
    "src": "assets/portfolio/gost-kv3k/room-living-wB.jpg",
    "alt": "Трёхкомнатная квартира — гостиная, визуализация",
    "w": 1200,
@@ -256,33 +234,6 @@
    "wall": "r6:B"
   },
   {
-   "src": "assets/portfolio/gost-kv3k/room-bedroom1.jpg",
-   "alt": "Трёхкомнатная квартира — спальня, визуализация",
-   "w": 1200,
-   "h": 800,
-   "state": "rejected",
-   "name": "room-bedroom1",
-   "wall": ""
-  },
-  {
-   "src": "assets/portfolio/gost-kv3k/room-bedroom2.jpg",
-   "alt": "Трёхкомнатная квартира — спальня, визуализация",
-   "w": 1200,
-   "h": 800,
-   "state": "rejected",
-   "name": "room-bedroom2",
-   "wall": ""
-  },
-  {
-   "src": "assets/portfolio/gost-kv3k/room-bedroom1-wA.jpg",
-   "alt": "Трёхкомнатная квартира — спальня, визуализация",
-   "w": 1200,
-   "h": 800,
-   "state": "rejected",
-   "name": "room-bedroom1-wA",
-   "wall": "r1:A"
-  },
-  {
    "src": "assets/portfolio/gost-kv3k/room-bedroom2-wC.jpg",
    "alt": "Трёхкомнатная квартира — спальня, визуализация",
    "w": 1200,
@@ -290,15 +241,6 @@
    "state": "rejected",
    "name": "room-bedroom2-wC",
    "wall": "r4:C"
-  },
-  {
-   "src": "assets/portfolio/gost-kv3k/room-hall.jpg",
-   "alt": "Трёхкомнатная квартира — прихожая, визуализация",
-   "w": 1200,
-   "h": 800,
-   "state": "rejected",
-   "name": "room-hall",
-   "wall": ""
   }
  ],
  "hero": {

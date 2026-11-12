@@ -1,9 +1,9 @@
 {
  "checked": true,
- "signed": 15,
+ "signed": 17,
  "prelim": 0,
- "rejected": 7,
- "accepted": 15,
+ "rejected": 5,
+ "accepted": 17,
  "ribbon": [
   {
    "src": "assets/portfolio/gost-proekt2/room-living1-wA.jpg",
@@ -160,6 +160,20 @@
    }
   },
   {
+   "src": "assets/portfolio/gost-proekt2/room-storage-wide.jpg",
+   "alt": "Квартира с эркерами, 13 помещений — кладовая, визуализация",
+   "w": 1200,
+   "h": 800,
+   "state": "signed",
+   "name": "room-storage-wide",
+   "wall": "r3:room",
+   "clay": {
+    "src": "assets/portfolio/gost-proekt2/clay-room-storage-wide.jpg",
+    "w": 1200,
+    "h": 800
+   }
+  },
+  {
    "src": "assets/portfolio/gost-proekt2/room-bath-wB.jpg",
    "alt": "Квартира с эркерами, 13 помещений — ванная, визуализация",
    "w": 1200,
@@ -167,15 +181,6 @@
    "state": "rejected",
    "name": "room-bath-wB",
    "wall": "r2:B"
-  },
-  {
-   "src": "assets/portfolio/gost-proekt2/room-storage-wide.jpg",
-   "alt": "Квартира с эркерами, 13 помещений — кладовая, визуализация",
-   "w": 1200,
-   "h": 800,
-   "state": "rejected",
-   "name": "room-storage-wide",
-   "wall": "r3:room"
   },
   {
    "src": "assets/portfolio/gost-proekt2/room-living1-wB.jpg",
@@ -201,6 +206,20 @@
    "wall": "r1:C",
    "clay": {
     "src": "assets/portfolio/gost-proekt2/clay-room-living1-wC.jpg",
+    "w": 1200,
+    "h": 800
+   }
+  },
+  {
+   "src": "assets/portfolio/gost-proekt2/room-kitchen-wB.jpg",
+   "alt": "Квартира с эркерами, 13 помещений — кухня-столовая, визуализация",
+   "w": 1200,
+   "h": 800,
+   "state": "signed",
+   "name": "room-kitchen-wB",
+   "wall": "r6:B",
+   "clay": {
+    "src": "assets/portfolio/gost-proekt2/clay-room-kitchen-wB.jpg",
     "w": 1200,
     "h": 800
    }
@@ -250,15 +269,6 @@
    "state": "rejected",
    "name": "room-living2-wA",
    "wall": "r11:A"
-  },
-  {
-   "src": "assets/portfolio/gost-proekt2/room-kitchen-wB.jpg",
-   "alt": "Квартира с эркерами, 13 помещений — кухня-столовая, визуализация",
-   "w": 1200,
-   "h": 800,
-   "state": "rejected",
-   "name": "room-kitchen-wB",
-   "wall": "r6:B"
   },
   {
    "src": "assets/portfolio/gost-proekt2/room-kids2-wD.jpg",

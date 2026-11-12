@@ -1,9 +1,9 @@
 {
  "checked": true,
- "signed": 17,
+ "signed": 19,
  "prelim": 0,
- "rejected": 9,
- "accepted": 17,
+ "rejected": 7,
+ "accepted": 19,
  "ribbon": [
   {
    "src": "assets/portfolio/gost-lineademo/room-living-wA.jpg",
@@ -83,6 +83,20 @@
    "state": "rejected",
    "name": "3d-top",
    "wall": "top"
+  },
+  {
+   "src": "assets/portfolio/gost-lineademo/room-living-wB.jpg",
+   "alt": "Квартира 56 м² · джапанди — гостиная, визуализация",
+   "w": 1200,
+   "h": 800,
+   "state": "signed",
+   "name": "room-living-wB",
+   "wall": "r1:B",
+   "clay": {
+    "src": "assets/portfolio/gost-lineademo/clay-room-living-wB.jpg",
+    "w": 1200,
+    "h": 800
+   }
   },
   {
    "src": "assets/portfolio/gost-lineademo/room-living-wC.jpg",
@@ -211,6 +225,20 @@
    }
   },
   {
+   "src": "assets/portfolio/gost-lineademo/room-bath-wD.jpg",
+   "alt": "Квартира 56 м² · джапанди — ванная, визуализация",
+   "w": 1200,
+   "h": 800,
+   "state": "signed",
+   "name": "room-bath-wD",
+   "wall": "r4:D",
+   "clay": {
+    "src": "assets/portfolio/gost-lineademo/clay-room-bath-wD.jpg",
+    "w": 1200,
+    "h": 800
+   }
+  },
+  {
    "src": "assets/portfolio/gost-lineademo/room-hall-wB.jpg",
    "alt": "Квартира 56 м² · джапанди — прихожая, визуализация",
    "w": 1200,
@@ -253,15 +281,6 @@
    }
   },
   {
-   "src": "assets/portfolio/gost-lineademo/room-living-wB.jpg",
-   "alt": "Квартира 56 м² · джапанди — гостиная, визуализация",
-   "w": 1200,
-   "h": 800,
-   "state": "rejected",
-   "name": "room-living-wB",
-   "wall": "r1:B"
-  },
-  {
    "src": "assets/portfolio/gost-lineademo/room-living-wD.jpg",
    "alt": "Квартира 56 м² · джапанди — гостиная, визуализация",
    "w": 1200,
@@ -269,15 +288,6 @@
    "state": "rejected",
    "name": "room-living-wD",
    "wall": "r1:D"
-  },
-  {
-   "src": "assets/portfolio/gost-lineademo/room-bath-wD.jpg",
-   "alt": "Квартира 56 м² · джапанди — ванная, визуализация",
-   "w": 1200,
-   "h": 800,
-   "state": "rejected",
-   "name": "room-bath-wD",
-   "wall": "r4:D"
   }
  ],
  "hero": {

@@ -10,10 +10,10 @@
  "declared": "",
  "rooms": 9,
  "total": 113,
- "blockers": 1,
- "issues": 226,
+ "blockers": 0,
+ "issues": 229,
  "openQ": {
-  "n": 13,
+  "n": 12,
   "no": "06"
  },
  "preReview": "",
@@ -27,7 +27,7 @@
   "name": "cover-hero",
   "webp": "assets/portfolio/gost-kv65-hero.webp"
  },
- "visuals": 14,
+ "visuals": 15,
  "visualsPrelim": 0,
  "studioSize": "5 МБ",
  "pdfSize": "8 МБ"
