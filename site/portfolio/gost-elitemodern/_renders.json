@@ -1,9 +1,9 @@
 {
  "checked": true,
- "signed": 7,
+ "signed": 6,
  "prelim": 0,
- "rejected": 5,
- "accepted": 7,
+ "rejected": 6,
+ "accepted": 6,
  "ribbon": [
   {
    "src": "assets/portfolio/gost-elitemodern/room-living-m1.jpg",
@@ -29,20 +29,6 @@
    "wall": "r5:mag",
    "clay": {
     "src": "assets/portfolio/gost-elitemodern/clay-room-kitchen-m2.jpg",
-    "w": 1200,
-    "h": 800
-   }
-  },
-  {
-   "src": "assets/portfolio/gost-elitemodern/room-study-m1.jpg",
-   "alt": "Квартира 68 м² · элитный модерн — кабинет, визуализация",
-   "w": 1200,
-   "h": 800,
-   "state": "signed",
-   "name": "room-study-m1",
-   "wall": "r1:mag",
-   "clay": {
-    "src": "assets/portfolio/gost-elitemodern/clay-room-study-m1.jpg",
     "w": 1200,
     "h": 800
    }
@@ -92,6 +78,15 @@
    "state": "rejected",
    "name": "room-bedroom-m1",
    "wall": "r7:mag"
+  },
+  {
+   "src": "assets/portfolio/gost-elitemodern/room-study-m1.jpg",
+   "alt": "Квартира 68 м² · элитный модерн — кабинет, визуализация",
+   "w": 1200,
+   "h": 800,
+   "state": "rejected",
+   "name": "room-study-m1",
+   "wall": "r1:mag"
   },
   {
    "src": "assets/portfolio/gost-elitemodern/room-hall-s1.jpg",

@@ -1,9 +1,9 @@
 {
  "checked": true,
- "signed": 15,
+ "signed": 10,
  "prelim": 0,
- "rejected": 11,
- "accepted": 15,
+ "rejected": 16,
+ "accepted": 10,
  "ribbon": [
   {
    "src": "assets/portfolio/gost-lineademo/room-living-wB.jpg",
@@ -85,62 +85,6 @@
    "wall": "top"
   },
   {
-   "src": "assets/portfolio/gost-lineademo/room-living-wC.jpg",
-   "alt": "Квартира 56 м² · джапанди — гостиная, визуализация",
-   "w": 1200,
-   "h": 800,
-   "state": "signed",
-   "name": "room-living-wC",
-   "wall": "r1:C",
-   "clay": {
-    "src": "assets/portfolio/gost-lineademo/clay-room-living-wC.jpg",
-    "w": 1200,
-    "h": 800
-   }
-  },
-  {
-   "src": "assets/portfolio/gost-lineademo/room-bedroom-wC.jpg",
-   "alt": "Квартира 56 м² · джапанди — спальня, визуализация",
-   "w": 1200,
-   "h": 800,
-   "state": "signed",
-   "name": "room-bedroom-wC",
-   "wall": "r2:C",
-   "clay": {
-    "src": "assets/portfolio/gost-lineademo/clay-room-bedroom-wC.jpg",
-    "w": 1200,
-    "h": 800
-   }
-  },
-  {
-   "src": "assets/portfolio/gost-lineademo/room-bedroom-wD.jpg",
-   "alt": "Квартира 56 м² · джапанди — спальня, визуализация",
-   "w": 1200,
-   "h": 800,
-   "state": "signed",
-   "name": "room-bedroom-wD",
-   "wall": "r2:D",
-   "clay": {
-    "src": "assets/portfolio/gost-lineademo/clay-room-bedroom-wD.jpg",
-    "w": 1200,
-    "h": 800
-   }
-  },
-  {
-   "src": "assets/portfolio/gost-lineademo/room-kids-wB.jpg",
-   "alt": "Квартира 56 м² · джапанди — детская, визуализация",
-   "w": 1200,
-   "h": 800,
-   "state": "signed",
-   "name": "room-kids-wB",
-   "wall": "r3:B",
-   "clay": {
-    "src": "assets/portfolio/gost-lineademo/clay-room-kids-wB.jpg",
-    "w": 1200,
-    "h": 800
-   }
-  },
-  {
    "src": "assets/portfolio/gost-lineademo/room-kids-wC.jpg",
    "alt": "Квартира 56 м² · джапанди — детская, визуализация",
    "w": 1200,
@@ -197,20 +141,6 @@
    }
   },
   {
-   "src": "assets/portfolio/gost-lineademo/room-hall-wC.jpg",
-   "alt": "Квартира 56 м² · джапанди — прихожая, визуализация",
-   "w": 1200,
-   "h": 800,
-   "state": "signed",
-   "name": "room-hall-wC",
-   "wall": "r5:C",
-   "clay": {
-    "src": "assets/portfolio/gost-lineademo/clay-room-hall-wC.jpg",
-    "w": 1200,
-    "h": 800
-   }
-  },
-  {
    "src": "assets/portfolio/gost-lineademo/room-hall-wD.jpg",
    "alt": "Квартира 56 м² · джапанди — прихожая, визуализация",
    "w": 1200,
@@ -234,6 +164,15 @@
    "wall": "r1:A"
   },
   {
+   "src": "assets/portfolio/gost-lineademo/room-living-wC.jpg",
+   "alt": "Квартира 56 м² · джапанди — гостиная, визуализация",
+   "w": 1200,
+   "h": 800,
+   "state": "rejected",
+   "name": "room-living-wC",
+   "wall": "r1:C"
+  },
+  {
    "src": "assets/portfolio/gost-lineademo/room-living-wD.jpg",
    "alt": "Квартира 56 м² · джапанди — гостиная, визуализация",
    "w": 1200,
@@ -252,6 +191,33 @@
    "wall": "r2:A"
   },
   {
+   "src": "assets/portfolio/gost-lineademo/room-bedroom-wC.jpg",
+   "alt": "Квартира 56 м² · джапанди — спальня, визуализация",
+   "w": 1200,
+   "h": 800,
+   "state": "rejected",
+   "name": "room-bedroom-wC",
+   "wall": "r2:C"
+  },
+  {
+   "src": "assets/portfolio/gost-lineademo/room-bedroom-wD.jpg",
+   "alt": "Квартира 56 м² · джапанди — спальня, визуализация",
+   "w": 1200,
+   "h": 800,
+   "state": "rejected",
+   "name": "room-bedroom-wD",
+   "wall": "r2:D"
+  },
+  {
+   "src": "assets/portfolio/gost-lineademo/room-kids-wB.jpg",
+   "alt": "Квартира 56 м² · джапанди — детская, визуализация",
+   "w": 1200,
+   "h": 800,
+   "state": "rejected",
+   "name": "room-kids-wB",
+   "wall": "r3:B"
+  },
+  {
    "src": "assets/portfolio/gost-lineademo/room-kids-wD.jpg",
    "alt": "Квартира 56 м² · джапанди — детская, визуализация",
    "w": 1200,
@@ -268,6 +234,15 @@
    "state": "rejected",
    "name": "room-hall-wB",
    "wall": "r5:B"
+  },
+  {
+   "src": "assets/portfolio/gost-lineademo/room-hall-wC.jpg",
+   "alt": "Квартира 56 м² · джапанди — прихожая, визуализация",
+   "w": 1200,
+   "h": 800,
+   "state": "rejected",
+   "name": "room-hall-wC",
+   "wall": "r5:C"
   }
  ],
  "hero": {

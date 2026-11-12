@@ -33,7 +33,7 @@ const w = (rel, html) => {
 const ALBUMS = [
   {
     slug: 'gost-proekt2',
-    name: 'Квартира с эркерами, 13 помещений',
+    name: 'Квартира {A} м² · с эркерами, 13 помещений',
     short: 'квартира с эркерами',
     lead: 'Четырёхкомнатная с непрямоугольным контуром и двумя эркерными балконами: зал, кухня, две детские, '
       + 'две гардеробные, кладовая, ванная, санузел, прихожая и коридор.',
@@ -49,7 +49,7 @@ const ALBUMS = [
   },
   {
     slug: 'gost-kv3k',
-    name: 'Трёхкомнатная квартира',
+    name: 'Квартира {A} м² · трёхкомнатная',
     short: 'трёхкомнатная квартира',
     lead: 'Трёхкомнатная квартира: две спальни, кухня-гостиная, ванная, санузел, гардеробная, прихожая и коридор. '
       + 'Г-образный контур, помещения собраны из нескольких частей.',
@@ -71,7 +71,7 @@ ALBUMS.push(
   {
     slug: 'gost-kv65',
     explain: false,
-    name: 'Квартира {A} м² после реконструкции',
+    name: 'Квартира {A} м² · после реконструкции',
     short: 'квартира {A} м²',
     lead: 'Собрана по плану заказчика: две спальни, кухня-гостиная, прихожая, коридор, ванная, санузел, гардеробная '
       + 'и кладовая. К альбому — выпуск для заказчика по образцу студийных проектов: визуализации стоят листами перед '
@@ -106,7 +106,7 @@ ALBUMS.push(
   {
     slug: 'gost-modern4k',
     explain: false,
-    name: 'Квартира с кабинетом · современный модерн',
+    name: 'Квартира {A} м² · современный модерн, с кабинетом',
     short: 'квартира с кабинетом',
     lead: 'Новый проект по плану заказчика: перепланировка (предложение до обмера), мебель расставлена заново, стиль — '
       + 'модерн 2026: шалфей, бархат павлиньего цвета, горчица, травертин, морёный дуб и латунь.',
@@ -189,7 +189,7 @@ ALBUMS.push(
     explain: false,
     type: 'Квартира',
     style: 'Элитный модерн',
-    name: 'Квартира 68 м² · элитный модерн',
+    name: 'Квартира {A} м² · элитный модерн',
     short: 'квартира в элитном модерне',
     lead: 'Новый проект: семь помещений, элитный модерн — орех, латунь, мрамор с прожилкой, букле; '
       + 'у каждой комнаты свой тёмный акцент. Авторский светлый титул с виньетками и аркой, вид сверху и студийный порядок листов.',
@@ -468,6 +468,7 @@ const CSS = `<style>
 .g-ribbon a{scroll-snap-align:start;display:block}
 .g-ribbon img{display:block;width:100%;aspect-ratio:3/2;height:auto;object-fit:cover;border:1px solid var(--line);border-radius:3px}
 .g-ribbon span{display:block;color:var(--dim);font-size:12.5px;margin-top:6px}
+.g-ribbon span i{font-style:normal;white-space:nowrap}.g-ribbon span i.st-signed{color:var(--gold2)}
 .g-note{color:var(--mut);font-size:14px;line-height:1.6;max-width:760px;margin:18px 0 0}
 .g-steps{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:18px;margin:0 0 26px;padding:0;list-style:none;counter-reset:st}
 .g-steps li{border:1px solid var(--line);border-radius:4px;padding:18px 20px;background:var(--panel);counter-increment:st}
@@ -521,7 +522,7 @@ const CSS = `<style>
 .cmp-cap b{color:var(--ink);font-weight:500}.cmp-cap a{color:inherit}
 .cmp-cta{display:inline-block;padding:14px 32px;font-size:12px;font-weight:500;letter-spacing:.1em;text-transform:uppercase;color:var(--ink);text-decoration:none;border:1px solid #F2EEE699;transition:.3s;white-space:nowrap}
 .cmp-cta:hover{background:var(--gold);border-color:var(--gold);color:#14130f}
-@media (max-width:760px){.cmp-head{padding:22px 16px 16px}.cmp-long{display:none}.cmp-row{gap:8px}.cmp-row>*{flex:1 1 100%}.cmp-seg button{flex:1;height:34px;padding:0 6px;font-size:10px;letter-spacing:.08em}.cmp-floors button{flex:1 1 auto}.cmp-stage{max-height:62vh}.cmp-l{font-size:10px;padding:5px 9px;top:10px}.cmp-l.l{left:10px}.cmp-l.r{right:58px}.cmp-zoom{width:36px;height:36px;top:8px;right:8px}.cmp-hint{font-size:11px;padding:8px 16px}.cmp-foot{padding:16px;flex-direction:column;align-items:stretch;text-align:center}.cmp-cta{text-align:center;padding:12px 20px}.g-ribbon{grid-auto-columns:78%}.stats{gap:22px 30px}.cta-row .btn{white-space:normal;text-align:center}}
+@media (max-width:760px){.cmp-head{padding:22px 16px 16px}.cmp-long{display:none}.cmp-row{gap:8px}.cmp-row>*{flex:1 1 100%}.cmp-seg{flex-wrap:wrap}.cmp-seg button{flex:1 1 auto;min-height:36px;height:auto;padding:6px 8px;font-size:12px;letter-spacing:.04em;margin-bottom:-1px}.cmp-floors button{flex:1 1 auto}.cmp-stage{max-height:62vh}.cmp-l{font-size:12px;letter-spacing:.06em;padding:4px 8px;top:10px}.cmp-l.l{left:10px}.cmp-l.r{right:58px}.cmp-zoom{width:36px;height:36px;top:8px;right:8px}.cmp-hint{font-size:12px;padding:8px 14px}.cmp-foot{padding:16px;flex-direction:column;align-items:stretch;text-align:center}.cmp-cta{text-align:center;padding:12px 20px}.g-ribbon{grid-auto-columns:78%}.stats{gap:22px 30px}.cta-row .btn{white-space:normal;text-align:center}}
 </style>`;
 
 function page({ file, title, desc, h1, crumb, lead, body, u, jsonld, object, ogImage, ogDesc }) {
@@ -609,15 +610,21 @@ function albumPage(a, r, honesty) {
   const card = CARD[a.slug] || {};
   const areaNote = card.declared ? `      <p class="g-note"><b>Про площадь.</b> ${esc(card.declared.replace('{AREA}', a.area))}</p>\n` : '';
 
+  // лента: под кадром — короткая метка, пояснение статусов — один раз над лентой (только те статусы, что есть в ленте)
+  const RIB = { signed: ['подписан', 'кадр сверен с планом по чек-листу (мебель, двери, сантехника, свет) и подписан дизайнером'],
+    prelim: ['ждёт подписи', 'кадр сверен с планом по чек-листу исполнителем, подписи дизайнера пока нет'],
+    illustration: ['иллюстрация', 'сверка кадра с планом ещё не завершена: где кадр и чертёж расходятся, верен чертёж'] };
+  const stKey = f => (RIB[f.state] ? f.state : 'illustration');
+  const ribbonLegend = Object.keys(RIB).filter(k => R.ribbon.some(f => stKey(f) === k))
+    .map(k => `<b>«${RIB[k][0]}»</b> — ${RIB[k][1]}`).join('; ') + '.';
   const ribbon = R.ribbon.length ? `  <section class="blk">
     <div class="wrap">
       <div class="kicker">Визуализации</div>
       <h2>Как это будет выглядеть</h2>
-      <p class="sub">Все 3D-кадры проекта. Подписанные дизайнером сверены с планом по чек-листу; остальные — иллюстрации,
-      сверка с планом ещё не завершена: где кадр и чертёж расходятся, верен чертёж. Под каждым кадром — его статус.
-      В ленте — ${plural(R.ribbon.length, 'кадр', 'кадра', 'кадров')}.</p>
+      <p class="sub">Все 3D-кадры проекта, в ленте — ${plural(R.ribbon.length, 'кадр', 'кадра', 'кадров')}. Под каждым кадром — короткая метка статуса:
+      ${ribbonLegend}</p>
       <div class="g-ribbon">
-      ${R.ribbon.map(f => `<a href="../../${f.src}" target="_blank" rel="noopener"><img src="../../${f.src}" alt="${esc(f.alt)}" width="${f.w}" height="${f.h}" loading="lazy" decoding="async"><span>${esc(f.alt.replace(`${a.name} — `, '').replace(', визуализация', ''))} · ${f.state === 'signed' ? 'подписан дизайнером' : f.state === 'prelim' ? 'ждёт подписи дизайнера' : 'иллюстрация · сверка с планом не завершена'}</span></a>`).join('\n      ')}
+      ${R.ribbon.map(f => `<a href="../../${f.src}" target="_blank" rel="noopener"><img src="../../${f.src}" alt="${esc(f.alt)}" width="${f.w}" height="${f.h}" loading="lazy" decoding="async"><span>${esc(f.alt.replace(`${a.name} — `, '').replace(', визуализация', ''))} · <i class="st-${stKey(f)}">${RIB[stKey(f)][0]}</i></span></a>`).join('\n      ')}
       </div>
     </div>
   </section>\n` : '';
@@ -810,11 +817,10 @@ ${blocks}
   const declN = +((a.name.match(/(\d+) м²/) || [])[1] || 0);
   const what = `Дизайн-проект ${a.house ? 'дома' : 'квартиры'} ${declN || Math.round(areaN)} м²`;
   const sheetsT = `${plural(r.total, 'лист', 'листа', 'листов')} по ГОСТ`;
-  const title = fit([
-    `${what} ${card.inStyle || ''} — ${sheetsT} | LINEA`,
-    `${what} ${card.inStyle || ''} — ${sheetsT}`,
-    `${what} — ${sheetsT} | LINEA`,
-  ], 70, `${a.slug} title`);
+  // один шаблон для всех проектов (аудит 12.11.2026). Раньше варианты подбирались под 70 знаков, и вид расходился:
+  // у семи проектов пропадал хвост «| LINEA», у kv65 («в скандинавском стиле» + «113 листов» = 71 знак) — стиль.
+  // Обрезка в выдаче придётся на «| LINEA», смысловая часть (площадь, стиль, листы) укладывается в 71 знак.
+  const title = fit([`${what} ${card.inStyle || ''} — ${sheetsT} | LINEA`], 84, `${a.slug} title`);
   // description: законченная фраза ≤ 158 знаков. Если площадь в названии заявленная — в описании прямо «по экспликации».
   const areaT = declN && Math.abs(declN - areaN) > 1.5 ? `площадь по экспликации ${a.area}` : `общая площадь ${a.area}`;
   const one = R.signed % 10 === 1 && R.signed % 100 !== 11;
@@ -1005,6 +1011,9 @@ for (const { a } of releases) {
   // площадь в названии — общая по экспликации, округлённо (заявленная заказчиком — один раз, в пояснении «Про площадь»)
   const A = String(Math.round(+a.area.replace(/[^\d,]/g, '').replace(',', '.')));
   a.name = a.name.replace('{A}', A); a.short = a.short.replace('{A}', A);
+  // единый вид названия (аудит 12.11.2026): «Квартира NN м² · <стиль или особенность>», площадь — только из выпуска
+  if (!a.house && !/^Квартира \d+ м² · \S/.test(a.name)) throw new Error(`${a.slug}: название «${a.name}» не по шаблону «Квартира {A} м² · <стиль/особенность>»`);
+  if (!a.house && !(CARD[a.slug] || {}).inStyle) throw new Error(`${a.slug}: в CARD нет inStyle — title страницы останется без стиля`);
   a.openQ = openQuestions(a.slug, r);
   a.preReview = preReview(a.slug);
   const nm = a.name.match(/(\d+) помещени/);   // число в названии альбома не пишем мимо титула

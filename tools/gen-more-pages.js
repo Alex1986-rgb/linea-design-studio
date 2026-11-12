@@ -128,15 +128,17 @@ ${SHELL.footer(u, sec || null)}
 /* ---------------------------------------------------------- портфолио */
 // карточка проекта нового формата: кадр, тип и стиль, площадь по экспликации, листов из sheets.json
 const firstSentence = t => (t.match(/^.+?[.!?](\s|$)/) || [t])[0].trim();
+// статус кадров — одна и та же строка в одном месте карточки (под цифрами) у каждого проекта, где есть подписанные кадры
+const visLine = c => c.visuals ? `\n        <span class="tile-status">${c.visuals} ${word(c.visuals, 'кадр сверен с планом и подписан', 'кадра сверены с планом и подписаны', 'кадров сверены с планом и подписаны')} дизайнером</span>` : '';
 const tileOf = c => {
   const h = c.hero;
   const decl = (c.name.match(/(\d+) м²/) || [])[1];
   const declTxt = decl && Math.abs(+decl - areaNum(c)) > 1.5 ? `<span class="tile-lead" style="font-size:12.5px;margin-top:8px">В названии — заявленная площадь ${decl} м²; в цифрах ниже — по экспликации альбома.</span>` : '';
-  return `      <a class="tile" href="../portfolio/${c.slug}/">
+  return `      <a class="tile tile-pj" href="../portfolio/${c.slug}/">
         ${h ? pic(h, '../', `loading="lazy" decoding="async"${h.kind === 'sheet' ? ' style="object-fit:contain;background:#f4f1ea"' : ''}`) : ''}
         <div class="tile-body"><span class="tag">${esc(c.type)} · ${esc(c.style)}</span><b>${esc(c.name)}</b>
         <span class="tile-lead">${esc(firstSentence(c.lead))}</span>${declTxt}
-        <span class="tile-figs"><i><b>${c.total}</b>${word(c.total, 'лист', 'листа', 'листов')}</i><i><b>${c.area.replace(' м²', '')}</b>м²</i><i><b>${c.rooms}</b>${word(c.rooms, 'помещение', 'помещения', 'помещений')}</i>${c.visuals ? `<i><b>${c.visuals}</b>${word(c.visuals, 'кадр подписан', 'кадра подписаны', 'кадров подписаны')}</i>` : ''}</span></div>
+        <span class="tile-figs"><i><b>${c.total}</b>${word(c.total, 'лист', 'листа', 'листов')}</i><i><b>${c.area.replace(' м²', '')}</b>м²</i><i><b>${c.rooms}</b>${word(c.rooms, 'помещение', 'помещения', 'помещений')}</i></span>${visLine(c)}</div>
       </a>`;
 };
 // листы крупно — по одному типовому листу из разных альбомов (ищем по названию в sheets.json)
