@@ -140,12 +140,12 @@
  ],
  "hero": {
   "src": "assets/portfolio/gost-lineademo-hero.jpg",
-  "alt": "Квартира 56 м² · джапанди — визуализация интерьера",
+  "alt": "Квартира 56 м² · джапанди — гостиная, визуализация",
   "w": 1600,
-  "h": 1067,
+  "h": 1066,
   "kind": "render",
-  "state": "illustration",
-  "name": "cover-hero",
+  "state": "signed",
+  "name": "room-living-wB",
   "webp": "assets/portfolio/gost-lineademo-hero.webp"
  }
 }

@@ -128,12 +128,12 @@
  ],
  "hero": {
   "src": "assets/portfolio/gost-kv58-hero.jpg",
-  "alt": "Квартира 55 м² · кухня-гостиная и спальня — визуализация интерьера",
+  "alt": "Квартира 55 м² · кухня-гостиная и спальня — гостиная, визуализация",
   "w": 1600,
-  "h": 1067,
+  "h": 1066,
   "kind": "render",
-  "state": "illustration",
-  "name": "cover-hero",
+  "state": "signed",
+  "name": "room-living-wC",
   "webp": "assets/portfolio/gost-kv58-hero.webp"
  }
 }

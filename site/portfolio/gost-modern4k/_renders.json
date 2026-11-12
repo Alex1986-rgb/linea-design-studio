@@ -259,12 +259,12 @@
  ],
  "hero": {
   "src": "assets/portfolio/gost-modern4k-hero.jpg",
-  "alt": "Квартира 127 м² · современный модерн, с кабинетом — визуализация интерьера",
+  "alt": "Квартира 127 м² · современный модерн, с кабинетом — вид сверху 3D",
   "w": 1600,
-  "h": 1067,
+  "h": 1066,
   "kind": "render",
-  "state": "illustration",
-  "name": "cover-hero",
+  "state": "signed",
+  "name": "3d-top",
   "webp": "assets/portfolio/gost-modern4k-hero.webp"
  }
 }

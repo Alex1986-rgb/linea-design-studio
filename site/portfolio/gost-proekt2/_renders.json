@@ -218,12 +218,12 @@
  ],
  "hero": {
   "src": "assets/portfolio/gost-proekt2-hero.jpg",
-  "alt": "Квартира 103 м² · с эркерами, 13 помещений — визуализация интерьера",
+  "alt": "Квартира 103 м² · с эркерами, 13 помещений — детская, визуализация",
   "w": 1600,
-  "h": 1067,
+  "h": 1066,
   "kind": "render",
-  "state": "illustration",
-  "name": "cover-hero",
+  "state": "signed",
+  "name": "room-kids1-wD",
   "webp": "assets/portfolio/gost-proekt2-hero.webp"
  }
 }

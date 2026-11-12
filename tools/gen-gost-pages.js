@@ -425,8 +425,11 @@ function renders(a, r) {
   let prevHero = null;
   try { prevHero = JSON.parse(fs.readFileSync(man, 'utf8')).hero.name; } catch { /* первый прогон */ }
   const acceptedHero = heroV && (st(heroV) === 'signed' || st(heroV) === 'prelim');
-  if (coverFile && fs.existsSync(coverFile)) {
-    // на титуле альбома — 3D-фотография квартиры (04.11.2026); она и идёт заглавной на странице проекта
+  // 12.11.2026: титульная картинка альбома (renders/cover/hero.jpg, 04.11) с планом не сверялась и устарела (на kv-65 — стул без ножек,
+  // мебель до перестановки). Заглавным идёт подписанный кадр; титульная картинка — только если подписанных кадров нет вовсе.
+  const signedHero = heroV && st(heroV) === 'signed';
+  if (!signedHero && coverFile && fs.existsSync(coverFile)) {
+    // на титуле альбома — 3D-фотография квартиры (04.11.2026)
     sips(coverFile, dstHero, 1600, prevHero !== 'cover-hero');
     out.hero = { src: `assets/portfolio/${a.slug}-hero.jpg`, alt: `${a.name} — визуализация интерьера`, ...dims(dstHero), kind: 'render', state: 'illustration', name: 'cover-hero' };
   } else if (acceptedHero) {
