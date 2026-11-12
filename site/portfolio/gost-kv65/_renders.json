@@ -1,48 +1,34 @@
 {
  "checked": true,
- "signed": 12,
+ "signed": 6,
  "prelim": 0,
- "rejected": 8,
- "accepted": 12,
+ "rejected": 9,
+ "accepted": 6,
  "ribbon": [
   {
-   "src": "assets/portfolio/gost-kv65/room-living-wA.jpg",
-   "alt": "Квартира 65 м² · после реконструкции — гостиная, визуализация",
-   "w": 1200,
-   "h": 800,
-   "state": "signed",
-   "name": "room-living-wA",
-   "wall": "r3:A",
-   "clay": {
-    "src": "assets/portfolio/gost-kv65/clay-room-living-wA.jpg",
-    "w": 1200,
-    "h": 800
-   }
-  },
-  {
-   "src": "assets/portfolio/gost-kv65/room-bedroom-wD.jpg",
+   "src": "assets/portfolio/gost-kv65/room-bedroom-wA.jpg",
    "alt": "Квартира 65 м² · после реконструкции — спальня, визуализация",
    "w": 1200,
    "h": 800,
    "state": "signed",
-   "name": "room-bedroom-wD",
-   "wall": "r2:D",
+   "name": "room-bedroom-wA",
+   "wall": "r2:A",
    "clay": {
-    "src": "assets/portfolio/gost-kv65/clay-room-bedroom-wD.jpg",
+    "src": "assets/portfolio/gost-kv65/clay-room-bedroom-wA.jpg",
     "w": 1200,
     "h": 800
    }
   },
   {
-   "src": "assets/portfolio/gost-kv65/room-bath-wB.jpg",
-   "alt": "Квартира 65 м² · после реконструкции — ванная, визуализация",
+   "src": "assets/portfolio/gost-kv65/room-kids-wD.jpg",
+   "alt": "Квартира 65 м² · после реконструкции — детская, визуализация",
    "w": 1200,
    "h": 800,
    "state": "signed",
-   "name": "room-bath-wB",
-   "wall": "r7:B",
+   "name": "room-kids-wD",
+   "wall": "r9:D",
    "clay": {
-    "src": "assets/portfolio/gost-kv65/clay-room-bath-wB.jpg",
+    "src": "assets/portfolio/gost-kv65/clay-room-kids-wD.jpg",
     "w": 1200,
     "h": 800
    }
@@ -62,20 +48,6 @@
    }
   },
   {
-   "src": "assets/portfolio/gost-kv65/room-wardrobe-wide.jpg",
-   "alt": "Квартира 65 м² · после реконструкции — гардеробная, визуализация",
-   "w": 1200,
-   "h": 800,
-   "state": "signed",
-   "name": "room-wardrobe-wide",
-   "wall": "r1:room",
-   "clay": {
-    "src": "assets/portfolio/gost-kv65/clay-room-wardrobe-wide.jpg",
-    "w": 1200,
-    "h": 800
-   }
-  },
-  {
    "src": "assets/portfolio/gost-kv65/room-corridor-wA.jpg",
    "alt": "Квартира 65 м² · после реконструкции — холл, визуализация",
    "w": 1200,
@@ -90,29 +62,15 @@
    }
   },
   {
-   "src": "assets/portfolio/gost-kv65/room-wc-wC.jpg",
+   "src": "assets/portfolio/gost-kv65/room-wc-wide.jpg",
    "alt": "Квартира 65 м² · после реконструкции — санузел, визуализация",
    "w": 1200,
    "h": 800,
    "state": "signed",
-   "name": "room-wc-wC",
-   "wall": "r6:C",
+   "name": "room-wc-wide",
+   "wall": "r6:room",
    "clay": {
-    "src": "assets/portfolio/gost-kv65/clay-room-wc-wC.jpg",
-    "w": 1200,
-    "h": 800
-   }
-  },
-  {
-   "src": "assets/portfolio/gost-kv65/room-storage-wide.jpg",
-   "alt": "Квартира 65 м² · после реконструкции — кладовая, визуализация",
-   "w": 1200,
-   "h": 800,
-   "state": "signed",
-   "name": "room-storage-wide",
-   "wall": "r8:room",
-   "clay": {
-    "src": "assets/portfolio/gost-kv65/clay-room-storage-wide.jpg",
+    "src": "assets/portfolio/gost-kv65/clay-room-wc-wide.jpg",
     "w": 1200,
     "h": 800
    }
@@ -127,78 +85,63 @@
    "wall": "top"
   },
   {
-   "src": "assets/portfolio/gost-kv65/room-kids-wA.jpg",
-   "alt": "Квартира 65 м² · после реконструкции — детская, визуализация",
-   "w": 1200,
-   "h": 800,
-   "state": "rejected",
-   "name": "room-kids-wA",
-   "wall": "r9:A"
-  },
-  {
-   "src": "assets/portfolio/gost-kv65/room-living-wB.jpg",
+   "src": "assets/portfolio/gost-kv65/room-living-wA.jpg",
    "alt": "Квартира 65 м² · после реконструкции — гостиная, визуализация",
    "w": 1200,
    "h": 800,
-   "state": "signed",
-   "name": "room-living-wB",
-   "wall": "r3:B",
-   "clay": {
-    "src": "assets/portfolio/gost-kv65/clay-room-living-wB.jpg",
-    "w": 1200,
-    "h": 800
-   }
+   "state": "rejected",
+   "name": "room-living-wA",
+   "wall": "r3:A"
   },
   {
-   "src": "assets/portfolio/gost-kv65/room-bedroom-wA.jpg",
-   "alt": "Квартира 65 м² · после реконструкции — спальня, визуализация",
-   "w": 1200,
-   "h": 800,
-   "state": "signed",
-   "name": "room-bedroom-wA",
-   "wall": "r2:A",
-   "clay": {
-    "src": "assets/portfolio/gost-kv65/clay-room-bedroom-wA.jpg",
-    "w": 1200,
-    "h": 800
-   }
-  },
-  {
-   "src": "assets/portfolio/gost-kv65/room-bath-wD.jpg",
+   "src": "assets/portfolio/gost-kv65/room-bath-wide.jpg",
    "alt": "Квартира 65 м² · после реконструкции — ванная, визуализация",
    "w": 1200,
    "h": 800,
-   "state": "signed",
-   "name": "room-bath-wD",
-   "wall": "r7:D",
-   "clay": {
-    "src": "assets/portfolio/gost-kv65/clay-room-bath-wD.jpg",
-    "w": 1200,
-    "h": 800
-   }
+   "state": "rejected",
+   "name": "room-bath-wide",
+   "wall": "r7:room"
   },
   {
-   "src": "assets/portfolio/gost-kv65/room-corridor-wC.jpg",
-   "alt": "Квартира 65 м² · после реконструкции — холл, визуализация",
-   "w": 1200,
-   "h": 800,
-   "state": "signed",
-   "name": "room-corridor-wC",
-   "wall": "r5:C",
-   "clay": {
-    "src": "assets/portfolio/gost-kv65/clay-room-corridor-wC.jpg",
-    "w": 1200,
-    "h": 800
-   }
-  },
-  {
-   "src": "assets/portfolio/gost-kv65/room-bedroom-wC.jpg",
-   "alt": "Квартира 65 м² · после реконструкции — спальня, визуализация",
+   "src": "assets/portfolio/gost-kv65/room-wardrobe-wide.jpg",
+   "alt": "Квартира 65 м² · после реконструкции — гардеробная, визуализация",
    "w": 1200,
    "h": 800,
    "state": "rejected",
-   "name": "room-bedroom-wC",
-   "wall": "r2:C"
+   "name": "room-wardrobe-wide",
+   "wall": "r1:room"
+  },
+  {
+   "src": "assets/portfolio/gost-kv65/room-storage-wide.jpg",
+   "alt": "Квартира 65 м² · после реконструкции — кладовая, визуализация",
+   "w": 1200,
+   "h": 800,
+   "state": "rejected",
+   "name": "room-storage-wide",
+   "wall": "r8:room"
+  },
+  {
+   "src": "assets/portfolio/gost-kv65/room-bedroom-wide.jpg",
+   "alt": "Квартира 65 м² · после реконструкции — спальня, визуализация",
+   "w": 1200,
+   "h": 800,
+   "state": "signed",
+   "name": "room-bedroom-wide",
+   "wall": "r2:room",
+   "clay": {
+    "src": "assets/portfolio/gost-kv65/clay-room-bedroom-wide.jpg",
+    "w": 1200,
+    "h": 800
+   }
+  },
+  {
+   "src": "assets/portfolio/gost-kv65/room-living-wide.jpg",
+   "alt": "Квартира 65 м² · после реконструкции — гостиная, визуализация",
+   "w": 1200,
+   "h": 800,
+   "state": "rejected",
+   "name": "room-living-wide",
+   "wall": "r3:room"
   },
   {
    "src": "assets/portfolio/gost-kv65/room-kids-wC.jpg",
@@ -208,24 +151,6 @@
    "state": "rejected",
    "name": "room-kids-wC",
    "wall": "r9:C"
-  },
-  {
-   "src": "assets/portfolio/gost-kv65/room-kids-wD.jpg",
-   "alt": "Квартира 65 м² · после реконструкции — детская, визуализация",
-   "w": 1200,
-   "h": 800,
-   "state": "rejected",
-   "name": "room-kids-wD",
-   "wall": "r9:D"
-  },
-  {
-   "src": "assets/portfolio/gost-kv65/room-wc-wB.jpg",
-   "alt": "Квартира 65 м² · после реконструкции — санузел, визуализация",
-   "w": 1200,
-   "h": 800,
-   "state": "rejected",
-   "name": "room-wc-wB",
-   "wall": "r6:B"
   }
  ],
  "hero": {

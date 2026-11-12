@@ -27,8 +27,8 @@
   "name": "cover-hero",
   "webp": "assets/portfolio/gost-elitemodern-hero.webp"
  },
- "visuals": 6,
- "visualsPrelim": 0,
+ "visuals": 1,
+ "visualsPrelim": 6,
  "studioSize": "6 МБ",
  "pdfSize": "9 МБ"
 }

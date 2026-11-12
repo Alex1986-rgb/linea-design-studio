@@ -1,34 +1,34 @@
 {
  "checked": true,
- "signed": 8,
+ "signed": 6,
  "prelim": 0,
- "rejected": 3,
- "accepted": 8,
+ "rejected": 4,
+ "accepted": 6,
  "ribbon": [
   {
-   "src": "assets/portfolio/gost-kv58/room-living-wD.jpg",
+   "src": "assets/portfolio/gost-kv58/room-living-wC.jpg",
    "alt": "Квартира 55 м² · кухня-гостиная и спальня — гостиная, визуализация",
    "w": 1200,
    "h": 800,
    "state": "signed",
-   "name": "room-living-wD",
-   "wall": "r1:D",
+   "name": "room-living-wC",
+   "wall": "r1:C",
    "clay": {
-    "src": "assets/portfolio/gost-kv58/clay-room-living-wD.jpg",
+    "src": "assets/portfolio/gost-kv58/clay-room-living-wC.jpg",
     "w": 1200,
     "h": 800
    }
   },
   {
-   "src": "assets/portfolio/gost-kv58/room-bedroom-wA.jpg",
+   "src": "assets/portfolio/gost-kv58/room-bedroom-wB.jpg",
    "alt": "Квартира 55 м² · кухня-гостиная и спальня — спальня, визуализация",
    "w": 1200,
    "h": 800,
    "state": "signed",
-   "name": "room-bedroom-wA",
-   "wall": "r2:A",
+   "name": "room-bedroom-wB",
+   "wall": "r2:B",
    "clay": {
-    "src": "assets/portfolio/gost-kv58/clay-room-bedroom-wA.jpg",
+    "src": "assets/portfolio/gost-kv58/clay-room-bedroom-wB.jpg",
     "w": 1200,
     "h": 800
    }
@@ -48,15 +48,15 @@
    }
   },
   {
-   "src": "assets/portfolio/gost-kv58/room-hall-wA.jpg",
+   "src": "assets/portfolio/gost-kv58/room-hall-wide.jpg",
    "alt": "Квартира 55 м² · кухня-гостиная и спальня — прихожая, визуализация",
    "w": 1200,
    "h": 800,
    "state": "signed",
-   "name": "room-hall-wA",
-   "wall": "r5:A",
+   "name": "room-hall-wide",
+   "wall": "r5:room",
    "clay": {
-    "src": "assets/portfolio/gost-kv58/clay-room-hall-wA.jpg",
+    "src": "assets/portfolio/gost-kv58/clay-room-hall-wide.jpg",
     "w": 1200,
     "h": 800
    }
@@ -80,14 +80,9 @@
    "alt": "Квартира 55 м² · кухня-гостиная и спальня — санузел, визуализация",
    "w": 1200,
    "h": 800,
-   "state": "signed",
+   "state": "rejected",
    "name": "room-wc-wide",
-   "wall": "r4:room",
-   "clay": {
-    "src": "assets/portfolio/gost-kv58/clay-room-wc-wide.jpg",
-    "w": 1200,
-    "h": 800
-   }
+   "wall": "r4:room"
   },
   {
    "src": "assets/portfolio/gost-kv58/room-bath-wC.jpg",
@@ -104,20 +99,6 @@
    }
   },
   {
-   "src": "assets/portfolio/gost-kv58/room-hall-wC.jpg",
-   "alt": "Квартира 55 м² · кухня-гостиная и спальня — прихожая, визуализация",
-   "w": 1200,
-   "h": 800,
-   "state": "signed",
-   "name": "room-hall-wC",
-   "wall": "r5:C",
-   "clay": {
-    "src": "assets/portfolio/gost-kv58/clay-room-hall-wC.jpg",
-    "w": 1200,
-    "h": 800
-   }
-  },
-  {
    "src": "assets/portfolio/gost-kv58/room-living-wB.jpg",
    "alt": "Квартира 55 м² · кухня-гостиная и спальня — гостиная, визуализация",
    "w": 1200,
@@ -127,22 +108,22 @@
    "wall": "r1:B"
   },
   {
-   "src": "assets/portfolio/gost-kv58/room-living-wC.jpg",
+   "src": "assets/portfolio/gost-kv58/room-living-wD.jpg",
    "alt": "Квартира 55 м² · кухня-гостиная и спальня — гостиная, визуализация",
    "w": 1200,
    "h": 800,
    "state": "rejected",
-   "name": "room-living-wC",
-   "wall": "r1:C"
+   "name": "room-living-wD",
+   "wall": "r1:D"
   },
   {
-   "src": "assets/portfolio/gost-kv58/room-bedroom-wB.jpg",
+   "src": "assets/portfolio/gost-kv58/room-bedroom-wA.jpg",
    "alt": "Квартира 55 м² · кухня-гостиная и спальня — спальня, визуализация",
    "w": 1200,
    "h": 800,
    "state": "rejected",
-   "name": "room-bedroom-wB",
-   "wall": "r2:B"
+   "name": "room-bedroom-wA",
+   "wall": "r2:A"
   }
  ],
  "hero": {
