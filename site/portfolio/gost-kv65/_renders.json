@@ -2,19 +2,19 @@
  "checked": true,
  "signed": 15,
  "prelim": 0,
- "rejected": 10,
+ "rejected": 5,
  "accepted": 15,
  "ribbon": [
   {
-   "src": "assets/portfolio/gost-kv65/room-living-wB.jpg",
+   "src": "assets/portfolio/gost-kv65/room-living-wA.jpg",
    "alt": "Квартира 65 м² после реконструкции — гостиная, визуализация",
    "w": 1200,
    "h": 800,
    "state": "signed",
-   "name": "room-living-wB",
-   "wall": "r3:B",
+   "name": "room-living-wA",
+   "wall": "r3:A",
    "clay": {
-    "src": "assets/portfolio/gost-kv65/clay-room-living-wB.jpg",
+    "src": "assets/portfolio/gost-kv65/clay-room-living-wA.jpg",
     "w": 1200,
     "h": 800
    }
@@ -141,6 +141,20 @@
    "wall": "top"
   },
   {
+   "src": "assets/portfolio/gost-kv65/room-living-wB.jpg",
+   "alt": "Квартира 65 м² после реконструкции — гостиная, визуализация",
+   "w": 1200,
+   "h": 800,
+   "state": "signed",
+   "name": "room-living-wB",
+   "wall": "r3:B",
+   "clay": {
+    "src": "assets/portfolio/gost-kv65/clay-room-living-wB.jpg",
+    "w": 1200,
+    "h": 800
+   }
+  },
+  {
    "src": "assets/portfolio/gost-kv65/room-bedroom-wD.jpg",
    "alt": "Квартира 65 м² после реконструкции — спальня, визуализация",
    "w": 1200,
@@ -164,20 +178,6 @@
    "wall": "r2:A",
    "clay": {
     "src": "assets/portfolio/gost-kv65/clay-room-bedroom-wA.jpg",
-    "w": 1200,
-    "h": 800
-   }
-  },
-  {
-   "src": "assets/portfolio/gost-kv65/room-kids-wC.jpg",
-   "alt": "Квартира 65 м² после реконструкции — детская, визуализация",
-   "w": 1200,
-   "h": 800,
-   "state": "signed",
-   "name": "room-kids-wC",
-   "wall": "r9:C",
-   "clay": {
-    "src": "assets/portfolio/gost-kv65/clay-room-kids-wC.jpg",
     "w": 1200,
     "h": 800
    }
@@ -225,13 +225,13 @@
    }
   },
   {
-   "src": "assets/portfolio/gost-kv65/room-living-wA.jpg",
-   "alt": "Квартира 65 м² после реконструкции — гостиная, визуализация",
+   "src": "assets/portfolio/gost-kv65/room-kids-wC.jpg",
+   "alt": "Квартира 65 м² после реконструкции — детская, визуализация",
    "w": 1200,
    "h": 800,
    "state": "rejected",
-   "name": "room-living-wA",
-   "wall": "r3:A"
+   "name": "room-kids-wC",
+   "wall": "r9:C"
   },
   {
    "src": "assets/portfolio/gost-kv65/room-kids-wD.jpg",

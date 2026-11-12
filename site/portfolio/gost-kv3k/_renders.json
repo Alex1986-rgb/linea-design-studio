@@ -1,9 +1,9 @@
 {
  "checked": true,
- "signed": 15,
+ "signed": 13,
  "prelim": 0,
  "rejected": 10,
- "accepted": 15,
+ "accepted": 13,
  "ribbon": [
   {
    "src": "assets/portfolio/gost-kv3k/room-living-wC.jpg",
@@ -20,15 +20,15 @@
    }
   },
   {
-   "src": "assets/portfolio/gost-kv3k/room-bedroom1-wA.jpg",
+   "src": "assets/portfolio/gost-kv3k/room-bedroom1-wB.jpg",
    "alt": "Трёхкомнатная квартира — спальня, визуализация",
    "w": 1200,
    "h": 800,
    "state": "signed",
-   "name": "room-bedroom1-wA",
-   "wall": "r1:A",
+   "name": "room-bedroom1-wB",
+   "wall": "r1:B",
    "clay": {
-    "src": "assets/portfolio/gost-kv3k/clay-room-bedroom1-wA.jpg",
+    "src": "assets/portfolio/gost-kv3k/clay-room-bedroom1-wB.jpg",
     "w": 1200,
     "h": 800
    }
@@ -127,34 +127,6 @@
    "wall": "top"
   },
   {
-   "src": "assets/portfolio/gost-kv3k/room-living-wD.jpg",
-   "alt": "Трёхкомнатная квартира — гостиная, визуализация",
-   "w": 1200,
-   "h": 800,
-   "state": "signed",
-   "name": "room-living-wD",
-   "wall": "r6:D",
-   "clay": {
-    "src": "assets/portfolio/gost-kv3k/clay-room-living-wD.jpg",
-    "w": 1200,
-    "h": 800
-   }
-  },
-  {
-   "src": "assets/portfolio/gost-kv3k/room-bedroom1-wB.jpg",
-   "alt": "Трёхкомнатная квартира — спальня, визуализация",
-   "w": 1200,
-   "h": 800,
-   "state": "signed",
-   "name": "room-bedroom1-wB",
-   "wall": "r1:B",
-   "clay": {
-    "src": "assets/portfolio/gost-kv3k/clay-room-bedroom1-wB.jpg",
-    "w": 1200,
-    "h": 800
-   }
-  },
-  {
    "src": "assets/portfolio/gost-kv3k/room-bedroom2-wD.jpg",
    "alt": "Трёхкомнатная квартира — спальня, визуализация",
    "w": 1200,
@@ -232,6 +204,24 @@
    "state": "rejected",
    "name": "room-living-wB",
    "wall": "r6:B"
+  },
+  {
+   "src": "assets/portfolio/gost-kv3k/room-living-wD.jpg",
+   "alt": "Трёхкомнатная квартира — гостиная, визуализация",
+   "w": 1200,
+   "h": 800,
+   "state": "rejected",
+   "name": "room-living-wD",
+   "wall": "r6:D"
+  },
+  {
+   "src": "assets/portfolio/gost-kv3k/room-bedroom1-wA.jpg",
+   "alt": "Трёхкомнатная квартира — спальня, визуализация",
+   "w": 1200,
+   "h": 800,
+   "state": "rejected",
+   "name": "room-bedroom1-wA",
+   "wall": "r1:A"
   },
   {
    "src": "assets/portfolio/gost-kv3k/room-bedroom2-wC.jpg",

@@ -1,9 +1,9 @@
 {
  "checked": true,
- "signed": 10,
+ "signed": 7,
  "prelim": 0,
- "rejected": 2,
- "accepted": 10,
+ "rejected": 5,
+ "accepted": 7,
  "ribbon": [
   {
    "src": "assets/portfolio/gost-elitemodern/room-living-m1.jpg",
@@ -20,29 +20,15 @@
    }
   },
   {
-   "src": "assets/portfolio/gost-elitemodern/room-kitchen-m1.jpg",
+   "src": "assets/portfolio/gost-elitemodern/room-kitchen-m2.jpg",
    "alt": "Квартира 68 м² · элитный модерн — кухня-столовая, визуализация",
    "w": 1200,
    "h": 800,
    "state": "signed",
-   "name": "room-kitchen-m1",
+   "name": "room-kitchen-m2",
    "wall": "r5:mag",
    "clay": {
-    "src": "assets/portfolio/gost-elitemodern/clay-room-kitchen-m1.jpg",
-    "w": 1200,
-    "h": 800
-   }
-  },
-  {
-   "src": "assets/portfolio/gost-elitemodern/room-bedroom-m1.jpg",
-   "alt": "Квартира 68 м² · элитный модерн — спальня, визуализация",
-   "w": 1200,
-   "h": 800,
-   "state": "signed",
-   "name": "room-bedroom-m1",
-   "wall": "r7:mag",
-   "clay": {
-    "src": "assets/portfolio/gost-elitemodern/clay-room-bedroom-m1.jpg",
+    "src": "assets/portfolio/gost-elitemodern/clay-room-kitchen-m2.jpg",
     "w": 1200,
     "h": 800
    }
@@ -76,27 +62,18 @@
    }
   },
   {
-   "src": "assets/portfolio/gost-elitemodern/room-hall-s1.jpg",
-   "alt": "Квартира 68 м² · элитный модерн — прихожая, визуализация",
-   "w": 1200,
-   "h": 800,
-   "state": "signed",
-   "name": "room-hall-s1",
-   "wall": "r4:mag",
-   "clay": {
-    "src": "assets/portfolio/gost-elitemodern/clay-room-hall-s1.jpg",
-    "w": 1200,
-    "h": 800
-   }
-  },
-  {
    "src": "assets/portfolio/gost-elitemodern/room-wc-s1.jpg",
    "alt": "Квартира 68 м² · элитный модерн — санузел, визуализация",
    "w": 1200,
    "h": 800,
    "state": "signed",
    "name": "room-wc-s1",
-   "wall": "r2:mag"
+   "wall": "r2:mag",
+   "clay": {
+    "src": "assets/portfolio/gost-elitemodern/clay-room-wc-s1.jpg",
+    "w": 1200,
+    "h": 800
+   }
   },
   {
    "src": "assets/portfolio/gost-elitemodern/3d-top.jpg",
@@ -108,18 +85,22 @@
    "wall": "top"
   },
   {
-   "src": "assets/portfolio/gost-elitemodern/room-kitchen-m2.jpg",
-   "alt": "Квартира 68 м² · элитный модерн — кухня-столовая, визуализация",
+   "src": "assets/portfolio/gost-elitemodern/room-bedroom-m1.jpg",
+   "alt": "Квартира 68 м² · элитный модерн — спальня, визуализация",
    "w": 1200,
    "h": 800,
-   "state": "signed",
-   "name": "room-kitchen-m2",
-   "wall": "r5:mag",
-   "clay": {
-    "src": "assets/portfolio/gost-elitemodern/clay-room-kitchen-m2.jpg",
-    "w": 1200,
-    "h": 800
-   }
+   "state": "rejected",
+   "name": "room-bedroom-m1",
+   "wall": "r7:mag"
+  },
+  {
+   "src": "assets/portfolio/gost-elitemodern/room-hall-s1.jpg",
+   "alt": "Квартира 68 м² · элитный модерн — прихожая, визуализация",
+   "w": 1200,
+   "h": 800,
+   "state": "rejected",
+   "name": "room-hall-s1",
+   "wall": "r4:mag"
   },
   {
    "src": "assets/portfolio/gost-elitemodern/room-bath-d1.jpg",
@@ -157,6 +138,15 @@
    "state": "rejected",
    "name": "room-living-s1",
    "wall": "r6:mag"
+  },
+  {
+   "src": "assets/portfolio/gost-elitemodern/room-kitchen-m1.jpg",
+   "alt": "Квартира 68 м² · элитный модерн — кухня-столовая, визуализация",
+   "w": 1200,
+   "h": 800,
+   "state": "rejected",
+   "name": "room-kitchen-m1",
+   "wall": "r5:mag"
   }
  ],
  "hero": {
