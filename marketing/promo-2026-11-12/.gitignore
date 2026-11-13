@@ -1,0 +1,7 @@
+out/
+voice/
+*.mp4
+cartoon/out/
+cartoon/voice/
+cartoon/frames/*.png
+src/*.png
