@@ -1018,3 +1018,61 @@ footer.site .f-links{flex:1 1 560px;min-width:0}
   .nav{gap:8px}
   .nav .btn.sm.nav-cta{padding:0 12px}
 }
+
+/* ═══════════════════════════════════════════════════════════════════
+   v18 · ПРОСТОР, ЛИНИЯ, ВЕНЗЕЛЬ (13.11.2026, просьба Александра: «продумай отступы, расстояния, шапку и подвал,
+   вензеля, что-то на фоне, анимация»). Тихо: золото — тонкими линиями, движение — медленное и отключается при reduced-motion.
+   ═══════════════════════════════════════════════════════════════════ */
+
+/* 1. Поля: шире контейнер на больших экранах, шапка и блоки — по одной линии */
+@media (min-width:900px){
+  .wrap,.nav{max-width:1320px;padding-left:4vw;padding-right:4vw}
+}
+section.blk{padding:clamp(72px,9vw,120px) 0}
+
+/* 2. Шапка: золотая волосяная линия снизу, которая «дышит» от центра */
+header.site{border-bottom-color:transparent}
+header.site::after{content:'';position:absolute;left:0;right:0;bottom:-1px;height:1px;pointer-events:none;
+  background:linear-gradient(90deg,transparent,#C29A5B40 18%,#E2C688aa 50%,#C29A5B40 82%,transparent)}
+.logo i{font-style:normal;background:linear-gradient(160deg,#F3DC9E,#C9A45F 55%,#8F6C33);-webkit-background-clip:text;background-clip:text;color:transparent}
+
+/* 3. Первый экран: ар-деко уголки вокруг оффера и тёплый блик, который медленно плывёт */
+@media (min-width:900px){
+
+  .film .scenes{position:relative}
+  .film .scenes::before,.film .scenes::after{content:'';position:absolute;width:46px;height:46px;pointer-events:none;opacity:.75}
+  .film .scenes::before{top:-30px;left:-22px;border-top:1px solid #C29A5B99;border-left:1px solid #C29A5B99;
+    background:radial-gradient(circle at 0 0,#C29A5B 1.6px,transparent 2.4px)}
+  .film .scenes::after{bottom:-14px;left:-22px;border-bottom:1px solid #C29A5B55;border-left:1px solid #C29A5B55;width:30px;height:30px}
+}
+.film .screen::after{content:'';position:absolute;inset:-20%;pointer-events:none;z-index:1;mix-blend-mode:screen;
+  background:radial-gradient(38% 30% at 72% 42%,#C29A5B2e,transparent 70%),radial-gradient(30% 26% at 18% 80%,#C29A5B14,transparent 70%)}
+.film .stage{z-index:2}
+@media (prefers-reduced-motion:no-preference){
+  .film .screen::after{animation:goldDrift 18s ease-in-out infinite alternate}
+}
+@keyframes goldDrift{from{transform:translate3d(-3%,-2%,0) scale(1)}to{transform:translate3d(4%,3%,0) scale(1.08)}}
+
+/* 4. Разделители блоков — вензель-ромб на золотой линии вместо простой черты */
+section.blk{border-top:0;position:relative}
+section.blk::before{content:'';position:absolute;top:0;left:4vw;right:4vw;height:1px;
+  background:linear-gradient(90deg,transparent,#C29A5B33 25%,#C29A5B33 75%,transparent)}
+section.blk::after{content:'';position:absolute;top:-5px;left:50%;width:9px;height:9px;transform:translateX(-50%) rotate(45deg);
+  border:1px solid #C29A5B88;background:#0F0E0C;box-shadow:0 0 0 4px #0F0E0C}
+section.blk.price::after{border-color:#C29A5Bcc}
+
+/* 5. Подвал: тёплый глубокий фон, золотые заголовки колонок, нижняя строка — через волосяную линию */
+footer.site{background:radial-gradient(70% 120% at 50% 0,#1C1812 0%,#11100D 55%,#0B0A08 100%);color:var(--dim)}
+footer.site .cols{row-gap:40px}
+footer.site .logo{font-size:22px;letter-spacing:7px}
+footer.site p{line-height:1.7}
+footer.site a{transition:color .2s}
+footer.site .f-links>p:last-child{margin-top:18px;padding-top:18px;border-top:1px solid #C29A5B26;font-size:12px;letter-spacing:.08em}
+
+/* 6. Кнопки: мягкий золотой блик при наведении (без смены размера) */
+.btn{position:relative;overflow:hidden}
+.btn::after{content:'';position:absolute;top:0;bottom:0;left:-60%;width:40%;pointer-events:none;
+  background:linear-gradient(100deg,transparent,#FFFFFF38,transparent);transform:skewX(-18deg);transition:left .7s ease}
+.btn:hover::after{left:120%}
+.btn.ghost::after{background:linear-gradient(100deg,transparent,#C29A5B33,transparent)}
+@media (prefers-reduced-motion:reduce){.btn::after{display:none}}
