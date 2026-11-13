@@ -275,8 +275,27 @@
           <a class="btn ghost" href="#portfolio">Смотреть примеры</a>
 <!-- /home:cta-count -->
         </div>
+        <!-- Ролик на первом экране (13.11.2026, просьба Александра): мультфильм «от пустой квартиры до ремонта по проекту»,
+             marketing/promo-2026-11-12/cartoon → assets/video/. Компьютер — справа от оффера, телефон — под кнопками. Без автозапуска. -->
+        <div class="hero-video">
+          <video controls playsinline preload="none" poster="assets/video/linea-film-poster.jpg" width="720" height="1280" aria-label="Мультфильм LINEA: от пустой квартиры до ремонта по проекту">
+            <source src="assets/video/linea-film.mp4" type="video/mp4">
+          </video>
+          <p>Как это работает — мультфильм за минуту</p>
+        </div>
       </div>
     </div>
+    <style>
+      .film .hero-video video{width:100%;height:auto;aspect-ratio:9/16;border-radius:16px;background:#14120E;display:block;
+        box-shadow:0 0 0 1px #C29A5B55,0 24px 60px #000000b0}
+      .film .hero-video p{margin:10px 0 0;text-align:center;color:#C9C2B4;font-size:12.5px;letter-spacing:.06em}
+      @media (min-width:900px){
+        .film .hero-video{position:absolute;z-index:3;top:50%;transform:translateY(-52%);
+          right:max(5vw,calc((100vw - 1180px)/2 + 5vw));width:min(clamp(220px,24vw,330px),calc((100vh - 300px)*.5625))}
+        .film .scenes,.film .cta-row{max-width:calc(100% - min(clamp(220px,24vw,330px),calc((100vh - 300px)*.5625)) - 36px)}
+      }
+      @media (max-width:899px){ .film .hero-video{max-width:300px;margin:6px auto 0} }
+    </style>
 <!-- home:framecap -->
     <div class="frame-cap"><b id="filmRoom">Кабинет, стена А</b> <span id="filmNote">— квартира 127 м² · кадр сверен с планом и подписан дизайнером</span></div>
 <!-- /home:framecap -->
@@ -523,38 +542,6 @@
         <a href="process/">Подробно о процессе →</a></div>
     </div>
 <!-- /home:steps -->
-  </div>
-</section>
-
-<!-- Ролик (13.11.2026): мультфильм «от пустой квартиры до ремонта», marketing/promo-2026-11-12/cartoon → assets/video/ -->
-<section class="blk" id="video">
-  <style>
-    .h-video{display:grid;grid-template-columns:1fr minmax(260px,360px);gap:48px;align-items:center}
-    .h-video video{width:100%;height:auto;aspect-ratio:9/16;border-radius:14px;background:#14120E;display:block;box-shadow:0 18px 50px rgba(0,0,0,.35)}
-    .h-video .sub{max-width:520px}
-    .h-video ul{margin:18px 0 26px;padding:0;list-style:none;color:var(--mut)}
-    .h-video li{padding:6px 0;border-bottom:1px solid var(--line)}
-    .h-video li b{color:var(--ink);font-weight:600}
-    @media(max-width:820px){.h-video{grid-template-columns:1fr;gap:24px}.h-video-box{max-width:360px;margin:0 auto;width:100%}}
-  </style>
-  <div class="wrap h-video">
-    <div class="h-video-txt">
-      <div class="kicker">За минуту</div>
-      <h2>От пустой квартиры <em>до ремонта по проекту</em></h2>
-      <p class="sub">Короткий мультфильм о том, как это устроено: загружаете план, видите эскиз квартиры сверху и каждой комнаты, правите словами — и получаете рабочий проект, по которому работает бригада.</p>
-      <ul>
-        <li><b>План</b> — фото или скан, бриф около 5 минут</li>
-        <li><b>Эскиз</b> — квартира сверху и интерьеры комнат</li>
-        <li><b>Правки словами</b> — 3 круга входят в стоимость</li>
-        <li><b>Рабочий проект по ГОСТ</b> — чертежи для бригады</li>
-      </ul>
-      <a class="btn" href="brief.html">Открыть бриф →</a>
-    </div>
-    <div class="h-video-box">
-      <video controls playsinline preload="none" poster="assets/video/linea-film-poster.jpg" width="720" height="1280" aria-label="Мультфильм LINEA: от пустой квартиры до ремонта по проекту">
-        <source src="assets/video/linea-film.mp4" type="video/mp4">
-      </video>
-    </div>
   </div>
 </section>
 
