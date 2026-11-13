@@ -53,7 +53,7 @@ ${SHELL.header(u, null)}
 ${SHELL.footer(u, null)}
 <script type="application/json" id="kabTerms">${JSON.stringify({ call: SHELL.TERMS.call.title + '. ' + SHELL.TERMS.call.line, areaRecalc: SHELL.TERMS.areaRecalc, roundsText: SHELL.TERMS.roundsText, rounds: SHELL.TERMS.rounds, reqLine: SHELL.TERMS.reqLine, line: SHELL.TERMS.line, term: SHELL.TERMS.term, notIncluded: SHELL.TERMS.notIncluded, briefAddon: false, wa: 'https://wa.me/79257338640', mail: 'optteem@mail.ru' })}</script>
 <script src="${u}js/kabinet-remont.js?v=1"></script>
-<script src="${u}js/kabinet.js?v=7"></script>
+<script src="${u}js/kabinet.js?v=8"></script>
 </body>
 </html>
 `;
