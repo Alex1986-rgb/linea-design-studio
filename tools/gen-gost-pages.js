@@ -400,7 +400,11 @@ function renders(a, r) {
   const has = n => fs.existsSync(path.join(dir, `${n}.jpg`));
   const st = v => (acc && acc.get(v.name)) || 'rejected';
   // 04.11.2026 (Александр): показываем все кадры проекта; непринятые идут с честной подписью «иллюстрация».
-  const shown = views.filter(v => has(v.name) && /^(room-|3d-top)/.test(v.name));
+  // 12.11.2026: технические кадры помещений хранения (views.json → tech: true) — только на лист развёртки, в ленту и счётчики не идут;
+  // кадры, не прошедшие сверку с планом («брак» / «не уверен»), на сайт не выкладываются вовсе: заказчик увидел на них диван в проходе
+  // и стул без ножек. Вернуть показ всех кадров — GOST_SHOW_REJECTED=1.
+  const SHOW_REJ = process.env.GOST_SHOW_REJECTED === '1';
+  const shown = views.filter(v => has(v.name) && /^(room-|3d-top)/.test(v.name) && !v.tech && (SHOW_REJ || st(v) !== 'rejected'));
   const n = { signed: shown.filter(v => st(v) === 'signed').length, prelim: shown.filter(v => st(v) === 'prelim').length };
   n.rejected = views.length - n.signed - n.prelim;
   const first = (re, state) => shown.find(v => re.test(v.name) && (!state || st(v) === state));
