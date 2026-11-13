@@ -41,6 +41,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (!hash_equals($csrf, (string)($_POST['csrf'] ?? ''))) { http_response_code(400); exit('Сессия устарела — обновите страницу.'); }
     $act = (string)($_POST['act'] ?? '');
     try {
+        if ($act === 'from-order') {
+            $o = linea_order_by_number(trim((string)($_POST['number'] ?? '')));
+            if (!$o) { throw new RuntimeException('Заказ не найден.'); }
+            $m = eskiz_from_order($o);
+            if (!$m) { throw new RuntimeException('В брифе заказа нет плана картинкой (JPG/PNG/WebP) — создайте эскиз вручную, загрузив план.'); }
+            header("Location: $self?id=" . $m['id']); exit;
+        }
         if ($act === 'create') {
             if (empty($_FILES['plan']['tmp_name']) || !is_uploaded_file($_FILES['plan']['tmp_name'])) { throw new RuntimeException('Загрузите план картинкой (JPG, PNG, WebP).'); }
             $id = date('ymd-His') . '-' . substr(bin2hex(random_bytes(3)), 0, 4);
@@ -83,6 +90,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         } elseif ($act === 'replan') {
             $m['brief']['replan'] = in_array($_POST['replan'] ?? '', ['keep', 'replan'], true) ? $_POST['replan'] : '';
             eskiz_log($m, 'перепланировка: ' . ($m['brief']['replan'] ?: 'нет ответа')); eskiz_save($m);
+        } elseif ($act === 'show' || $act === 'hide') {
+            // показать клиенту в кабинете: только заказ, только с видом сверху, при ответе о перепланировке и сверке ≥ 70 (или «всё равно»)
+            if (empty($m['order_id'])) { throw new RuntimeException('Эскиз не привязан к заказу — показывать некому.'); }
+            if ($act === 'show') {
+                if (empty($m['best'])) { throw new RuntimeException('Нет вида сверху.'); }
+                if (($m['tops'][0]['score'] ?? 0) < 70 && empty($_POST['force'])) { throw new RuntimeException('Вид сверху ниже порога сверки 70 — перегенерируйте или отметьте «показать всё равно».'); }
+                $m['shown'] = true; eskiz_log($m, 'показан клиенту'); eskiz_save($m);
+                require_once __DIR__ . '/lib/kabinet.php'; brig_db();
+                $o = linea_order_by_number((string)$m['order_number']);
+                if ($o) { kab_notice_order($o, 'project', 'Эскиз готов: 3D-вид квартиры сверху и интерьеры. Посмотрите и напишите правки словами — или согласуйте.', 'kabinet/#o=' . rawurlencode((string)$o['number'])); linea_event((int)$o['id'], 'studio', 'Эскиз показан клиенту в кабинете'); }
+            } else { $m['shown'] = false; eskiz_log($m, 'скрыт от клиента'); eskiz_save($m); }
         } elseif ($act === 'rescene') {
             $m['status'] = 'new'; eskiz_log($m, 'описание комнат — заново'); eskiz_save($m); eskiz_spawn($id, 'scene');
         }
@@ -96,7 +114,7 @@ $img = fn($id, $f, $cls = '') => '<a href="' . $self . '?id=' . $id . '&img=' . 
 if ($id !== '' && ($m = eskiz_load($id))) {
     $busy = in_array($m['status'], ['new', 'scene-run', 'rendering', 'render'], true);
     $ST = ['new' => 'описание комнат…', 'scene-run' => 'описание комнат…', 'scene-check' => 'проверьте описание комнат', 'rendering' => 'генерация…', 'render' => 'генерация…', 'ready' => 'готово', 'error' => 'ошибка'];
-    $body .= '<p><a href="' . $self . '">← все эскизы</a></p><h1>' . $h($m['title']) . '</h1><p class="st">Статус: <b>' . $h($ST[$m['status']] ?? $m['status']) . '</b>'
+    $body .= '<p><a href="' . $self . '">← все эскизы</a>' . (!empty($m['order_number']) ? ' · <a href="panel.php?s=order&o=' . rawurlencode((string)$m['order_number']) . '">заказ ' . $h($m['order_number']) . '</a>' : '') . '</p><h1>' . $h($m['title']) . '</h1><p class="st">Статус: <b>' . $h($ST[$m['status']] ?? $m['status']) . '</b>'
         . ($busy ? ' · страница обновится сама' : '') . (!empty($m['approved']) ? ' · <span class="ok">согласовано: ' . $h($m['approved']['by']) . ', ' . $h($m['approved']['date']) . '</span>' : '') . '</p>';
     $body .= '<div class="row"><div><h3>План заказчика</h3>' . $img($id, 'plan.png') . '</div>';
     foreach (glob(eskiz_dir($id) . '/ref-*.jpg') ?: [] as $r) { if (!str_ends_with($r, '.v.jpg')) { $body .= '<div><h3>Референс</h3>' . $img($id, basename($r, '.jpg') . '.png') . '</div>'; } }
@@ -138,6 +156,12 @@ if ($id !== '' && ($m = eskiz_load($id))) {
             . '<form method="post"><input type="hidden" name="csrf" value="' . $h($csrf) . '"><input type="hidden" name="id" value="' . $h($id) . '"><input type="hidden" name="act" value="fix">'
             . '<textarea name="text" rows="3" placeholder="например: в гостиной диван зелёный бархат, кухню светлее, в детской кровать-домик"></textarea><label><input type="checkbox" name="over" value="1"> сверх кругов</label> <button>Применить правку</button></form>';
         foreach (array_reverse($m['fixes']) as $i => $fx) { $body .= '<p class="fx">№' . (count($m['fixes']) - $i) . ' ' . $h($fx['date']) . ': «' . $h($fx['text']) . '»' . (!empty($fx['summary']) ? ' → ' . $h($fx['summary']) : '') . (!empty($fx['geometry']) ? ' <span class="q">планировка: ' . $h(implode('; ', $fx['geometry'])) . '</span>' : '') . '</p>'; }
+        if (!empty($m['order_id'])) {
+            $body .= '<h2>Кабинет клиента</h2><p>' . (!empty($m['shown']) ? '<span class="ok">Показан клиенту</span> — клиент видит вид сверху и интерьеры, пишет правки и согласует сам.' : 'Клиент эскиз пока не видит.') . '</p>'
+                . '<form method="post" class="inl"><input type="hidden" name="csrf" value="' . $h($csrf) . '"><input type="hidden" name="id" value="' . $h($id) . '">'
+                . (!empty($m['shown']) ? '<input type="hidden" name="act" value="hide"><button class="sec">Скрыть от клиента</button>'
+                    : '<input type="hidden" name="act" value="show"><label><input type="checkbox" name="force" value="1"> показать всё равно (ниже порога сверки)</label> <button>Показать клиенту</button>') . '</form>';
+        }
         if (empty($m['approved'])) {
             $body .= '<h2>Согласование</h2><form method="post" class="inl"><input type="hidden" name="csrf" value="' . $h($csrf) . '"><input type="hidden" name="id" value="' . $h($id) . '"><input type="hidden" name="act" value="approve">'
                 . '<input name="by" placeholder="кто согласовал (имя заказчика)"> <label><input type="checkbox" name="force" value="1"> согласовать всё равно (ниже порога сверки)</label> <button>Эскиз согласован</button></form>';
@@ -145,7 +169,10 @@ if ($id !== '' && ($m = eskiz_load($id))) {
     }
     $body .= '<details><summary>Журнал</summary><pre>' . $h(implode("\n", $m['log'] ?? [])) . '</pre></details>';
 } else {
-    $body .= '<h1>Эскиз по плану</h1><p>План заказчика + бриф + референсы → 3D-вид сверху (3 варианта, сверка с планом) и 5 интерьеров в 4K. Шлюз arionhub, ≈ $0,03 за эскиз.</p>'
+    $body .= '<h1>Эскиз по плану</h1><p>План заказчика + бриф + референсы → 3D-вид сверху (3 варианта, сверка с планом) и 5 интерьеров в 4K. Шлюз arionhub, ≈ $0,03 за эскиз. '
+        . 'Бриф с планом, пришедший с сайта, запускает эскиз сам — он появится в списке ниже с номером заказа.</p>'
+        . '<form method="post" class="inl"><input type="hidden" name="csrf" value="' . $h($csrf) . '"><input type="hidden" name="act" value="from-order">'
+        . 'Эскиз из заказа: <input name="number" placeholder="LN-…" size="16"> <button>Создать</button></form>'
         . '<form method="post" enctype="multipart/form-data" class="new"><input type="hidden" name="csrf" value="' . $h($csrf) . '"><input type="hidden" name="act" value="create">'
         . '<label>Название<input name="title" placeholder="например: Иванова, 3-к на Ленинском"></label>'
         . '<label>План квартиры (картинка: JPG, PNG, WebP; PDF — сохранить страницу картинкой)<input type="file" name="plan" accept="image/*" required></label>'

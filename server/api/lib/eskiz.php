@@ -236,3 +236,76 @@ function eskiz_spawn(string $id, string $step): void
         . ' >> ' . escapeshellarg(eskiz_dir($id) . '/worker.log') . ' 2>&1 &';
     exec('nohup ' . $cmd);
 }
+
+// ── эскиз заказа (бриф с сайта → эскиз → кабинет клиента) ──────────────────────────────────────────────────────────────────
+// Связь: orders/<номер>/eskiz.json = {"id": "<id эскиза>"}; в meta эскиза — order_id, order_number. Клиент видит эскиз, только когда
+// дизайнер нажал «показать клиенту» (meta.shown) — после проверки описания и сверки вида сверху с планом.
+function eskiz_of_order(array $o): ?array
+{
+    $f = linea_private() . '/orders/' . preg_replace('/[^A-Za-z0-9-]/', '', (string)$o['number']) . '/eskiz.json';
+    if (!is_file($f)) { return null; }
+    $id = (string)(json_decode((string)file_get_contents($f), true)['id'] ?? '');
+    return $id !== '' ? eskiz_load($id) : null;
+}
+/** Ответ брифа «перепланировка» (home.works.replan / answers.replan) → keep | replan | '' (нет ответа). */
+function eskiz_replan_of(array $b): string
+{
+    $raw = $b['home']['works']['replan'] ?? null;
+    $list = array_values(array_filter(is_array($raw) ? $raw : ($raw !== null ? [$raw] : []), fn($x) => is_string($x) && $x !== '' && $x !== 'unknown'));
+    if ($list) { return $list === ['none'] ? 'keep' : 'replan'; }
+    $t = mb_strtolower(trim((string)($b['answers']['replan'] ?? '')));
+    if ($t === '') { return ''; }
+    return preg_match('/^(нет|не\s|оставля|не менять|без перепланир)/u', $t) ? 'keep' : 'replan';
+}
+/** Создать эскиз из заказа: план и референсы — из архива брифа, бриф — из brief.json. Плана картинкой нет — null (эскиз вручную). */
+function eskiz_from_order(array $o, bool $spawn = true): ?array
+{
+    if ($m = eskiz_of_order($o)) { return $m; }
+    $dir = linea_private() . '/orders/' . preg_replace('/[^A-Za-z0-9-]/', '', (string)$o['number']);
+    $zf = $dir . '/brief.zip'; if (!is_file($zf)) { return null; }
+    $b = is_file($dir . '/brief.json') ? (json_decode((string)file_get_contents($dir . '/brief.json'), true) ?: []) : [];
+    $z = new ZipArchive(); if ($z->open($zf, ZipArchive::RDONLY) !== true) { return null; }
+    $plans = []; $refs = [];
+    for ($i = 0; $i < $z->numFiles; $i++) {
+        $n = (string)($z->statIndex($i)['name'] ?? '');
+        if (!preg_match('/\.(jpe?g|png|webp)$/i', $n)) { continue; }
+        if (str_starts_with($n, 'plan/')) { $plans[] = $n; } elseif (str_starts_with($n, 'referensy/')) { $refs[] = $n; }
+    }
+    if (!$plans) { $z->close(); return null; }
+    sort($plans); sort($refs);
+    $id = date('ymd-His') . '-' . substr(bin2hex(random_bytes(3)), 0, 4);
+    $d = eskiz_dir($id); linea_mkdir($d);
+    $tmp = $d . '/in.bin';
+    file_put_contents($tmp, (string)$z->getFromName($plans[0])); eskiz_png($tmp, $d . '/plan.png', 2400);
+    $k = 0; foreach (array_slice($refs, 0, 5) as $r) { file_put_contents($tmp, (string)$z->getFromName($r)); try { eskiz_png($tmp, $d . '/ref-' . (++$k) . '.png', 1600); eskiz_preview($d . "/ref-$k.png"); } catch (Throwable $e) { $k--; } }
+    @unlink($tmp); $z->close();
+    $s = $b['style'] ?? []; $a = $b['answers'] ?? [];
+    $brief = ['household' => mb_substr((string)($a['household'] ?? ''), 0, 500), 'story' => mb_substr((string)($b['story'] ?? ''), 0, 2000),
+        'style' => mb_substr((string)($s['title'] ?? $s['key'] ?? ''), 0, 120), 'colors' => mb_substr((string)($s['colors'] ?? ''), 0, 300),
+        'avoid' => mb_substr((string)($s['avoidColors'] ?? ''), 0, 300),
+        'rooms' => mb_substr(implode(', ', array_filter(array_map(fn($r) => is_array($r) ? (string)($r['name'] ?? $r['type'] ?? '') : (string)$r, (array)($b['rooms'] ?? [])))), 0, 500),
+        'replan' => eskiz_replan_of($b)];
+    $m = ['id' => $id, 'title' => 'Заказ ' . $o['number'], 'created' => linea_now(), 'by' => 'brief', 'test' => !empty($o['test']), 'order_id' => (int)$o['id'],
+        'order_number' => (string)$o['number'], 'brief' => $brief, 'status' => 'new', 'log' => [], 'fixes' => [], 'rooms' => [], 'tops' => [], 'shown' => false];
+    eskiz_log($m, 'из заказа ' . $o['number'] . ': план ' . basename($plans[0]) . ($k ? ", референсов $k" : ', без референсов') . ', перепланировка: ' . ($brief['replan'] ?: 'нет ответа'));
+    eskiz_save($m);
+    file_put_contents($dir . '/eskiz.json', json_encode(['id' => $id]));
+    if ($spawn) { eskiz_spawn($id, 'scene'); }
+    return $m;
+}
+/** Что клиент видит в кабинете. null — эскиза нет или дизайнер ещё не показал. */
+function eskiz_public(array $o): ?array
+{
+    $m = eskiz_of_order($o);
+    if (!$m) { return null; }
+    if (empty($m['shown'])) { return ['state' => 'work', 'text' => 'Готовим эскиз: 3D-вид квартиры сверху и пять интерьеров. Покажем здесь, как только дизайнер проверит его по вашему плану.']; }
+    $rounds = (int)(linea_cfg()['rounds'] ?? 3);
+    $img = fn($f) => 'eskiz_img&o=' . rawurlencode((string)$o['number']) . '&f=' . rawurlencode((string)$f);
+    $rooms = []; foreach ((array)$m['rooms'] as $t => $f) { $rooms[] = ['title' => ESKIZ_ROOM_RU[$t] ?? $t, 'img' => $img(preg_replace('/\.png$/', '.jpg', $f)), 'full' => $img($f)]; }
+    $busy = in_array($m['status'], ['new', 'scene-run', 'rendering', 'render'], true);
+    return ['state' => $busy ? 'redraw' : 'ready', 'version' => (int)($m['scene']['version'] ?? 1),
+        'top' => !empty($m['best']) ? ['img' => $img(preg_replace('/\.png$/', '.jpg', $m['best'])), 'full' => $img($m['best'])] : null, 'rooms' => $rooms,
+        'fixes' => array_map(fn($f) => ['text' => $f['text'], 'date' => $f['date'], 'summary' => $f['summary'] ?? '', 'geometry' => $f['geometry'] ?? []], (array)$m['fixes']),
+        'roundsLeft' => max(0, $rounds - count((array)$m['fixes'])), 'rounds' => $rounds,
+        'replanAnswered' => ($m['brief']['replan'] ?? '') !== '', 'approved' => $m['approved'] ?? null];
+}

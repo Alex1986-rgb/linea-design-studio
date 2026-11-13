@@ -165,7 +165,13 @@ function kb_object(array $o, ?array $c): array
         'termsCall' => kab_terms_client()['call'] ?? null,
         'remont' => ['eligible' => kab_remont_eligible($o), 'chooseAfter' => brig_terms()['choose_after'], 'hasRequest' => (bool)$rm['request'],
             'jobStatus' => $rm['job']['status'] ?? null, 'rt' => $o['token']],
-        'lenta' => kb_lenta($o), 'guest' => $c === null, 'fresh' => kab_fresh()];
+        'lenta' => kb_lenta($o), 'guest' => $c === null, 'fresh' => kab_fresh(), 'eskiz' => kb_eskiz($o)];
+}
+
+/** Эскиз заказа для кабинета (lib/eskiz.php → eskiz_public); сбой эскиза кабинет не роняет. */
+function kb_eskiz(array $o): ?array
+{
+    try { require_once __DIR__ . '/lib/eskiz.php'; return eskiz_public($o); } catch (Throwable $e) { linea_log('error.log', 'kabinet eskiz: ' . $e->getMessage()); return null; }
 }
 
 /** Согласия аккаунта без дублей: по виду + заказу + сделке — последняя запись; с номером заказа и тем, можно ли отозвать сейчас (и почему нет). */
@@ -231,6 +237,16 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'GET') {
             $idx = brief_extra_index($o);
             linea_json(['ok' => true, 'view' => brief_view(brief_load($o)), 'files' => array_map(fn($f) => ['src' => $f['src'], 'name' => $f['name'], 'orig' => $f['orig'] ?? $f['name'], 'size' => $f['size'], 'at' => $f['at'], 'img' => $f['img'], 'q' => $f['q'] ?? null], brief_files($o)),
                 'maxMb' => (int)linea_cfg()['max_upload_mb'], 'maxFiles' => BRIEF_EXTRA_MAX_FILES, 'extra' => count($idx), 'sent' => (string)$o['created_at']]);
+        }
+        case 'eskiz_img': {   // картинка эскиза заказа: только показанного клиенту, только файлы вида сверху и интерьеров
+            $o = kb_order((string)($_GET['o'] ?? ''));
+            require_once __DIR__ . '/lib/eskiz.php';
+            $m = eskiz_of_order($o); $f = basename((string)($_GET['f'] ?? ''));
+            $ok = $m && !empty($m['shown']) && preg_match('/^(top|room)-v\d+-[a-z0-9-]+\.(png|jpg)$/', $f) && is_file($p = eskiz_dir($m['id']) . '/' . $f);
+            if (!$ok) { linea_fail('Картинка не найдена', 404); }
+            header('Content-Type: ' . (str_ends_with($f, '.png') ? 'image/png' : 'image/jpeg')); header('X-Content-Type-Options: nosniff'); header('Cache-Control: private, max-age=3600');
+            if (str_ends_with($f, '.png')) { header('Content-Disposition: attachment; filename="LINEA-' . $o['number'] . '-' . $f . '"'); }
+            header('Content-Length: ' . filesize($p)); readfile($p); exit;
         }
         case 'bfile': {
             $o = kb_order((string)($_GET['o'] ?? ''));
@@ -424,6 +440,35 @@ switch ($a) {
         kab_answers_put($o, $id, $rec);
         if (isset(kb_deferred($o)[$id])) { $d = kb_deferred($o); unset($d[$id]); file_put_contents(kab_order_dir($o) . '/deferred.json', json_encode($d)); }
         brig_admin_notify('Клиент ответил: ' . $o['number'], $id . ' — ' . ($a === 'answer' ? 'ответ' : 'решение'), brig_link('api/panel.php?s=order&o=' . rawurlencode($o['number']) . '&tab=voprosy'), (bool)$o['test']);
+        linea_json(kb_object(linea_order_by_number($o['number']), $c));
+    }
+    case 'eskiz_fix':
+    case 'eskiz_approve': {   // эскиз: правка словами (круги правок) или согласование; планировка при «оставляем» — вопрос, не правка
+        $o = kb_order($num);
+        kab_require_fresh_for_order($o);
+        require_once __DIR__ . '/lib/eskiz.php';
+        $m = eskiz_of_order($o);
+        if (!$m || empty($m['shown'])) { linea_fail('Эскиз ещё не готов', 404); }
+        if (!empty($m['approved'])) { linea_fail('Эскиз уже согласован', 409); }
+        if (in_array($m['status'], ['new', 'scene-run', 'rendering', 'render'], true)) { linea_fail('Эскиз перерисовывается — подождите несколько минут', 409); }
+        if ($a === 'eskiz_fix') {
+            $t = linea_str($in['text'] ?? '', 2000);
+            if (mb_strlen($t) < 3) { linea_fail('Опишите правку словами'); }
+            $rounds = (int)(linea_cfg()['rounds'] ?? 3);
+            if (count((array)$m['fixes']) >= $rounds) { linea_fail("Круги правок эскиза ($rounds) использованы — напишите нам в сообщениях, обсудим", 409); }
+            $m['fixes'][] = ['text' => $t, 'date' => linea_now(), 'by' => 'client']; $m['status'] = 'rendering';
+            eskiz_log($m, 'правка клиента №' . count($m['fixes'])); eskiz_save($m); eskiz_spawn($m['id'], 'fix');
+            linea_event((int)$o['id'], 'client', 'Правка эскиза №' . count($m['fixes']) . ': ' . mb_substr($t, 0, 200));
+            brig_admin_notify('Правка эскиза: ' . $o['number'], mb_substr($t, 0, 300), brig_link('api/eskiz.php?id=' . $m['id']), (bool)$o['test']);
+        } else {
+            if (($m['brief']['replan'] ?? '') === '') { linea_fail('Сначала ответьте, менять ли планировку, — от этого зависит проект', 409); }
+            $who = (string)($c['name'] ?? '') ?: (string)($o['client_name'] ?? 'заказчик');
+            $m['approved'] = ['by' => $who . ' (кабинет)', 'date' => linea_now(), 'version' => (int)($m['scene']['version'] ?? 1), 'top' => $m['best'] ?? null, 'rooms' => $m['rooms']];
+            eskiz_log($m, 'согласовано клиентом в кабинете'); eskiz_save($m);
+            kab_sign('client', (int)($_SESSION['roles']['client'] ?? 0), 'eskiz_accept', $o['number'], 'v' . (int)($m['scene']['version'] ?? 1), hash_file('sha256', eskiz_dir($m['id']) . '/meta.json'), 'agree', '', (int)$o['id']);
+            linea_event((int)$o['id'], 'client', 'Эскиз согласован в кабинете (версия ' . (int)($m['scene']['version'] ?? 1) . ') — старт полного проекта');
+            brig_admin_notify('Эскиз согласован: ' . $o['number'], 'Клиент согласовал эскиз — можно начинать полный проект', brig_link('api/eskiz.php?id=' . $m['id']), (bool)$o['test']);
+        }
         linea_json(kb_object(linea_order_by_number($o['number']), $c));
     }
     case 'accept_album': {

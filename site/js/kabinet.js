@@ -259,6 +259,23 @@
       <form id="kabMsg"><textarea class="kab-in" name="text" rows="2" placeholder="Сообщение студии"></textarea><div class="kab-row"><button class="btn sm" type="submit">Отправить</button></div><p class="kab-err" role="alert"></p></form></div>`;
   }
 
+  // эскиз (12.11.2026): 3D-вид квартиры сверху и интерьеры по плану клиента — до полного проекта; правки словами (круги), согласование
+  function eskizCard(j) {
+    const E = j.eskiz, num = j.order.number;
+    if (!E) return '';
+    if (E.state === 'work') return `<div class="kab-card kab-eskiz"><h3>Эскиз</h3><p class="kab-empty">${esc(E.text)}</p></div>`;
+    const img = x => `<a href="${API}kabinet.php?a=${x.full}" target="_blank" rel="noopener"><img src="${API}kabinet.php?a=${x.img}" alt="" loading="lazy" style="width:100%;border-radius:8px;display:block"></a>`;
+    const rooms = E.rooms.map(r => `<figure style="margin:0">${img(r)}<figcaption class="kab-mut">${esc(r.title)}</figcaption></figure>`).join('');
+    const fixes = E.fixes.length ? '<ul class="kab-list">' + E.fixes.map((f, i) => `<li><div><b>Правка ${i + 1}</b> <span class="kab-mut">${esc(dt(f.date))}</span><div>${esc(f.text)}</div>${f.summary ? '<div class="kab-mut">Сделано: ' + esc(f.summary) + '</div>' : ''}${f.geometry && f.geometry.length ? '<div class="kab-mut">Про планировку: ' + esc(f.geometry.join('; ')) + ' — уточним с вами отдельно</div>' : ''}</div></li>`).join('') + '</ul>' : '';
+    const busy = E.state === 'redraw' ? '<p><span class="kab-tag g">Перерисовываем по вашей правке</span> обычно 5–10 минут — обновите страницу.</p>' : '';
+    const tools = E.approved ? `<p class="kab-ok">Эскиз согласован ${esc(dt(E.approved.date))} — начинаем полный проект.</p>`
+      : E.state === 'redraw' ? '' : `${E.roundsLeft ? `<textarea class="kab-in" id="eskFix" rows="3" placeholder="Что поменять — словами: например, «диван зелёный бархат», «в детской кровать-домик», «кухню светлее»"></textarea>
+        <div class="kab-row"><button class="btn ghost sm" type="button" id="eskFixBtn">Отправить правку</button><span class="kab-mut">Осталось кругов правок: ${E.roundsLeft} из ${E.rounds}</span></div>` : '<p class="kab-mut">Круги правок эскиза использованы — если нужно ещё, напишите в ленту заказа.</p>'}
+        <div class="kab-row"><button class="btn sm" type="button" id="eskOk"${E.replanAnswered ? '' : ' disabled'}>Согласовать эскиз</button>${E.replanAnswered ? '' : '<span class="kab-mut">Сначала ответьте в брифе, менять ли планировку</span>'}</div><p class="kab-err" role="alert" id="eskErr"></p>`;
+    return `<div class="kab-card kab-eskiz"><h3>Эскиз — версия ${E.version}</h3><p class="kab-mut">Так будет выглядеть квартира: вид сверху по вашему плану и интерьеры. Это эскиз до полного проекта — мебель и цвета обсуждаем словами.</p>
+      ${E.top ? img(E.top) : ''}<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px;margin-top:12px">${rooms}</div>${busy}${fixes}${tools}</div>`;
+  }
+
   function proekt(j) {
     const O = j.order, B = j.brief, rel = j.releases, last = rel[rel.length - 1];
     const R = j.registry, open = R ? R.items.filter(i => !i.closed && !i.answer) : [];
@@ -269,7 +286,7 @@
       : `<p class="kab-empty">Альбом появится здесь, как только будет готов первый вариант. Мы напишем на почту.</p>`;
     const vers = rel.length > 1 ? `<div class="kab-card"><h3>Версии альбома</h3><ul class="kab-list">${rel.slice().reverse().map(r => `<li><div><b>${esc(r.title)}</b> <span class="kab-mut">${esc(day(r.date))}</span>${r.changes.length ? '<div class="kab-mut">Что изменилось: ' + r.changes.map(esc).join('; ') + '</div>' : ''}</div>${r.url ? `<a href="${esc(r.url)}" target="_blank" rel="noopener">Открыть</a>` : ''}</li>`).join('')}</ul></div>` : '';
     const msgs = j.lenta.slice().reverse();
-    return statusCard(j) + `<div class="kab-grid">
+    return statusCard(j) + eskizCard(j) + `<div class="kab-grid">
       <div class="kab-card"><h3>Бриф</h3><p>${esc(B.objectType || 'Объект')}${B.area ? ', ' + String(B.area).replace('.', ',') + ' м²' : ''}${B.rooms.length ? ' · ' + B.rooms.length + ' помещ.' : ''}</p>${B.style ? '<p class="kab-mut">Стиль: ' + esc(B.style) + '</p>' : ''}<p class="kab-mut">Отправлен ${esc(dt(B.sent))}, файлов: ${B.files}.</p><a class="btn ghost sm" href="#/o/${esc(O.number)}/brif">Посмотреть и дополнить</a></div>
       <div class="kab-card"><h3>Оплата</h3>${pay}</div>
       ${optionsCards(j)}
@@ -380,6 +397,8 @@
     const num = j.order.number, q = s => root.querySelector(s), qa = s => root.querySelectorAll(s);
     bindPay(j);
     const m = q('#kabMsg'); if (m) m.onsubmit = async e => { e.preventDefault(); const r = await act('msg', { o: num, text: m.text.value }, m.querySelector('.kab-err')); if (r.ok) object(num, tab); };
+    const ef = q('#eskFixBtn'); if (ef) ef.onclick = async () => { const r = await act('eskiz_fix', { o: num, text: q('#eskFix').value }, q('#eskErr')); if (r.ok) object(num, tab); };
+    const eo = q('#eskOk'); if (eo) eo.onclick = async () => { if (!await ask('Согласовать эскиз? После этого начинаем полный проект: чертежи и альбом по этому эскизу.')) return; const r = await act('eskiz_approve', { o: num }, q('#eskErr')); if (r.ok) object(num, tab); };
     qa('[data-accept]').forEach(b => b.onclick = async () => { if (!await ask('Принять финальный альбом? Это подписание акта сдачи-приёмки проекта (кодом из письма).')) return; const r = await act('accept_album', { o: num, ver: b.dataset.accept }); if (r.ok) object(num, tab); });
     qa('[data-qf]').forEach(b => b.onclick = () => { qFilter = b.dataset.qf; object(num, 'voprosy'); });
     qa('[data-opt]').forEach(b => b.onclick = () => { qa(`[data-opt="${b.dataset.opt}"]`).forEach(x => x.classList.toggle('on', x === b)); });

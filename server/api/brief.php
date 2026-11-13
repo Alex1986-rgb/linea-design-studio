@@ -187,4 +187,10 @@ linea_notify($isSmeta ? 'LINEA: новый заказ сметы ' . $number : '
     'Заказы: ' . linea_base() . '/api/admin.php',
 ]), $test);
 
+// эскиз (12.11.2026): план картинкой в брифе → черновик описания комнат в фоне; клиент увидит эскиз в кабинете после проверки дизайнером
+// (api/eskiz.php → «показать клиенту»). Сбой эскиза заказ не роняет.
+if (!$isSmeta) {
+    try { require_once __DIR__ . '/lib/eskiz.php'; $oEsk = linea_order_by_number($number); if ($oEsk && eskiz_from_order($oEsk)) { linea_event($id, 'site', 'Эскиз: план из брифа принят, готовим описание комнат'); } }
+    catch (Throwable $e) { linea_log('error.log', 'brief eskiz: ' . $e->getMessage()); }
+}
 linea_json(['ok' => true, 'number' => $number, 'token' => $token, 'orderUrl' => 'order.html?t=' . $token]);
