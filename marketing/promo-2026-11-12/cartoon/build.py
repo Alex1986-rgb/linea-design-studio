@@ -75,6 +75,14 @@ def scene(sid, seconds, move, cap, out):
     if sid == "end":
         sh("ffmpeg", "-loglevel", "error", "-y", "-loop", "1", "-t", f"{seconds:.3f}", "-i", cap, "-vf", f"fps={FPS},format=yuv420p",
            "-c:v", "libx264", "-crf", "17", "-preset", "medium", out); return
+    clip = HERE / "video" / f"{sid}.mp4"
+    if clip.exists():   # живой клип видеомодели (anim.py): растянуть под длину реплики, поднять до 1080×1920, тот же титр
+        k = max(1.0, seconds / dur(clip))
+        sh("ffmpeg", "-loglevel", "error", "-y", "-i", clip, "-loop", "1", "-i", cap, "-filter_complex",
+           f"[0:v]setpts={k:.4f}*PTS,fps={FPS},scale={W}:{H}:force_original_aspect_ratio=increase:flags=lanczos,crop={W}:{H},unsharp=5:5:0.6,tpad=stop_mode=clone:stop_duration=2[v];"
+           "[1]format=rgba,fade=t=in:st=0.35:d=0.4:alpha=1[o];[v][o]overlay=0:0:shortest=1,format=yuv420p",
+           "-frames:v", n, "-c:v", "libx264", "-crf", "16", "-preset", "medium", out)
+        return
     # zoompan по картинке, увеличенной ×2 (без «дрожи» целых пикселей); итог 1080×1920
     z = {"zoom_in": f"1.0+0.10*on/{n}", "zoom_out": f"1.10-0.10*on/{n}", "pan_up": "1.10", "pan_down": "1.10"}[move]
     y = {"pan_up": f"(ih-ih/zoom)*(1-on/{n})", "pan_down": f"(ih-ih/zoom)*on/{n}"}.get(move, "(ih-ih/zoom)/2")
@@ -114,11 +122,11 @@ def main():
     sh("ffmpeg", "-loglevel", "error", "-y", "-i", OUT / "music.wav", "-i", OUT / "voice.wav", "-filter_complex",
        "[0]volume=0.42[m];[1]asplit[v1][v2];[m][v1]sidechaincompress=threshold=0.03:ratio=8:attack=20:release=400[md];[md][v2]amix=inputs=2:normalize=0,alimiter=limit=0.95[a]",
        "-map", "[a]", "-ar", "48000", OUT / "mix.wav")
-    final = HERE / "linea-multik.mp4"
+    final = HERE / ("linea-multik-anim.mp4" if (HERE / "video" / "s01.mp4").exists() else "linea-multik.mp4")
     sh("ffmpeg", "-loglevel", "error", "-y", "-i", OUT / "video.mp4", "-i", OUT / "mix.wav", "-map", "0:v", "-map", "1:a", "-c:v", "libx264", "-preset", "slow",
        "-crf", "18", "-pix_fmt", "yuv420p", "-c:a", "aac", "-b:a", "192k", "-movflags", "+faststart", "-shortest", final)
     sh("ffmpeg", "-loglevel", "error", "-y", "-i", final, "-c:v", "libx264", "-crf", "25", "-preset", "slow", "-c:a", "copy", "-movflags", "+faststart",
-       HERE / "linea-multik-light.mp4")
+       final.with_name(final.stem + "-light.mp4"))
     print("готово:", final, round(dur(final), 1), "с")
 
 if __name__ == "__main__":
