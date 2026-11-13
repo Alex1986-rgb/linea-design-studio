@@ -276,27 +276,67 @@
 <!-- /home:cta-count -->
         </div>
         <!-- Ролик на первом экране (13.11.2026, просьба Александра): мультфильм «от пустой квартиры до ремонта по проекту»,
-             marketing/promo-2026-11-12/cartoon → assets/video/. Компьютер — справа от оффера, телефон — под кнопками. Автозапуск без звука (браузеры иначе не дают), по кругу. -->
-        <div class="hero-video">
-          <video controls autoplay muted loop playsinline preload="metadata" poster="assets/video/linea-film-poster.jpg" width="720" height="1280" aria-label="Мультфильм LINEA: от пустой квартиры до ремонта по проекту">
+             marketing/promo-2026-11-12/cartoon → assets/video/. Компьютер — справа от оффера, телефон — под кнопками.
+             Звук: сначала пробуем со звуком (часть браузеров разрешает), запрет — играет без звука с кнопкой «Включить звук»;
+             первый клик или клавиша в любом месте страницы включает звук (браузеры без действия посетителя звук не дают). -->
+        <figure class="hero-video" data-hv>
+          <span class="hv-chip"><i aria-hidden="true">▶</i> Мультфильм · 1 мин</span>
+          <video autoplay muted loop playsinline preload="auto" poster="assets/video/linea-film-poster.jpg" width="720" height="1280" aria-label="Мультфильм LINEA: от пустой квартиры до ремонта по проекту">
             <source src="assets/video/linea-film.mp4" type="video/mp4">
           </video>
-          <p>Как это работает — мультфильм за минуту · звук — кнопкой в плеере</p>
-        </div>
+          <button class="hv-sound" type="button" data-hv-sound hidden><span aria-hidden="true">🔊</span> Включить звук</button>
+          <button class="hv-mute" type="button" data-hv-mute hidden aria-label="Выключить звук">🔈</button>
+          <figcaption class="sr">Как это работает: план → эскиз → правки словами → рабочий проект → бригада по проекту</figcaption>
+        </figure>
       </div>
     </div>
     <style>
-      .film .hero-video video{width:100%;height:auto;aspect-ratio:9/16;border-radius:16px;background:#14120E;display:block;
-        box-shadow:0 0 0 1px #C29A5B55,0 24px 60px #000000b0}
-      .film .hero-video p{margin:10px 0 0;text-align:center;color:#C9C2B4;font-size:12.5px;letter-spacing:.06em}
+      .film .hero-video{margin:0;position:relative}
+      .film .hero-video video{width:100%;height:auto;aspect-ratio:9/16;border-radius:20px;background:#14120E;display:block;cursor:pointer;
+        box-shadow:0 0 0 1px #C29A5B66,0 0 0 6px #C29A5B14,0 30px 80px #000000c0;transition:transform .5s cubic-bezier(.2,.7,.2,1),box-shadow .5s}
+      .film .hero-video:hover video{transform:translateY(-4px);box-shadow:0 0 0 1px #C29A5Baa,0 0 0 8px #C29A5B1f,0 40px 90px #000000d0}
+      .film .hv-chip{position:absolute;z-index:2;top:14px;left:14px;padding:6px 12px 6px 10px;border-radius:999px;background:#0F0E0Cb8;
+        backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);color:#F4EFE6;font-size:12px;letter-spacing:.06em;border:1px solid #C29A5B55}
+      .film .hv-chip i{color:#C29A5B;font-style:normal;margin-right:4px;font-size:10px}
+      .film .hv-sound{position:absolute;z-index:2;left:50%;bottom:22%;transform:translateX(-50%);padding:12px 20px;border-radius:999px;cursor:pointer;
+        background:#C29A5B;color:#14120E;font:600 14px/1 inherit;font-family:inherit;letter-spacing:.04em;border:0;white-space:nowrap;
+        box-shadow:0 10px 30px #000000a0;animation:hvPulse 2s ease-in-out infinite}
+      .film .hv-sound:hover{background:#D7B373}
+      .film .hv-mute{position:absolute;z-index:2;right:12px;bottom:12px;width:38px;height:38px;border-radius:50%;border:1px solid #C29A5B66;
+        background:#0F0E0Cb8;color:#F4EFE6;font-size:16px;cursor:pointer}
+      @keyframes hvPulse{0%,100%{box-shadow:0 10px 30px #000000a0,0 0 0 0 #C29A5B88}50%{box-shadow:0 10px 30px #000000a0,0 0 0 12px #C29A5B00}}
+      .film .sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+      @media (prefers-reduced-motion:reduce){.film .hv-sound{animation:none}}
       @media (min-width:900px){
+        header.site .nav{max-width:1440px;padding-left:3vw;padding-right:3vw}
         .film .stage .wrap{max-width:1440px;padding:0 3vw}
-        .film .hero-video{position:absolute;z-index:3;top:50%;transform:translateY(-52%);
-          right:max(3vw,calc((100vw - 1440px)/2 + 3vw));width:min(clamp(220px,24vw,330px),calc((100vh - 300px)*.5625))}
-        .film .scenes,.film .cta-row{max-width:calc(100% - min(clamp(220px,24vw,330px),calc((100vh - 300px)*.5625)) - 36px)}
+        .film .hero-video{position:absolute;z-index:3;top:50%;transform:translateY(-50%);
+          right:max(3vw,calc((100vw - 1440px)/2 + 3vw));width:min(clamp(230px,24vw,340px),calc((100vh - 240px)*.5625))}
+        .film .scenes,.film .cta-row{max-width:calc(100% - min(clamp(230px,24vw,340px),calc((100vh - 240px)*.5625)) - 56px)}
+        .film .frame-cap{left:max(3vw,calc((100vw - 1440px)/2 + 3vw));right:auto;text-align:left;max-width:52%}
       }
-      @media (max-width:899px){ .film .hero-video{max-width:300px;margin:6px auto 0} }
+      @media (max-width:899px){ .film .hero-video{max-width:300px;margin:10px auto 0} }
     </style>
+    <script>
+    (function () {
+      var f = document.querySelector('[data-hv]'); if (!f) return;
+      var v = f.querySelector('video'), on = f.querySelector('[data-hv-sound]'), off = f.querySelector('[data-hv-mute]');
+      function ui() { on.hidden = !v.muted; off.hidden = v.muted; }
+      function sound(restart) { v.muted = false; if (restart) { try { v.currentTime = 0; } catch (e) {} } v.play().catch(function () {}); ui(); }
+      // 1) пробуем сразу со звуком; браузер запретил — без звука, с кнопкой
+      v.muted = false;
+      var p = v.play();
+      if (p && p.catch) p.catch(function () { v.muted = true; v.play().catch(function () {}); ui(); }); else ui();
+      v.addEventListener('playing', ui);
+      on.addEventListener('click', function (e) { e.stopPropagation(); sound(true); });
+      off.addEventListener('click', function (e) { e.stopPropagation(); v.muted = true; ui(); });
+      v.addEventListener('click', function () { if (v.muted) sound(true); else if (v.paused) v.play(); else v.pause(); });
+      // 2) первое действие посетителя в любом месте страницы — включаем звук (без перемотки)
+      function first() { if (v.muted && !f.dataset.userMuted) sound(false); ['pointerdown', 'keydown'].forEach(function (t) { document.removeEventListener(t, first, true); }); }
+      off.addEventListener('click', function () { f.dataset.userMuted = '1'; });
+      ['pointerdown', 'keydown'].forEach(function (t) { document.addEventListener(t, first, true); });
+    })();
+    </script>
 <!-- home:framecap -->
     <div class="frame-cap"><b id="filmRoom">Кабинет, стена А</b> <span id="filmNote">— квартира 127 м² · кадр сверен с планом и подписан дизайнером</span></div>
 <!-- /home:framecap -->
