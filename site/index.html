@@ -276,12 +276,12 @@
 <!-- /home:cta-count -->
         </div>
         <!-- Ролик на первом экране (13.11.2026, просьба Александра): мультфильм «от пустой квартиры до ремонта по проекту»,
-             marketing/promo-2026-11-12/cartoon → assets/video/. Компьютер — справа от оффера, телефон — под кнопками. Без автозапуска. -->
+             marketing/promo-2026-11-12/cartoon → assets/video/. Компьютер — справа от оффера, телефон — под кнопками. Автозапуск без звука (браузеры иначе не дают), по кругу. -->
         <div class="hero-video">
-          <video controls playsinline preload="none" poster="assets/video/linea-film-poster.jpg" width="720" height="1280" aria-label="Мультфильм LINEA: от пустой квартиры до ремонта по проекту">
+          <video controls autoplay muted loop playsinline preload="metadata" poster="assets/video/linea-film-poster.jpg" width="720" height="1280" aria-label="Мультфильм LINEA: от пустой квартиры до ремонта по проекту">
             <source src="assets/video/linea-film.mp4" type="video/mp4">
           </video>
-          <p>Как это работает — мультфильм за минуту</p>
+          <p>Как это работает — мультфильм за минуту · звук — кнопкой в плеере</p>
         </div>
       </div>
     </div>
@@ -290,8 +290,9 @@
         box-shadow:0 0 0 1px #C29A5B55,0 24px 60px #000000b0}
       .film .hero-video p{margin:10px 0 0;text-align:center;color:#C9C2B4;font-size:12.5px;letter-spacing:.06em}
       @media (min-width:900px){
+        .film .stage .wrap{max-width:1440px;padding:0 3vw}
         .film .hero-video{position:absolute;z-index:3;top:50%;transform:translateY(-52%);
-          right:max(5vw,calc((100vw - 1180px)/2 + 5vw));width:min(clamp(220px,24vw,330px),calc((100vh - 300px)*.5625))}
+          right:max(3vw,calc((100vw - 1440px)/2 + 3vw));width:min(clamp(220px,24vw,330px),calc((100vh - 300px)*.5625))}
         .film .scenes,.film .cta-row{max-width:calc(100% - min(clamp(220px,24vw,330px),calc((100vh - 300px)*.5625)) - 36px)}
       }
       @media (max-width:899px){ .film .hero-video{max-width:300px;margin:6px auto 0} }
