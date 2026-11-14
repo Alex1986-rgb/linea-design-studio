@@ -1,15 +1,145 @@
 {
- "checked": false,
- "signed": 0,
+ "checked": true,
+ "signed": 9,
  "prelim": 0,
- "rejected": 35,
- "accepted": 0,
- "ribbon": [],
+ "rejected": 10,
+ "accepted": 9,
+ "ribbon": [
+  {
+   "src": "assets/portfolio/gost-kv3k/3d-top.jpg",
+   "alt": "Квартира 79 м² · трёхкомнатная — вид сверху 3D",
+   "w": 1200,
+   "h": 800,
+   "state": "signed",
+   "name": "3d-top",
+   "wall": "top",
+   "clay": {
+    "src": "assets/portfolio/gost-kv3k/clay-3d-top.jpg",
+    "w": 1200,
+    "h": 800
+   }
+  },
+  {
+   "src": "assets/portfolio/gost-kv3k/room-living-wC.jpg",
+   "alt": "Квартира 79 м² · трёхкомнатная — гостиная, визуализация",
+   "w": 1200,
+   "h": 800,
+   "state": "signed",
+   "name": "room-living-wC",
+   "wall": "r6:C",
+   "clay": {
+    "src": "assets/portfolio/gost-kv3k/clay-room-living-wC.jpg",
+    "w": 1200,
+    "h": 800
+   }
+  },
+  {
+   "src": "assets/portfolio/gost-kv3k/room-bedroom1-wB.jpg",
+   "alt": "Квартира 79 м² · трёхкомнатная — спальня, визуализация",
+   "w": 1200,
+   "h": 800,
+   "state": "signed",
+   "name": "room-bedroom1-wB",
+   "wall": "r1:B",
+   "clay": {
+    "src": "assets/portfolio/gost-kv3k/clay-room-bedroom1-wB.jpg",
+    "w": 1200,
+    "h": 800
+   }
+  },
+  {
+   "src": "assets/portfolio/gost-kv3k/room-bedroom2-wA.jpg",
+   "alt": "Квартира 79 м² · трёхкомнатная — спальня, визуализация",
+   "w": 1200,
+   "h": 800,
+   "state": "signed",
+   "name": "room-bedroom2-wA",
+   "wall": "r4:A",
+   "clay": {
+    "src": "assets/portfolio/gost-kv3k/clay-room-bedroom2-wA.jpg",
+    "w": 1200,
+    "h": 800
+   }
+  },
+  {
+   "src": "assets/portfolio/gost-kv3k/room-bath1-wB.jpg",
+   "alt": "Квартира 79 м² · трёхкомнатная — ванная, визуализация",
+   "w": 1200,
+   "h": 800,
+   "state": "signed",
+   "name": "room-bath1-wB",
+   "wall": "r2:B",
+   "clay": {
+    "src": "assets/portfolio/gost-kv3k/clay-room-bath1-wB.jpg",
+    "w": 1200,
+    "h": 800
+   }
+  },
+  {
+   "src": "assets/portfolio/gost-kv3k/room-bath2-wB.jpg",
+   "alt": "Квартира 79 м² · трёхкомнатная — ванная, визуализация",
+   "w": 1200,
+   "h": 800,
+   "state": "signed",
+   "name": "room-bath2-wB",
+   "wall": "r7:B",
+   "clay": {
+    "src": "assets/portfolio/gost-kv3k/clay-room-bath2-wB.jpg",
+    "w": 1200,
+    "h": 800
+   }
+  },
+  {
+   "src": "assets/portfolio/gost-kv3k/room-corridor-wA.jpg",
+   "alt": "Квартира 79 м² · трёхкомнатная — холл, визуализация",
+   "w": 1200,
+   "h": 800,
+   "state": "signed",
+   "name": "room-corridor-wA",
+   "wall": "r8:A",
+   "clay": {
+    "src": "assets/portfolio/gost-kv3k/clay-room-corridor-wA.jpg",
+    "w": 1200,
+    "h": 800
+   }
+  },
+  {
+   "src": "assets/portfolio/gost-kv3k/room-living-wD.jpg",
+   "alt": "Квартира 79 м² · трёхкомнатная — гостиная, визуализация",
+   "w": 1200,
+   "h": 800,
+   "state": "signed",
+   "name": "room-living-wD",
+   "wall": "r6:D",
+   "clay": {
+    "src": "assets/portfolio/gost-kv3k/clay-room-living-wD.jpg",
+    "w": 1200,
+    "h": 800
+   }
+  },
+  {
+   "src": "assets/portfolio/gost-kv3k/room-bath1-wD.jpg",
+   "alt": "Квартира 79 м² · трёхкомнатная — ванная, визуализация",
+   "w": 1200,
+   "h": 800,
+   "state": "signed",
+   "name": "room-bath1-wD",
+   "wall": "r2:D",
+   "clay": {
+    "src": "assets/portfolio/gost-kv3k/clay-room-bath1-wD.jpg",
+    "w": 1200,
+    "h": 800
+   }
+  }
+ ],
  "hero": {
-  "src": "portfolio/gost-kv3k/sheets/32-interior-designer-furniture.svg",
-  "alt": "Квартира 79 м² · трёхкомнатная — план расстановки мебели",
-  "w": 1587,
-  "h": 1123,
-  "kind": "sheet"
+  "src": "assets/portfolio/gost-kv3k-hero.jpg",
+  "alt": "Квартира 79 м² · трёхкомнатная — вид сверху 3D",
+  "w": 1600,
+  "h": 1066,
+  "kind": "render",
+  "state": "signed",
+  "name": "3d-top",
+  "webp": "assets/portfolio/gost-kv3k-hero.webp"
  }
 }

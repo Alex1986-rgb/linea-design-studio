@@ -18,13 +18,16 @@
  },
  "preReview": "",
  "hero": {
-  "src": "portfolio/gost-kv3k/sheets/32-interior-designer-furniture.svg",
-  "alt": "Квартира 79 м² · трёхкомнатная — план расстановки мебели",
-  "w": 1587,
-  "h": 1123,
-  "kind": "sheet"
+  "src": "assets/portfolio/gost-kv3k-hero.jpg",
+  "alt": "Квартира 79 м² · трёхкомнатная — вид сверху 3D",
+  "w": 1600,
+  "h": 1066,
+  "kind": "render",
+  "state": "signed",
+  "name": "3d-top",
+  "webp": "assets/portfolio/gost-kv3k-hero.webp"
  },
- "visuals": 0,
+ "visuals": 9,
  "visualsPrelim": 0,
  "studioSize": "6 МБ",
  "pdfSize": "11 МБ"

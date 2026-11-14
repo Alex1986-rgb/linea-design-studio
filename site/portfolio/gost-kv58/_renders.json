@@ -1,15 +1,117 @@
 {
- "checked": false,
- "signed": 0,
+ "checked": true,
+ "signed": 7,
  "prelim": 0,
- "rejected": 11,
- "accepted": 0,
- "ribbon": [],
+ "rejected": 3,
+ "accepted": 7,
+ "ribbon": [
+  {
+   "src": "assets/portfolio/gost-kv58/room-living-wC.jpg",
+   "alt": "Квартира 55 м² · кухня-гостиная и спальня — гостиная, визуализация",
+   "w": 1200,
+   "h": 800,
+   "state": "signed",
+   "name": "room-living-wC",
+   "wall": "r1:C",
+   "clay": {
+    "src": "assets/portfolio/gost-kv58/clay-room-living-wC.jpg",
+    "w": 1200,
+    "h": 800
+   }
+  },
+  {
+   "src": "assets/portfolio/gost-kv58/room-bedroom-wB.jpg",
+   "alt": "Квартира 55 м² · кухня-гостиная и спальня — спальня, визуализация",
+   "w": 1200,
+   "h": 800,
+   "state": "signed",
+   "name": "room-bedroom-wB",
+   "wall": "r2:B",
+   "clay": {
+    "src": "assets/portfolio/gost-kv58/clay-room-bedroom-wB.jpg",
+    "w": 1200,
+    "h": 800
+   }
+  },
+  {
+   "src": "assets/portfolio/gost-kv58/room-bath-wB.jpg",
+   "alt": "Квартира 55 м² · кухня-гостиная и спальня — ванная, визуализация",
+   "w": 1200,
+   "h": 800,
+   "state": "signed",
+   "name": "room-bath-wB",
+   "wall": "r3:B",
+   "clay": {
+    "src": "assets/portfolio/gost-kv58/clay-room-bath-wB.jpg",
+    "w": 1200,
+    "h": 800
+   }
+  },
+  {
+   "src": "assets/portfolio/gost-kv58/room-hall-wide.jpg",
+   "alt": "Квартира 55 м² · кухня-гостиная и спальня — прихожая, визуализация",
+   "w": 1200,
+   "h": 800,
+   "state": "signed",
+   "name": "room-hall-wide",
+   "wall": "r5:room",
+   "clay": {
+    "src": "assets/portfolio/gost-kv58/clay-room-hall-wide.jpg",
+    "w": 1200,
+    "h": 800
+   }
+  },
+  {
+   "src": "assets/portfolio/gost-kv58/room-wc-wide.jpg",
+   "alt": "Квартира 55 м² · кухня-гостиная и спальня — санузел, визуализация",
+   "w": 1200,
+   "h": 800,
+   "state": "signed",
+   "name": "room-wc-wide",
+   "wall": "r4:room",
+   "clay": {
+    "src": "assets/portfolio/gost-kv58/clay-room-wc-wide.jpg",
+    "w": 1200,
+    "h": 800
+   }
+  },
+  {
+   "src": "assets/portfolio/gost-kv58/room-living-wD.jpg",
+   "alt": "Квартира 55 м² · кухня-гостиная и спальня — гостиная, визуализация",
+   "w": 1200,
+   "h": 800,
+   "state": "signed",
+   "name": "room-living-wD",
+   "wall": "r1:D",
+   "clay": {
+    "src": "assets/portfolio/gost-kv58/clay-room-living-wD.jpg",
+    "w": 1200,
+    "h": 800
+   }
+  },
+  {
+   "src": "assets/portfolio/gost-kv58/room-bath-wC.jpg",
+   "alt": "Квартира 55 м² · кухня-гостиная и спальня — ванная, визуализация",
+   "w": 1200,
+   "h": 800,
+   "state": "signed",
+   "name": "room-bath-wC",
+   "wall": "r3:C",
+   "clay": {
+    "src": "assets/portfolio/gost-kv58/clay-room-bath-wC.jpg",
+    "w": 1200,
+    "h": 800
+   }
+  }
+ ],
  "hero": {
-  "src": "portfolio/gost-kv58/sheets/24-interior-designer-furniture.svg",
-  "alt": "Квартира 55 м² · кухня-гостиная и спальня — план расстановки мебели",
-  "w": 1587,
-  "h": 1123,
-  "kind": "sheet"
+  "src": "assets/portfolio/gost-kv58-hero.jpg",
+  "alt": "Квартира 55 м² · кухня-гостиная и спальня — гостиная, визуализация",
+  "w": 1600,
+  "h": 1066,
+  "kind": "render",
+  "state": "signed",
+  "name": "room-living-wC",
+  "webp": "assets/portfolio/gost-kv58-hero.webp"
  }
 }

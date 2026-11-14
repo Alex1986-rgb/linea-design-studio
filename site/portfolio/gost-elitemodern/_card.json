@@ -19,16 +19,16 @@
  "preReview": "",
  "hero": {
   "src": "assets/portfolio/gost-elitemodern-hero.jpg",
-  "alt": "Квартира 68 м² · элитный модерн — ванная, визуализация",
+  "alt": "Квартира 68 м² · элитный модерн — гостиная, визуализация",
   "w": 1600,
   "h": 1066,
   "kind": "render",
   "state": "signed",
-  "name": "room-bath-d1",
+  "name": "room-living-m1",
   "webp": "assets/portfolio/gost-elitemodern-hero.webp"
  },
- "visuals": 1,
- "visualsPrelim": 6,
+ "visuals": 7,
+ "visualsPrelim": 3,
  "studioSize": "6 МБ",
  "pdfSize": "9 МБ"
 }

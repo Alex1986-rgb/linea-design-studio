@@ -18,13 +18,16 @@
  },
  "preReview": "",
  "hero": {
-  "src": "portfolio/gost-kv58/sheets/24-interior-designer-furniture.svg",
-  "alt": "Квартира 55 м² · кухня-гостиная и спальня — план расстановки мебели",
-  "w": 1587,
-  "h": 1123,
-  "kind": "sheet"
+  "src": "assets/portfolio/gost-kv58-hero.jpg",
+  "alt": "Квартира 55 м² · кухня-гостиная и спальня — гостиная, визуализация",
+  "w": 1600,
+  "h": 1066,
+  "kind": "render",
+  "state": "signed",
+  "name": "room-living-wC",
+  "webp": "assets/portfolio/gost-kv58-hero.webp"
  },
- "visuals": 0,
+ "visuals": 7,
  "visualsPrelim": 0,
  "studioSize": "4 МБ",
  "pdfSize": "6 МБ"
