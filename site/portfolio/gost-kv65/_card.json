@@ -9,9 +9,9 @@
  "area": "65,24 м²",
  "declared": "",
  "rooms": 9,
- "total": 113,
+ "total": 117,
  "blockers": 0,
- "issues": 229,
+ "issues": 217,
  "openQ": {
   "n": 12,
   "no": "06"
@@ -27,8 +27,8 @@
   "name": "room-living-wA",
   "webp": "assets/portfolio/gost-kv65-hero.webp"
  },
- "visuals": 8,
+ "visuals": 9,
  "visualsPrelim": 0,
- "studioSize": "5 МБ",
- "pdfSize": "8 МБ"
+ "studioSize": "8 МБ",
+ "pdfSize": "10 МБ"
 }

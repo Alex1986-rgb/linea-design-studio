@@ -9,9 +9,9 @@
  "area": "102,67 м²",
  "declared": "",
  "rooms": 13,
- "total": 157,
+ "total": 161,
  "blockers": 0,
- "issues": 171,
+ "issues": 161,
  "openQ": {
   "n": 28,
   "no": "07"
@@ -27,8 +27,8 @@
   "name": "room-living1-wA",
   "webp": "assets/portfolio/gost-proekt2-hero.webp"
  },
- "visuals": 12,
+ "visuals": 14,
  "visualsPrelim": 0,
- "studioSize": "9 МБ",
- "pdfSize": "13 МБ"
+ "studioSize": "12 МБ",
+ "pdfSize": "16 МБ"
 }

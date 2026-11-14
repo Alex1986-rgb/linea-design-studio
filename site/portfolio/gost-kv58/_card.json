@@ -9,9 +9,9 @@
  "area": "55,23 м²",
  "declared": "В исходных данных заказчика — 57,6 м²; по экспликации альбома (сумма помещений) — 55,23 м², она и стоит в названии.",
  "rooms": 6,
- "total": 102,
+ "total": 108,
  "blockers": 0,
- "issues": 163,
+ "issues": 148,
  "openQ": {
   "n": 7,
   "no": "06"
@@ -24,11 +24,11 @@
   "h": 1066,
   "kind": "render",
   "state": "signed",
-  "name": "room-living-wC",
+  "name": "room-living-wB",
   "webp": "assets/portfolio/gost-kv58-hero.webp"
  },
- "visuals": 7,
+ "visuals": 8,
  "visualsPrelim": 0,
- "studioSize": "4 МБ",
- "pdfSize": "6 МБ"
+ "studioSize": "6 МБ",
+ "pdfSize": "9 МБ"
 }

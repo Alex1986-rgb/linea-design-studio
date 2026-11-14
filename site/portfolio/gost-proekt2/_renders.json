@@ -1,9 +1,9 @@
 {
  "checked": true,
- "signed": 12,
+ "signed": 14,
  "prelim": 0,
- "rejected": 8,
- "accepted": 12,
+ "rejected": 6,
+ "accepted": 14,
  "ribbon": [
   {
    "src": "assets/portfolio/gost-proekt2/room-living1-wA.jpg",
@@ -34,15 +34,15 @@
    }
   },
   {
-   "src": "assets/portfolio/gost-proekt2/room-kitchen-wD.jpg",
+   "src": "assets/portfolio/gost-proekt2/room-kitchen-wA.jpg",
    "alt": "Квартира 103 м² · с эркерами, 13 помещений — кухня-столовая, визуализация",
    "w": 1200,
    "h": 800,
    "state": "signed",
-   "name": "room-kitchen-wD",
-   "wall": "r6:D",
+   "name": "room-kitchen-wA",
+   "wall": "r6:A",
    "clay": {
-    "src": "assets/portfolio/gost-proekt2/clay-room-kitchen-wD.jpg",
+    "src": "assets/portfolio/gost-proekt2/clay-room-kitchen-wA.jpg",
     "w": 1200,
     "h": 800
    }
@@ -146,6 +146,20 @@
    }
   },
   {
+   "src": "assets/portfolio/gost-proekt2/room-living1-wC.jpg",
+   "alt": "Квартира 103 м² · с эркерами, 13 помещений — гостиная, визуализация",
+   "w": 1200,
+   "h": 800,
+   "state": "signed",
+   "name": "room-living1-wC",
+   "wall": "r1:C",
+   "clay": {
+    "src": "assets/portfolio/gost-proekt2/clay-room-living1-wC.jpg",
+    "w": 1200,
+    "h": 800
+   }
+  },
+  {
    "src": "assets/portfolio/gost-proekt2/room-living1-wD.jpg",
    "alt": "Квартира 103 м² · с эркерами, 13 помещений — гостиная, визуализация",
    "w": 1200,
@@ -155,6 +169,20 @@
    "wall": "r1:D",
    "clay": {
     "src": "assets/portfolio/gost-proekt2/clay-room-living1-wD.jpg",
+    "w": 1200,
+    "h": 800
+   }
+  },
+  {
+   "src": "assets/portfolio/gost-proekt2/room-kitchen-wD.jpg",
+   "alt": "Квартира 103 м² · с эркерами, 13 помещений — кухня-столовая, визуализация",
+   "w": 1200,
+   "h": 800,
+   "state": "signed",
+   "name": "room-kitchen-wD",
+   "wall": "r6:D",
+   "clay": {
+    "src": "assets/portfolio/gost-proekt2/clay-room-kitchen-wD.jpg",
     "w": 1200,
     "h": 800
    }

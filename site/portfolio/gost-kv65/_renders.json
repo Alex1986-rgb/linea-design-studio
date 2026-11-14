@@ -1,9 +1,9 @@
 {
  "checked": true,
- "signed": 8,
+ "signed": 9,
  "prelim": 0,
- "rejected": 7,
- "accepted": 8,
+ "rejected": 6,
+ "accepted": 9,
  "ribbon": [
   {
    "src": "assets/portfolio/gost-kv65/room-living-wA.jpg",
@@ -113,6 +113,20 @@
    "wall": "r2:room",
    "clay": {
     "src": "assets/portfolio/gost-kv65/clay-room-bedroom-wide.jpg",
+    "w": 1200,
+    "h": 800
+   }
+  },
+  {
+   "src": "assets/portfolio/gost-kv65/room-kids-wD.jpg",
+   "alt": "Квартира 65 м² · после реконструкции — детская, визуализация",
+   "w": 1200,
+   "h": 800,
+   "state": "signed",
+   "name": "room-kids-wD",
+   "wall": "r9:D",
+   "clay": {
+    "src": "assets/portfolio/gost-kv65/clay-room-kids-wD.jpg",
     "w": 1200,
     "h": 800
    }

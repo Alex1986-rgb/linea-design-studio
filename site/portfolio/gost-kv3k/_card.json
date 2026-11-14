@@ -9,9 +9,9 @@
  "area": "78,95 м²",
  "declared": "",
  "rooms": 8,
- "total": 130,
+ "total": 132,
  "blockers": 0,
- "issues": 126,
+ "issues": 113,
  "openQ": {
   "n": 27,
   "no": "06"
@@ -29,6 +29,6 @@
  },
  "visuals": 11,
  "visualsPrelim": 0,
- "studioSize": "6 МБ",
- "pdfSize": "11 МБ"
+ "studioSize": "10 МБ",
+ "pdfSize": "13 МБ"
 }
