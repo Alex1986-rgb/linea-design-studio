@@ -18,16 +18,13 @@
  },
  "preReview": "",
  "hero": {
-  "src": "assets/portfolio/gost-retro103-hero.jpg",
-  "alt": "Квартира 101 м² · ретро с авторской мебелью — гостиная, визуализация",
-  "w": 1600,
-  "h": 1066,
-  "kind": "render",
-  "state": "signed",
-  "name": "room-living-wA",
-  "webp": "assets/portfolio/gost-retro103-hero.webp"
+  "src": "portfolio/gost-retro103/sheets/25-interior-designer-furniture.svg",
+  "alt": "Квартира 101 м² · ретро с авторской мебелью — план расстановки мебели",
+  "w": 1587,
+  "h": 1123,
+  "kind": "sheet"
  },
- "visuals": 7,
+ "visuals": 0,
  "visualsPrelim": 0,
  "studioSize": "7 МБ",
  "pdfSize": "10 МБ"

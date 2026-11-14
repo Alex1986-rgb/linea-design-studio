@@ -18,16 +18,13 @@
  },
  "preReview": "",
  "hero": {
-  "src": "assets/portfolio/gost-kv65-hero.jpg",
-  "alt": "Квартира 65 м² · после реконструкции — спальня, визуализация",
-  "w": 1600,
-  "h": 1066,
-  "kind": "render",
-  "state": "signed",
-  "name": "room-bedroom-wA",
-  "webp": "assets/portfolio/gost-kv65-hero.webp"
+  "src": "portfolio/gost-kv65/sheets/24-interior-designer-furniture.svg",
+  "alt": "Квартира 65 м² · после реконструкции — план расстановки мебели",
+  "w": 1587,
+  "h": 1123,
+  "kind": "sheet"
  },
- "visuals": 6,
+ "visuals": 0,
  "visualsPrelim": 0,
  "studioSize": "5 МБ",
  "pdfSize": "8 МБ"

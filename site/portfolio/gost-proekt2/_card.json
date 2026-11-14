@@ -18,16 +18,13 @@
  },
  "preReview": "",
  "hero": {
-  "src": "assets/portfolio/gost-proekt2-hero.jpg",
-  "alt": "Квартира 103 м² · с эркерами, 13 помещений — детская, визуализация",
-  "w": 1600,
-  "h": 1066,
-  "kind": "render",
-  "state": "signed",
-  "name": "room-kids1-wD",
-  "webp": "assets/portfolio/gost-proekt2-hero.webp"
+  "src": "portfolio/gost-proekt2/sheets/31-interior-designer-furniture.svg",
+  "alt": "Квартира 103 м² · с эркерами, 13 помещений — план расстановки мебели",
+  "w": 1587,
+  "h": 1123,
+  "kind": "sheet"
  },
- "visuals": 6,
+ "visuals": 0,
  "visualsPrelim": 0,
  "studioSize": "9 МБ",
  "pdfSize": "13 МБ"
