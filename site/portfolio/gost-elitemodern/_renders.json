@@ -1,9 +1,9 @@
 {
  "checked": true,
- "signed": 9,
+ "signed": 10,
  "prelim": 0,
- "rejected": 3,
- "accepted": 9,
+ "rejected": 2,
+ "accepted": 10,
  "ribbon": [
   {
    "src": "assets/portfolio/gost-elitemodern/room-living-m1.jpg",
@@ -15,6 +15,20 @@
    "wall": "r6:mag",
    "clay": {
     "src": "assets/portfolio/gost-elitemodern/clay-room-living-m1.jpg",
+    "w": 1200,
+    "h": 800
+   }
+  },
+  {
+   "src": "assets/portfolio/gost-elitemodern/room-kitchen-m1.jpg",
+   "alt": "Квартира 68 м² · элитный модерн — кухня-столовая, визуализация",
+   "w": 1200,
+   "h": 800,
+   "state": "signed",
+   "name": "room-kitchen-m1",
+   "wall": "r5:mag",
+   "clay": {
+    "src": "assets/portfolio/gost-elitemodern/clay-room-kitchen-m1.jpg",
     "w": 1200,
     "h": 800
    }

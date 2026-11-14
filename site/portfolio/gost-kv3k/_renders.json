@@ -1,9 +1,9 @@
 {
  "checked": true,
- "signed": 11,
+ "signed": 14,
  "prelim": 0,
- "rejected": 8,
- "accepted": 11,
+ "rejected": 5,
+ "accepted": 14,
  "ribbon": [
   {
    "src": "assets/portfolio/gost-kv3k/3d-top.jpg",
@@ -20,15 +20,15 @@
    }
   },
   {
-   "src": "assets/portfolio/gost-kv3k/room-living-wC.jpg",
+   "src": "assets/portfolio/gost-kv3k/room-living-wB.jpg",
    "alt": "Квартира 79 м² · трёхкомнатная — гостиная, визуализация",
    "w": 1200,
    "h": 800,
    "state": "signed",
-   "name": "room-living-wC",
-   "wall": "r6:C",
+   "name": "room-living-wB",
+   "wall": "r6:B",
    "clay": {
-    "src": "assets/portfolio/gost-kv3k/clay-room-living-wC.jpg",
+    "src": "assets/portfolio/gost-kv3k/clay-room-living-wB.jpg",
     "w": 1200,
     "h": 800
    }
@@ -90,6 +90,20 @@
    }
   },
   {
+   "src": "assets/portfolio/gost-kv3k/room-hall-wide.jpg",
+   "alt": "Квартира 79 м² · трёхкомнатная — прихожая, визуализация",
+   "w": 1200,
+   "h": 800,
+   "state": "signed",
+   "name": "room-hall-wide",
+   "wall": "r5:room",
+   "clay": {
+    "src": "assets/portfolio/gost-kv3k/clay-room-hall-wide.jpg",
+    "w": 1200,
+    "h": 800
+   }
+  },
+  {
    "src": "assets/portfolio/gost-kv3k/room-corridor-wA.jpg",
    "alt": "Квартира 79 м² · трёхкомнатная — холл, визуализация",
    "w": 1200,
@@ -99,6 +113,20 @@
    "wall": "r8:A",
    "clay": {
     "src": "assets/portfolio/gost-kv3k/clay-room-corridor-wA.jpg",
+    "w": 1200,
+    "h": 800
+   }
+  },
+  {
+   "src": "assets/portfolio/gost-kv3k/room-living-wC.jpg",
+   "alt": "Квартира 79 м² · трёхкомнатная — гостиная, визуализация",
+   "w": 1200,
+   "h": 800,
+   "state": "signed",
+   "name": "room-living-wC",
+   "wall": "r6:C",
+   "clay": {
+    "src": "assets/portfolio/gost-kv3k/clay-room-living-wC.jpg",
     "w": 1200,
     "h": 800
    }
@@ -127,6 +155,20 @@
    "wall": "r1:B",
    "clay": {
     "src": "assets/portfolio/gost-kv3k/clay-room-bedroom1-wB.jpg",
+    "w": 1200,
+    "h": 800
+   }
+  },
+  {
+   "src": "assets/portfolio/gost-kv3k/room-bedroom2-wC.jpg",
+   "alt": "Квартира 79 м² · трёхкомнатная — спальня, визуализация",
+   "w": 1200,
+   "h": 800,
+   "state": "signed",
+   "name": "room-bedroom2-wC",
+   "wall": "r4:C",
+   "clay": {
+    "src": "assets/portfolio/gost-kv3k/clay-room-bedroom2-wC.jpg",
     "w": 1200,
     "h": 800
    }

@@ -1,9 +1,9 @@
 {
  "checked": true,
- "signed": 9,
+ "signed": 10,
  "prelim": 0,
- "rejected": 9,
- "accepted": 9,
+ "rejected": 8,
+ "accepted": 10,
  "ribbon": [
   {
    "src": "assets/portfolio/gost-lineademo/3d-top.jpg",
@@ -20,15 +20,15 @@
    }
   },
   {
-   "src": "assets/portfolio/gost-lineademo/room-living-wC.jpg",
+   "src": "assets/portfolio/gost-lineademo/room-living-wA.jpg",
    "alt": "Квартира 56 м² · джапанди — гостиная, визуализация",
    "w": 1200,
    "h": 800,
    "state": "signed",
-   "name": "room-living-wC",
-   "wall": "r1:C",
+   "name": "room-living-wA",
+   "wall": "r1:A",
    "clay": {
-    "src": "assets/portfolio/gost-lineademo/clay-room-living-wC.jpg",
+    "src": "assets/portfolio/gost-lineademo/clay-room-living-wA.jpg",
     "w": 1200,
     "h": 800
    }
@@ -71,6 +71,20 @@
    "wall": "r4:A",
    "clay": {
     "src": "assets/portfolio/gost-lineademo/clay-room-bath-wA.jpg",
+    "w": 1200,
+    "h": 800
+   }
+  },
+  {
+   "src": "assets/portfolio/gost-lineademo/room-living-wC.jpg",
+   "alt": "Квартира 56 м² · джапанди — гостиная, визуализация",
+   "w": 1200,
+   "h": 800,
+   "state": "signed",
+   "name": "room-living-wC",
+   "wall": "r1:C",
+   "clay": {
+    "src": "assets/portfolio/gost-lineademo/clay-room-living-wC.jpg",
     "w": 1200,
     "h": 800
    }
