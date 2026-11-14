@@ -1,20 +1,20 @@
 {
  "checked": true,
- "signed": 8,
+ "signed": 12,
  "prelim": 0,
- "rejected": 12,
- "accepted": 8,
+ "rejected": 8,
+ "accepted": 12,
  "ribbon": [
   {
-   "src": "assets/portfolio/gost-proekt2/room-living1-wB.jpg",
+   "src": "assets/portfolio/gost-proekt2/room-living1-wA.jpg",
    "alt": "Квартира 103 м² · с эркерами, 13 помещений — гостиная, визуализация",
    "w": 1200,
    "h": 800,
    "state": "signed",
-   "name": "room-living1-wB",
-   "wall": "r1:B",
+   "name": "room-living1-wA",
+   "wall": "r1:A",
    "clay": {
-    "src": "assets/portfolio/gost-proekt2/clay-room-living1-wB.jpg",
+    "src": "assets/portfolio/gost-proekt2/clay-room-living1-wA.jpg",
     "w": 1200,
     "h": 800
    }
@@ -48,15 +48,15 @@
    }
   },
   {
-   "src": "assets/portfolio/gost-proekt2/room-kids1-wD.jpg",
+   "src": "assets/portfolio/gost-proekt2/room-kids1-wC.jpg",
    "alt": "Квартира 103 м² · с эркерами, 13 помещений — детская, визуализация",
    "w": 1200,
    "h": 800,
    "state": "signed",
-   "name": "room-kids1-wD",
-   "wall": "r4:D",
+   "name": "room-kids1-wC",
+   "wall": "r4:C",
    "clay": {
-    "src": "assets/portfolio/gost-proekt2/clay-room-kids1-wD.jpg",
+    "src": "assets/portfolio/gost-proekt2/clay-room-kids1-wC.jpg",
     "w": 1200,
     "h": 800
    }
@@ -116,6 +116,62 @@
     "w": 1200,
     "h": 800
    }
+  },
+  {
+   "src": "assets/portfolio/gost-proekt2/room-wc-wide.jpg",
+   "alt": "Квартира 103 м² · с эркерами, 13 помещений — санузел, визуализация",
+   "w": 1200,
+   "h": 800,
+   "state": "signed",
+   "name": "room-wc-wide",
+   "wall": "r10:room",
+   "clay": {
+    "src": "assets/portfolio/gost-proekt2/clay-room-wc-wide.jpg",
+    "w": 1200,
+    "h": 800
+   }
+  },
+  {
+   "src": "assets/portfolio/gost-proekt2/room-living1-wB.jpg",
+   "alt": "Квартира 103 м² · с эркерами, 13 помещений — гостиная, визуализация",
+   "w": 1200,
+   "h": 800,
+   "state": "signed",
+   "name": "room-living1-wB",
+   "wall": "r1:B",
+   "clay": {
+    "src": "assets/portfolio/gost-proekt2/clay-room-living1-wB.jpg",
+    "w": 1200,
+    "h": 800
+   }
+  },
+  {
+   "src": "assets/portfolio/gost-proekt2/room-living1-wD.jpg",
+   "alt": "Квартира 103 м² · с эркерами, 13 помещений — гостиная, визуализация",
+   "w": 1200,
+   "h": 800,
+   "state": "signed",
+   "name": "room-living1-wD",
+   "wall": "r1:D",
+   "clay": {
+    "src": "assets/portfolio/gost-proekt2/clay-room-living1-wD.jpg",
+    "w": 1200,
+    "h": 800
+   }
+  },
+  {
+   "src": "assets/portfolio/gost-proekt2/room-kids1-wD.jpg",
+   "alt": "Квартира 103 м² · с эркерами, 13 помещений — детская, визуализация",
+   "w": 1200,
+   "h": 800,
+   "state": "signed",
+   "name": "room-kids1-wD",
+   "wall": "r4:D",
+   "clay": {
+    "src": "assets/portfolio/gost-proekt2/clay-room-kids1-wD.jpg",
+    "w": 1200,
+    "h": 800
+   }
   }
  ],
  "hero": {
@@ -125,7 +181,7 @@
   "h": 1066,
   "kind": "render",
   "state": "signed",
-  "name": "room-living1-wB",
+  "name": "room-living1-wA",
   "webp": "assets/portfolio/gost-proekt2-hero.webp"
  }
 }

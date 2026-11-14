@@ -1,9 +1,9 @@
 {
  "checked": true,
- "signed": 7,
- "prelim": 3,
- "rejected": 2,
- "accepted": 7,
+ "signed": 9,
+ "prelim": 0,
+ "rejected": 3,
+ "accepted": 9,
  "ribbon": [
   {
    "src": "assets/portfolio/gost-elitemodern/room-living-m1.jpg",
@@ -48,15 +48,15 @@
    }
   },
   {
-   "src": "assets/portfolio/gost-elitemodern/room-bath-d1.jpg",
+   "src": "assets/portfolio/gost-elitemodern/room-bath-s1.jpg",
    "alt": "Квартира 68 м² · элитный модерн — ванная, визуализация",
    "w": 1200,
    "h": 800,
    "state": "signed",
-   "name": "room-bath-d1",
+   "name": "room-bath-s1",
    "wall": "r3:mag",
    "clay": {
-    "src": "assets/portfolio/gost-elitemodern/clay-room-bath-d1.jpg",
+    "src": "assets/portfolio/gost-elitemodern/clay-room-bath-s1.jpg",
     "w": 1200,
     "h": 800
    }
@@ -76,25 +76,11 @@
    }
   },
   {
-   "src": "assets/portfolio/gost-elitemodern/room-kitchen-m1.jpg",
-   "alt": "Квартира 68 м² · элитный модерн — кухня-столовая, визуализация",
-   "w": 1200,
-   "h": 800,
-   "state": "prelim",
-   "name": "room-kitchen-m1",
-   "wall": "r5:mag",
-   "clay": {
-    "src": "assets/portfolio/gost-elitemodern/clay-room-kitchen-m1.jpg",
-    "w": 1200,
-    "h": 800
-   }
-  },
-  {
    "src": "assets/portfolio/gost-elitemodern/room-wc-s1.jpg",
    "alt": "Квартира 68 м² · элитный модерн — санузел, визуализация",
    "w": 1200,
    "h": 800,
-   "state": "prelim",
+   "state": "signed",
    "name": "room-wc-s1",
    "wall": "r2:mag",
    "clay": {
@@ -118,6 +104,20 @@
    }
   },
   {
+   "src": "assets/portfolio/gost-elitemodern/room-bath-d1.jpg",
+   "alt": "Квартира 68 м² · элитный модерн — ванная, визуализация",
+   "w": 1200,
+   "h": 800,
+   "state": "signed",
+   "name": "room-bath-d1",
+   "wall": "r3:mag",
+   "clay": {
+    "src": "assets/portfolio/gost-elitemodern/clay-room-bath-d1.jpg",
+    "w": 1200,
+    "h": 800
+   }
+  },
+  {
    "src": "assets/portfolio/gost-elitemodern/room-bath-d2.jpg",
    "alt": "Квартира 68 м² · элитный модерн — ванная, визуализация",
    "w": 1200,
@@ -127,20 +127,6 @@
    "wall": "r3:mag",
    "clay": {
     "src": "assets/portfolio/gost-elitemodern/clay-room-bath-d2.jpg",
-    "w": 1200,
-    "h": 800
-   }
-  },
-  {
-   "src": "assets/portfolio/gost-elitemodern/room-bath-s1.jpg",
-   "alt": "Квартира 68 м² · элитный модерн — ванная, визуализация",
-   "w": 1200,
-   "h": 800,
-   "state": "prelim",
-   "name": "room-bath-s1",
-   "wall": "r3:mag",
-   "clay": {
-    "src": "assets/portfolio/gost-elitemodern/clay-room-bath-s1.jpg",
     "w": 1200,
     "h": 800
    }

@@ -1,10 +1,24 @@
 {
  "checked": true,
- "signed": 4,
+ "signed": 7,
  "prelim": 0,
- "rejected": 14,
- "accepted": 4,
+ "rejected": 11,
+ "accepted": 7,
  "ribbon": [
+  {
+   "src": "assets/portfolio/gost-lineademo/3d-top.jpg",
+   "alt": "Квартира 56 м² · джапанди — вид сверху 3D",
+   "w": 1200,
+   "h": 800,
+   "state": "signed",
+   "name": "3d-top",
+   "wall": "top",
+   "clay": {
+    "src": "assets/portfolio/gost-lineademo/clay-3d-top.jpg",
+    "w": 1200,
+    "h": 800
+   }
+  },
   {
    "src": "assets/portfolio/gost-lineademo/room-living-wC.jpg",
    "alt": "Квартира 56 м² · джапанди — гостиная, визуализация",
@@ -15,6 +29,20 @@
    "wall": "r1:C",
    "clay": {
     "src": "assets/portfolio/gost-lineademo/clay-room-living-wC.jpg",
+    "w": 1200,
+    "h": 800
+   }
+  },
+  {
+   "src": "assets/portfolio/gost-lineademo/room-bedroom-wA.jpg",
+   "alt": "Квартира 56 м² · джапанди — спальня, визуализация",
+   "w": 1200,
+   "h": 800,
+   "state": "signed",
+   "name": "room-bedroom-wA",
+   "wall": "r2:A",
+   "clay": {
+    "src": "assets/portfolio/gost-lineademo/clay-room-bedroom-wA.jpg",
     "w": 1200,
     "h": 800
    }
@@ -48,6 +76,20 @@
    }
   },
   {
+   "src": "assets/portfolio/gost-lineademo/room-kids-wB.jpg",
+   "alt": "Квартира 56 м² · джапанди — детская, визуализация",
+   "w": 1200,
+   "h": 800,
+   "state": "signed",
+   "name": "room-kids-wB",
+   "wall": "r3:B",
+   "clay": {
+    "src": "assets/portfolio/gost-lineademo/clay-room-kids-wB.jpg",
+    "w": 1200,
+    "h": 800
+   }
+  },
+  {
    "src": "assets/portfolio/gost-lineademo/room-bath-wD.jpg",
    "alt": "Квартира 56 м² · джапанди — ванная, визуализация",
    "w": 1200,
@@ -64,12 +106,12 @@
  ],
  "hero": {
   "src": "assets/portfolio/gost-lineademo-hero.jpg",
-  "alt": "Квартира 56 м² · джапанди — гостиная, визуализация",
+  "alt": "Квартира 56 м² · джапанди — вид сверху 3D",
   "w": 1600,
   "h": 1066,
   "kind": "render",
   "state": "signed",
-  "name": "room-living-wC",
+  "name": "3d-top",
   "webp": "assets/portfolio/gost-lineademo-hero.webp"
  }
 }
