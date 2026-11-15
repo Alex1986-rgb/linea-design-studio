@@ -551,6 +551,27 @@ function furnitureFor(room) {
     }
     return false;
   };
+  // Локальная система стены s: u — вдоль стены, v — от стены вглубь комнаты.
+  const wallLen = s => (s === 'A' || s === 'C') ? W : L;
+  const rect = (s, u, v, wu, wv) => s === 'A' ? [u, v, wu, wv] : s === 'C' ? [u, L - v - wv, wu, wv]
+    : s === 'D' ? [v, u, wv, wu] : [W - v - wv, u, wv, wu];
+  // Поставить предмет вдоль стены s: сначала по центру (или в точке prefU), затем со сдвигом
+  // по 100 мм в обе стороны, затем короче. Так дверь или радиатор сдвигают предмет, а не удаляют его.
+  const addAlong = (key, name, s, v, lens, thick, prefU) => {
+    const span = wallLen(s);
+    for (const len of lens) {
+      if (len > span - 160) continue;
+      const c = prefU == null ? (span - len) / 2 : Math.max(80, Math.min(span - len - 80, prefU));
+      const offs = [0];
+      for (let d = 100; d <= span; d += 100) offs.push(-d, d);
+      for (const d of offs) {
+        const u = Math.round(c + d);
+        if (u < 80 || u + len > span - 80) continue;
+        if (add(key, typeof name === 'function' ? name(len) : name, ...rect(s, u, v, len, thick))) return true;
+      }
+    }
+    return false;
+  };
   if (room.stairs) { // марш вдоль длинной стены; ширина марша 1000, длина по числу ступеней
     const run = Math.min(3600, (room.w >= room.l ? room.w : room.l) - 400), march = 1000;
     const it0 = room.w >= room.l
@@ -583,17 +604,47 @@ function furnitureFor(room) {
       add('kitchen', 'Кухонный гарнитур', 100, 100, W - 200, 600);
       add('rug', 'Ковёр', W - 3200, 900, 2100, Math.min(2900, L - 1000));
       add('table', 'Обеденный стол + 4 стула', 900, 1100, 1500, 900);
-      add('sofa', 'Диван', W - 1050, Math.max(900, (L - 2400) / 2 + 300), 950, Math.min(2400, L - 1200));
+      // диван — напротив ТВ-стены D, на стене B; дверь или радиатор сдвигают и укорачивают его
+      add('sofa', 'Диван', W - 1050, Math.max(900, (L - 2400) / 2 + 300), 950, Math.min(2400, L - 1200))
+        || addAlong('sofa', l => `Диван ${l}`, 'B', 100, [2400, 2200, 2000, 1800, 1600].filter(x => x <= L - 1200), 950, Math.max(900, (L - 2400) / 2 + 300));
       add('coffee', 'Журнальный стол', W - 2150, Math.min(L - 900, 2000), 800, 800);
       add('tv', 'ТВ-зона', 100, Math.max(800, (L - 1800) / 2 + 300), 400, Math.min(1800, L - 1100));
       break; }
     case 'living': {
-      add('tv', 'ТВ-консоль', (W - 1800) / 2, 100, 1800, 400);
-      add('rug', 'Ковёр', (W - 2800) / 2, L - 3000, 2800, 2000);
-      add('sofa', 'Диван 2400', (W - 2400) / 2, L - 1050, 2400, 950);
-      add('coffee', 'Журнальный стол', (W - 800) / 2, L - 2050, 800, 800);
-      add('shelf', 'Стеллаж', W - 450, 100, 350, 1400);
-      add('armchair', 'Кресло', 150, L - 1250, 750, 800);
+      // Гостиная строится на оси «ТВ-стена ↔ диван». Раньше ТВ всегда стоял по центру стены A,
+      // а окно по умолчанию тоже на A: консоль упиралась в радиатор и молча пропадала вместе
+      // с осью комнаты. Теперь ТВ-стена — глухая стена (без окон, по возможности без дверей),
+      // диван — напротив на той же оси; ширина дивана — по длине стены, а не всегда 2400.
+      const opp = { A: 'C', C: 'A', B: 'D', D: 'B' };
+      const score = s => room.windows.filter(o => o.wall === s).length * 10 + room.doors.filter(o => o.wall === s).length * 3
+        + room.windows.filter(o => o.wall === opp[s]).length;   // диван у окна — терпимо, но хуже
+      const order = ['A', 'C', 'B', 'D'].sort((a, b) => score(a) - score(b) || wallLen(b) - wallLen(a));
+      const put = (key, name, s, u, v, wu, wv) => add(key, name, ...rect(s, u, v, wu, wv));
+      for (const s of order) {
+        const len = wallLen(s), depth = (s === 'A' || s === 'C') ? L : W, mark = it.length;
+        const tvW = Math.min(1800, len - 600), sofaW = Math.max(1600, Math.min(2400, Math.floor((len - 1200) / 100) * 100));
+        if (tvW < 1200 || depth < 400 + 1800 + 950) continue;   // ось не помещается: ТВ к дивану ближе 1,8 м
+        if (!addAlong('tv', 'ТВ-консоль', s, 100, [tvW, 1600, 1400].filter(x => x <= tvW), 400)) continue;
+        const tv = it[it.length - 1];
+        const tvC = (s === 'A' || s === 'C') ? tv.x + tv.w / 2 : tv.y + tv.h / 2;
+        const sofaLens = [sofaW, 2200, 2000, 1800, 1600].filter((x, i, a) => x <= sofaW && a.indexOf(x) === i);
+        let sofaOk = false;
+        for (const back of [100, 230, 330]) {   // 230 — отступ от радиатора, если диван у окна
+          // диван держится оси ТВ: перебор сдвигов начинается от центра ТВ
+          if (sofaLens.some(sl => addAlong('sofa', `Диван ${sl}`, opp[s], back, [sl], 950, tvC - sl / 2))) { sofaOk = true; break; }
+        }
+        if (!sofaOk) { it.splice(mark); continue; }
+        const rugW = Math.min(2800, len - 400);
+        put('rug', 'Ковёр', s, (len - rugW) / 2, Math.max(500, depth - 3000), rugW, 2000);
+        put('coffee', 'Журнальный стол', s, (len - 800) / 2, depth - 1050 - 100 - 900, 800, 800);
+        break;
+      }
+      addScan('shelf', 'Стеллаж', 350, 1400, [[W - 450, 100], [100, 100], [W - 450, L - 1500], [100, L - 1500]]);
+      // кресло для чтения — у окна, если оно есть
+      const win = room.windows[0];
+      const armC = win ? [win.wall === 'A' ? [Math.max(80, win.off - 850), 250] : win.wall === 'C' ? [Math.max(80, win.off - 850), L - 1050]
+        : win.wall === 'D' ? [250, Math.max(80, win.off - 900)] : [W - 1000, Math.max(80, win.off - 900)]] : [];
+      addScan('armchair', 'Кресло', 750, 800, [...armC, [150, L - 1250], [W - 900, L - 1250]]);
       break; }
     case 'kitchen': {
       add('kitchen', 'Гарнитур', 100, 100, W - 200, 600);
@@ -601,7 +652,11 @@ function furnitureFor(room) {
       add('table', 'Стол + стулья', W - 1400, L - 1000, 1200, 800);
       break; }
     case 'kids': {
-      add('kidbed', 'Кровать 900×2000', 100, 100, 900, 2000);
+      // кровать — главный предмет детской: ставится первой, при конфликте с радиатором или дверью
+      // уходит к другой стене, а не уступает место столу и шкафу
+      add('kidbed', 'Кровать 900×2000', 100, 100, 900, 2000)
+        || ['D', 'B', 'C', 'A'].some(s => !room.windows.some(o => o.wall === s) && addAlong('kidbed', 'Кровать 900×2000', s, 100, [2000], 900))
+        || ['D', 'B', 'C', 'A'].some(s => addAlong('kidbed', 'Кровать 900×2000', s, 100, [2000], 900));
       // Рабочее место — у окна, свет слева. Раньше стол стоял в одной жёсткой точке
       // и, попадая в зону открывания двери, просто не размещался: детская выходила
       // без рабочего места. Теперь перебираем позиции вдоль стены с окном.
@@ -612,12 +667,14 @@ function furnitureFor(room) {
         if (win) {
           const along = (win.wall === 'A' || win.wall === 'C');
           const c0 = win.off, len = along ? W : L;
+          // стол у окна отходит от стены на 230 мм: радиатор (вылет 130) остаётся открытым для конвекции
+          const gap = 230;
           for (const off of [c0, c0 + win.w - dw, c0 - dw - 100, c0 + win.w + 100, 100, len - dw - 100]) {
             const o = Math.max(80, Math.min((along ? W : L) - dw - 80, off));
-            if (win.wall === 'A') cands.push([o, 100]);
-            else if (win.wall === 'C') cands.push([o, L - dd - 100]);
-            else if (win.wall === 'D') cands.push([100, o]);
-            else cands.push([W - dd - 100, o]);
+            if (win.wall === 'A') cands.push([o, gap]);
+            else if (win.wall === 'C') cands.push([o, L - dd - gap]);
+            else if (win.wall === 'D') cands.push([gap, o]);
+            else cands.push([W - dd - gap, o]);
           }
         }
         addScan('desk', `Стол ${dw}×${dd}`, dw, dd, cands);
@@ -643,8 +700,44 @@ function furnitureFor(room) {
       break; }
     default: add('wardrobe', 'Шкаф', 100, 100, Math.min(1800, W - 200), 600);
   }
+  // Запасной ход для ключевой мебели: любая стена, со сдвигом и короче. Сначала стены без окон.
+  const byWin = ['A', 'C', 'B', 'D'].sort((a, b) => room.windows.filter(o => o.wall === a).length - room.windows.filter(o => o.wall === b).length);
+  for (const k of REQUIRED_FURN[room.type] || []) {
+    const fb = FALLBACK_FURN[k];
+    if (!fb || it.some(f => f.key === k)) continue;
+    const walls = fb.window ? [...byWin].reverse() : byWin;   // рабочий стол — к окну, остальное — к глухим стенам
+    for (const s of walls) if (addAlong(k, fb.name, s, fb.v || 100, fb.lens, fb.thick)) break;
+  }
+  if (!it.some(f => f.key === 'sink') && (REQUIRED_FURN[room.type] || []).includes('sink'))
+    addScan('sink', 'Раковина 500', 500, 400, []);
+  // Ключевая мебель, которая не встала, раньше пропадала молча: гостиная без дивана выходила
+  // «готовой». Теперь недостающее запоминается и попадает в концепцию и в вывод движка.
+  const need = (REQUIRED_FURN[room.type] || []).filter(k => !it.some(f => f.key === k));
+  if (need.length) UNPLACED.set(room.name, need);
   return it;
 }
+
+// без этих предметов помещение не работает по назначению
+const REQUIRED_FURN = {
+  bedroom: ['bed', 'wardrobe'], 'living-kitchen': ['kitchen', 'table', 'sofa', 'tv'], living: ['tv', 'sofa'],
+  kitchen: ['kitchen'], kids: ['kidbed', 'desk', 'wardrobe'], bathroom: ['bath', 'wc', 'sink'],
+  hallway: ['hallwardrobe'], cabinet: ['desk']
+};
+// запасные габариты: длина вдоль стены (по убыванию) × глубина, мм
+const FALLBACK_FURN = {
+  wardrobe: { lens: [2400, 2000, 1800, 1500, 1200, 1000], thick: 600, name: l => `Шкаф ${l}×600` },
+  hallwardrobe: { lens: [1800, 1500, 1200, 1000], thick: 600, name: l => `Шкаф-гардероб ${l}` },
+  kidbed: { lens: [2000], thick: 900, name: 'Кровать 900×2000' },
+  bed: { lens: [2000], thick: 1600, name: 'Кровать 1600×2000' },
+  desk: { lens: [1400, 1200, 1000, 800], thick: 650, name: l => `Стол ${l}×650`, window: true },
+  sofa: { lens: [2400, 2200, 2000, 1800], thick: 950, name: l => `Диван ${l}` },
+  tv: { lens: [1800, 1600, 1400], thick: 400, name: 'ТВ-консоль' },
+  kitchen: { lens: [3600, 3200, 3000, 2800, 2600, 2400, 2200, 2000, 1800, 1600], thick: 600, name: l => `Кухонный гарнитур ${l}` }
+};
+const FURN_RU = { bed: 'кровать', wardrobe: 'шкаф', kitchen: 'кухонный гарнитур', table: 'обеденный стол', sofa: 'диван',
+  tv: 'ТВ-зона', kidbed: 'кровать', desk: 'рабочий стол', bath: 'ванна или душ', wc: 'унитаз', sink: 'раковина',
+  hallwardrobe: 'шкаф прихожей' };
+const UNPLACED = new Map();   // имя помещения → ключи неразмещённых предметов
 
 // ---------- свет ----------
 // Свет и мебель обязаны знать друг о друге: спот в шкафу или над кроватью — брак,
@@ -6014,6 +6107,7 @@ function conceptHTML() {
 <div class="card"><h2>${nn(r.idx)} · ${esc(r.name)}</h2>
 ${gal}
 <p>${esc(roomConcept(r))}</p>
+${UNPLACED.has(r.name) ? `<p class="note"><b>Не разместилось по габаритам:</b> ${esc(UNPLACED.get(r.name).map(k => FURN_RU[k] || k).join(', '))} — решение дизайнера по обмеру (другая модель, перестановка или отказ).</p>` : ''}
 <p class="mut">Потолок: ${lv.oneLevel ? 'один уровень, ревизионный люк' : (lv.three ? '3 уровня с «парящим» островом' : '2 уровня')}, скрытая LED 3000K — ${lv.ledLen} м.п. ${niches ? '· Ниши: ' + esc(niches) : ''}</p>
 <p class="mut">Свет: ${lightsFor(r).spots.length} точечных${lightsFor(r).pendant ? ' + декоративный подвес' : ''}${lightsFor(r).track ? ' + трек' : ''}. Пол: ${esc(['bathroom', 'wc'].includes(r.type) ? 'керамогранит, −0,020' : style.floor.name)}.</p></div>`;
   }).join('');
@@ -6474,6 +6568,13 @@ const DOC_HTML = {
   '07-materialy/specification.html': specHTML(),
   '08-smeta/smeta.html': smetaHTML(smetaRows)
 };
+if (UNPLACED.size) {
+  for (const [name, keys] of UNPLACED) console.warn(`  ! «${name}»: не разместилось — ${keys.map(k => FURN_RU[k] || k).join(', ')}`);
+  if (FLAGS.strict) {
+    console.error('--strict: альбом не собран — ключевая мебель не встала (см. выше). Поправьте габариты, проёмы или задайте расстановку вручную.');
+    process.exit(2);
+  }
+}
 if (CHECK.errors.length || CHECK.warnings.length) DOC_HTML['00-pasport/zamechaniya.html'] = zamechaniyaHTML();
 for (const [rel, html] of Object.entries(DOC_HTML)) writeOut(rel, html);
 writeOut('08-smeta/smeta.csv', smetaCSV(smetaRows));
