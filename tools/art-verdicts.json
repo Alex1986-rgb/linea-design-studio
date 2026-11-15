@@ -1,0 +1,954 @@
+{
+ "_note": "Вердикты арт-директора 15.11.2026 по tools/prompts/art-check.md (редакция с R3а/R3б); score — сумма из 20",
+ "gost-proekt2": {
+  "room-living1-wA": {
+   "score": 12,
+   "verdict": "ДОРАБОТКА",
+   "flags": [],
+   "nodes": [
+    "радиатор"
+   ]
+  },
+  "room-living1-wB": {
+   "score": 16,
+   "verdict": "ПРИНЯТ",
+   "flags": [],
+   "nodes": []
+  },
+  "room-living1-wC": {
+   "score": 11,
+   "verdict": "ВОЗВРАТ",
+   "flags": [],
+   "nodes": [
+    "радиатор"
+   ]
+  },
+  "room-living1-wD": {
+   "score": 11,
+   "verdict": "ВОЗВРАТ",
+   "flags": [],
+   "nodes": [
+    "радиатор"
+   ]
+  },
+  "room-bath-wB": {
+   "score": 12,
+   "verdict": "ДОРАБОТКА",
+   "flags": [],
+   "nodes": []
+  },
+  "room-kids1-wC": {
+   "score": 15,
+   "verdict": "ДОРАБОТКА",
+   "flags": [],
+   "nodes": []
+  },
+  "room-kids1-wD": {
+   "score": 17,
+   "verdict": "ПРИНЯТ",
+   "flags": [],
+   "nodes": []
+  },
+  "room-corridor-wA": {
+   "score": 11,
+   "verdict": "ВОЗВРАТ",
+   "flags": [],
+   "nodes": []
+  },
+  "room-kitchen-wA": {
+   "score": 17,
+   "verdict": "ПРИНЯТ",
+   "flags": [],
+   "nodes": []
+  },
+  "room-kitchen-wB": {
+   "score": 14,
+   "verdict": "ДОРАБОТКА",
+   "flags": [],
+   "nodes": []
+  },
+  "room-kitchen-wD": {
+   "score": 12,
+   "verdict": "ДОРАБОТКА",
+   "flags": [],
+   "nodes": [
+    "радиатор"
+   ]
+  },
+  "room-kids2-wA": {
+   "score": 14,
+   "verdict": "ДОРАБОТКА",
+   "flags": [],
+   "nodes": []
+  },
+  "room-kids2-wD": {
+   "score": 11,
+   "verdict": "ВОЗВРАТ",
+   "flags": [],
+   "nodes": [
+    "радиатор"
+   ]
+  },
+  "room-living2-wA": {
+   "score": 7,
+   "verdict": "ВОЗВРАТ",
+   "flags": [],
+   "nodes": []
+  },
+  "room-hall-wide": {
+   "score": 18,
+   "verdict": "ПРИНЯТ",
+   "flags": [],
+   "nodes": []
+  },
+  "room-wc-wide": {
+   "score": 17,
+   "verdict": "ДОРАБОТКА",
+   "flags": [],
+   "nodes": []
+  },
+  "room-wardrobe2-wide": {
+   "score": 17,
+   "verdict": "ПРИНЯТ",
+   "flags": [],
+   "nodes": []
+  },
+  "room-balcony-wide": {
+   "score": 13,
+   "verdict": "ДОРАБОТКА",
+   "flags": [],
+   "nodes": []
+  }
+ },
+ "gost-kv3k": {
+  "3d-top": {
+   "score": 13,
+   "verdict": "не оценивается",
+   "flags": [],
+   "nodes": []
+  },
+  "room-bedroom1-wA": {
+   "score": 18,
+   "verdict": "ВОЗВРАТ",
+   "flags": [
+    "R3б: нейросетевая живопись"
+   ],
+   "nodes": []
+  },
+  "room-bedroom1-wB": {
+   "score": 15,
+   "verdict": "ВОЗВРАТ",
+   "flags": [
+    "R3б: нейросетевая живопись"
+   ],
+   "nodes": []
+  },
+  "room-bath1-wB": {
+   "score": 14,
+   "verdict": "ДОРАБОТКА",
+   "flags": [],
+   "nodes": []
+  },
+  "room-bath1-wD": {
+   "score": 15,
+   "verdict": "ДОРАБОТКА",
+   "flags": [],
+   "nodes": []
+  },
+  "room-bedroom2-wA": {
+   "score": 13,
+   "verdict": "ВОЗВРАТ",
+   "flags": [
+    "R3б: нейросетевая живопись"
+   ],
+   "nodes": []
+  },
+  "room-bedroom2-wC": {
+   "score": 11,
+   "verdict": "ВОЗВРАТ",
+   "flags": [
+    "R3б: ТВ на голой стене"
+   ],
+   "nodes": [
+    "радиатор"
+   ]
+  },
+  "room-bedroom2-wD": {
+   "score": 16,
+   "verdict": "ВОЗВРАТ",
+   "flags": [
+    "R3б: нейросетевая живопись"
+   ],
+   "nodes": []
+  },
+  "room-living-wB": {
+   "score": 12,
+   "verdict": "ВОЗВРАТ",
+   "flags": [
+    "R3б: нейросетевая живопись"
+   ],
+   "nodes": [
+    "радиатор"
+   ]
+  },
+  "room-living-wC": {
+   "score": 17,
+   "verdict": "ДОРАБОТКА",
+   "flags": [],
+   "nodes": []
+  },
+  "room-living-wD": {
+   "score": 16,
+   "verdict": "ВОЗВРАТ",
+   "flags": [
+    "R3б: нейросетевая живопись"
+   ],
+   "nodes": []
+  },
+  "room-bath2-wB": {
+   "score": 14,
+   "verdict": "ДОРАБОТКА",
+   "flags": [],
+   "nodes": []
+  },
+  "room-corridor-wA": {
+   "score": 13,
+   "verdict": "ВОЗВРАТ",
+   "flags": [
+    "R3б: нейросетевая живопись"
+   ],
+   "nodes": []
+  },
+  "room-hall-wide": {
+   "score": 17,
+   "verdict": "ПРИНЯТ",
+   "flags": [],
+   "nodes": []
+  },
+  "ceiling-bedroom2": {
+   "score": 14,
+   "verdict": "не оценивается",
+   "flags": [
+    "R3б: нейросетевая живопись"
+   ],
+   "nodes": []
+  },
+  "ceiling-hall": {
+   "score": 12,
+   "verdict": "не оценивается",
+   "flags": [],
+   "nodes": []
+  },
+  "ceiling-living": {
+   "score": 10,
+   "verdict": "не оценивается",
+   "flags": [],
+   "nodes": [
+    "сетка точек"
+   ]
+  }
+ },
+ "gost-kv65": {
+  "3d-top": {
+   "score": 11,
+   "verdict": "не оценивается",
+   "flags": [],
+   "nodes": []
+  },
+  "room-living-wA": {
+   "score": 9,
+   "verdict": "ВОЗВРАТ",
+   "flags": [
+    "R3б: нейросетевая живопись"
+   ],
+   "nodes": [
+    "радиатор"
+   ]
+  },
+  "room-corridor-wA": {
+   "score": 8,
+   "verdict": "ВОЗВРАТ",
+   "flags": [
+    "R1: дуб (главный) почти не виден — только рамки; лён, плетёное, абажур отс"
+   ],
+   "nodes": []
+  },
+  "room-kids-wC": {
+   "score": 8,
+   "verdict": "ВОЗВРАТ",
+   "flags": [
+    "R3б: нейросетевая живопись"
+   ],
+   "nodes": [
+    "радиатор"
+   ]
+  },
+  "room-kids-wD": {
+   "score": 13,
+   "verdict": "ВОЗВРАТ",
+   "flags": [
+    "R3б: нейросетевая живопись"
+   ],
+   "nodes": []
+  },
+  "room-bedroom-wA": {
+   "score": 12,
+   "verdict": "ДОРАБОТКА",
+   "flags": [],
+   "nodes": [
+    "радиатор"
+   ]
+  },
+  "room-bedroom-wide": {
+   "score": 11,
+   "verdict": "ВОЗВРАТ",
+   "flags": [],
+   "nodes": [
+    "радиатор"
+   ]
+  },
+  "room-living-wide": {
+   "score": 14,
+   "verdict": "ДОРАБОТКА",
+   "flags": [],
+   "nodes": [
+    "радиатор"
+   ]
+  },
+  "room-wc-wide": {
+   "score": 13,
+   "verdict": "ДОРАБОТКА",
+   "flags": [],
+   "nodes": []
+  },
+  "room-bath-wide": {
+   "score": 12,
+   "verdict": "ДОРАБОТКА",
+   "flags": [],
+   "nodes": []
+  },
+  "room-hall-wide": {
+   "score": 16,
+   "verdict": "ДОРАБОТКА",
+   "flags": [],
+   "nodes": []
+  }
+ },
+ "gost-kv58": {
+  "room-living-wB": {
+   "score": 16,
+   "verdict": "ПРИНЯТ",
+   "flags": [],
+   "nodes": []
+  },
+  "room-living-wC": {
+   "score": 16,
+   "verdict": "ДОРАБОТКА",
+   "flags": [],
+   "nodes": []
+  },
+  "room-living-wD": {
+   "score": 11,
+   "verdict": "ВОЗВРАТ",
+   "flags": [],
+   "nodes": [
+    "радиатор"
+   ]
+  },
+  "room-bedroom-wA": {
+   "score": 9,
+   "verdict": "ВОЗВРАТ",
+   "flags": [
+    "R3б: нейросетевая живопись"
+   ],
+   "nodes": [
+    "радиатор"
+   ]
+  },
+  "room-bedroom-wB": {
+   "score": 11,
+   "verdict": "ВОЗВРАТ",
+   "flags": [
+    "R3б: нейросетевая живопись"
+   ],
+   "nodes": [
+    "радиатор"
+   ]
+  },
+  "room-bath-wB": {
+   "score": 17,
+   "verdict": "ПРИНЯТ",
+   "flags": [],
+   "nodes": []
+  },
+  "room-bath-wC": {
+   "score": 17,
+   "verdict": "ПРИНЯТ",
+   "flags": [],
+   "nodes": []
+  },
+  "room-wc-wide": {
+   "score": 10,
+   "verdict": "ВОЗВРАТ",
+   "flags": [
+    "R1: дуб (главный материал) и пыльный синий в кадре отсутствуют"
+   ],
+   "nodes": []
+  },
+  "room-hall-wide": {
+   "score": 14,
+   "verdict": "ДОРАБОТКА",
+   "flags": [],
+   "nodes": []
+  }
+ },
+ "gost-modern4k": {
+  "3d-top": {
+   "score": 10,
+   "verdict": "не оценивается",
+   "flags": [],
+   "nodes": []
+  },
+  "room-bedroom-wB": {
+   "score": 12,
+   "verdict": "ДОРАБОТКА",
+   "flags": [],
+   "nodes": [
+    "радиатор"
+   ]
+  },
+  "room-bedroom-wA": {
+   "score": 11,
+   "verdict": "ВОЗВРАТ",
+   "flags": [],
+   "nodes": [
+    "радиатор"
+   ]
+  },
+  "room-bedroom-wD": {
+   "score": 14,
+   "verdict": "ДОРАБОТКА",
+   "flags": [],
+   "nodes": []
+  },
+  "room-wardrobe-wide": {
+   "score": 6,
+   "verdict": "ВОЗВРАТ",
+   "flags": [
+    "R1: морёный тёмный дуб, шалфейная стена, латунь не читаются — светлый дуб,"
+   ],
+   "nodes": []
+  },
+  "room-study-wD": {
+   "score": 10,
+   "verdict": "ВОЗВРАТ",
+   "flags": [
+    "R3б: подушки случайных цветов"
+   ],
+   "nodes": []
+  },
+  "room-study-wA": {
+   "score": 12,
+   "verdict": "ДОРАБОТКА",
+   "flags": [],
+   "nodes": [
+    "радиатор",
+    "сетка точек"
+   ]
+  },
+  "room-living-wB": {
+   "score": 16,
+   "verdict": "ПРИНЯТ",
+   "flags": [],
+   "nodes": [
+    "сетка точек"
+   ]
+  },
+  "room-living-wC": {
+   "score": 12,
+   "verdict": "ДОРАБОТКА",
+   "flags": [],
+   "nodes": [
+    "сетка точек"
+   ]
+  },
+  "room-living-wD": {
+   "score": 10,
+   "verdict": "ВОЗВРАТ",
+   "flags": [],
+   "nodes": [
+    "сетка точек"
+   ]
+  },
+  "room-kids-wB": {
+   "score": 13,
+   "verdict": "ДОРАБОТКА",
+   "flags": [],
+   "nodes": []
+  },
+  "room-kids-wA": {
+   "score": 16,
+   "verdict": "ДОРАБОТКА",
+   "flags": [],
+   "nodes": []
+  },
+  "room-kids-wD": {
+   "score": 10,
+   "verdict": "ВОЗВРАТ",
+   "flags": [],
+   "nodes": [
+    "радиатор"
+   ]
+  },
+  "room-bath1-wC": {
+   "score": 11,
+   "verdict": "ВОЗВРАТ",
+   "flags": [
+    "R1: латунь, морёный дуб и шалфей не видны — хром, светлый шпон, бежевая пл"
+   ],
+   "nodes": []
+  },
+  "room-bath1-wB": {
+   "score": 14,
+   "verdict": "ДОРАБОТКА",
+   "flags": [],
+   "nodes": []
+  },
+  "room-bath1-wD": {
+   "score": 10,
+   "verdict": "ВОЗВРАТ",
+   "flags": [
+    "R1: латунь и морёный дуб не видны — хромированный полотенцесушитель, бежев"
+   ],
+   "nodes": []
+  },
+  "room-hall-wD": {
+   "score": 8,
+   "verdict": "ВОЗВРАТ",
+   "flags": [
+    "R4: зеркальный купе-шкаф вместо встроенного хранения в тон стены и одного "
+   ],
+   "nodes": [
+    "дверь с наличником"
+   ]
+  },
+  "room-hall-wC": {
+   "score": 2,
+   "verdict": "ВОЗВРАТ",
+   "flags": [],
+   "nodes": [
+    "дверь с наличником"
+   ]
+  },
+  "room-bath2-wide": {
+   "score": 12,
+   "verdict": "ДОРАБОТКА",
+   "flags": [],
+   "nodes": []
+  },
+  "room-bath2-wC": {
+   "score": 18,
+   "verdict": "ПРИНЯТ",
+   "flags": [],
+   "nodes": []
+  },
+  "room-study-wB": {
+   "score": 17,
+   "verdict": "ДОРАБОТКА",
+   "flags": [],
+   "nodes": []
+  },
+  "room-living-wA": {
+   "score": 14,
+   "verdict": "ВОЗВРАТ",
+   "flags": [
+    "R4: два павлиньих предмета в кадре — диван и банкетка у стола (dna.avoid)"
+   ],
+   "nodes": []
+  },
+  "room-hall-wB": {
+   "score": 13,
+   "verdict": "ДОРАБОТКА",
+   "flags": [],
+   "nodes": []
+  },
+  "room-corridor-wC": {
+   "score": 8,
+   "verdict": "ВОЗВРАТ",
+   "flags": [
+    "R1: материалы ДНК не видны — только бежевая стена и пол, шалфея, латуни, д"
+   ],
+   "nodes": []
+  }
+ },
+ "gost-retro103": {
+  "3d-top": {
+   "score": 7,
+   "verdict": "не оценивается",
+   "flags": [],
+   "nodes": []
+  },
+  "room-study-wA": {
+   "score": 7,
+   "verdict": "ВОЗВРАТ",
+   "flags": [],
+   "nodes": [
+    "радиатор"
+   ]
+  },
+  "room-study-wD": {
+   "score": 12,
+   "verdict": "ДОРАБОТКА",
+   "flags": [],
+   "nodes": [
+    "радиатор"
+   ]
+  },
+  "room-study-wB": {
+   "score": 13,
+   "verdict": "ВОЗВРАТ",
+   "flags": [
+    "R3б: нейросетевая живопись"
+   ],
+   "nodes": []
+  },
+  "room-living-wD": {
+   "score": 11,
+   "verdict": "ВОЗВРАТ",
+   "flags": [],
+   "nodes": [
+    "сетка точек"
+   ]
+  },
+  "room-living-wB": {
+   "score": 13,
+   "verdict": "ДОРАБОТКА",
+   "flags": [],
+   "nodes": [
+    "сетка точек"
+   ]
+  },
+  "room-hall-wB": {
+   "score": 18,
+   "verdict": "ПРИНЯТ",
+   "flags": [],
+   "nodes": []
+  },
+  "room-kitchen-wB": {
+   "score": 13,
+   "verdict": "ДОРАБОТКА",
+   "flags": [],
+   "nodes": []
+  },
+  "room-kitchen-wC": {
+   "score": 13,
+   "verdict": "ДОРАБОТКА",
+   "flags": [],
+   "nodes": []
+  },
+  "room-bath1-wC": {
+   "score": 13,
+   "verdict": "ДОРАБОТКА",
+   "flags": [],
+   "nodes": []
+  },
+  "room-bath1-wD": {
+   "score": 12,
+   "verdict": "ВОЗВРАТ",
+   "flags": [
+    "R5: скошенный выступ/пилястра справа без ясной геометрии"
+   ],
+   "nodes": []
+  },
+  "room-bath1-wB": {
+   "score": 13,
+   "verdict": "ДОРАБОТКА",
+   "flags": [],
+   "nodes": []
+  },
+  "room-bedroom1-wD": {
+   "score": 15,
+   "verdict": "ВОЗВРАТ",
+   "flags": [
+    "R3б: нейросетевая живопись"
+   ],
+   "nodes": []
+  },
+  "room-bedroom1-wA": {
+   "score": 12,
+   "verdict": "ВОЗВРАТ",
+   "flags": [
+    "R5: кровать и изголовье обрезаны, кадр случайный"
+   ],
+   "nodes": []
+  },
+  "room-bedroom1-wB": {
+   "score": 13,
+   "verdict": "ДОРАБОТКА",
+   "flags": [],
+   "nodes": [
+    "радиатор"
+   ]
+  },
+  "room-corridor-wB": {
+   "score": 8,
+   "verdict": "ВОЗВРАТ",
+   "flags": [
+    "R1: орех и драгоценный цвет отсутствуют, видна только латунная ручка"
+   ],
+   "nodes": []
+  },
+  "room-bedroom2-wA": {
+   "score": 19,
+   "verdict": "ПРИНЯТ",
+   "flags": [],
+   "nodes": []
+  },
+  "room-bedroom2-wD": {
+   "score": 17,
+   "verdict": "ПРИНЯТ",
+   "flags": [],
+   "nodes": []
+  },
+  "room-bedroom2-wB": {
+   "score": 11,
+   "verdict": "ВОЗВРАТ",
+   "flags": [],
+   "nodes": [
+    "радиатор"
+   ]
+  },
+  "room-bedroom2-wC": {
+   "score": 12,
+   "verdict": "ДОРАБОТКА",
+   "flags": [],
+   "nodes": [
+    "радиатор"
+   ]
+  },
+  "room-bath2-wide": {
+   "score": 13,
+   "verdict": "ДОРАБОТКА",
+   "flags": [],
+   "nodes": []
+  }
+ },
+ "gost-lineademo": {
+  "3d-top": {
+   "score": 11,
+   "verdict": "не оценивается",
+   "flags": [],
+   "nodes": [
+    "радиатор"
+   ]
+  },
+  "room-living-wA": {
+   "score": 15,
+   "verdict": "ДОРАБОТКА",
+   "flags": [],
+   "nodes": [
+    "радиатор"
+   ]
+  },
+  "room-living-wC": {
+   "score": 13,
+   "verdict": "ВОЗВРАТ",
+   "flags": [
+    "R3б: нейросетевая живопись"
+   ],
+   "nodes": [
+    "сетка точек"
+   ]
+  },
+  "room-bedroom-wA": {
+   "score": 10,
+   "verdict": "ВОЗВРАТ",
+   "flags": [],
+   "nodes": []
+  },
+  "room-bedroom-wC": {
+   "score": 18,
+   "verdict": "ВОЗВРАТ",
+   "flags": [
+    "R3б: нейросетевая живопись"
+   ],
+   "nodes": []
+  },
+  "room-bedroom-wD": {
+   "score": 17,
+   "verdict": "ВОЗВРАТ",
+   "flags": [
+    "R3б: нейросетевая живопись"
+   ],
+   "nodes": []
+  },
+  "room-kids-wA": {
+   "score": 14,
+   "verdict": "ДОРАБОТКА",
+   "flags": [],
+   "nodes": []
+  },
+  "room-kids-wB": {
+   "score": 18,
+   "verdict": "ПРИНЯТ",
+   "flags": [],
+   "nodes": []
+  },
+  "room-kids-wD": {
+   "score": 17,
+   "verdict": "ВОЗВРАТ",
+   "flags": [
+    "R3б: нейросетевая живопись"
+   ],
+   "nodes": []
+  },
+  "room-bath-wA": {
+   "score": 17,
+   "verdict": "ПРИНЯТ",
+   "flags": [],
+   "nodes": []
+  },
+  "room-bath-wD": {
+   "score": 15,
+   "verdict": "ДОРАБОТКА",
+   "flags": [],
+   "nodes": []
+  },
+  "room-hall-wide": {
+   "score": 17,
+   "verdict": "ПРИНЯТ",
+   "flags": [],
+   "nodes": []
+  },
+  "ceiling-bedroom": {
+   "score": 10,
+   "verdict": "не оценивается",
+   "flags": [],
+   "nodes": [
+    "сетка точек"
+   ]
+  },
+  "ceiling-kids": {
+   "score": 13,
+   "verdict": "не оценивается",
+   "flags": [],
+   "nodes": []
+  }
+ },
+ "gost-elitemodern": {
+  "3d-top": {
+   "score": 12,
+   "verdict": "не оценивается",
+   "flags": [
+    "R3а: радиатор"
+   ],
+   "nodes": [
+    "радиатор"
+   ]
+  },
+  "room-kitchen-m1": {
+   "score": 16,
+   "verdict": "ПРИНЯТ",
+   "flags": [],
+   "nodes": []
+  },
+  "room-living-m1": {
+   "score": 7,
+   "verdict": "ВОЗВРАТ",
+   "flags": [
+    "R1: нет ореховых панелей и мрамора, главный материал ДНК не виден",
+    "R3б: нейросетевая живопись",
+    "R3а: дверь с наличником",
+    "R3б: подушки случайных цветов"
+   ],
+   "nodes": [
+    "дверь с наличником"
+   ]
+  },
+  "room-bedroom-m1": {
+   "score": 9,
+   "verdict": "ВОЗВРАТ",
+   "flags": [
+    "R1: нет ореховой панели у изголовья, главный материал не виден",
+    "R3б: нейросетевая живопись",
+    "R3а: радиатор",
+    "R3а: сетка точек",
+    "R3б: подушки случайных цветов",
+    "R3б: фикус как единственный декор"
+   ],
+   "nodes": [
+    "радиатор",
+    "сетка точек"
+   ]
+  },
+  "room-bath-s1": {
+   "score": 15,
+   "verdict": "ДОРАБОТКА",
+   "flags": [],
+   "nodes": []
+  },
+  "room-bath-d1": {
+   "score": 19,
+   "verdict": "ПРИНЯТ",
+   "flags": [],
+   "nodes": []
+  },
+  "room-bath-d2": {
+   "score": 15,
+   "verdict": "ДОРАБОТКА",
+   "flags": [],
+   "nodes": []
+  },
+  "room-study-m1": {
+   "score": 17,
+   "verdict": "ВОЗВРАТ",
+   "flags": [
+    "R3б: нейросетевая живопись",
+    "R3а: радиатор"
+   ],
+   "nodes": [
+    "радиатор"
+   ]
+  },
+  "room-wc-s1": {
+   "score": 19,
+   "verdict": "ПРИНЯТ",
+   "flags": [],
+   "nodes": []
+  },
+  "room-hall-s1": {
+   "score": 12,
+   "verdict": "ВОЗВРАТ",
+   "flags": [
+    "R3а: сетка точек",
+    "R3а: дверь с наличником"
+   ],
+   "nodes": [
+    "сетка точек",
+    "дверь с наличником"
+   ]
+  },
+  "room-kitchen-m2": {
+   "score": 18,
+   "verdict": "ВОЗВРАТ",
+   "flags": [
+    "R3а: дверь с наличником"
+   ],
+   "nodes": [
+    "дверь с наличником"
+   ]
+  },
+  "room-living-s1": {
+   "score": 18,
+   "verdict": "ВОЗВРАТ",
+   "flags": [
+    "R3б: нейросетевая живопись",
+    "R3а: сетка точек",
+    "R3б: подушки случайных цветов"
+   ],
+   "nodes": [
+    "сетка точек"
+   ]
+  }
+ }
+}

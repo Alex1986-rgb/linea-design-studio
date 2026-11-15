@@ -1,9 +1,9 @@
 {
  "checked": true,
- "signed": 17,
+ "signed": 12,
  "prelim": 0,
- "rejected": 3,
- "accepted": 17,
+ "rejected": 8,
+ "accepted": 12,
  "ribbon": [
   {
    "src": "assets/portfolio/gost-proekt2/room-living1-wB.jpg",
@@ -15,20 +15,6 @@
    "wall": "r1:B",
    "clay": {
     "src": "assets/portfolio/gost-proekt2/clay-room-living1-wB.jpg",
-    "w": 1200,
-    "h": 800
-   }
-  },
-  {
-   "src": "assets/portfolio/gost-proekt2/room-living2-wA.jpg",
-   "alt": "Квартира 103 м² · с эркерами, 13 помещений — гостиная, визуализация",
-   "w": 1200,
-   "h": 800,
-   "state": "signed",
-   "name": "room-living2-wA",
-   "wall": "r11:A",
-   "clay": {
-    "src": "assets/portfolio/gost-proekt2/clay-room-living2-wA.jpg",
     "w": 1200,
     "h": 800
    }
@@ -132,20 +118,6 @@
    }
   },
   {
-   "src": "assets/portfolio/gost-proekt2/room-corridor-wA.jpg",
-   "alt": "Квартира 103 м² · с эркерами, 13 помещений — холл, визуализация",
-   "w": 1200,
-   "h": 800,
-   "state": "signed",
-   "name": "room-corridor-wA",
-   "wall": "r5:A",
-   "clay": {
-    "src": "assets/portfolio/gost-proekt2/clay-room-corridor-wA.jpg",
-    "w": 1200,
-    "h": 800
-   }
-  },
-  {
    "src": "assets/portfolio/gost-proekt2/room-wc-wide.jpg",
    "alt": "Квартира 103 м² · с эркерами, 13 помещений — санузел, визуализация",
    "w": 1200,
@@ -155,34 +127,6 @@
    "wall": "r10:room",
    "clay": {
     "src": "assets/portfolio/gost-proekt2/clay-room-wc-wide.jpg",
-    "w": 1200,
-    "h": 800
-   }
-  },
-  {
-   "src": "assets/portfolio/gost-proekt2/room-living1-wC.jpg",
-   "alt": "Квартира 103 м² · с эркерами, 13 помещений — гостиная, визуализация",
-   "w": 1200,
-   "h": 800,
-   "state": "signed",
-   "name": "room-living1-wC",
-   "wall": "r1:C",
-   "clay": {
-    "src": "assets/portfolio/gost-proekt2/clay-room-living1-wC.jpg",
-    "w": 1200,
-    "h": 800
-   }
-  },
-  {
-   "src": "assets/portfolio/gost-proekt2/room-living1-wD.jpg",
-   "alt": "Квартира 103 м² · с эркерами, 13 помещений — гостиная, визуализация",
-   "w": 1200,
-   "h": 800,
-   "state": "signed",
-   "name": "room-living1-wD",
-   "wall": "r1:D",
-   "clay": {
-    "src": "assets/portfolio/gost-proekt2/clay-room-living1-wD.jpg",
     "w": 1200,
     "h": 800
    }
@@ -225,20 +169,6 @@
    "wall": "r4:D",
    "clay": {
     "src": "assets/portfolio/gost-proekt2/clay-room-kids1-wD.jpg",
-    "w": 1200,
-    "h": 800
-   }
-  },
-  {
-   "src": "assets/portfolio/gost-proekt2/room-kids2-wD.jpg",
-   "alt": "Квартира 103 м² · с эркерами, 13 помещений — детская, визуализация",
-   "w": 1200,
-   "h": 800,
-   "state": "signed",
-   "name": "room-kids2-wD",
-   "wall": "r9:D",
-   "clay": {
-    "src": "assets/portfolio/gost-proekt2/clay-room-kids2-wD.jpg",
     "w": 1200,
     "h": 800
    }

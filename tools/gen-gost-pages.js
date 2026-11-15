@@ -419,8 +419,10 @@ function renders(a, r) {
   const byRoom = state => shown.filter(v => st(v) === state && /^room-/.test(v.name))
     .sort((x, y) => (ROOM_ORDER.indexOf(roomKey(x.name)) + 1 || 99) - (ROOM_ORDER.indexOf(roomKey(y.name)) + 1 || 99))[0];
   // 15.11.2026: заглавный — интерьерный кадр (не вид сверху и не схема): с лучшим баллом арт-директора, без баллов — самого важного помещения
-  const byArt = shown.filter(v => st(v) === 'signed' && /^room-/.test(v.name) && Number.isFinite(ART[v.name]?.score))
-    .sort((x, y) => ART[y.name].score - ART[x.name].score || (ROOM_ORDER.indexOf(roomKey(x.name)) + 1 || 99) - (ROOM_ORDER.indexOf(roomKey(y.name)) + 1 || 99))[0];
+  // сначала «ПРИНЯТ» арт-директором — самого важного помещения (гостиная раньше ванной), при равенстве — по баллу; нет принятых — лучший по баллу
+  const ro = v => ROOM_ORDER.indexOf(roomKey(v.name)) + 1 || 99, rated = shown.filter(v => st(v) === 'signed' && /^room-/.test(v.name) && Number.isFinite(ART[v.name]?.score));
+  const byArt = rated.filter(v => /ПРИНЯТ/.test(ART[v.name].verdict)).sort((x, y) => ro(x) - ro(y) || ART[y.name].score - ART[x.name].score)[0]
+    || rated.sort((x, y) => ART[y.name].score - ART[x.name].score || ro(x) - ro(y))[0];
   const heroV = byArt || byRoom('signed') || first(/^3d-top(-et1)?$/, 'signed') || byRoom('prelim') || first(/^3d-top(-et1)?$/) || shown[0];
   // лента: по одному кадру на помещение в порядке значимости, подписанные первыми, затем вторые кадры — до 8
   // титул альбома идёт заглавным сам — тогда кадр heroV из ленты не убираем, иначе он пропадёт со страницы

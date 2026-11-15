@@ -19,15 +19,15 @@
  "preReview": "",
  "hero": {
   "src": "assets/portfolio/gost-retro103-hero.jpg",
-  "alt": "Квартира 101 м² · ретро с авторской мебелью — гостиная, визуализация",
+  "alt": "Квартира 101 м² · ретро с авторской мебелью — спальня, визуализация",
   "w": 1600,
   "h": 1066,
   "kind": "render",
   "state": "signed",
-  "name": "room-living-wD",
+  "name": "room-bedroom2-wA",
   "webp": "assets/portfolio/gost-retro103-hero.webp"
  },
- "visuals": 21,
+ "visuals": 13,
  "visualsPrelim": 0,
  "studioSize": "13 МБ",
  "pdfSize": "14 МБ"

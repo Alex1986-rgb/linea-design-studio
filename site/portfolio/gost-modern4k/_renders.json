@@ -1,9 +1,9 @@
 {
  "checked": true,
- "signed": 23,
+ "signed": 13,
  "prelim": 0,
- "rejected": 1,
- "accepted": 23,
+ "rejected": 11,
+ "accepted": 13,
  "ribbon": [
   {
    "src": "assets/portfolio/gost-modern4k/3d-top.jpg",
@@ -52,22 +52,27 @@
    "wall": "r6:B"
   },
   {
-   "src": "assets/portfolio/gost-modern4k/room-study-wD.jpg",
+   "src": "assets/portfolio/gost-modern4k/room-study-wA.jpg",
    "alt": "Квартира 127 м² · современный модерн, с кабинетом — кабинет, визуализация",
    "w": 1200,
    "h": 800,
    "state": "signed",
-   "name": "room-study-wD",
-   "wall": "r3:D"
+   "name": "room-study-wA",
+   "wall": "r3:A"
   },
   {
-   "src": "assets/portfolio/gost-modern4k/room-bath1-wC.jpg",
+   "src": "assets/portfolio/gost-modern4k/room-bath1-wB.jpg",
    "alt": "Квартира 127 м² · современный модерн, с кабинетом — ванная, визуализация",
    "w": 1200,
    "h": 800,
    "state": "signed",
-   "name": "room-bath1-wC",
-   "wall": "r7:C"
+   "name": "room-bath1-wB",
+   "wall": "r7:B",
+   "clay": {
+    "src": "assets/portfolio/gost-modern4k/clay-room-bath1-wB.jpg",
+    "w": 1200,
+    "h": 800
+   }
   },
   {
    "src": "assets/portfolio/gost-modern4k/room-bath2-wide.jpg",
@@ -79,31 +84,13 @@
    "wall": "r9:room"
   },
   {
-   "src": "assets/portfolio/gost-modern4k/room-hall-wD.jpg",
+   "src": "assets/portfolio/gost-modern4k/room-hall-wB.jpg",
    "alt": "Квартира 127 м² · современный модерн, с кабинетом — прихожая, визуализация",
    "w": 1200,
    "h": 800,
    "state": "signed",
-   "name": "room-hall-wD",
-   "wall": "r8:D"
-  },
-  {
-   "src": "assets/portfolio/gost-modern4k/room-wardrobe-wide.jpg",
-   "alt": "Квартира 127 м² · современный модерн, с кабинетом — гардеробная, визуализация",
-   "w": 1200,
-   "h": 800,
-   "state": "signed",
-   "name": "room-wardrobe-wide",
-   "wall": "r2:room"
-  },
-  {
-   "src": "assets/portfolio/gost-modern4k/room-corridor-wC.jpg",
-   "alt": "Квартира 127 м² · современный модерн, с кабинетом — холл, визуализация",
-   "w": 1200,
-   "h": 800,
-   "state": "signed",
-   "name": "room-corridor-wC",
-   "wall": "r5:C"
+   "name": "room-hall-wB",
+   "wall": "r8:B"
   },
   {
    "src": "assets/portfolio/gost-modern4k/room-living-wC.jpg",
@@ -115,34 +102,6 @@
    "wall": "r4:C",
    "clay": {
     "src": "assets/portfolio/gost-modern4k/clay-room-living-wC.jpg",
-    "w": 1200,
-    "h": 800
-   }
-  },
-  {
-   "src": "assets/portfolio/gost-modern4k/room-living-wA.jpg",
-   "alt": "Квартира 127 м² · современный модерн, с кабинетом — гостиная, визуализация",
-   "w": 1200,
-   "h": 800,
-   "state": "signed",
-   "name": "room-living-wA",
-   "wall": "r4:A",
-   "clay": {
-    "src": "assets/portfolio/gost-modern4k/clay-room-living-wA.jpg",
-    "w": 1200,
-    "h": 800
-   }
-  },
-  {
-   "src": "assets/portfolio/gost-modern4k/room-bedroom-wA.jpg",
-   "alt": "Квартира 127 м² · современный модерн, с кабинетом — спальня, визуализация",
-   "w": 1200,
-   "h": 800,
-   "state": "signed",
-   "name": "room-bedroom-wA",
-   "wall": "r1:A",
-   "clay": {
-    "src": "assets/portfolio/gost-modern4k/clay-room-bedroom-wA.jpg",
     "w": 1200,
     "h": 800
    }
@@ -171,24 +130,6 @@
    "wall": "r6:A"
   },
   {
-   "src": "assets/portfolio/gost-modern4k/room-kids-wD.jpg",
-   "alt": "Квартира 127 м² · современный модерн, с кабинетом — детская, визуализация",
-   "w": 1200,
-   "h": 800,
-   "state": "signed",
-   "name": "room-kids-wD",
-   "wall": "r6:D"
-  },
-  {
-   "src": "assets/portfolio/gost-modern4k/room-study-wA.jpg",
-   "alt": "Квартира 127 м² · современный модерн, с кабинетом — кабинет, визуализация",
-   "w": 1200,
-   "h": 800,
-   "state": "signed",
-   "name": "room-study-wA",
-   "wall": "r3:A"
-  },
-  {
    "src": "assets/portfolio/gost-modern4k/room-study-wB.jpg",
    "alt": "Квартира 127 м² · современный модерн, с кабинетом — кабинет, визуализация",
    "w": 1200,
@@ -198,29 +139,6 @@
    "wall": "r3:B"
   },
   {
-   "src": "assets/portfolio/gost-modern4k/room-bath1-wB.jpg",
-   "alt": "Квартира 127 м² · современный модерн, с кабинетом — ванная, визуализация",
-   "w": 1200,
-   "h": 800,
-   "state": "signed",
-   "name": "room-bath1-wB",
-   "wall": "r7:B",
-   "clay": {
-    "src": "assets/portfolio/gost-modern4k/clay-room-bath1-wB.jpg",
-    "w": 1200,
-    "h": 800
-   }
-  },
-  {
-   "src": "assets/portfolio/gost-modern4k/room-bath1-wD.jpg",
-   "alt": "Квартира 127 м² · современный модерн, с кабинетом — ванная, визуализация",
-   "w": 1200,
-   "h": 800,
-   "state": "signed",
-   "name": "room-bath1-wD",
-   "wall": "r7:D"
-  },
-  {
    "src": "assets/portfolio/gost-modern4k/room-bath2-wC.jpg",
    "alt": "Квартира 127 м² · современный модерн, с кабинетом — ванная, визуализация",
    "w": 1200,
@@ -228,24 +146,6 @@
    "state": "signed",
    "name": "room-bath2-wC",
    "wall": "r9:C"
-  },
-  {
-   "src": "assets/portfolio/gost-modern4k/room-hall-wC.jpg",
-   "alt": "Квартира 127 м² · современный модерн, с кабинетом — прихожая, визуализация",
-   "w": 1200,
-   "h": 800,
-   "state": "signed",
-   "name": "room-hall-wC",
-   "wall": "r8:C"
-  },
-  {
-   "src": "assets/portfolio/gost-modern4k/room-hall-wB.jpg",
-   "alt": "Квартира 127 м² · современный модерн, с кабинетом — прихожая, визуализация",
-   "w": 1200,
-   "h": 800,
-   "state": "signed",
-   "name": "room-hall-wB",
-   "wall": "r8:B"
   }
  ],
  "hero": {

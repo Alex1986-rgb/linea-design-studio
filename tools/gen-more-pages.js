@@ -24,6 +24,7 @@ const { AUTHOR, BASE, esc, crumbsLd, TERMS } = SHELL;
 const out = [];
 // выпуски нового движка: число листов и паспорт объекта читаются с самих листов, а не пишутся руками
 // gost-kv65 и gost-kv58 — без разбора реестра (как в gen-gost-pages, explain: false): паспорт — с титула
+const PORTFOLIO_ORDER = ['gost-modern4k', 'gost-retro103', 'gost-proekt2', 'gost-elitemodern', 'gost-lineademo', 'gost-kv3k', 'gost-kv65', 'gost-kv58'];
 const GOST = Object.fromEntries(['gost-proekt2', 'gost-kv3k', 'gost-kv65', 'gost-kv58', 'gost-modern4k', 'gost-retro103', 'gost-lineademo', 'gost-elitemodern'].map(slug => {
   const r = OPEN.readRelease(SITE, slug);
   const facts = ['gost-kv65', 'gost-kv58', 'gost-modern4k', 'gost-retro103', 'gost-lineademo', 'gost-elitemodern'].includes(slug) ? OPEN.facts(SITE, slug, r).facts : OPEN.read(SITE, slug, r).facts;
@@ -39,7 +40,12 @@ const CARDS = Object.keys(GOST).map(slug => {
   c.total = JSON.parse(fs.readFileSync(path.join(SITE, 'portfolio', slug, 'sheets.json'), 'utf8')).length;   // листов — из sheets.json
   c.elev = fs.readdirSync(path.join(SITE, 'portfolio', slug, 'sheets')).filter(f => /-elev-/.test(f)).length;
   return c;
-}).sort((a, b) => (+(b.code.match(/-(\d{3})-/) || [])[1] || 0) - (+(a.code.match(/-(\d{3})-/) || [])[1] || 0));   // новые первыми
+}).sort((a, b) => {
+  // 15.11.2026 (решение Александра по итогам арт-директора): сильные проекты первыми; kv-3k, kv-65, kv-58 — в конце, пока главным кадром
+  // у них прихожая или ванная (после перегенерации kv-3k поднять). Проект вне списка — после перечисленных, новые первыми.
+  const i = s => { const k = PORTFOLIO_ORDER.indexOf(s.slug); return k < 0 ? 99 : k; };
+  return i(a) - i(b) || (+(b.code.match(/-(\d{3})-/) || [])[1] || 0) - (+(a.code.match(/-(\d{3})-/) || [])[1] || 0);
+});
 const NEW_N = CARDS.length;
 const NUM_W = { 2: 'два', 3: 'три', 4: 'четыре', 5: 'пять', 6: 'шесть', 7: 'семь', 8: 'восемь', 9: 'девять', 10: 'десять', 11: 'одиннадцать' };
 const NUM_IN = { 2: 'двух', 3: 'трёх', 4: 'четырёх', 5: 'пяти', 6: 'шести', 7: 'семи', 8: 'восьми', 9: 'девяти', 10: 'десяти', 11: 'одиннадцати' };

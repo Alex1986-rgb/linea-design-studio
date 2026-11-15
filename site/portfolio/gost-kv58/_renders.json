@@ -1,9 +1,9 @@
 {
  "checked": true,
- "signed": 7,
+ "signed": 4,
  "prelim": 0,
- "rejected": 3,
- "accepted": 7,
+ "rejected": 6,
+ "accepted": 4,
  "ribbon": [
   {
    "src": "assets/portfolio/gost-kv58/room-living-wC.jpg",
@@ -15,20 +15,6 @@
    "wall": "r1:C",
    "clay": {
     "src": "assets/portfolio/gost-kv58/clay-room-living-wC.jpg",
-    "w": 1200,
-    "h": 800
-   }
-  },
-  {
-   "src": "assets/portfolio/gost-kv58/room-bedroom-wA.jpg",
-   "alt": "Квартира 55 м² · кухня-гостиная и спальня — спальня, визуализация",
-   "w": 1200,
-   "h": 800,
-   "state": "signed",
-   "name": "room-bedroom-wA",
-   "wall": "r2:A",
-   "clay": {
-    "src": "assets/portfolio/gost-kv58/clay-room-bedroom-wA.jpg",
     "w": 1200,
     "h": 800
    }
@@ -62,34 +48,6 @@
    }
   },
   {
-   "src": "assets/portfolio/gost-kv58/room-wc-wide.jpg",
-   "alt": "Квартира 55 м² · кухня-гостиная и спальня — санузел, визуализация",
-   "w": 1200,
-   "h": 800,
-   "state": "signed",
-   "name": "room-wc-wide",
-   "wall": "r4:room",
-   "clay": {
-    "src": "assets/portfolio/gost-kv58/clay-room-wc-wide.jpg",
-    "w": 1200,
-    "h": 800
-   }
-  },
-  {
-   "src": "assets/portfolio/gost-kv58/room-bedroom-wB.jpg",
-   "alt": "Квартира 55 м² · кухня-гостиная и спальня — спальня, визуализация",
-   "w": 1200,
-   "h": 800,
-   "state": "signed",
-   "name": "room-bedroom-wB",
-   "wall": "r2:B",
-   "clay": {
-    "src": "assets/portfolio/gost-kv58/clay-room-bedroom-wB.jpg",
-    "w": 1200,
-    "h": 800
-   }
-  },
-  {
    "src": "assets/portfolio/gost-kv58/room-bath-wC.jpg",
    "alt": "Квартира 55 м² · кухня-гостиная и спальня — ванная, визуализация",
    "w": 1200,
@@ -106,12 +64,12 @@
  ],
  "hero": {
   "src": "assets/portfolio/gost-kv58-hero.jpg",
-  "alt": "Квартира 55 м² · кухня-гостиная и спальня — гостиная, визуализация",
+  "alt": "Квартира 55 м² · кухня-гостиная и спальня — ванная, визуализация",
   "w": 1600,
   "h": 1066,
   "kind": "render",
   "state": "signed",
-  "name": "room-living-wC",
+  "name": "room-bath-wB",
   "webp": "assets/portfolio/gost-kv58-hero.webp"
  }
 }

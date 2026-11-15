@@ -42,7 +42,7 @@ const OBJ = (() => {
 })();
 
 // порядок карточек на главной: сначала проект с подписанными кадрами, дальше остальные квартиры
-const ORDER = ['gost-elitemodern', 'gost-modern4k', 'gost-retro103', 'gost-lineademo', 'gost-proekt2', 'gost-kv3k', 'gost-kv65', 'gost-kv58'];
+const ORDER = ['gost-modern4k', 'gost-retro103', 'gost-proekt2', 'gost-elitemodern', 'gost-lineademo', 'gost-kv3k', 'gost-kv65', 'gost-kv58'];   // 15.11.2026: сильные первыми
 // короткая подпись стиля/типа на карточке
 const KICK = {
   'gost-elitemodern': 'Квартира · элитный модерн',
