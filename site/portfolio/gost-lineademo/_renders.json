@@ -1,9 +1,9 @@
 {
  "checked": true,
- "signed": 10,
+ "signed": 11,
  "prelim": 0,
- "rejected": 8,
- "accepted": 10,
+ "rejected": 7,
+ "accepted": 11,
  "ribbon": [
   {
    "src": "assets/portfolio/gost-lineademo/3d-top.jpg",
@@ -85,6 +85,20 @@
    "wall": "r1:C",
    "clay": {
     "src": "assets/portfolio/gost-lineademo/clay-room-living-wC.jpg",
+    "w": 1200,
+    "h": 800
+   }
+  },
+  {
+   "src": "assets/portfolio/gost-lineademo/room-bedroom-wC.jpg",
+   "alt": "Квартира 56 м² · джапанди — спальня, визуализация",
+   "w": 1200,
+   "h": 800,
+   "state": "signed",
+   "name": "room-bedroom-wC",
+   "wall": "r2:C",
+   "clay": {
+    "src": "assets/portfolio/gost-lineademo/clay-room-bedroom-wC.jpg",
     "w": 1200,
     "h": 800
    }

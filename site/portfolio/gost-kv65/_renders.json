@@ -1,10 +1,24 @@
 {
  "checked": true,
- "signed": 9,
+ "signed": 11,
  "prelim": 0,
- "rejected": 6,
- "accepted": 9,
+ "rejected": 4,
+ "accepted": 11,
  "ribbon": [
+  {
+   "src": "assets/portfolio/gost-kv65/3d-top.jpg",
+   "alt": "Квартира 65 м² · после реконструкции — вид сверху 3D",
+   "w": 1200,
+   "h": 800,
+   "state": "signed",
+   "name": "3d-top",
+   "wall": "top",
+   "clay": {
+    "src": "assets/portfolio/gost-kv65/clay-3d-top.jpg",
+    "w": 1200,
+    "h": 800
+   }
+  },
   {
    "src": "assets/portfolio/gost-kv65/room-living-wA.jpg",
    "alt": "Квартира 65 м² · после реконструкции — гостиная, визуализация",
@@ -104,6 +118,20 @@
    }
   },
   {
+   "src": "assets/portfolio/gost-kv65/room-living-wide.jpg",
+   "alt": "Квартира 65 м² · после реконструкции — гостиная, визуализация",
+   "w": 1200,
+   "h": 800,
+   "state": "signed",
+   "name": "room-living-wide",
+   "wall": "r3:room",
+   "clay": {
+    "src": "assets/portfolio/gost-kv65/clay-room-living-wide.jpg",
+    "w": 1200,
+    "h": 800
+   }
+  },
+  {
    "src": "assets/portfolio/gost-kv65/room-bedroom-wide.jpg",
    "alt": "Квартира 65 м² · после реконструкции — спальня, визуализация",
    "w": 1200,
@@ -134,12 +162,12 @@
  ],
  "hero": {
   "src": "assets/portfolio/gost-kv65-hero.jpg",
-  "alt": "Квартира 65 м² · после реконструкции — гостиная, визуализация",
+  "alt": "Квартира 65 м² · после реконструкции — вид сверху 3D",
   "w": 1600,
   "h": 1066,
   "kind": "render",
   "state": "signed",
-  "name": "room-living-wA",
+  "name": "3d-top",
   "webp": "assets/portfolio/gost-kv65-hero.webp"
  }
 }

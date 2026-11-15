@@ -1,9 +1,9 @@
 {
  "checked": true,
- "signed": 14,
+ "signed": 16,
  "prelim": 0,
- "rejected": 6,
- "accepted": 14,
+ "rejected": 4,
+ "accepted": 16,
  "ribbon": [
   {
    "src": "assets/portfolio/gost-proekt2/room-living1-wA.jpg",
@@ -113,6 +113,34 @@
    "wall": "r12:room",
    "clay": {
     "src": "assets/portfolio/gost-proekt2/clay-room-wardrobe2-wide.jpg",
+    "w": 1200,
+    "h": 800
+   }
+  },
+  {
+   "src": "assets/portfolio/gost-proekt2/room-balcony-wide.jpg",
+   "alt": "Квартира 103 м² · с эркерами, 13 помещений — балкон, визуализация",
+   "w": 1200,
+   "h": 800,
+   "state": "signed",
+   "name": "room-balcony-wide",
+   "wall": "r13:room",
+   "clay": {
+    "src": "assets/portfolio/gost-proekt2/clay-room-balcony-wide.jpg",
+    "w": 1200,
+    "h": 800
+   }
+  },
+  {
+   "src": "assets/portfolio/gost-proekt2/room-corridor-wA.jpg",
+   "alt": "Квартира 103 м² · с эркерами, 13 помещений — холл, визуализация",
+   "w": 1200,
+   "h": 800,
+   "state": "signed",
+   "name": "room-corridor-wA",
+   "wall": "r5:A",
+   "clay": {
+    "src": "assets/portfolio/gost-proekt2/clay-room-corridor-wA.jpg",
     "w": 1200,
     "h": 800
    }
