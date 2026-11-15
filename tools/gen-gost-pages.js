@@ -343,6 +343,8 @@ const OBJ = (() => {
 const ROOM_RU = { living: 'гостиная', kitchen: 'кухня-столовая', bedroom: 'спальня', kids: 'детская', study: 'кабинет',
   bath: 'ванная', wc: 'санузел', hall: 'прихожая', corridor: 'холл', wardrobe: 'гардеробная', storage: 'кладовая',
   balcony: 'балкон', '3d-top': 'вид сверху 3D' };
+const readJsonSafe = f => { try { return JSON.parse(fs.readFileSync(f, 'utf8')); } catch { return {}; } };
+const SITE_HIDDEN = readJsonSafe(path.join(__dirname, 'site-hidden.json')), ART_VERDICTS = readJsonSafe(path.join(__dirname, 'art-verdicts.json'));
 const ROOM_ORDER = ['living', 'kitchen', 'bedroom', 'kids', 'study', 'bath', 'hall', 'wardrobe', 'balcony', 'corridor', 'wc', 'storage'];
 const roomKey = n => (n.match(/^room-([a-z]+)/) || [])[1] || (/^3d-top/.test(n) ? '3d-top' : '');
 const frameAlt = (a, n) => {
@@ -404,14 +406,22 @@ function renders(a, r) {
   // кадры, не прошедшие сверку с планом («брак» / «не уверен»), на сайт не выкладываются вовсе: заказчик увидел на них диван в проходе
   // и стул без ножек. Вернуть показ всех кадров — GOST_SHOW_REJECTED=1.
   const SHOW_REJ = process.env.GOST_SHOW_REJECTED === '1';
-  const shown = views.filter(v => has(v.name) && /^(room-|3d-top)/.test(v.name) && !v.tech && (SHOW_REJ || st(v) !== 'rejected'));
+  // 15.11.2026 (решение Александра по сводке критиков docs/reviews/2026-11-15-kritiki-dizain.md): кадр может быть верен плану и всё же не
+  // годиться на витрину. tools/site-hidden.json — кадры, снятые с сайта по вкусу (slug → [кадры]); tools/art-verdicts.json — вердикты
+  // арт-директора (slug → кадр → { score, verdict }): «ВОЗВРАТ» на сайт не идёт, заглавным становится интерьерный кадр с лучшим баллом.
+  const HID = new Set((SITE_HIDDEN[a.slug] || [])), ART = ART_VERDICTS[a.slug] || {};
+  const artBad = v => /ВОЗВРАТ/i.test(String(ART[v.name]?.verdict || ''));
+  const shown = views.filter(v => has(v.name) && /^(room-|3d-top)/.test(v.name) && !v.tech && !HID.has(v.name) && !artBad(v) && (SHOW_REJ || st(v) !== 'rejected'));
   const n = { signed: shown.filter(v => st(v) === 'signed').length, prelim: shown.filter(v => st(v) === 'prelim').length };
   n.rejected = views.length - n.signed - n.prelim;
   const first = (re, state) => shown.find(v => re.test(v.name) && (!state || st(v) === state));
   // заглавный: подписанный вид сверху 3D, затем подписанный кадр самого важного помещения, и только потом предварительные
   const byRoom = state => shown.filter(v => st(v) === state && /^room-/.test(v.name))
     .sort((x, y) => (ROOM_ORDER.indexOf(roomKey(x.name)) + 1 || 99) - (ROOM_ORDER.indexOf(roomKey(y.name)) + 1 || 99))[0];
-  const heroV = first(/^3d-top(-et1)?$/, 'signed') || byRoom('signed') || first(/^3d-top(-et1)?$/) || byRoom('prelim') || shown[0];
+  // 15.11.2026: заглавный — интерьерный кадр (не вид сверху и не схема): с лучшим баллом арт-директора, без баллов — самого важного помещения
+  const byArt = shown.filter(v => st(v) === 'signed' && /^room-/.test(v.name) && Number.isFinite(ART[v.name]?.score))
+    .sort((x, y) => ART[y.name].score - ART[x.name].score || (ROOM_ORDER.indexOf(roomKey(x.name)) + 1 || 99) - (ROOM_ORDER.indexOf(roomKey(y.name)) + 1 || 99))[0];
+  const heroV = byArt || byRoom('signed') || first(/^3d-top(-et1)?$/, 'signed') || byRoom('prelim') || first(/^3d-top(-et1)?$/) || shown[0];
   // лента: по одному кадру на помещение в порядке значимости, подписанные первыми, затем вторые кадры — до 8
   // титул альбома идёт заглавным сам — тогда кадр heroV из ленты не убираем, иначе он пропадёт со страницы
   const hasCover = !!dir && fs.existsSync(path.join(dir, 'cover', 'hero.jpg'));

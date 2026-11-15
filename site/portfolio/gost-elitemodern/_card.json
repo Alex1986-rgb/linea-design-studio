@@ -19,15 +19,15 @@
  "preReview": "",
  "hero": {
   "src": "assets/portfolio/gost-elitemodern-hero.jpg",
-  "alt": "Квартира 68 м² · элитный модерн — вид сверху 3D",
+  "alt": "Квартира 68 м² · элитный модерн — гостиная, визуализация",
   "w": 1600,
   "h": 1066,
   "kind": "render",
   "state": "signed",
-  "name": "3d-top",
+  "name": "room-living-s1",
   "webp": "assets/portfolio/gost-elitemodern-hero.webp"
  },
- "visuals": 12,
+ "visuals": 11,
  "visualsPrelim": 0,
  "studioSize": "9 МБ",
  "pdfSize": "11 МБ"

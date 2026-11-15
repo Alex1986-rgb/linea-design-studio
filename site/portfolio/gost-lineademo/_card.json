@@ -19,12 +19,12 @@
  "preReview": "",
  "hero": {
   "src": "assets/portfolio/gost-lineademo-hero.jpg",
-  "alt": "Квартира 56 м² · джапанди — вид сверху 3D",
+  "alt": "Квартира 56 м² · джапанди — гостиная, визуализация",
   "w": 1600,
   "h": 1066,
   "kind": "render",
   "state": "signed",
-  "name": "3d-top",
+  "name": "room-living-wA",
   "webp": "assets/portfolio/gost-lineademo-hero.webp"
  },
  "visuals": 12,

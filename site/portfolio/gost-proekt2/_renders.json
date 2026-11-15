@@ -1,20 +1,20 @@
 {
  "checked": true,
- "signed": 18,
+ "signed": 17,
  "prelim": 0,
- "rejected": 2,
- "accepted": 18,
+ "rejected": 3,
+ "accepted": 17,
  "ribbon": [
   {
-   "src": "assets/portfolio/gost-proekt2/room-living1-wA.jpg",
+   "src": "assets/portfolio/gost-proekt2/room-living1-wB.jpg",
    "alt": "Квартира 103 м² · с эркерами, 13 помещений — гостиная, визуализация",
    "w": 1200,
    "h": 800,
    "state": "signed",
-   "name": "room-living1-wA",
-   "wall": "r1:A",
+   "name": "room-living1-wB",
+   "wall": "r1:B",
    "clay": {
-    "src": "assets/portfolio/gost-proekt2/clay-room-living1-wA.jpg",
+    "src": "assets/portfolio/gost-proekt2/clay-room-living1-wB.jpg",
     "w": 1200,
     "h": 800
    }
@@ -160,20 +160,6 @@
    }
   },
   {
-   "src": "assets/portfolio/gost-proekt2/room-living1-wB.jpg",
-   "alt": "Квартира 103 м² · с эркерами, 13 помещений — гостиная, визуализация",
-   "w": 1200,
-   "h": 800,
-   "state": "signed",
-   "name": "room-living1-wB",
-   "wall": "r1:B",
-   "clay": {
-    "src": "assets/portfolio/gost-proekt2/clay-room-living1-wB.jpg",
-    "w": 1200,
-    "h": 800
-   }
-  },
-  {
    "src": "assets/portfolio/gost-proekt2/room-living1-wC.jpg",
    "alt": "Квартира 103 м² · с эркерами, 13 помещений — гостиная, визуализация",
    "w": 1200,
@@ -265,7 +251,7 @@
   "h": 1066,
   "kind": "render",
   "state": "signed",
-  "name": "room-living1-wA",
+  "name": "room-living1-wB",
   "webp": "assets/portfolio/gost-proekt2-hero.webp"
  }
 }

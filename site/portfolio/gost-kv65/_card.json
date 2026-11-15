@@ -19,15 +19,15 @@
  "preReview": "",
  "hero": {
   "src": "assets/portfolio/gost-kv65-hero.jpg",
-  "alt": "Квартира 65 м² · после реконструкции — вид сверху 3D",
+  "alt": "Квартира 65 м² · после реконструкции — гостиная, визуализация",
   "w": 1600,
   "h": 1066,
   "kind": "render",
   "state": "signed",
-  "name": "3d-top",
+  "name": "room-living-wA",
   "webp": "assets/portfolio/gost-kv65-hero.webp"
  },
- "visuals": 11,
+ "visuals": 10,
  "visualsPrelim": 0,
  "studioSize": "9 МБ",
  "pdfSize": "10 МБ"

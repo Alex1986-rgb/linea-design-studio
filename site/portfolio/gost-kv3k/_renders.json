@@ -204,12 +204,12 @@
  ],
  "hero": {
   "src": "assets/portfolio/gost-kv3k-hero.jpg",
-  "alt": "Квартира 79 м² · трёхкомнатная — вид сверху 3D",
+  "alt": "Квартира 79 м² · трёхкомнатная — гостиная, визуализация",
   "w": 1600,
   "h": 1066,
   "kind": "render",
   "state": "signed",
-  "name": "3d-top",
+  "name": "room-living-wB",
   "webp": "assets/portfolio/gost-kv3k-hero.webp"
  }
 }

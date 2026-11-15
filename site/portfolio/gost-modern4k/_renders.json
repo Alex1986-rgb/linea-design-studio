@@ -1,9 +1,9 @@
 {
  "checked": true,
- "signed": 24,
+ "signed": 23,
  "prelim": 0,
- "rejected": 0,
- "accepted": 24,
+ "rejected": 1,
+ "accepted": 23,
  "ribbon": [
   {
    "src": "assets/portfolio/gost-modern4k/3d-top.jpg",
@@ -118,15 +118,6 @@
     "w": 1200,
     "h": 800
    }
-  },
-  {
-   "src": "assets/portfolio/gost-modern4k/room-living-wD.jpg",
-   "alt": "Квартира 127 м² · современный модерн, с кабинетом — гостиная, визуализация",
-   "w": 1200,
-   "h": 800,
-   "state": "signed",
-   "name": "room-living-wD",
-   "wall": "r4:D"
   },
   {
    "src": "assets/portfolio/gost-modern4k/room-living-wA.jpg",
@@ -259,12 +250,12 @@
  ],
  "hero": {
   "src": "assets/portfolio/gost-modern4k-hero.jpg",
-  "alt": "Квартира 127 м² · современный модерн, с кабинетом — вид сверху 3D",
+  "alt": "Квартира 127 м² · современный модерн, с кабинетом — гостиная, визуализация",
   "w": 1600,
   "h": 1066,
   "kind": "render",
   "state": "signed",
-  "name": "3d-top",
+  "name": "room-living-wB",
   "webp": "assets/portfolio/gost-modern4k-hero.webp"
  }
 }
