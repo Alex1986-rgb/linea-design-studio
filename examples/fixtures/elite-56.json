@@ -253,5 +253,6 @@
     "dislikes": "Глянец, холодный белый",
     "timeline": "Ремонт в течение 6 месяцев"
   },
-  "level": "elite"
+  "level": "elite",
+  "dna": "../dna/elite-modern.json"
 }

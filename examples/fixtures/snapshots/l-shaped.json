@@ -27,9 +27,9 @@
  "04-razvertki/05-koridor-steny-ABCD.svg": "ff297ff897d89f3b",
  "05-potolki/uzel-A-korob-led.svg": "106d17058d56eb76",
  "06-koncept/koncept.html": "5564c0f1a37ca2c0",
- "07-materialy/specification.html": "0f391bea6012e70c",
- "08-smeta/smeta.csv": "f6cfd8c4785e1f1a",
- "08-smeta/smeta.html": "893fc3c13a84029f",
+ "07-materialy/specification.html": "6ad67c65f365d71d",
+ "08-smeta/smeta.csv": "d7b5bbd5a036a074",
+ "08-smeta/smeta.html": "d3b1ee1801ac668e",
  "09-elektrika/schit-i-kabelnyy-zhurnal.svg": "801c547b0c1ef36c",
  "10-uzly/razrez-1-1.svg": "64a0a08025444471",
  "10-uzly/razrez-2-2.svg": "4ce9357eff10fcae",
@@ -38,5 +38,5 @@
  "index.html": "813cf27c501556ce",
  "manifest.json": "b9e212ba0ca59d10",
  "presentation.html": "94fc93d18b50da31",
- "print.html": "e8c003b1aa0254a9"
+ "print.html": "618bb2ef15b8285d"
 }

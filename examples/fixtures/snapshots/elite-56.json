@@ -1,6 +1,6 @@
 {
  "00-pasport/00-titul-perechen-chertezhey.svg": "fb85af259dacde49",
- "00-pasport/pasport.html": "a66b5e5c9c1a82d6",
+ "00-pasport/pasport.html": "f7bae66cf1e4ae68",
  "00-pasport/plan-prezentatsiya.svg": "0158d1c58dbf2bbf",
  "00-pasport/vedomost.html": "c59645d3ee81085f",
  "01-kvartira/kvartira-01-obmer.svg": "e88bc3069cfe951c",
@@ -26,10 +26,10 @@
  "04-razvertki/04-sanuzel-steny-ABCD.svg": "67b6530d735f4db6",
  "04-razvertki/05-prihozhaya-steny-ABCD.svg": "d544962382a04e6b",
  "05-potolki/uzel-A-korob-led.svg": "9128f68ea4fa0fe9",
- "06-koncept/koncept.html": "0363c63c6b63e97f",
- "07-materialy/specification.html": "4b67942981b592d1",
- "08-smeta/smeta.csv": "79047c3d9d70f3b2",
- "08-smeta/smeta.html": "8ebdd355832a9e98",
+ "06-koncept/koncept.html": "fc3fde6c79822fe8",
+ "07-materialy/specification.html": "f5c93838bf9ca08d",
+ "08-smeta/smeta.csv": "39b09e95be36eb63",
+ "08-smeta/smeta.html": "0e23a03d26842f2b",
  "09-elektrika/schit-i-kabelnyy-zhurnal.svg": "32840cce8af90417",
  "10-uzly/razrez-1-1.svg": "56721a253be05a43",
  "10-uzly/razrez-2-2.svg": "a50a9fad0e0b0d06",
@@ -38,5 +38,5 @@
  "index.html": "8ced19399a6d7971",
  "manifest.json": "c5c7bbfeedac6d0b",
  "presentation.html": "a39bfb3b49c50a66",
- "print.html": "34a88bc5dd0dab95"
+ "print.html": "75f095cc17c2932b"
 }

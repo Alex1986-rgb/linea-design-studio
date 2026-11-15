@@ -140,6 +140,24 @@ const style = ELITE
     })
   : STYLES[styleKey];
 const tier = TIERS[(brief.budget || 'business')] || TIERS.business;
+// Запас пола на подрезку: «ёлка» — 15 %, прямая укладка — 5 %. Раньше спецификация писала
+// «+15 % ёлка» для любого пола, а смета считала +5 % — две цифры для одного пола.
+const FLOOR_WASTE = /ёлк/i.test(style.floor.name) ? 0.15 : 0.05;
+const FLOOR_WASTE_TXT = `+${Math.round(FLOOR_WASTE * 100)}%${FLOOR_WASTE > 0.1 ? ' «ёлка»' : ''}`;
+
+// ДНК в документах: пол и материалы концепции. Ключи комнат ДНК — по смыслу (living, bath…),
+// помещения брифа — по типу; несколько синонимов на тип, первый найденный выигрывает.
+const DNA_ROOM_KEYS = {
+  living: ['living'], 'living-kitchen': ['living-kitchen', 'living', 'kitchen'], kitchen: ['kitchen'],
+  bedroom: ['bedroom'], kids: ['kids', 'children'], bathroom: ['bath', 'bathroom'], wc: ['wc', 'toilet'],
+  hallway: ['hall', 'hallway'], cabinet: ['study', 'cabinet']
+};
+const dnaText = (o, k) => (o && typeof o[k] === 'string' && o[k].trim()) || '';
+const dnaRoom = r => { if (!DNA || !DNA.rooms) return ''; for (const k of DNA_ROOM_KEYS[r.type] || [r.type]) { const t2 = dnaText(DNA.rooms[k], 'ru'); if (t2) return t2; } return ''; };
+const DNA_FLOOR = dnaText(DNA && DNA.floor, 'ru');
+const DNA_PALETTE = DNA && DNA.palette ? ['base', 'support', 'accent', 'anchor', 'metal'].map(k => DNA.palette[k]).filter(c => /^#[0-9A-Fa-f]{6}$/.test(c || '')) : [];
+const PALETTE = DNA_PALETTE.length >= 3 ? DNA_PALETTE : style.palette;
+const IDEA = dnaText(DNA, 'idea');
 
 // ---------- утилиты ----------
 const S = 0.08; // px на мм (≈ М 1:50 при печати)
@@ -1018,7 +1036,7 @@ function drawFloor(room, sheet) {
   b += notesBlock(M - WT, ly + 34, [
     'Стыки покрытий — на оси дверного полотна, без порожков.',
     wetFloor ? 'Пол на 15–20 мм ниже смежных помещений (СП 29.13330.2011, 4.8); гидроизоляция с заходом на стены не менее 200 мм.' : 'Укладка от базовой линии, указанной стрелкой; подрезка — в зоне, скрытой мебелью.',
-    'Площади даны с запасом на подрезку: +15% «ёлка», +10% плитка.',
+    `Площади даны с запасом на подрезку: ${FLOOR_WASTE_TXT}, +10% плитка.`,
   ]);
   b += stamp(M - WT, ly + 92, w + 2 * WT + 40, `План пола. ${room.name}`, sheet);
   return svgDoc(Wd + 20, Hd + 30, b);
@@ -5972,7 +5990,7 @@ function buildSmeta() {
       R('Чистовая отделка', r.name, WORK_RATES.floorLay.name, 'м²', g.floor, WORK_RATES.floorLay.rate * tier.k);
       R('Чистовая отделка', r.name, WORK_RATES.plinthLay.name, 'м.п.', g.plinth, WORK_RATES.plinthLay.rate * tier.k);
       R('Материалы', r.name, 'Краска (' + style.wall.finish + '), 2 слоя', 'л', g.walls * 0.25, style.paintPriceL * tier.kMat);
-      R('Материалы', r.name, 'Пол: ' + style.floor.name + ' (+5%)', 'м²', g.floor * 1.05, style.floor.priceM2 * tier.kMat);
+      R('Материалы', r.name, 'Пол: ' + (DNA_FLOOR || style.floor.name) + ` (${FLOOR_WASTE_TXT})`, 'м²', g.floor * (1 + FLOOR_WASTE), style.floor.priceM2 * tier.kMat);
       R('Материалы', r.name, style.plinth, 'м.п.', g.plinth, 550 * tier.kMat);
     }
   }
@@ -6041,6 +6059,11 @@ function smetaCSV(rows) {
 function specHTML() {
   const sku = style.skus || {};
   let body = '';
+  // материалы ДНК — сквозные для всей квартиры: колорист и мебельщик подбирают модели под них
+  if (DNA && Array.isArray(DNA.materials) && DNA.materials.length) {
+    body += `<h2>Материалы концепции</h2>
+<table><thead><tr><th>Роль</th><th>Материал</th><th>Бренд · артикул</th></tr></thead><tbody>${DNA.materials.map(m => `<tr><td class="k">${esc(dnaText(m, 'role') || '—')}</td><td>${esc(dnaText(m, 'ru') || dnaText(m, 'en'))}</td><td>по образцу — модель по согласованию</td></tr>`).join('')}${DNA_FLOOR ? `<tr><td class="k">пол</td><td>${esc(DNA_FLOOR)}</td><td>по образцу — модель по согласованию</td></tr>` : ''}</tbody></table>`;
+  }
   for (const r of rooms) {
     const wet = r.type === 'bathroom';
     const g = roomGeometry(r);
@@ -6054,7 +6077,7 @@ function specHTML() {
       [C(), 'LED-подсветка', 'ниша-полка + контур короба, 3000K', sku.led || '—', `${lv.ledLen} м.п.`],
       [C(), 'Сантехника', 'ванна 1700, подвесной унитаз, накладная раковина', 'по дизайн-борду', '3 поз.']
     ] : [
-      [C(), 'Пол', style.floor.name, sku.floor || '—', `${(g.floor * 1.15).toFixed(1)} м² (+15% ёлка)`],
+      [C(), 'Пол', DNA_FLOOR || style.floor.name, DNA_FLOOR ? 'по ДНК проекта — модель по согласованию' : (sku.floor || '—'), `${(g.floor * (1 + FLOOR_WASTE)).toFixed(1)} м² (${FLOOR_WASTE_TXT})`],
       [C(), 'Стены', style.wall.finish, sku.paint || '—', `${(g.walls * 0.25).toFixed(1)} л (2 слоя)`],
       [C(), 'Акцент', style.accent.finish, 'по дизайн-борду', '1 стена'],
       [C(), 'Потолок', style.ceiling, '—', `${g.floor} м²`],
@@ -6083,7 +6106,7 @@ function specHTML() {
   return docHTML('Спецификация материалов', `
 <h1>Спецификация чистовых материалов</h1>
 <p class="sub">Стиль «${style.title}» · тариф «${tier.title}» · ${DATE}</p>
-<div class="pal">${style.palette.map(c => `<span style="background:${c}"></span>`).join('')}<em>палитра проекта</em></div>
+<div class="pal">${PALETTE.map(c => `<span style="background:${c}"></span>`).join('')}<em>палитра проекта</em></div>
 ${body}
 ${vedomost}
 <p class="note"><b>Поставка и монтаж.</b> Черновые материалы и работы — подрядчик; чистовые материалы, сантехника, светильники и мебель — заказчик по этой спецификации, если в договоре не указано иное. Позиции «не в подряде» (техника, декор, текстиль) отмечаются при согласовании комплектации. Артикулы и точные коллекции подбираются на этапе комплектации; допустимы аналоги в той же ценовой группе без изменения образа. Площади стен даны за вычетом проёмов.</p>`);
@@ -6177,15 +6200,15 @@ function conceptHTML() {
     return `
 <div class="card"><h2>${nn(r.idx)} · ${esc(r.name)}</h2>
 ${gal}
-<p>${esc(roomConcept(r))}</p>
+${dnaRoom(r) ? `<p><b>Решение:</b> ${esc(dnaRoom(r))}</p>\n` : ''}<p>${esc(roomConcept(r))}</p>
 ${UNPLACED.has(r.name) ? `<p class="note"><b>Не разместилось по габаритам:</b> ${esc(UNPLACED.get(r.name).map(k => FURN_RU[k] || k).join(', '))} — решение дизайнера по обмеру (другая модель, перестановка или отказ).</p>` : ''}
 <p class="mut">Потолок: ${lv.oneLevel ? 'один уровень, ревизионный люк' : (lv.three ? '3 уровня с «парящим» островом' : '2 уровня')}, скрытая LED 3000K — ${lv.ledLen} м.п. ${niches ? '· Ниши: ' + esc(niches) : ''}</p>
-<p class="mut">Свет: ${lightsFor(r).spots.length} точечных${lightsFor(r).pendant ? ' + декоративный подвес' : ''}${lightsFor(r).track ? ' + трек' : ''}. Пол: ${esc(['bathroom', 'wc'].includes(r.type) ? 'керамогранит, −0,020' : style.floor.name)}.</p></div>`;
+<p class="mut">Свет: ${lightsFor(r).spots.length} точечных${lightsFor(r).pendant ? ' + декоративный подвес' : ''}${lightsFor(r).track ? ' + трек' : ''}. Пол: ${esc(['bathroom', 'wc'].includes(r.type) ? 'керамогранит, −0,020' : (DNA_FLOOR || style.floor.name))}.</p></div>`;
   }).join('');
   return docHTML('Концепция проекта', `
-<h1>Концепция · стиль «${style.title}»</h1>
-<p class="sub">${esc(style.concept)}</p>
-<div class="pal">${style.palette.map(c => `<span style="background:${c}"></span>`).join('')}<em>палитра</em></div>
+<h1>Концепция · ${IDEA ? `«${esc(IDEA)}»` : `стиль «${style.title}»`}</h1>
+<p class="sub">${IDEA ? `Стиль «${style.title}». ` : ''}${esc(style.concept)}</p>
+${DNA && Array.isArray(DNA.moves) && DNA.moves.length ? `<h2>Три сквозных приёма</h2><ol>${DNA.moves.map(m => `<li>${esc(dnaText(m, 'ru') || dnaText(m, 'en'))}</li>`).join('')}</ol>\n` : ''}<div class="pal">${PALETTE.map(c => `<span style="background:${c}"></span>`).join('')}<em>палитра</em></div>
 ${cards}
 <p class="note">${renders.length ? 'Визуализации выполнены по планировочному решению проекта: та же мебель, ниши и сценарии света, что и на чертежах.' : 'Фотореалистичные рендеры каждого помещения выполняются на этапе 2 после согласования планировочного решения.'}</p>`);
 }
@@ -6197,13 +6220,13 @@ function coverHTML(counts) {
 <p class="sub">${esc((brief.object && brief.object.address) || 'Объект')} · ${esc((brief.object && brief.object.type) || 'квартира')} · ${totalArea} м²</p>
 <table><tbody>
 <tr><td class="k">Заказчик</td><td>${esc((brief.client && brief.client.name) || '—')}</td></tr>
-<tr><td class="k">Стиль</td><td>«${style.title}» — ${esc(style.concept)}</td></tr>
+<tr><td class="k">Стиль</td><td>«${style.title}» — ${esc(IDEA || style.concept)}</td></tr>
 <tr><td class="k">Тариф</td><td>«${tier.title}»</td></tr>
 <tr><td class="k">Помещений</td><td>${rooms.length}: ${rooms.map(r => r.name).join(', ')}</td></tr>
 <tr><td class="k">Высота потолков</td><td>${rooms[0] ? rooms[0].h : 2700} мм</td></tr>
 <tr><td class="k">Дата выпуска</td><td>${DATE}</td></tr>
 </tbody></table>
-<div class="pal">${style.palette.map(c => `<span style="background:${c}"></span>`).join('')}<em>палитра проекта</em></div>
+<div class="pal">${PALETTE.map(c => `<span style="background:${c}"></span>`).join('')}<em>палитра проекта</em></div>
 <h2>Состав комплекта · ${counts.flat + counts.obmer + counts.demo + counts.mont + counts.plans + counts.poly + counts.elev + counts.ceil + counts.electro + 1} листов + документы</h2>
 <table><tbody>
 <tr><td class="k">00 Паспорт</td><td>паспорт, пояснительная записка, <a href="vedomost.html">ведомость чертежей</a></td></tr>
