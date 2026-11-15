@@ -1,6 +1,6 @@
 {
  "00-pasport/00-titul-perechen-chertezhey.svg": "fde4bb8eec62fcd1",
- "00-pasport/pasport.html": "c8a1d21baa1f2eb0",
+ "00-pasport/pasport.html": "caa642655282f915",
  "00-pasport/plan-prezentatsiya.svg": "79c093529b371093",
  "00-pasport/vedomost.html": "13a39c0835b1474e",
  "01-kvartira/kvartira-01-obmer.svg": "96ffc596fdf1d4e3",
@@ -26,7 +26,7 @@
  "04-razvertki/04-sanuzel-steny-ABCD.svg": "017c3873d72abcaf",
  "04-razvertki/05-koridor-steny-ABCD.svg": "ff297ff897d89f3b",
  "05-potolki/uzel-A-korob-led.svg": "106d17058d56eb76",
- "06-koncept/koncept.html": "0a08f2aa2efefdc1",
+ "06-koncept/koncept.html": "96ff14482d9f1f15",
  "07-materialy/specification.html": "60f55dae4834c484",
  "08-smeta/smeta.csv": "58118e0cc4ec3bbb",
  "08-smeta/smeta.html": "79d6ac8a5aa42315",
@@ -38,5 +38,5 @@
  "index.html": "813cf27c501556ce",
  "manifest.json": "b9e212ba0ca59d10",
  "presentation.html": "94fc93d18b50da31",
- "print.html": "870b99bfc955b785"
+ "print.html": "597eab4f90254690"
 }

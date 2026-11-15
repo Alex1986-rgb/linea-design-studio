@@ -5931,11 +5931,23 @@ ${vedomost}
 function roomConcept(r) {
   const f = furnitureFor(r), by = k => f.find(x => x.key === k);
   const m = v => (v / 1000).toFixed(2).replace(/\.?0+$/, '').replace('.', ',');
-  const wallOf = it => !it ? null : (it.y < 300 ? 'A' : (r.l - (it.y + it.h) < 300 ? 'C' : (it.x < 300 ? 'D' : (r.w - (it.x + it.w) < 300 ? 'B' : null))));
+  // ближайшая стена, к которой предмет придвинут (≤ 300 мм). Раньше первой проверялась стена A,
+  // и шкаф у стены D возле верхнего угла подписывался «по стене A». Длинная сторона предмета
+  // решает ничью: шкаф в углу стоит вдоль той стены, к которой обращён фасадом.
+  const wallOf = it => {
+    if (!it) return null;
+    const d = { A: it.y, C: r.l - (it.y + it.h), D: it.x, B: r.w - (it.x + it.w) };
+    const near = Object.keys(d).filter(k => d[k] < 300);
+    if (!near.length) return null;
+    const along = it.w >= it.h ? ['A', 'C'] : ['B', 'D'];
+    near.sort((a, b2) => (along.includes(b2) - along.includes(a)) || d[a] - d[b2]);
+    return near[0];
+  };
+  const hasWindow = w => r.windows.some(o => o.wall === w);
   const at = it => { const w = wallOf(it); return w ? ` по стене ${w}` : ' в центре помещения'; };
   const lv = ceilingLevelsFor(r);
   const b = [];
-  const bed = by('bed') || by('kidbed'), kit = by('kitchen'), sofa = by('sofa'), desk = by('desk'), wr = by('wardrobe');
+  const bed = by('bed') || by('kidbed'), kit = by('kitchen'), sofa = by('sofa'), desk = by('desk'), wr = by('wardrobe') || by('hallwardrobe');
   switch (r.type) {
     case 'living-kitchen':
       b.push(`Единое пространство ${r.area} м² без перегородок`);
@@ -5956,7 +5968,7 @@ function roomConcept(r) {
       break;
     case 'kids':
       b.push(`Детская ${r.area} м²: спальное место${bed ? ' ' + bed.name.replace(/^Кровать /, '') : ''}${at(bed)}`);
-      if (desk) b.push(`рабочий стол ${m(desk.w)} м у окна — свет слева`);
+      if (desk) b.push(`рабочий стол ${m(desk.w)} м${hasWindow(wallOf(desk)) ? ' у окна' : at(desk)}`);
       if (by('rug')) b.push('игровая зона в центре');
       b.push('свет разделён на общий, рабочий и ночной');
       break;
@@ -5979,7 +5991,7 @@ function roomConcept(r) {
       b.push('керамогранит с тёплым полом в зоне входа, зеркало в полный рост');
       break;
     case 'cabinet':
-      b.push(`Кабинет ${r.area} м²: рабочее место${desk ? ' ' + m(desk.w) + ' м' : ''} у окна`);
+      b.push(`Кабинет ${r.area} м²: рабочее место${desk ? ' ' + m(desk.w) + ' м' + (hasWindow(wallOf(desk)) ? ' у окна' : at(desk)) : ''}`);
       b.push('розетки и слаботочка в столе, свет 4000K на рабочей плоскости');
       break;
     default:
@@ -6002,8 +6014,8 @@ function conceptHTML() {
 <div class="card"><h2>${nn(r.idx)} · ${esc(r.name)}</h2>
 ${gal}
 <p>${esc(roomConcept(r))}</p>
-<p class="mut">Потолок: ${lv.three ? '3 уровня с «парящим» островом' : '2 уровня'}, скрытая LED 3000K — ${lv.ledLen} м.п. ${niches ? '· Ниши: ' + esc(niches) : ''}</p>
-<p class="mut">Свет: ${lightsFor(r).spots.length} точечных${lightsFor(r).pendant ? ' + декоративный подвес' : ''}${lightsFor(r).track ? ' + трек' : ''}. Пол: ${esc(style.floor.name)}.</p></div>`;
+<p class="mut">Потолок: ${lv.oneLevel ? 'один уровень, ревизионный люк' : (lv.three ? '3 уровня с «парящим» островом' : '2 уровня')}, скрытая LED 3000K — ${lv.ledLen} м.п. ${niches ? '· Ниши: ' + esc(niches) : ''}</p>
+<p class="mut">Свет: ${lightsFor(r).spots.length} точечных${lightsFor(r).pendant ? ' + декоративный подвес' : ''}${lightsFor(r).track ? ' + трек' : ''}. Пол: ${esc(['bathroom', 'wc'].includes(r.type) ? 'керамогранит, −0,020' : style.floor.name)}.</p></div>`;
   }).join('');
   return docHTML('Концепция проекта', `
 <h1>Концепция · стиль «${style.title}»</h1>
@@ -6045,7 +6057,7 @@ ${counts.flat ? `<tr><td class="k">01 Сводные планы квартиры
 <table><tbody>
 <tr><td class="k">Объект</td><td>${esc((brief.object && brief.object.type) || 'квартира')} ${totalArea} м², ${rooms.length} помещений: ${rooms.map(r => `${r.name} (${r.area} м²)`).join(', ')}. Высота потолков ${rooms[0] ? rooms[0].h : 2700} мм.</td></tr>
 <tr><td class="k">Стиль и колористика</td><td>«${style.title}». ${esc(style.concept)} Палитра из 5 тонов: светлая тёплая база, деревянные фактуры, один тёмный якорь и латунный акцент — сочетание проверено на контраст и температуру.</td></tr>
-<tr><td class="k">Потолки</td><td>Два уровня во всех помещениях (короб 450 мм, перепад 120 мм, скрытая LED 3000K по внутреннему контуру)${rooms.some(r => ceilingLevelsFor(r).three) ? '; в гостиной — третий уровень «парящий остров» с теневой щелью 10 мм' : ''}. Узел исполнения — лист «Узел А» (М 1:20). Закладные под все подвесные светильники.</td></tr>
+<tr><td class="k">Потолки</td><td>${(() => { const one = rooms.filter(r => ceilingLevelsFor(r).oneLevel), two = rooms.filter(r => !ceilingLevelsFor(r).oneLevel); return (two.length ? `Два уровня: ${two.map(r => r.name).join(', ')} (короб по периметру, перепад 120 мм, скрытая LED 3000K по внутреннему контуру)` : '') + (one.length ? `${two.length ? '; один' : 'Один'} уровень с ревизионным люком: ${one.map(r => r.name).join(', ')}` : ''); })()}${rooms.some(r => ceilingLevelsFor(r).three) ? '; в гостиной — третий уровень «парящий остров» с теневой щелью 10 мм' : ''}. Узел исполнения — лист «Узел А» (М 1:20). Закладные под все подвесные светильники.</td></tr>
 ${(DEMOLISH.length || PARTITIONS.length) ? `<tr><td class="k">Перепланировка</td><td>Демонтаж: ${DEMOLISH.length ? `${DEMOLISH.length} уч., ${String(+DEMOLISH.reduce((a, d) => a + segAreaM2(d), 0).toFixed(1)).replace('.', ',')} м² (марки С1–С${DEMOLISH.length}, лист «План демонтажа»)` : 'не требуется'}. Возводится: ${PARTITIONS.length ? `${PARTITIONS.length} перегородки, ${String(+PARTITIONS.reduce((a, p) => a + segAreaM2(p), 0).toFixed(1)).replace('.', ',')} м² (${[...new Set(PARTITIONS.map(p => PART_TYPES[p.type].short))].join(', ')}; марки П1–П${PARTITIONS.length}, лист «План монтажа»)` : 'не требуется'}. Несущие конструкции не затрагиваются. Работы выполнять после согласования перепланировки (ЖК РФ, ст. 25–29).</td></tr>\n` : ''}<tr><td class="k">Ниши</td><td>${esc(rooms.flatMap(r => nichesFor(r).map(n => n.label)).filter((v, i, a) => a.indexOf(v) === i).join('; ') || '—')}. Все ниши — ГКЛ с LED-подсветкой в алюминиевом профиле, БП с запасом 30% и ревизией.</td></tr>
 <tr><td class="k">Полы</td><td>${esc(style.floor.name)} (жилые), керамогранит (санузел, −0,020). Стыки покрытий — на оси дверного полотна, без порожков. Запас: +15% на «ёлку», +10% на плитку.</td></tr>
 <tr><td class="k">Электрика</td><td>Розетки по мебельным сценариям (кровать +600, фартук +1100, ТВ-блок +1300 скрыт в нише), выключатели +900 со стороны ручки. Санузлы — через УЗО 30 мА, IP44. Разводку выполняет инженерный проект по привязкам альбома.</td></tr>
