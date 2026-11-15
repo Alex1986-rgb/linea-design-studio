@@ -1,9 +1,9 @@
 {
  "checked": true,
- "signed": 16,
+ "signed": 18,
  "prelim": 0,
- "rejected": 4,
- "accepted": 16,
+ "rejected": 2,
+ "accepted": 18,
  "ribbon": [
   {
    "src": "assets/portfolio/gost-proekt2/room-living1-wA.jpg",
@@ -202,6 +202,20 @@
    }
   },
   {
+   "src": "assets/portfolio/gost-proekt2/room-kitchen-wB.jpg",
+   "alt": "Квартира 103 м² · с эркерами, 13 помещений — кухня-столовая, визуализация",
+   "w": 1200,
+   "h": 800,
+   "state": "signed",
+   "name": "room-kitchen-wB",
+   "wall": "r6:B",
+   "clay": {
+    "src": "assets/portfolio/gost-proekt2/clay-room-kitchen-wB.jpg",
+    "w": 1200,
+    "h": 800
+   }
+  },
+  {
    "src": "assets/portfolio/gost-proekt2/room-kitchen-wD.jpg",
    "alt": "Квартира 103 м² · с эркерами, 13 помещений — кухня-столовая, визуализация",
    "w": 1200,
@@ -225,6 +239,20 @@
    "wall": "r4:D",
    "clay": {
     "src": "assets/portfolio/gost-proekt2/clay-room-kids1-wD.jpg",
+    "w": 1200,
+    "h": 800
+   }
+  },
+  {
+   "src": "assets/portfolio/gost-proekt2/room-kids2-wD.jpg",
+   "alt": "Квартира 103 м² · с эркерами, 13 помещений — детская, визуализация",
+   "w": 1200,
+   "h": 800,
+   "state": "signed",
+   "name": "room-kids2-wD",
+   "wall": "r9:D",
+   "clay": {
+    "src": "assets/portfolio/gost-proekt2/clay-room-kids2-wD.jpg",
     "w": 1200,
     "h": 800
    }

@@ -1,10 +1,24 @@
 {
  "checked": true,
- "signed": 19,
+ "signed": 21,
  "prelim": 0,
- "rejected": 6,
- "accepted": 19,
+ "rejected": 3,
+ "accepted": 21,
  "ribbon": [
+  {
+   "src": "assets/portfolio/gost-retro103/3d-top.jpg",
+   "alt": "Квартира 101 м² · ретро с авторской мебелью — вид сверху 3D",
+   "w": 1200,
+   "h": 800,
+   "state": "signed",
+   "name": "3d-top",
+   "wall": "top",
+   "clay": {
+    "src": "assets/portfolio/gost-retro103/clay-3d-top.jpg",
+    "w": 1200,
+    "h": 800
+   }
+  },
   {
    "src": "assets/portfolio/gost-retro103/room-living-wD.jpg",
    "alt": "Квартира 101 м² · ретро с авторской мебелью — гостиная, визуализация",
@@ -202,6 +216,20 @@
    }
   },
   {
+   "src": "assets/portfolio/gost-retro103/room-bedroom2-wB.jpg",
+   "alt": "Квартира 101 м² · ретро с авторской мебелью — спальня, визуализация",
+   "w": 1200,
+   "h": 800,
+   "state": "signed",
+   "name": "room-bedroom2-wB",
+   "wall": "r10:B",
+   "clay": {
+    "src": "assets/portfolio/gost-retro103/clay-room-bedroom2-wB.jpg",
+    "w": 1200,
+    "h": 800
+   }
+  },
+  {
    "src": "assets/portfolio/gost-retro103/room-bedroom2-wC.jpg",
    "alt": "Квартира 101 м² · ретро с авторской мебелью — спальня, визуализация",
    "w": 1200,
@@ -274,12 +302,12 @@
  ],
  "hero": {
   "src": "assets/portfolio/gost-retro103-hero.jpg",
-  "alt": "Квартира 101 м² · ретро с авторской мебелью — гостиная, визуализация",
+  "alt": "Квартира 101 м² · ретро с авторской мебелью — вид сверху 3D",
   "w": 1600,
   "h": 1066,
   "kind": "render",
   "state": "signed",
-  "name": "room-living-wD",
+  "name": "3d-top",
   "webp": "assets/portfolio/gost-retro103-hero.webp"
  }
 }
