@@ -11,7 +11,7 @@
  "rooms": 8,
  "total": 132,
  "blockers": 0,
- "issues": 113,
+ "issues": 114,
  "openQ": {
   "n": 27,
   "no": "06"
@@ -19,16 +19,16 @@
  "preReview": "",
  "hero": {
   "src": "assets/portfolio/gost-kv3k-hero.jpg",
-  "alt": "Квартира 79 м² · трёхкомнатная — прихожая, визуализация",
+  "alt": "Квартира 79 м² · трёхкомнатная — спальня, визуализация",
   "w": 1600,
   "h": 1066,
   "kind": "render",
   "state": "signed",
-  "name": "room-hall-wide",
+  "name": "room-bedroom1-wA",
   "webp": "assets/portfolio/gost-kv3k-hero.webp"
  },
- "visuals": 6,
+ "visuals": 9,
  "visualsPrelim": 0,
- "studioSize": "11 МБ",
- "pdfSize": "14 МБ"
+ "studioSize": "10 МБ",
+ "pdfSize": "13 МБ"
 }

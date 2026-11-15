@@ -11,7 +11,7 @@
  "rooms": 7,
  "total": 118,
  "blockers": 0,
- "issues": 210,
+ "issues": 211,
  "openQ": {
   "n": 25,
   "no": "06"
@@ -29,6 +29,6 @@
  },
  "visuals": 6,
  "visualsPrelim": 0,
- "studioSize": "9 МБ",
- "pdfSize": "11 МБ"
+ "studioSize": "8 МБ",
+ "pdfSize": "10 МБ"
 }

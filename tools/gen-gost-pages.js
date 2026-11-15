@@ -410,7 +410,8 @@ function renders(a, r) {
   // годиться на витрину. tools/site-hidden.json — кадры, снятые с сайта по вкусу (slug → [кадры]); tools/art-verdicts.json — вердикты
   // арт-директора (slug → кадр → { score, verdict }): «ВОЗВРАТ» на сайт не идёт, заглавным становится интерьерный кадр с лучшим баллом.
   const HID = new Set((SITE_HIDDEN[a.slug] || [])), ART = ART_VERDICTS[a.slug] || {};
-  const artBad = v => /ВОЗВРАТ/i.test(String(ART[v.name]?.verdict || ''));
+  // «ДОРАБОТКА» без подписи дизайнера (новый кадр после перегенерации) на сайт не идёт: подпись ставится только при «ПРИНЯТ»
+  const artBad = v => /ВОЗВРАТ/i.test(String(ART[v.name]?.verdict || '')) || (/ДОРАБОТКА/i.test(String(ART[v.name]?.verdict || '')) && st(v) !== 'signed');
   const shown = views.filter(v => has(v.name) && /^(room-|3d-top)/.test(v.name) && !v.tech && !HID.has(v.name) && !artBad(v) && (SHOW_REJ || st(v) !== 'rejected'));
   const n = { signed: shown.filter(v => st(v) === 'signed').length, prelim: shown.filter(v => st(v) === 'prelim').length };
   n.rejected = views.length - n.signed - n.prelim;

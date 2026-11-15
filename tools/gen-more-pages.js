@@ -24,7 +24,7 @@ const { AUTHOR, BASE, esc, crumbsLd, TERMS } = SHELL;
 const out = [];
 // выпуски нового движка: число листов и паспорт объекта читаются с самих листов, а не пишутся руками
 // gost-kv65 и gost-kv58 — без разбора реестра (как в gen-gost-pages, explain: false): паспорт — с титула
-const PORTFOLIO_ORDER = ['gost-modern4k', 'gost-retro103', 'gost-proekt2', 'gost-elitemodern', 'gost-lineademo', 'gost-kv3k', 'gost-kv65', 'gost-kv58'];
+const PORTFOLIO_ORDER = ['gost-modern4k', 'gost-retro103', 'gost-proekt2', 'gost-kv3k', 'gost-elitemodern', 'gost-lineademo', 'gost-kv65', 'gost-kv58'];
 const GOST = Object.fromEntries(['gost-proekt2', 'gost-kv3k', 'gost-kv65', 'gost-kv58', 'gost-modern4k', 'gost-retro103', 'gost-lineademo', 'gost-elitemodern'].map(slug => {
   const r = OPEN.readRelease(SITE, slug);
   const facts = ['gost-kv65', 'gost-kv58', 'gost-modern4k', 'gost-retro103', 'gost-lineademo', 'gost-elitemodern'].includes(slug) ? OPEN.facts(SITE, slug, r).facts : OPEN.read(SITE, slug, r).facts;

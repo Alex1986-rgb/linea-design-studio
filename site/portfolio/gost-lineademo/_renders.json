@@ -1,9 +1,9 @@
 {
  "checked": true,
- "signed": 7,
+ "signed": 8,
  "prelim": 0,
- "rejected": 9,
- "accepted": 7,
+ "rejected": 8,
+ "accepted": 8,
  "ribbon": [
   {
    "src": "assets/portfolio/gost-lineademo/3d-top.jpg",
@@ -85,6 +85,20 @@
    "wall": "r3:B",
    "clay": {
     "src": "assets/portfolio/gost-lineademo/clay-room-kids-wB.jpg",
+    "w": 1200,
+    "h": 800
+   }
+  },
+  {
+   "src": "assets/portfolio/gost-lineademo/room-kids-wD.jpg",
+   "alt": "Квартира 56 м² · джапанди — детская, визуализация",
+   "w": 1200,
+   "h": 800,
+   "state": "signed",
+   "name": "room-kids-wD",
+   "wall": "r3:D",
+   "clay": {
+    "src": "assets/portfolio/gost-lineademo/clay-room-kids-wD.jpg",
     "w": 1200,
     "h": 800
    }

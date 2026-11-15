@@ -1,9 +1,9 @@
 {
  "checked": true,
- "signed": 6,
+ "signed": 9,
  "prelim": 0,
- "rejected": 13,
- "accepted": 6,
+ "rejected": 10,
+ "accepted": 9,
  "ribbon": [
   {
    "src": "assets/portfolio/gost-kv3k/3d-top.jpg",
@@ -29,6 +29,34 @@
    "wall": "r6:C",
    "clay": {
     "src": "assets/portfolio/gost-kv3k/clay-room-living-wC.jpg",
+    "w": 1200,
+    "h": 800
+   }
+  },
+  {
+   "src": "assets/portfolio/gost-kv3k/room-bedroom1-wA.jpg",
+   "alt": "Квартира 79 м² · трёхкомнатная — спальня, визуализация",
+   "w": 1200,
+   "h": 800,
+   "state": "signed",
+   "name": "room-bedroom1-wA",
+   "wall": "r1:A",
+   "clay": {
+    "src": "assets/portfolio/gost-kv3k/clay-room-bedroom1-wA.jpg",
+    "w": 1200,
+    "h": 800
+   }
+  },
+  {
+   "src": "assets/portfolio/gost-kv3k/room-bedroom2-wA.jpg",
+   "alt": "Квартира 79 м² · трёхкомнатная — спальня, визуализация",
+   "w": 1200,
+   "h": 800,
+   "state": "signed",
+   "name": "room-bedroom2-wA",
+   "wall": "r4:A",
+   "clay": {
+    "src": "assets/portfolio/gost-kv3k/clay-room-bedroom2-wA.jpg",
     "w": 1200,
     "h": 800
    }
@@ -76,6 +104,20 @@
    }
   },
   {
+   "src": "assets/portfolio/gost-kv3k/room-bedroom1-wB.jpg",
+   "alt": "Квартира 79 м² · трёхкомнатная — спальня, визуализация",
+   "w": 1200,
+   "h": 800,
+   "state": "signed",
+   "name": "room-bedroom1-wB",
+   "wall": "r1:B",
+   "clay": {
+    "src": "assets/portfolio/gost-kv3k/clay-room-bedroom1-wB.jpg",
+    "w": 1200,
+    "h": 800
+   }
+  },
+  {
    "src": "assets/portfolio/gost-kv3k/room-bath1-wD.jpg",
    "alt": "Квартира 79 м² · трёхкомнатная — ванная, визуализация",
    "w": 1200,
@@ -92,12 +134,12 @@
  ],
  "hero": {
   "src": "assets/portfolio/gost-kv3k-hero.jpg",
-  "alt": "Квартира 79 м² · трёхкомнатная — прихожая, визуализация",
+  "alt": "Квартира 79 м² · трёхкомнатная — спальня, визуализация",
   "w": 1600,
   "h": 1066,
   "kind": "render",
   "state": "signed",
-  "name": "room-hall-wide",
+  "name": "room-bedroom1-wA",
   "webp": "assets/portfolio/gost-kv3k-hero.webp"
  }
 }

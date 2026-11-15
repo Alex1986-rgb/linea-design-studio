@@ -11,7 +11,7 @@
  "rooms": 5,
  "total": 119,
  "blockers": 0,
- "issues": 99,
+ "issues": 100,
  "openQ": {
   "n": 12,
   "no": "06"
@@ -27,8 +27,8 @@
   "name": "room-kids-wB",
   "webp": "assets/portfolio/gost-lineademo-hero.webp"
  },
- "visuals": 7,
+ "visuals": 8,
  "visualsPrelim": 0,
- "studioSize": "10 МБ",
+ "studioSize": "9 МБ",
  "pdfSize": "12 МБ"
 }
