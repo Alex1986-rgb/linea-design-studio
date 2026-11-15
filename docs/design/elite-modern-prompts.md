@@ -15,7 +15,7 @@ Either a one-point view along the main axis of the room or a two-point view from
 
 DESIGN DNA — THE IDEA THAT EVERY FRAME OF THIS PROJECT SHARES:
 Dark walnut wraps pale veined marble: the apartment reads as a fine case built around a collection.
-Three signature moves, all of which must be visible in this room:
+Three signature moves. Show every move that fits this room's function: all three in living rooms, kitchens and bedrooms, at least two in bathrooms, halls and service rooms:
 - floor-to-ceiling American walnut veneer wall panelling with a 10 mm shadow gap, one feature wall per room, visible open wood grain, matte oiled finish
 - pale marble with bold grey-taupe veining used as sculptural monoliths with thick visible edges, not as thin cladding
 - brushed satin brass only at touch points: handles, taps, thin inlays and edge trims, never large brass surfaces
@@ -37,8 +37,13 @@ This is a portfolio image for a high-end interior design studio. The room must b
 STYLING — RESTRAINT:
 One hero piece per room; everything else is quiet. Three to five styling objects in the whole frame: a stack of books, one handmade ceramic vessel, a branch in water, a folded throw. Cushions match the upholstery with at most one accent from the project palette. Art is large-format black-and-white photography, graphic print, relief or ceramic — never a painted landscape in a gilded frame and never abstract art with gold arcs.
 
-MATERIALS — ONLY THESE, AND EACH MUST READ AS A REAL TACTILE SURFACE:
-American walnut veneer, matte oil finish, open grain; honed pale marble with bold grey-taupe veining; brushed satin brass; ivory boucle and wool upholstery with visible loop texture; warm white textured lime plaster walls with soft tonal movement. Do not introduce other wood species, stones or metals.
+ROOM FUNCTION:
+Never add furniture that does not belong to the room's function — a storage room, closet, laundry or toilet gets no sofa, no TV, no armchair and no coffee table. Washing machines and dryers are hidden behind flush fronts.
+
+PRIMARY MATERIALS — THE ROOM'S SURFACES ARE BUILT FROM THESE, EACH A REAL TACTILE SURFACE:
+American walnut veneer, matte oil finish, open grain; honed pale marble with bold grey-taupe veining; brushed satin brass; ivory boucle and wool upholstery with visible loop texture; warm white textured lime plaster walls with soft tonal movement.
+Floor throughout: wide-plank engineered oak floor in a deep smoked tone, matte oil, the same marble in wet areas.
+Do not introduce other wood species, stones or metals.
 Avoid in this project: cushions in two random contrasting colours; landscape painting in a gilded frame, abstract art with gold arcs; visible panel radiators; standard doors with architraves; grid of recessed downlights.
 
 LIGHT:
@@ -46,9 +51,6 @@ Warm 2700K light that is mostly indirect: concealed LED washing the walnut panel
 
 RENDER QUALITY AND CAMERA:
 Professional architectural visualization made in a high-end studio, physically based rendering, global illumination with realistic light bounce, soft ambient occlusion in corners and under furniture, accurate contact shadows, 4K material textures with visible grain and weave, subtle chromatic richness, filmic colour grading, clean sharp focus across the whole frame, no lens distortion.
-
-LIVED-IN DETAIL:
-Add the small imperfections of a real home that FIT THIS ROOM'S PURPOSE: in living rooms and bedrooms a throw casually draped, one book left open, cushions not perfectly aligned, a cup on the table; in bathrooms towels with soft creases; plants with uneven leaves. Never add furniture that does not belong to the room's function — a storage room, closet, laundry or toilet gets no sofa, no TV, no armchair and no coffee table. These details are what separate a real interior photograph from a catalogue image.
 
 DO NOT INCLUDE:
 No people, no pets, no text, no numbers, no dimension lines, no room labels, no title block, no watermark, no logos. No warped or melted geometry, no duplicated furniture, no objects floating above the floor, no doors opening into walls, no furniture clipping through walls.
@@ -65,7 +67,7 @@ Either a one-point view along the main axis of the room or a two-point view from
 
 DESIGN DNA — THE IDEA THAT EVERY FRAME OF THIS PROJECT SHARES:
 Dark walnut wraps pale veined marble: the apartment reads as a fine case built around a collection.
-Three signature moves, all of which must be visible in this room:
+Three signature moves. Show every move that fits this room's function: all three in living rooms, kitchens and bedrooms, at least two in bathrooms, halls and service rooms:
 - floor-to-ceiling American walnut veneer wall panelling with a 10 mm shadow gap, one feature wall per room, visible open wood grain, matte oiled finish
 - pale marble with bold grey-taupe veining used as sculptural monoliths with thick visible edges, not as thin cladding
 - brushed satin brass only at touch points: handles, taps, thin inlays and edge trims, never large brass surfaces
@@ -87,8 +89,13 @@ This is a portfolio image for a high-end interior design studio. The room must b
 STYLING — RESTRAINT:
 One hero piece per room; everything else is quiet. Three to five styling objects in the whole frame: a stack of books, one handmade ceramic vessel, a branch in water, a folded throw. Cushions match the upholstery with at most one accent from the project palette. Art is large-format black-and-white photography, graphic print, relief or ceramic — never a painted landscape in a gilded frame and never abstract art with gold arcs.
 
-MATERIALS — ONLY THESE, AND EACH MUST READ AS A REAL TACTILE SURFACE:
-American walnut veneer, matte oil finish, open grain; honed pale marble with bold grey-taupe veining; brushed satin brass; ivory boucle and wool upholstery with visible loop texture; warm white textured lime plaster walls with soft tonal movement. Do not introduce other wood species, stones or metals.
+ROOM FUNCTION:
+Never add furniture that does not belong to the room's function — a storage room, closet, laundry or toilet gets no sofa, no TV, no armchair and no coffee table. Washing machines and dryers are hidden behind flush fronts.
+
+PRIMARY MATERIALS — THE ROOM'S SURFACES ARE BUILT FROM THESE, EACH A REAL TACTILE SURFACE:
+American walnut veneer, matte oil finish, open grain; honed pale marble with bold grey-taupe veining; brushed satin brass; ivory boucle and wool upholstery with visible loop texture; warm white textured lime plaster walls with soft tonal movement.
+Floor throughout: wide-plank engineered oak floor in a deep smoked tone, matte oil, the same marble in wet areas.
+Do not introduce other wood species, stones or metals.
 Avoid in this project: cushions in two random contrasting colours; landscape painting in a gilded frame, abstract art with gold arcs; visible panel radiators; standard doors with architraves; grid of recessed downlights.
 
 LIGHT:
@@ -96,9 +103,6 @@ Warm 2700K light that is mostly indirect: concealed LED washing the walnut panel
 
 RENDER QUALITY AND CAMERA:
 Professional architectural visualization made in a high-end studio, physically based rendering, global illumination with realistic light bounce, soft ambient occlusion in corners and under furniture, accurate contact shadows, 4K material textures with visible grain and weave, subtle chromatic richness, filmic colour grading, clean sharp focus across the whole frame, no lens distortion.
-
-LIVED-IN DETAIL:
-Add the small imperfections of a real home that FIT THIS ROOM'S PURPOSE: in living rooms and bedrooms a throw casually draped, one book left open, cushions not perfectly aligned, a cup on the table; in bathrooms towels with soft creases; plants with uneven leaves. Never add furniture that does not belong to the room's function — a storage room, closet, laundry or toilet gets no sofa, no TV, no armchair and no coffee table. These details are what separate a real interior photograph from a catalogue image.
 
 DO NOT INCLUDE:
 No people, no pets, no text, no numbers, no dimension lines, no room labels, no title block, no watermark, no logos. No warped or melted geometry, no duplicated furniture, no objects floating above the floor, no doors opening into walls, no furniture clipping through walls.
@@ -115,7 +119,7 @@ Either a one-point view along the main axis of the room or a two-point view from
 
 DESIGN DNA — THE IDEA THAT EVERY FRAME OF THIS PROJECT SHARES:
 Dark walnut wraps pale veined marble: the apartment reads as a fine case built around a collection.
-Three signature moves, all of which must be visible in this room:
+Three signature moves. Show every move that fits this room's function: all three in living rooms, kitchens and bedrooms, at least two in bathrooms, halls and service rooms:
 - floor-to-ceiling American walnut veneer wall panelling with a 10 mm shadow gap, one feature wall per room, visible open wood grain, matte oiled finish
 - pale marble with bold grey-taupe veining used as sculptural monoliths with thick visible edges, not as thin cladding
 - brushed satin brass only at touch points: handles, taps, thin inlays and edge trims, never large brass surfaces
@@ -137,8 +141,13 @@ This is a portfolio image for a high-end interior design studio. The room must b
 STYLING — RESTRAINT:
 One hero piece per room; everything else is quiet. Three to five styling objects in the whole frame: a stack of books, one handmade ceramic vessel, a branch in water, a folded throw. Cushions match the upholstery with at most one accent from the project palette. Art is large-format black-and-white photography, graphic print, relief or ceramic — never a painted landscape in a gilded frame and never abstract art with gold arcs.
 
-MATERIALS — ONLY THESE, AND EACH MUST READ AS A REAL TACTILE SURFACE:
-American walnut veneer, matte oil finish, open grain; honed pale marble with bold grey-taupe veining; brushed satin brass; ivory boucle and wool upholstery with visible loop texture; warm white textured lime plaster walls with soft tonal movement. Do not introduce other wood species, stones or metals.
+ROOM FUNCTION:
+Never add furniture that does not belong to the room's function — a storage room, closet, laundry or toilet gets no sofa, no TV, no armchair and no coffee table. Washing machines and dryers are hidden behind flush fronts.
+
+PRIMARY MATERIALS — THE ROOM'S SURFACES ARE BUILT FROM THESE, EACH A REAL TACTILE SURFACE:
+American walnut veneer, matte oil finish, open grain; honed pale marble with bold grey-taupe veining; brushed satin brass; ivory boucle and wool upholstery with visible loop texture; warm white textured lime plaster walls with soft tonal movement.
+Floor throughout: wide-plank engineered oak floor in a deep smoked tone, matte oil, the same marble in wet areas.
+Do not introduce other wood species, stones or metals.
 Avoid in this project: cushions in two random contrasting colours; landscape painting in a gilded frame, abstract art with gold arcs; visible panel radiators; standard doors with architraves; grid of recessed downlights.
 
 LIGHT:
@@ -146,9 +155,6 @@ Warm 2700K light that is mostly indirect: concealed LED washing the walnut panel
 
 RENDER QUALITY AND CAMERA:
 Professional architectural visualization made in a high-end studio, physically based rendering, global illumination with realistic light bounce, soft ambient occlusion in corners and under furniture, accurate contact shadows, 4K material textures with visible grain and weave, subtle chromatic richness, filmic colour grading, clean sharp focus across the whole frame, no lens distortion.
-
-LIVED-IN DETAIL:
-Add the small imperfections of a real home that FIT THIS ROOM'S PURPOSE: in living rooms and bedrooms a throw casually draped, one book left open, cushions not perfectly aligned, a cup on the table; in bathrooms towels with soft creases; plants with uneven leaves. Never add furniture that does not belong to the room's function — a storage room, closet, laundry or toilet gets no sofa, no TV, no armchair and no coffee table. These details are what separate a real interior photograph from a catalogue image.
 
 DO NOT INCLUDE:
 No people, no pets, no text, no numbers, no dimension lines, no room labels, no title block, no watermark, no logos. No warped or melted geometry, no duplicated furniture, no objects floating above the floor, no doors opening into walls, no furniture clipping through walls.
@@ -165,7 +171,7 @@ Either a one-point view along the main axis of the room or a two-point view from
 
 DESIGN DNA — THE IDEA THAT EVERY FRAME OF THIS PROJECT SHARES:
 Dark walnut wraps pale veined marble: the apartment reads as a fine case built around a collection.
-Three signature moves, all of which must be visible in this room:
+Three signature moves. Show every move that fits this room's function: all three in living rooms, kitchens and bedrooms, at least two in bathrooms, halls and service rooms:
 - floor-to-ceiling American walnut veneer wall panelling with a 10 mm shadow gap, one feature wall per room, visible open wood grain, matte oiled finish
 - pale marble with bold grey-taupe veining used as sculptural monoliths with thick visible edges, not as thin cladding
 - brushed satin brass only at touch points: handles, taps, thin inlays and edge trims, never large brass surfaces
@@ -187,8 +193,13 @@ This is a portfolio image for a high-end interior design studio. The room must b
 STYLING — RESTRAINT:
 One hero piece per room; everything else is quiet. Three to five styling objects in the whole frame: a stack of books, one handmade ceramic vessel, a branch in water, a folded throw. Cushions match the upholstery with at most one accent from the project palette. Art is large-format black-and-white photography, graphic print, relief or ceramic — never a painted landscape in a gilded frame and never abstract art with gold arcs.
 
-MATERIALS — ONLY THESE, AND EACH MUST READ AS A REAL TACTILE SURFACE:
-American walnut veneer, matte oil finish, open grain; honed pale marble with bold grey-taupe veining; brushed satin brass; ivory boucle and wool upholstery with visible loop texture; warm white textured lime plaster walls with soft tonal movement. Do not introduce other wood species, stones or metals.
+ROOM FUNCTION:
+Never add furniture that does not belong to the room's function — a storage room, closet, laundry or toilet gets no sofa, no TV, no armchair and no coffee table. Washing machines and dryers are hidden behind flush fronts.
+
+PRIMARY MATERIALS — THE ROOM'S SURFACES ARE BUILT FROM THESE, EACH A REAL TACTILE SURFACE:
+American walnut veneer, matte oil finish, open grain; honed pale marble with bold grey-taupe veining; brushed satin brass; ivory boucle and wool upholstery with visible loop texture; warm white textured lime plaster walls with soft tonal movement.
+Floor throughout: wide-plank engineered oak floor in a deep smoked tone, matte oil, the same marble in wet areas.
+Do not introduce other wood species, stones or metals.
 Avoid in this project: cushions in two random contrasting colours; landscape painting in a gilded frame, abstract art with gold arcs; visible panel radiators; standard doors with architraves; grid of recessed downlights.
 
 LIGHT:
@@ -196,9 +207,6 @@ Warm 2700K light that is mostly indirect: concealed LED washing the walnut panel
 
 RENDER QUALITY AND CAMERA:
 Professional architectural visualization made in a high-end studio, physically based rendering, global illumination with realistic light bounce, soft ambient occlusion in corners and under furniture, accurate contact shadows, 4K material textures with visible grain and weave, subtle chromatic richness, filmic colour grading, clean sharp focus across the whole frame, no lens distortion.
-
-LIVED-IN DETAIL:
-Add the small imperfections of a real home that FIT THIS ROOM'S PURPOSE: in living rooms and bedrooms a throw casually draped, one book left open, cushions not perfectly aligned, a cup on the table; in bathrooms towels with soft creases; plants with uneven leaves. Never add furniture that does not belong to the room's function — a storage room, closet, laundry or toilet gets no sofa, no TV, no armchair and no coffee table. These details are what separate a real interior photograph from a catalogue image.
 
 DO NOT INCLUDE:
 No people, no pets, no text, no numbers, no dimension lines, no room labels, no title block, no watermark, no logos. No warped or melted geometry, no duplicated furniture, no objects floating above the floor, no doors opening into walls, no furniture clipping through walls.
@@ -215,14 +223,14 @@ Either a one-point view along the main axis of the room or a two-point view from
 
 DESIGN DNA — THE IDEA THAT EVERY FRAME OF THIS PROJECT SHARES:
 Dark walnut wraps pale veined marble: the apartment reads as a fine case built around a collection.
-Three signature moves, all of which must be visible in this room:
+Three signature moves. Show every move that fits this room's function: all three in living rooms, kitchens and bedrooms, at least two in bathrooms, halls and service rooms:
 - floor-to-ceiling American walnut veneer wall panelling with a 10 mm shadow gap, one feature wall per room, visible open wood grain, matte oiled finish
 - pale marble with bold grey-taupe veining used as sculptural monoliths with thick visible edges, not as thin cladding
 - brushed satin brass only at touch points: handles, taps, thin inlays and edge trims, never large brass surfaces
 Palette: warm ivory walls, sand and taupe support tones, deep walnut-brown anchor, one muted green-grey accent, satin brass.
 
 SCENE AND STYLE:
-bathroom: large-format marble slabs with continuous book-matched veining, floating walnut vanity with a marble top, brushed brass taps, frameless glass shower, recessed niche with LED, no visible pipes
+bathroom: a thick marble monolith vanity with a 60 mm visible edge and a marble shower tray, warm white lime plaster walls, one walnut panelled wall behind the freestanding bath, brushed brass taps, frameless glass shower, recessed niche with LED, no visible pipes
 
 ELITE STUDIO LEVEL — ARCHITECTURE BEFORE FURNITURE:
 This is a portfolio image for a high-end interior design studio. The room must be resolved by architecture, not by furniture: remove the furniture and the space should still look designed.
@@ -237,8 +245,13 @@ This is a portfolio image for a high-end interior design studio. The room must b
 STYLING — RESTRAINT:
 One hero piece per room; everything else is quiet. Three to five styling objects in the whole frame: a stack of books, one handmade ceramic vessel, a branch in water, a folded throw. Cushions match the upholstery with at most one accent from the project palette. Art is large-format black-and-white photography, graphic print, relief or ceramic — never a painted landscape in a gilded frame and never abstract art with gold arcs.
 
-MATERIALS — ONLY THESE, AND EACH MUST READ AS A REAL TACTILE SURFACE:
-American walnut veneer, matte oil finish, open grain; honed pale marble with bold grey-taupe veining; brushed satin brass; ivory boucle and wool upholstery with visible loop texture; warm white textured lime plaster walls with soft tonal movement. Do not introduce other wood species, stones or metals.
+ROOM FUNCTION:
+Never add furniture that does not belong to the room's function — a storage room, closet, laundry or toilet gets no sofa, no TV, no armchair and no coffee table. Washing machines and dryers are hidden behind flush fronts.
+
+PRIMARY MATERIALS — THE ROOM'S SURFACES ARE BUILT FROM THESE, EACH A REAL TACTILE SURFACE:
+American walnut veneer, matte oil finish, open grain; honed pale marble with bold grey-taupe veining; brushed satin brass; ivory boucle and wool upholstery with visible loop texture; warm white textured lime plaster walls with soft tonal movement.
+Floor throughout: wide-plank engineered oak floor in a deep smoked tone, matte oil, the same marble in wet areas.
+Do not introduce other wood species, stones or metals.
 Avoid in this project: cushions in two random contrasting colours; landscape painting in a gilded frame, abstract art with gold arcs; visible panel radiators; standard doors with architraves; grid of recessed downlights.
 
 LIGHT:
@@ -246,9 +259,6 @@ Warm 2700K light that is mostly indirect: concealed LED washing the walnut panel
 
 RENDER QUALITY AND CAMERA:
 Professional architectural visualization made in a high-end studio, physically based rendering, global illumination with realistic light bounce, soft ambient occlusion in corners and under furniture, accurate contact shadows, 4K material textures with visible grain and weave, subtle chromatic richness, filmic colour grading, clean sharp focus across the whole frame, no lens distortion.
-
-LIVED-IN DETAIL:
-Add the small imperfections of a real home that FIT THIS ROOM'S PURPOSE: in living rooms and bedrooms a throw casually draped, one book left open, cushions not perfectly aligned, a cup on the table; in bathrooms towels with soft creases; plants with uneven leaves. Never add furniture that does not belong to the room's function — a storage room, closet, laundry or toilet gets no sofa, no TV, no armchair and no coffee table. These details are what separate a real interior photograph from a catalogue image.
 
 DO NOT INCLUDE:
 No people, no pets, no text, no numbers, no dimension lines, no room labels, no title block, no watermark, no logos. No warped or melted geometry, no duplicated furniture, no objects floating above the floor, no doors opening into walls, no furniture clipping through walls.

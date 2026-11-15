@@ -42,6 +42,40 @@ class TestDnaSchema(unittest.TestCase):
     def test_not_an_object(self):
         self.assertEqual(pb.check_dna([]), ["ДНК должна быть JSON-объектом"])
 
+    def test_null_fields_are_empty(self):
+        # str(None) == "None" раньше проходил проверку и ронял build с трассировкой
+        bad = copy.deepcopy(DNA)
+        bad["idea_en"] = None
+        bad["light"]["en"] = None
+        bad["materials"][0]["en"] = None
+        errs = pb.check_dna(bad)
+        self.assertIn("нет idea_en — образа проекта для промпта", errs)
+        self.assertIn("light.en: нет характера света", errs)
+        self.assertIn("materials[0]: нет en", errs)
+
+    def test_floor_required(self):
+        bad = copy.deepcopy(DNA)
+        del bad["floor"]
+        self.assertTrue(any(e.startswith("floor.en") for e in pb.check_dna(bad)))
+
+    def test_palette_hex(self):
+        bad = copy.deepcopy(DNA)
+        bad["palette"]["anchor"] = "walnut"
+        self.assertIn("palette.anchor: нужен HEX вида #RRGGBB", pb.check_dna(bad))
+
+    def test_duplicate_moves(self):
+        bad = copy.deepcopy(DNA)
+        bad["moves"][2] = copy.deepcopy(bad["moves"][0])
+        self.assertIn("moves: приёмы повторяются", pb.check_dna(bad))
+
+    def test_tier_type_and_avoid_shape(self):
+        bad = copy.deepcopy(DNA)
+        bad["tier"] = 5
+        bad["avoid"] = ["просто строка"]
+        errs = pb.check_dna(bad)
+        self.assertTrue(any(e.startswith("tier") for e in errs))
+        self.assertTrue(any(e.startswith("avoid") for e in errs))
+
 
 class TestBuild(unittest.TestCase):
     def test_legacy_call_keeps_default_materials(self):
@@ -58,6 +92,19 @@ class TestBuild(unittest.TestCase):
         self.assertIn(DNA["rooms"]["living"]["en"], out)
         self.assertIn("ELITE STUDIO LEVEL", out)  # tier=elite включает блок сам
         self.assertIn("gilded frame", out)        # анти-список проекта дошёл до промпта
+        self.assertIn("Floor throughout: " + DNA["floor"]["en"], out)
+
+    def test_elite_drops_lived_in_clutter(self):
+        # «плед наброшен, чашка, книга» спорит со сдержанным стайлингом элитного уровня
+        self.assertNotIn("LIVED-IN DETAIL", pb.build("interior", dna=DNA, room="living"))
+        self.assertIn("LIVED-IN DETAIL", pb.build("interior", "Living room"))
+
+    def test_dollhouse_with_dna_needs_no_room(self):
+        out = pb.build("dollhouse", dna=DNA)
+        self.assertIn("across the apartment", out)
+        self.assertNotIn("this room's function", out)
+        for r in DNA["rooms"].values():
+            self.assertIn(r["en"], out)
 
     def test_evening_light(self):
         day = pb.build("interior", dna=DNA, room="bedroom")
@@ -94,6 +141,23 @@ class TestCli(unittest.TestCase):
 
     def test_check_dna_missing_file(self):
         self.assertEqual(pb.main(["--check-dna", "/nonexistent/dna.json"]), 2)
+
+    def test_cli_room_without_dna(self):
+        self.assertEqual(pb.main(["interior", "x", "--room", "living"]), 2)
+
+    def test_cli_missing_scene_file(self):
+        self.assertEqual(pb.main(["interior", "scene-typo.txt"]), 2)
+
+    def test_cli_check_dna_alone(self):
+        self.assertEqual(pb.main(["interior", "--check-dna", str(DNA_PATH)]), 2)
+
+    def test_cli_null_dna_no_traceback(self):
+        import json as _j, tempfile
+        bad = copy.deepcopy(DNA)
+        bad["light"]["en"] = None
+        with tempfile.NamedTemporaryFile("w", suffix=".json", delete=False) as f:
+            _j.dump(bad, f)
+        self.assertEqual(pb.main(["interior", "--dna", f.name, "--room", "living"]), 2)
 
     def test_cli_unknown_room_exit_code(self):
         self.assertEqual(pb.main(["interior", "--dna", str(DNA_PATH), "--room", "garage"]), 2)

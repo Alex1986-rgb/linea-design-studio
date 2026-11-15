@@ -1,5 +1,5 @@
 {
-  "$comment": "ДНК проекта — эталон схемы (docs/design/elite-standard.md, раздел 1). Пример по карточке gost-elitemodern: «орех, латунь, мрамор с прожилкой, букле; у каждой комнаты свой тёмный акцент». Пишет concept-designer в clients/<slug>/dna.json; читает tools/prompt-build.py. Поля *_en — для промпта рендера, остальные — для людей.",
+  "$comment": "ДНК проекта — эталон схемы (docs/design/elite-standard.md, раздел 1). Пример по карточке gost-elitemodern: «орех, латунь, мрамор с прожилкой, букле; у каждой комнаты свой тёмный акцент». Пишет concept-designer в clients/<slug>/dna.json; читает tools/prompt-build.py. Поля *_en — для промпта рендера, остальные — для людей. floor обязателен: пол один на всю серию кадров.",
   "project": "gost-elitemodern",
   "tier": "elite",
   "idea": "Тёмный орех обнимает светлый камень: квартира как футляр для коллекции",
@@ -19,12 +19,36 @@
     }
   ],
   "materials": [
-    { "ru": "орех американский, шпон, масло, матовый", "en": "American walnut veneer, matte oil finish, open grain", "role": "главный" },
-    { "ru": "мрамор светлый с серо-бежевой прожилкой, хонингованный", "en": "honed pale marble with bold grey-taupe veining", "role": "камень" },
-    { "ru": "латунь шлифованная, сатин", "en": "brushed satin brass", "role": "металл" },
-    { "ru": "букле молочное, шерсть", "en": "ivory boucle and wool upholstery with visible loop texture", "role": "текстиль" },
-    { "ru": "фактурная известковая штукатурка, тёплый белый", "en": "warm white textured lime plaster walls with soft tonal movement", "role": "фон" }
+    {
+      "ru": "орех американский, шпон, масло, матовый",
+      "en": "American walnut veneer, matte oil finish, open grain",
+      "role": "главный"
+    },
+    {
+      "ru": "мрамор светлый с серо-бежевой прожилкой, хонингованный",
+      "en": "honed pale marble with bold grey-taupe veining",
+      "role": "камень"
+    },
+    {
+      "ru": "латунь шлифованная, сатин",
+      "en": "brushed satin brass",
+      "role": "металл"
+    },
+    {
+      "ru": "букле молочное, шерсть",
+      "en": "ivory boucle and wool upholstery with visible loop texture",
+      "role": "текстиль"
+    },
+    {
+      "ru": "фактурная известковая штукатурка, тёплый белый",
+      "en": "warm white textured lime plaster walls with soft tonal movement",
+      "role": "фон"
+    }
   ],
+  "floor": {
+    "ru": "инженерная доска, дуб тёмного тона, широкая планка, масло; в мокрых зонах — тот же мрамор",
+    "en": "wide-plank engineered oak floor in a deep smoked tone, matte oil, the same marble in wet areas"
+  },
   "palette": {
     "base": "#EEE8DF",
     "support": "#C9B9A6",
@@ -57,23 +81,38 @@
       "en": "study: walnut built-in library wall with lit shelves, solid walnut desk on the window axis, leather desk chair, curated books and two ceramic objects only"
     },
     "bath": {
-      "ru": "Мрамор крупного формата с непрерывной прожилкой; тумба в орехе; латунные смесители",
-      "en": "bathroom: large-format marble slabs with continuous book-matched veining, floating walnut vanity with a marble top, brushed brass taps, frameless glass shower, recessed niche with LED, no visible pipes"
+      "ru": "Мраморный монолит-тумба с толстым торцом и мраморный поддон; ореховая панель на стене за ванной; латунные смесители",
+      "en": "bathroom: a thick marble monolith vanity with a 60 mm visible edge and a marble shower tray, warm white lime plaster walls, one walnut panelled wall behind the freestanding bath, brushed brass taps, frameless glass shower, recessed niche with LED, no visible pipes"
     },
     "hall": {
       "ru": "Встроенный шкаф в орехе в плоскости стены, скамья в нише, зеркало в полный рост",
       "en": "entrance hall: flush walnut wardrobe wall with hidden handles, a bench set into a lit niche, full-height mirror with thin brass frame, marble floor threshold"
     },
     "wc": {
-      "ru": "Тёмная стена-акцент, подвесной унитаз, мраморная консоль",
-      "en": "guest WC: one dark accent wall, wall-hung WC, small marble console basin with brass tap, a single sconce"
+      "ru": "Ореховая панель за подвесным унитазом с теневым швом, мраморная консоль-раковина, латунный смеситель, одно бра",
+      "en": "guest WC: walnut panelled wall behind a wall-hung WC with a shadow gap, a small marble console basin with a thick edge and brass tap, a single brass sconce"
     }
   },
   "avoid": [
-    { "ru": "подушки двух случайных цветов", "en": "cushions in two random contrasting colours" },
-    { "ru": "пейзаж в золотой раме и абстракция с золотыми дугами", "en": "landscape painting in a gilded frame, abstract art with gold arcs" },
-    { "ru": "открытые панельные радиаторы", "en": "visible panel radiators" },
-    { "ru": "стандартные двери с наличниками", "en": "standard doors with architraves" },
-    { "ru": "сетка точечных светильников", "en": "grid of recessed downlights" }
+    {
+      "ru": "подушки двух случайных цветов",
+      "en": "cushions in two random contrasting colours"
+    },
+    {
+      "ru": "пейзаж в золотой раме и абстракция с золотыми дугами",
+      "en": "landscape painting in a gilded frame, abstract art with gold arcs"
+    },
+    {
+      "ru": "открытые панельные радиаторы",
+      "en": "visible panel radiators"
+    },
+    {
+      "ru": "стандартные двери с наличниками",
+      "en": "standard doors with architraves"
+    },
+    {
+      "ru": "сетка точечных светильников",
+      "en": "grid of recessed downlights"
+    }
   ]
 }
