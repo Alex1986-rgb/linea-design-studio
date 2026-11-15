@@ -26,6 +26,23 @@ const ISSUE_DATE = (typeof FLAGS.date === 'string' && FLAGS.date) || (brief.meta
 const DATE = ISSUE_DATE || new Date().toLocaleDateString('ru-RU');
 const outDir = POS[1] || path.join('output', 'project-' + (ISSUE_DATE ? ISSUE_DATE.split('.').reverse().join('-') : new Date().toISOString().slice(0, 10)));
 
+// ---------- ДНК проекта и уровень ----------
+// ДНК (docs/design/elite-standard.md): --dna=путь, brief.dna (путь от брифа) или dna.json рядом с брифом.
+// Элитный уровень включается только явно — brief.level или dna.tier = "elite": он меняет узлы
+// (двери в потолок, конвекторы, свет слоями, теневой плинтус), и обычные проекты это не должно задеть.
+const DNA = (() => {
+  const cand = [typeof FLAGS.dna === 'string' && FLAGS.dna,
+    typeof brief.dna === 'string' && path.resolve(path.dirname(briefPath), brief.dna),
+    path.join(path.dirname(briefPath), 'dna.json')].filter(Boolean);
+  for (const f of cand) {
+    if (!fs.existsSync(f)) continue;
+    try { return JSON.parse(fs.readFileSync(f, 'utf8')); }
+    catch (e) { console.error(`  ✖ ДНК ${f}: битый JSON (${e.message})`); process.exit(1); }
+  }
+  return null;
+})();
+const ELITE = String(brief.level || (DNA && DNA.tier) || '').toLowerCase() === 'elite';
+
 // ---------- проверка исходных данных ----------
 const CHECK = require('./validate').validate(brief);
 if (CHECK.errors.length || CHECK.warnings.length) {
@@ -45,8 +62,10 @@ const rooms = (brief.rooms || []).map((r, i) => {
   const h = Math.round((r.height || (brief.object && brief.object.ceilingHeight) || 2.7) * 1000);
   const windows = (r.windows || (HABITABLE.has(r.type) ? [{ wall: 'A', offset: Math.max(0.2, (r.width - 1.5) / 2), width: 1.5, height: 1.45, sill: 0.9 }] : []))
     .map(o => ({ wall: o.wall, off: Math.round(o.offset * 1000), w: Math.round(o.width * 1000), h: Math.round(o.height * 1000), sill: Math.round((o.sill == null ? 0.9 : o.sill) * 1000) }));
+  // элитный уровень: полотно скрытого монтажа до 2400, перемычка под потолком не меньше 200 мм
+  const doorH = ELITE ? Math.min(2400, h - 200) / 1000 : 2.05;
   const doors = (r.doors || [{ wall: 'C', offset: 0.2, width: 0.9 }])
-    .map(o => ({ wall: o.wall, off: Math.round(o.offset * 1000), w: Math.round(o.width * 1000), h: Math.round((o.height || 2.05) * 1000) }));
+    .map(o => ({ wall: o.wall, off: Math.round(o.offset * 1000), w: Math.round(o.width * 1000), h: Math.round((o.height || doorH) * 1000) }));
   return { idx: i + 1, id: r.id || 'room' + (i + 1), name: r.name, type: r.type || 'living', w, l, h, windows, doors, area: +(r.width * r.length).toFixed(1), level: r.level || 1, stairs: r.stairs || null,
     pos: r.pos ? { x: Math.round(r.pos.x * 1000), y: Math.round(r.pos.y * 1000) } : null,
     walls: r.walls || null };
@@ -108,7 +127,18 @@ const HOUSE_RU = { panel: 'панель', brick: 'кирпич', monolith: 'мо
 
 const totalArea = (brief.object && brief.object.area) || +rooms.reduce((s, r) => s + r.area, 0).toFixed(1);
 const styleKey = (brief.style && !brief.style.byStudio && brief.style.name && STYLES[brief.style.name]) ? brief.style.name : pickStyle(brief);
-const style = STYLES[styleKey];
+const style = ELITE
+  ? Object.assign({}, STYLES[styleKey], {
+      plinth: 'теневой плинтус, алюминиевый профиль заподлицо со стеной',
+      doors: 'скрытого монтажа, полотно до 2400, без наличников',
+      // артикулы пресета — для обычного плинтуса и дверей; на элитном уровне — класс изделия,
+      // конкретную модель подбирает комплектатор (не выдумываем артикулы, prompts/roles/_base.md)
+      skus: Object.assign({}, STYLES[styleKey].skus, {
+        plinth: 'теневой профиль скрытого монтажа, алюминий — модель по согласованию',
+        doors: 'полотно скрытого монтажа до 2400, алюминиевый короб — модель по согласованию'
+      })
+    })
+  : STYLES[styleKey];
 const tier = TIERS[(brief.budget || 'business')] || TIERS.business;
 
 // ---------- утилиты ----------
@@ -511,8 +541,9 @@ const hits = (a, b) => a.x < b.x + b.w && a.x + a.w > b.x && a.y < b.y + b.h && 
 function obstacles(room) {
   const out = [];
   for (const o of room.windows) {     // радиатор под окном: ширина проёма − 100, вылет 130 от стены
-    const rw = Math.max(400, o.w - 100), d = 130;
-    if (o.wall === 'A') out.push({ x: o.off + 50, y: 0, w: rw, h: d, why: 'радиатор' });
+    // элитный уровень — внутрипольный конвектор: решётка в полу у окна, полоса около 300 мм
+    const rw = Math.max(400, o.w - 100), d = ELITE ? 300 : 130;
+    if (o.wall === 'A') out.push({ x: o.off + 50, y: 0, w: rw, h: d, why: ELITE ? 'конвектор' : 'радиатор' });
     else if (o.wall === 'C') out.push({ x: o.off + 50, y: room.l - d, w: rw, h: d, why: 'радиатор' });
     else if (o.wall === 'D') out.push({ x: 0, y: o.off + 50, w: d, h: rw, why: 'радиатор' });
     else out.push({ x: room.w - d, y: o.off + 50, w: d, h: rw, why: 'радиатор' });
@@ -757,12 +788,46 @@ function lightsFor(room, furn) {
   const kept = spots.filter(s => !blockers.some(f =>
     s.x > f.x - 150 && s.x < f.x + f.w + 150 && s.y > f.y - 150 && s.y < f.y + f.h + 150));
   if (kept.length >= 2) spots = kept;   // если выбросили всё — оставляем сетку, лист не должен пустеть
+  // Элитный уровень: в жилых комнатах сетка точек — анти-паттерн (стандарт, раздел 7, п. 3).
+  // Общий свет даёт скрытая LED короба, акцентный — линия светильников вдоль стены-события
+  // (ТВ-стена, изголовье), рабочий — точки только над кухонным фронтом.
+  let accent = null;
+  if (ELITE && ['living', 'bedroom', 'living-kitchen', 'cabinet'].includes(room.type)) {
+    const f = furn || furnitureFor(room);
+    const tv = f.find(x => x.key === 'tv'), bed = f.find(x => x.key === 'bed');
+    const near = it => { if (!it) return null; const d = { A: it.y, C: room.l - it.y - it.h, D: it.x, B: room.w - it.x - it.w }; return Object.keys(d).sort((a, b) => d[a] - d[b])[0]; };
+    const wall = (bed && bed.head) || near(tv) || ['A', 'C', 'B', 'D'].find(s => !room.windows.some(o => o.wall === s)) || 'A';
+    // в коробе — по его оси (до кромки ≥ 150 мм при коробе ≥ 300), без короба — 350 мм от стены
+    const v = lv.box >= 300 ? lv.box / 2 : 350;
+    const len = (wall === 'A' || wall === 'C') ? room.w : room.l;
+    const n = Math.max(2, Math.min(5, Math.floor((len - 1200) / 900) + 1));
+    const line = Array.from({ length: n }, (_, i) => 600 + i * (len - 1200) / (n - 1));
+    const at = (u, vv) => wall === 'A' ? { x: u, y: vv } : wall === 'C' ? { x: u, y: room.l - vv } : wall === 'D' ? { x: vv, y: u } : { x: room.w - vv, y: u };
+    accent = { wall, n };
+    // рабочий свет кухни — линия точек над передней кромкой столешницы (150 мм от края), шаг ≈ 900
+    const overFront = k => {
+      const horiz = k.w >= k.h, len2 = horiz ? k.w : k.h, m = Math.max(2, Math.round(len2 / 900));
+      const nearA = k.y < room.l / 2, nearD = k.x < room.w / 2;
+      return Array.from({ length: m }, (_, i) => {
+        const u = (horiz ? k.x : k.y) + len2 * (i + 0.5) / m;
+        return horiz ? { x: Math.round(u), y: Math.round(nearA ? k.y + k.h - 150 : k.y + 150) }
+                     : { x: Math.round(nearD ? k.x + k.w - 150 : k.x + 150), y: Math.round(u) };
+      });
+    };
+    const work = room.type === 'living-kitchen'
+      ? f.filter(k => k.key === 'kitchen' || k.key === 'kitchen_ext').flatMap(overFront)
+      : room.type === 'cabinet' ? spots.filter(s => f.some(k => k.key === 'desk' && s.x > k.x - 600 && s.x < k.x + k.w + 600 && s.y > k.y - 600 && s.y < k.y + k.h + 600)) : [];
+    spots = [...line.map(u => at(Math.round(u), Math.round(v))), ...work];
+  }
   const pendant = ['living', 'bedroom', 'living-kitchen'].includes(room.type);
-  const track = ['kitchen', 'living-kitchen'].includes(room.type);
+  const track = !ELITE && ['kitchen', 'living-kitchen'].includes(room.type);
   const ip = room.type === 'bathroom' || room.type === 'wc';
-  // оценочная освещённость: 9 Вт на точку, ~90 лм/Вт, коэффициент использования 0,7
-  const lux = Math.round(spots.length * 9 * 90 * 0.7 / (room.w * room.l / 1e6) / 10) * 10;
-  return { spots, pendant, track, ip, lux };
+  // оценочная освещённость: 9 Вт на точку, ~90 лм/Вт, коэффициент использования 0,7.
+  // На элитном уровне общий свет — скрытая LED: оцениваем лентой 9,6 Вт/м с потерей в нише (0,35)
+  const area = room.w * room.l / 1e6;
+  const ledLm = ELITE ? lv.ledLen * 9.6 * 90 * 0.35 : 0;
+  const lux = Math.round((spots.length * 9 * 90 * 0.7 + ledLm) / area / 10) * 10;
+  return { spots, pendant, track, ip, lux, accent };
 }
 
 // ---------- размерные цепочки (ярус 1 = сегменты, ярус 2 = габарит) ----------
@@ -1392,14 +1457,14 @@ function openingPlan(o, kind, M, WT, room) {
       r += `<line x1="${mx - 2.2}" y1="${y0}" x2="${mx - 2.2}" y2="${y0 + ow}" stroke="${CAD.window}" stroke-width="1.6"/><line x1="${mx + 2.2}" y1="${y0}" x2="${mx + 2.2}" y2="${y0 + ow}" stroke="${CAD.wallStroke}" stroke-width="0.7"/>`;
     }
   }
-  if (kind === 'window') { // радиатор отопления под окном
-    const rl = Math.min(ow - 8, px(1200)), t = px(90);
+  if (kind === 'window') { // радиатор отопления под окном (элитный уровень — внутрипольный конвектор)
+    const rl = Math.min(ow - 8, px(ELITE ? 1600 : 1200)), t = px(ELITE ? 260 : 90);
     let rx, ry, rw2, rh2, horiz = (o.wall === 'A' || o.wall === 'C');
     if (o.wall === 'A') { rx = M + px(o.off) + (ow - rl) / 2; ry = M + px(60); rw2 = rl; rh2 = t; }
     else if (o.wall === 'C') { rx = M + px(o.off) + (ow - rl) / 2; ry = M + L - px(60) - t; rw2 = rl; rh2 = t; }
     else if (o.wall === 'D') { rx = M + px(60); ry = M + px(o.off) + (ow - rl) / 2; rw2 = t; rh2 = rl; }
     else { rx = M + W - px(60) - t; ry = M + px(o.off) + (ow - rl) / 2; rw2 = t; rh2 = rl; }
-    r += `<rect x="${rx}" y="${ry}" width="${rw2}" height="${rh2}" fill="#EAF3F7" stroke="${CAD.window}" stroke-width="0.9"/>`;
+    r += `<rect x="${rx}" y="${ry}" width="${rw2}" height="${rh2}" fill="#EAF3F7" stroke="${CAD.window}" stroke-width="0.9"${ELITE ? ' stroke-dasharray="3 2"' : ''}/>`;
     const n = Math.max(3, Math.round((horiz ? rw2 : rh2) / 6));
     for (let i = 1; i < n; i++) r += horiz
       ? `<line x1="${rx + (rw2 / n) * i}" y1="${ry + 1}" x2="${rx + (rw2 / n) * i}" y2="${ry + rh2 - 1}" stroke="${CAD.window}" stroke-width="0.5"/>`
@@ -2060,6 +2125,11 @@ function drawElevation(room, wallKey, sheet, parts) {
     const sillMat = style.key === 'neoclassic' ? 'мрамор Bianco' : style.key === 'minimal' || style.key === 'loft' ? 'искусств. камень' : 'МДФ кр. в тон';
     b += placeLabel(ox + 4, [sillY + px(sillThick) + 12, sillY - 6, sillY + px(sillThick) + 26, sillY + px(sillThick) + 12],
       `подоконник ${o.w + sillOvhg * 2}×${o.sill}×${sillThick} · ${sillMat}`, { anchor: 'start' });
+    // элитный уровень: отопление в полу, под подоконником чистая стена — только подпись
+    if (ELITE) {
+      radSvg += placeLabel(ox + px(o.w) - 4, [sillY + px(sillThick) + 14, sillY + px(sillThick) + 28, sillY - 18],
+        'конвектор в полу', { anchor: 'end', fill: '#5B7FA0' });
+    } else {
     // радиатор под подоконником
     const radW = px(Math.min(o.w, 1200)), radH = px(88);
     const radX = ox + (px(o.w) - radW) / 2, radY = sillY + px(sillThick) + px(20);
@@ -2068,6 +2138,7 @@ function drawElevation(room, wallKey, sheet, parts) {
     for (let i = 1; i < rn; i++) radSvg += `<line x1="${radX + radW / rn * i}" y1="${radY + 2}" x2="${radX + radW / rn * i}" y2="${radY + radH - 2}" stroke="#5B7FA0" stroke-width="0.6"/>`;
     radSvg += placeLabel(ox + px(o.w) - 4, [radY + radH + 11, radY + radH + 24, radY - 5, radY + radH + 11],
       'радиатор отопления', { anchor: 'end', fill: '#5B7FA0' });
+    }
   }
 
   // ── 6. двери + перемычка ──────────────────────────────────────
