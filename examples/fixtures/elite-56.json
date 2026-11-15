@@ -1,0 +1,258 @@
+{
+  "meta": {
+    "created": "2026-08-01",
+    "source": "site-brief-wizard"
+  },
+  "client": {
+    "name": "Демо-клиент",
+    "phone": "+7 900 000-00-00",
+    "email": "client@example.com"
+  },
+  "object": {
+    "type": "квартира",
+    "address": "ЖК «Северный парк», Москва",
+    "area": 56,
+    "ceilingHeight": 2.7,
+    "flat": {
+      "width": 8.75,
+      "length": 6.75,
+      "extWall": 0.2,
+      "intWall": 0.15
+    },
+    "structure": {
+      "houseType": "monolith",
+      "extWall": 0.2,
+      "intWall": 0.15,
+      "slab": 0.2
+    },
+    "risers": [
+      {
+        "x": 8.5,
+        "y": 4.4,
+        "d": 0.11,
+        "kind": "sewer"
+      },
+      {
+        "x": 8.66,
+        "y": 4.4,
+        "d": 0.032,
+        "kind": "water"
+      }
+    ],
+    "demolish": [
+      {
+        "from": [
+          2.6,
+          0
+        ],
+        "to": [
+          2.6,
+          4.0
+        ],
+        "thick": 0.12,
+        "h": 2.7,
+        "kind": "partition",
+        "note": "перегородка кухня/гостиная, объединение в кухню-гостиную"
+      },
+      {
+        "from": [
+          7.3,
+          4.15
+        ],
+        "to": [
+          7.3,
+          6.75
+        ],
+        "thick": 0.12,
+        "h": 2.7,
+        "kind": "partition",
+        "note": "старая стена санузла, расширение мокрой зоны"
+      }
+    ],
+    "partitions": [
+      {
+        "from": [
+          6.825,
+          4.15
+        ],
+        "to": [
+          6.825,
+          6.75
+        ],
+        "type": "block",
+        "thick": 0.1,
+        "h": 2.7,
+        "note": "новая стена санузла, пеноблок под гидроизоляцию"
+      },
+      {
+        "from": [
+          3.375,
+          4.15
+        ],
+        "to": [
+          3.375,
+          6.75
+        ],
+        "type": "gkl",
+        "thick": 0.15,
+        "h": 2.7,
+        "note": "перегородка детская/прихожая, ГКЛ со звукоизоляцией"
+      },
+      {
+        "from": [
+          5.275,
+          0
+        ],
+        "to": [
+          5.275,
+          4.0
+        ],
+        "type": "brick",
+        "thick": 0.12,
+        "h": 2.7,
+        "note": "перегородка спальня/гостиная, кирпич для звукоизоляции"
+      }
+    ]
+  },
+  "rooms": [
+    {
+      "name": "Гостиная-кухня",
+      "type": "living-kitchen",
+      "width": 5.2,
+      "length": 4.0,
+      "pos": {
+        "x": 0,
+        "y": 0
+      },
+      "windows": [
+        {
+          "wall": "A",
+          "offset": 1.6,
+          "width": 1.8,
+          "height": 1.5,
+          "sill": 0.85
+        }
+      ],
+      "doors": [
+        {
+          "wall": "C",
+          "offset": 3.7,
+          "width": 0.9
+        }
+      ]
+    },
+    {
+      "name": "Спальня",
+      "type": "bedroom",
+      "width": 3.4,
+      "length": 4.0,
+      "pos": {
+        "x": 5.35,
+        "y": 0
+      },
+      "windows": [
+        {
+          "wall": "A",
+          "offset": 0.95,
+          "width": 1.5,
+          "height": 1.45,
+          "sill": 0.9
+        }
+      ],
+      "doors": [
+        {
+          "wall": "C",
+          "offset": 0.4,
+          "width": 0.9
+        }
+      ]
+    },
+    {
+      "name": "Детская",
+      "type": "kids",
+      "width": 3.3,
+      "length": 2.6,
+      "pos": {
+        "x": 0,
+        "y": 4.15
+      },
+      "windows": [
+        {
+          "wall": "C",
+          "offset": 0.9,
+          "width": 1.4,
+          "height": 1.45,
+          "sill": 0.9
+        }
+      ],
+      "doors": [
+        {
+          "wall": "B",
+          "offset": 0.6,
+          "width": 0.8
+        }
+      ]
+    },
+    {
+      "name": "Санузел",
+      "type": "bathroom",
+      "width": 1.85,
+      "length": 2.6,
+      "pos": {
+        "x": 6.9,
+        "y": 4.15
+      },
+      "windows": [],
+      "doors": [
+        {
+          "wall": "D",
+          "offset": 0.6,
+          "width": 0.7
+        }
+      ]
+    },
+    {
+      "name": "Прихожая",
+      "type": "hallway",
+      "width": 3.3,
+      "length": 2.6,
+      "pos": {
+        "x": 3.45,
+        "y": 4.15
+      },
+      "windows": [],
+      "doors": [
+        {
+          "wall": "C",
+          "offset": 1.1,
+          "width": 1.0
+        }
+      ]
+    }
+  ],
+  "style": {
+    "name": "japandi",
+    "byStudio": false,
+    "colors": [
+      "тёплый белый",
+      "натуральное дерево",
+      "серо-зелёный"
+    ],
+    "references": [
+      "минимум декора",
+      "скрытые двери",
+      "шторы в нише"
+    ]
+  },
+  "budget": "business",
+  "answers": {
+    "household": "Пара с ребёнком 6 лет",
+    "pets": "Кот",
+    "wfh": "Да, нужно рабочее место",
+    "storage": "Хранения много: гардероб + антресоли",
+    "dislikes": "Глянец, холодный белый",
+    "timeline": "Ремонт в течение 6 месяцев"
+  },
+  "level": "elite",
+  "dna": "../dna/elite-modern.json"
+}

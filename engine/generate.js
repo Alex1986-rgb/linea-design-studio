@@ -26,6 +26,23 @@ const ISSUE_DATE = (typeof FLAGS.date === 'string' && FLAGS.date) || (brief.meta
 const DATE = ISSUE_DATE || new Date().toLocaleDateString('ru-RU');
 const outDir = POS[1] || path.join('output', 'project-' + (ISSUE_DATE ? ISSUE_DATE.split('.').reverse().join('-') : new Date().toISOString().slice(0, 10)));
 
+// ---------- ДНК проекта и уровень ----------
+// ДНК (docs/design/elite-standard.md): --dna=путь, brief.dna (путь от брифа) или dna.json рядом с брифом.
+// Элитный уровень включается только явно — brief.level или dna.tier = "elite": он меняет узлы
+// (двери в потолок, конвекторы, свет слоями, теневой плинтус), и обычные проекты это не должно задеть.
+const DNA = (() => {
+  const cand = [typeof FLAGS.dna === 'string' && FLAGS.dna,
+    typeof brief.dna === 'string' && path.resolve(path.dirname(briefPath), brief.dna),
+    path.join(path.dirname(briefPath), 'dna.json')].filter(Boolean);
+  for (const f of cand) {
+    if (!fs.existsSync(f)) continue;
+    try { return JSON.parse(fs.readFileSync(f, 'utf8')); }
+    catch (e) { console.error(`  ✖ ДНК ${f}: битый JSON (${e.message})`); process.exit(1); }
+  }
+  return null;
+})();
+const ELITE = String(brief.level || (DNA && DNA.tier) || '').toLowerCase() === 'elite';
+
 // ---------- проверка исходных данных ----------
 const CHECK = require('./validate').validate(brief);
 if (CHECK.errors.length || CHECK.warnings.length) {
@@ -45,8 +62,10 @@ const rooms = (brief.rooms || []).map((r, i) => {
   const h = Math.round((r.height || (brief.object && brief.object.ceilingHeight) || 2.7) * 1000);
   const windows = (r.windows || (HABITABLE.has(r.type) ? [{ wall: 'A', offset: Math.max(0.2, (r.width - 1.5) / 2), width: 1.5, height: 1.45, sill: 0.9 }] : []))
     .map(o => ({ wall: o.wall, off: Math.round(o.offset * 1000), w: Math.round(o.width * 1000), h: Math.round(o.height * 1000), sill: Math.round((o.sill == null ? 0.9 : o.sill) * 1000) }));
+  // элитный уровень: полотно скрытого монтажа до 2400, перемычка под потолком не меньше 200 мм
+  const doorH = ELITE ? Math.min(2400, h - 200) / 1000 : 2.05;
   const doors = (r.doors || [{ wall: 'C', offset: 0.2, width: 0.9 }])
-    .map(o => ({ wall: o.wall, off: Math.round(o.offset * 1000), w: Math.round(o.width * 1000), h: Math.round((o.height || 2.05) * 1000) }));
+    .map(o => ({ wall: o.wall, off: Math.round(o.offset * 1000), w: Math.round(o.width * 1000), h: Math.round((o.height || doorH) * 1000) }));
   return { idx: i + 1, id: r.id || 'room' + (i + 1), name: r.name, type: r.type || 'living', w, l, h, windows, doors, area: +(r.width * r.length).toFixed(1), level: r.level || 1, stairs: r.stairs || null,
     pos: r.pos ? { x: Math.round(r.pos.x * 1000), y: Math.round(r.pos.y * 1000) } : null,
     walls: r.walls || null };
@@ -108,8 +127,37 @@ const HOUSE_RU = { panel: 'панель', brick: 'кирпич', monolith: 'мо
 
 const totalArea = (brief.object && brief.object.area) || +rooms.reduce((s, r) => s + r.area, 0).toFixed(1);
 const styleKey = (brief.style && !brief.style.byStudio && brief.style.name && STYLES[brief.style.name]) ? brief.style.name : pickStyle(brief);
-const style = STYLES[styleKey];
+const style = ELITE
+  ? Object.assign({}, STYLES[styleKey], {
+      plinth: 'теневой плинтус, алюминиевый профиль заподлицо со стеной',
+      doors: 'скрытого монтажа, полотно до 2400, без наличников',
+      // артикулы пресета — для обычного плинтуса и дверей; на элитном уровне — класс изделия,
+      // конкретную модель подбирает комплектатор (не выдумываем артикулы, prompts/roles/_base.md)
+      skus: Object.assign({}, STYLES[styleKey].skus, {
+        plinth: 'теневой профиль скрытого монтажа, алюминий — модель по согласованию',
+        doors: 'полотно скрытого монтажа до 2400, алюминиевый короб — модель по согласованию'
+      })
+    })
+  : STYLES[styleKey];
 const tier = TIERS[(brief.budget || 'business')] || TIERS.business;
+// Запас пола на подрезку: «ёлка» — 15 %, прямая укладка — 5 %. Раньше спецификация писала
+// «+15 % ёлка» для любого пола, а смета считала +5 % — две цифры для одного пола.
+const FLOOR_WASTE = /ёлк/i.test(style.floor.name) ? 0.15 : 0.05;
+const FLOOR_WASTE_TXT = `+${Math.round(FLOOR_WASTE * 100)}%${FLOOR_WASTE > 0.1 ? ' «ёлка»' : ''}`;
+
+// ДНК в документах: пол и материалы концепции. Ключи комнат ДНК — по смыслу (living, bath…),
+// помещения брифа — по типу; несколько синонимов на тип, первый найденный выигрывает.
+const DNA_ROOM_KEYS = {
+  living: ['living'], 'living-kitchen': ['living-kitchen', 'living', 'kitchen'], kitchen: ['kitchen'],
+  bedroom: ['bedroom'], kids: ['kids', 'children'], bathroom: ['bath', 'bathroom'], wc: ['wc', 'toilet'],
+  hallway: ['hall', 'hallway'], cabinet: ['study', 'cabinet']
+};
+const dnaText = (o, k) => (o && typeof o[k] === 'string' && o[k].trim()) || '';
+const dnaRoom = r => { if (!DNA || !DNA.rooms) return ''; for (const k of DNA_ROOM_KEYS[r.type] || [r.type]) { const t2 = dnaText(DNA.rooms[k], 'ru'); if (t2) return t2; } return ''; };
+const DNA_FLOOR = dnaText(DNA && DNA.floor, 'ru');
+const DNA_PALETTE = DNA && DNA.palette ? ['base', 'support', 'accent', 'anchor', 'metal'].map(k => DNA.palette[k]).filter(c => /^#[0-9A-Fa-f]{6}$/.test(c || '')) : [];
+const PALETTE = DNA_PALETTE.length >= 3 ? DNA_PALETTE : style.palette;
+const IDEA = dnaText(DNA, 'idea');
 
 // ---------- утилиты ----------
 const S = 0.08; // px на мм (≈ М 1:50 при печати)
@@ -511,8 +559,9 @@ const hits = (a, b) => a.x < b.x + b.w && a.x + a.w > b.x && a.y < b.y + b.h && 
 function obstacles(room) {
   const out = [];
   for (const o of room.windows) {     // радиатор под окном: ширина проёма − 100, вылет 130 от стены
-    const rw = Math.max(400, o.w - 100), d = 130;
-    if (o.wall === 'A') out.push({ x: o.off + 50, y: 0, w: rw, h: d, why: 'радиатор' });
+    // элитный уровень — внутрипольный конвектор: решётка в полу у окна, полоса около 300 мм
+    const rw = Math.max(400, o.w - 100), d = ELITE ? 300 : 130;
+    if (o.wall === 'A') out.push({ x: o.off + 50, y: 0, w: rw, h: d, why: ELITE ? 'конвектор' : 'радиатор' });
     else if (o.wall === 'C') out.push({ x: o.off + 50, y: room.l - d, w: rw, h: d, why: 'радиатор' });
     else if (o.wall === 'D') out.push({ x: 0, y: o.off + 50, w: d, h: rw, why: 'радиатор' });
     else out.push({ x: room.w - d, y: o.off + 50, w: d, h: rw, why: 'радиатор' });
@@ -551,6 +600,27 @@ function furnitureFor(room) {
     }
     return false;
   };
+  // Локальная система стены s: u — вдоль стены, v — от стены вглубь комнаты.
+  const wallLen = s => (s === 'A' || s === 'C') ? W : L;
+  const rect = (s, u, v, wu, wv) => s === 'A' ? [u, v, wu, wv] : s === 'C' ? [u, L - v - wv, wu, wv]
+    : s === 'D' ? [v, u, wv, wu] : [W - v - wv, u, wv, wu];
+  // Поставить предмет вдоль стены s: сначала по центру (или в точке prefU), затем со сдвигом
+  // по 100 мм в обе стороны, затем короче. Так дверь или радиатор сдвигают предмет, а не удаляют его.
+  const addAlong = (key, name, s, v, lens, thick, prefU) => {
+    const span = wallLen(s);
+    for (const len of lens) {
+      if (len > span - 160) continue;
+      const c = prefU == null ? (span - len) / 2 : Math.max(80, Math.min(span - len - 80, prefU));
+      const offs = [0];
+      for (let d = 100; d <= span; d += 100) offs.push(-d, d);
+      for (const d of offs) {
+        const u = Math.round(c + d);
+        if (u < 80 || u + len > span - 80) continue;
+        if (add(key, typeof name === 'function' ? name(len) : name, ...rect(s, u, v, len, thick))) return true;
+      }
+    }
+    return false;
+  };
   if (room.stairs) { // марш вдоль длинной стены; ширина марша 1000, длина по числу ступеней
     const run = Math.min(3600, (room.w >= room.l ? room.w : room.l) - 400), march = 1000;
     const it0 = room.w >= room.l
@@ -583,17 +653,47 @@ function furnitureFor(room) {
       add('kitchen', 'Кухонный гарнитур', 100, 100, W - 200, 600);
       add('rug', 'Ковёр', W - 3200, 900, 2100, Math.min(2900, L - 1000));
       add('table', 'Обеденный стол + 4 стула', 900, 1100, 1500, 900);
-      add('sofa', 'Диван', W - 1050, Math.max(900, (L - 2400) / 2 + 300), 950, Math.min(2400, L - 1200));
+      // диван — напротив ТВ-стены D, на стене B; дверь или радиатор сдвигают и укорачивают его
+      add('sofa', 'Диван', W - 1050, Math.max(900, (L - 2400) / 2 + 300), 950, Math.min(2400, L - 1200))
+        || addAlong('sofa', l => `Диван ${l}`, 'B', 100, [2400, 2200, 2000, 1800, 1600].filter(x => x <= L - 1200), 950, Math.max(900, (L - 2400) / 2 + 300));
       add('coffee', 'Журнальный стол', W - 2150, Math.min(L - 900, 2000), 800, 800);
       add('tv', 'ТВ-зона', 100, Math.max(800, (L - 1800) / 2 + 300), 400, Math.min(1800, L - 1100));
       break; }
     case 'living': {
-      add('tv', 'ТВ-консоль', (W - 1800) / 2, 100, 1800, 400);
-      add('rug', 'Ковёр', (W - 2800) / 2, L - 3000, 2800, 2000);
-      add('sofa', 'Диван 2400', (W - 2400) / 2, L - 1050, 2400, 950);
-      add('coffee', 'Журнальный стол', (W - 800) / 2, L - 2050, 800, 800);
-      add('shelf', 'Стеллаж', W - 450, 100, 350, 1400);
-      add('armchair', 'Кресло', 150, L - 1250, 750, 800);
+      // Гостиная строится на оси «ТВ-стена ↔ диван». Раньше ТВ всегда стоял по центру стены A,
+      // а окно по умолчанию тоже на A: консоль упиралась в радиатор и молча пропадала вместе
+      // с осью комнаты. Теперь ТВ-стена — глухая стена (без окон, по возможности без дверей),
+      // диван — напротив на той же оси; ширина дивана — по длине стены, а не всегда 2400.
+      const opp = { A: 'C', C: 'A', B: 'D', D: 'B' };
+      const score = s => room.windows.filter(o => o.wall === s).length * 10 + room.doors.filter(o => o.wall === s).length * 3
+        + room.windows.filter(o => o.wall === opp[s]).length;   // диван у окна — терпимо, но хуже
+      const order = ['A', 'C', 'B', 'D'].sort((a, b) => score(a) - score(b) || wallLen(b) - wallLen(a));
+      const put = (key, name, s, u, v, wu, wv) => add(key, name, ...rect(s, u, v, wu, wv));
+      for (const s of order) {
+        const len = wallLen(s), depth = (s === 'A' || s === 'C') ? L : W, mark = it.length;
+        const tvW = Math.min(1800, len - 600), sofaW = Math.max(1600, Math.min(2400, Math.floor((len - 1200) / 100) * 100));
+        if (tvW < 1200 || depth < 400 + 1800 + 950) continue;   // ось не помещается: ТВ к дивану ближе 1,8 м
+        if (!addAlong('tv', 'ТВ-консоль', s, 100, [tvW, 1600, 1400].filter(x => x <= tvW), 400)) continue;
+        const tv = it[it.length - 1];
+        const tvC = (s === 'A' || s === 'C') ? tv.x + tv.w / 2 : tv.y + tv.h / 2;
+        const sofaLens = [sofaW, 2200, 2000, 1800, 1600].filter((x, i, a) => x <= sofaW && a.indexOf(x) === i);
+        let sofaOk = false;
+        for (const back of [100, 230, 330]) {   // 230 — отступ от радиатора, если диван у окна
+          // диван держится оси ТВ: перебор сдвигов начинается от центра ТВ
+          if (sofaLens.some(sl => addAlong('sofa', `Диван ${sl}`, opp[s], back, [sl], 950, tvC - sl / 2))) { sofaOk = true; break; }
+        }
+        if (!sofaOk) { it.splice(mark); continue; }
+        const rugW = Math.min(2800, len - 400);
+        put('rug', 'Ковёр', s, (len - rugW) / 2, Math.max(500, depth - 3000), rugW, 2000);
+        put('coffee', 'Журнальный стол', s, (len - 800) / 2, depth - 1050 - 100 - 900, 800, 800);
+        break;
+      }
+      addScan('shelf', 'Стеллаж', 350, 1400, [[W - 450, 100], [100, 100], [W - 450, L - 1500], [100, L - 1500]]);
+      // кресло для чтения — у окна, если оно есть
+      const win = room.windows[0];
+      const armC = win ? [win.wall === 'A' ? [Math.max(80, win.off - 850), 250] : win.wall === 'C' ? [Math.max(80, win.off - 850), L - 1050]
+        : win.wall === 'D' ? [250, Math.max(80, win.off - 900)] : [W - 1000, Math.max(80, win.off - 900)]] : [];
+      addScan('armchair', 'Кресло', 750, 800, [...armC, [150, L - 1250], [W - 900, L - 1250]]);
       break; }
     case 'kitchen': {
       add('kitchen', 'Гарнитур', 100, 100, W - 200, 600);
@@ -601,7 +701,11 @@ function furnitureFor(room) {
       add('table', 'Стол + стулья', W - 1400, L - 1000, 1200, 800);
       break; }
     case 'kids': {
-      add('kidbed', 'Кровать 900×2000', 100, 100, 900, 2000);
+      // кровать — главный предмет детской: ставится первой, при конфликте с радиатором или дверью
+      // уходит к другой стене, а не уступает место столу и шкафу
+      add('kidbed', 'Кровать 900×2000', 100, 100, 900, 2000)
+        || ['D', 'B', 'C', 'A'].some(s => !room.windows.some(o => o.wall === s) && addAlong('kidbed', 'Кровать 900×2000', s, 100, [2000], 900))
+        || ['D', 'B', 'C', 'A'].some(s => addAlong('kidbed', 'Кровать 900×2000', s, 100, [2000], 900));
       // Рабочее место — у окна, свет слева. Раньше стол стоял в одной жёсткой точке
       // и, попадая в зону открывания двери, просто не размещался: детская выходила
       // без рабочего места. Теперь перебираем позиции вдоль стены с окном.
@@ -612,12 +716,14 @@ function furnitureFor(room) {
         if (win) {
           const along = (win.wall === 'A' || win.wall === 'C');
           const c0 = win.off, len = along ? W : L;
+          // стол у окна отходит от стены на 230 мм: радиатор (вылет 130) остаётся открытым для конвекции
+          const gap = 230;
           for (const off of [c0, c0 + win.w - dw, c0 - dw - 100, c0 + win.w + 100, 100, len - dw - 100]) {
             const o = Math.max(80, Math.min((along ? W : L) - dw - 80, off));
-            if (win.wall === 'A') cands.push([o, 100]);
-            else if (win.wall === 'C') cands.push([o, L - dd - 100]);
-            else if (win.wall === 'D') cands.push([100, o]);
-            else cands.push([W - dd - 100, o]);
+            if (win.wall === 'A') cands.push([o, gap]);
+            else if (win.wall === 'C') cands.push([o, L - dd - gap]);
+            else if (win.wall === 'D') cands.push([gap, o]);
+            else cands.push([W - dd - gap, o]);
           }
         }
         addScan('desk', `Стол ${dw}×${dd}`, dw, dd, cands);
@@ -643,8 +749,44 @@ function furnitureFor(room) {
       break; }
     default: add('wardrobe', 'Шкаф', 100, 100, Math.min(1800, W - 200), 600);
   }
+  // Запасной ход для ключевой мебели: любая стена, со сдвигом и короче. Сначала стены без окон.
+  const byWin = ['A', 'C', 'B', 'D'].sort((a, b) => room.windows.filter(o => o.wall === a).length - room.windows.filter(o => o.wall === b).length);
+  for (const k of REQUIRED_FURN[room.type] || []) {
+    const fb = FALLBACK_FURN[k];
+    if (!fb || it.some(f => f.key === k)) continue;
+    const walls = fb.window ? [...byWin].reverse() : byWin;   // рабочий стол — к окну, остальное — к глухим стенам
+    for (const s of walls) if (addAlong(k, fb.name, s, fb.v || 100, fb.lens, fb.thick)) break;
+  }
+  if (!it.some(f => f.key === 'sink') && (REQUIRED_FURN[room.type] || []).includes('sink'))
+    addScan('sink', 'Раковина 500', 500, 400, []);
+  // Ключевая мебель, которая не встала, раньше пропадала молча: гостиная без дивана выходила
+  // «готовой». Теперь недостающее запоминается и попадает в концепцию и в вывод движка.
+  const need = (REQUIRED_FURN[room.type] || []).filter(k => !it.some(f => f.key === k));
+  if (need.length) UNPLACED.set(room.name, need);
   return it;
 }
+
+// без этих предметов помещение не работает по назначению
+const REQUIRED_FURN = {
+  bedroom: ['bed', 'wardrobe'], 'living-kitchen': ['kitchen', 'table', 'sofa', 'tv'], living: ['tv', 'sofa'],
+  kitchen: ['kitchen'], kids: ['kidbed', 'desk', 'wardrobe'], bathroom: ['bath', 'wc', 'sink'],
+  hallway: ['hallwardrobe'], cabinet: ['desk']
+};
+// запасные габариты: длина вдоль стены (по убыванию) × глубина, мм
+const FALLBACK_FURN = {
+  wardrobe: { lens: [2400, 2000, 1800, 1500, 1200, 1000], thick: 600, name: l => `Шкаф ${l}×600` },
+  hallwardrobe: { lens: [1800, 1500, 1200, 1000], thick: 600, name: l => `Шкаф-гардероб ${l}` },
+  kidbed: { lens: [2000], thick: 900, name: 'Кровать 900×2000' },
+  bed: { lens: [2000], thick: 1600, name: 'Кровать 1600×2000' },
+  desk: { lens: [1400, 1200, 1000, 800], thick: 650, name: l => `Стол ${l}×650`, window: true },
+  sofa: { lens: [2400, 2200, 2000, 1800], thick: 950, name: l => `Диван ${l}` },
+  tv: { lens: [1800, 1600, 1400], thick: 400, name: 'ТВ-консоль' },
+  kitchen: { lens: [3600, 3200, 3000, 2800, 2600, 2400, 2200, 2000, 1800, 1600], thick: 600, name: l => `Кухонный гарнитур ${l}` }
+};
+const FURN_RU = { bed: 'кровать', wardrobe: 'шкаф', kitchen: 'кухонный гарнитур', table: 'обеденный стол', sofa: 'диван',
+  tv: 'ТВ-зона', kidbed: 'кровать', desk: 'рабочий стол', bath: 'ванна или душ', wc: 'унитаз', sink: 'раковина',
+  hallwardrobe: 'шкаф прихожей' };
+const UNPLACED = new Map();   // имя помещения → ключи неразмещённых предметов
 
 // ---------- свет ----------
 // Свет и мебель обязаны знать друг о друге: спот в шкафу или над кроватью — брак,
@@ -664,12 +806,46 @@ function lightsFor(room, furn) {
   const kept = spots.filter(s => !blockers.some(f =>
     s.x > f.x - 150 && s.x < f.x + f.w + 150 && s.y > f.y - 150 && s.y < f.y + f.h + 150));
   if (kept.length >= 2) spots = kept;   // если выбросили всё — оставляем сетку, лист не должен пустеть
+  // Элитный уровень: в жилых комнатах сетка точек — анти-паттерн (стандарт, раздел 7, п. 3).
+  // Общий свет даёт скрытая LED короба, акцентный — линия светильников вдоль стены-события
+  // (ТВ-стена, изголовье), рабочий — точки только над кухонным фронтом.
+  let accent = null;
+  if (ELITE && ['living', 'bedroom', 'living-kitchen', 'cabinet'].includes(room.type)) {
+    const f = furn || furnitureFor(room);
+    const tv = f.find(x => x.key === 'tv'), bed = f.find(x => x.key === 'bed');
+    const near = it => { if (!it) return null; const d = { A: it.y, C: room.l - it.y - it.h, D: it.x, B: room.w - it.x - it.w }; return Object.keys(d).sort((a, b) => d[a] - d[b])[0]; };
+    const wall = (bed && bed.head) || near(tv) || ['A', 'C', 'B', 'D'].find(s => !room.windows.some(o => o.wall === s)) || 'A';
+    // в коробе — по его оси (до кромки ≥ 150 мм при коробе ≥ 300), без короба — 350 мм от стены
+    const v = lv.box >= 300 ? lv.box / 2 : 350;
+    const len = (wall === 'A' || wall === 'C') ? room.w : room.l;
+    const n = Math.max(2, Math.min(5, Math.floor((len - 1200) / 900) + 1));
+    const line = Array.from({ length: n }, (_, i) => 600 + i * (len - 1200) / (n - 1));
+    const at = (u, vv) => wall === 'A' ? { x: u, y: vv } : wall === 'C' ? { x: u, y: room.l - vv } : wall === 'D' ? { x: vv, y: u } : { x: room.w - vv, y: u };
+    accent = { wall, n };
+    // рабочий свет кухни — линия точек над передней кромкой столешницы (150 мм от края), шаг ≈ 900
+    const overFront = k => {
+      const horiz = k.w >= k.h, len2 = horiz ? k.w : k.h, m = Math.max(2, Math.round(len2 / 900));
+      const nearA = k.y < room.l / 2, nearD = k.x < room.w / 2;
+      return Array.from({ length: m }, (_, i) => {
+        const u = (horiz ? k.x : k.y) + len2 * (i + 0.5) / m;
+        return horiz ? { x: Math.round(u), y: Math.round(nearA ? k.y + k.h - 150 : k.y + 150) }
+                     : { x: Math.round(nearD ? k.x + k.w - 150 : k.x + 150), y: Math.round(u) };
+      });
+    };
+    const work = room.type === 'living-kitchen'
+      ? f.filter(k => k.key === 'kitchen' || k.key === 'kitchen_ext').flatMap(overFront)
+      : room.type === 'cabinet' ? spots.filter(s => f.some(k => k.key === 'desk' && s.x > k.x - 600 && s.x < k.x + k.w + 600 && s.y > k.y - 600 && s.y < k.y + k.h + 600)) : [];
+    spots = [...line.map(u => at(Math.round(u), Math.round(v))), ...work];
+  }
   const pendant = ['living', 'bedroom', 'living-kitchen'].includes(room.type);
-  const track = ['kitchen', 'living-kitchen'].includes(room.type);
+  const track = !ELITE && ['kitchen', 'living-kitchen'].includes(room.type);
   const ip = room.type === 'bathroom' || room.type === 'wc';
-  // оценочная освещённость: 9 Вт на точку, ~90 лм/Вт, коэффициент использования 0,7
-  const lux = Math.round(spots.length * 9 * 90 * 0.7 / (room.w * room.l / 1e6) / 10) * 10;
-  return { spots, pendant, track, ip, lux };
+  // оценочная освещённость: 9 Вт на точку, ~90 лм/Вт, коэффициент использования 0,7.
+  // На элитном уровне общий свет — скрытая LED: оцениваем лентой 9,6 Вт/м с потерей в нише (0,35)
+  const area = room.w * room.l / 1e6;
+  const ledLm = ELITE ? lv.ledLen * 9.6 * 90 * 0.35 : 0;
+  const lux = Math.round((spots.length * 9 * 90 * 0.7 + ledLm) / area / 10) * 10;
+  return { spots, pendant, track, ip, lux, accent };
 }
 
 // ---------- размерные цепочки (ярус 1 = сегменты, ярус 2 = габарит) ----------
@@ -860,7 +1036,7 @@ function drawFloor(room, sheet) {
   b += notesBlock(M - WT, ly + 34, [
     'Стыки покрытий — на оси дверного полотна, без порожков.',
     wetFloor ? 'Пол на 15–20 мм ниже смежных помещений (СП 29.13330.2011, 4.8); гидроизоляция с заходом на стены не менее 200 мм.' : 'Укладка от базовой линии, указанной стрелкой; подрезка — в зоне, скрытой мебелью.',
-    'Площади даны с запасом на подрезку: +15% «ёлка», +10% плитка.',
+    `Площади даны с запасом на подрезку: ${FLOOR_WASTE_TXT}, +10% плитка.`,
   ]);
   b += stamp(M - WT, ly + 92, w + 2 * WT + 40, `План пола. ${room.name}`, sheet);
   return svgDoc(Wd + 20, Hd + 30, b);
@@ -1299,14 +1475,14 @@ function openingPlan(o, kind, M, WT, room) {
       r += `<line x1="${mx - 2.2}" y1="${y0}" x2="${mx - 2.2}" y2="${y0 + ow}" stroke="${CAD.window}" stroke-width="1.6"/><line x1="${mx + 2.2}" y1="${y0}" x2="${mx + 2.2}" y2="${y0 + ow}" stroke="${CAD.wallStroke}" stroke-width="0.7"/>`;
     }
   }
-  if (kind === 'window') { // радиатор отопления под окном
-    const rl = Math.min(ow - 8, px(1200)), t = px(90);
+  if (kind === 'window') { // радиатор отопления под окном (элитный уровень — внутрипольный конвектор)
+    const rl = Math.min(ow - 8, px(ELITE ? 1600 : 1200)), t = px(ELITE ? 260 : 90);
     let rx, ry, rw2, rh2, horiz = (o.wall === 'A' || o.wall === 'C');
     if (o.wall === 'A') { rx = M + px(o.off) + (ow - rl) / 2; ry = M + px(60); rw2 = rl; rh2 = t; }
     else if (o.wall === 'C') { rx = M + px(o.off) + (ow - rl) / 2; ry = M + L - px(60) - t; rw2 = rl; rh2 = t; }
     else if (o.wall === 'D') { rx = M + px(60); ry = M + px(o.off) + (ow - rl) / 2; rw2 = t; rh2 = rl; }
     else { rx = M + W - px(60) - t; ry = M + px(o.off) + (ow - rl) / 2; rw2 = t; rh2 = rl; }
-    r += `<rect x="${rx}" y="${ry}" width="${rw2}" height="${rh2}" fill="#EAF3F7" stroke="${CAD.window}" stroke-width="0.9"/>`;
+    r += `<rect x="${rx}" y="${ry}" width="${rw2}" height="${rh2}" fill="#EAF3F7" stroke="${CAD.window}" stroke-width="0.9"${ELITE ? ' stroke-dasharray="3 2"' : ''}/>`;
     const n = Math.max(3, Math.round((horiz ? rw2 : rh2) / 6));
     for (let i = 1; i < n; i++) r += horiz
       ? `<line x1="${rx + (rw2 / n) * i}" y1="${ry + 1}" x2="${rx + (rw2 / n) * i}" y2="${ry + rh2 - 1}" stroke="${CAD.window}" stroke-width="0.5"/>`
@@ -1967,6 +2143,11 @@ function drawElevation(room, wallKey, sheet, parts) {
     const sillMat = style.key === 'neoclassic' ? 'мрамор Bianco' : style.key === 'minimal' || style.key === 'loft' ? 'искусств. камень' : 'МДФ кр. в тон';
     b += placeLabel(ox + 4, [sillY + px(sillThick) + 12, sillY - 6, sillY + px(sillThick) + 26, sillY + px(sillThick) + 12],
       `подоконник ${o.w + sillOvhg * 2}×${o.sill}×${sillThick} · ${sillMat}`, { anchor: 'start' });
+    // элитный уровень: отопление в полу, под подоконником чистая стена — только подпись
+    if (ELITE) {
+      radSvg += placeLabel(ox + px(o.w) - 4, [sillY + px(sillThick) + 14, sillY + px(sillThick) + 28, sillY - 18],
+        'конвектор в полу', { anchor: 'end', fill: '#5B7FA0' });
+    } else {
     // радиатор под подоконником
     const radW = px(Math.min(o.w, 1200)), radH = px(88);
     const radX = ox + (px(o.w) - radW) / 2, radY = sillY + px(sillThick) + px(20);
@@ -1975,6 +2156,7 @@ function drawElevation(room, wallKey, sheet, parts) {
     for (let i = 1; i < rn; i++) radSvg += `<line x1="${radX + radW / rn * i}" y1="${radY + 2}" x2="${radX + radW / rn * i}" y2="${radY + radH - 2}" stroke="#5B7FA0" stroke-width="0.6"/>`;
     radSvg += placeLabel(ox + px(o.w) - 4, [radY + radH + 11, radY + radH + 24, radY - 5, radY + radH + 11],
       'радиатор отопления', { anchor: 'end', fill: '#5B7FA0' });
+    }
   }
 
   // ── 6. двери + перемычка ──────────────────────────────────────
@@ -5808,7 +5990,7 @@ function buildSmeta() {
       R('Чистовая отделка', r.name, WORK_RATES.floorLay.name, 'м²', g.floor, WORK_RATES.floorLay.rate * tier.k);
       R('Чистовая отделка', r.name, WORK_RATES.plinthLay.name, 'м.п.', g.plinth, WORK_RATES.plinthLay.rate * tier.k);
       R('Материалы', r.name, 'Краска (' + style.wall.finish + '), 2 слоя', 'л', g.walls * 0.25, style.paintPriceL * tier.kMat);
-      R('Материалы', r.name, 'Пол: ' + style.floor.name + ' (+5%)', 'м²', g.floor * 1.05, style.floor.priceM2 * tier.kMat);
+      R('Материалы', r.name, 'Пол: ' + (DNA_FLOOR || style.floor.name) + ` (${FLOOR_WASTE_TXT})`, 'м²', g.floor * (1 + FLOOR_WASTE), style.floor.priceM2 * tier.kMat);
       R('Материалы', r.name, style.plinth, 'м.п.', g.plinth, 550 * tier.kMat);
     }
   }
@@ -5877,6 +6059,11 @@ function smetaCSV(rows) {
 function specHTML() {
   const sku = style.skus || {};
   let body = '';
+  // материалы ДНК — сквозные для всей квартиры: колорист и мебельщик подбирают модели под них
+  if (DNA && Array.isArray(DNA.materials) && DNA.materials.length) {
+    body += `<h2>Материалы концепции</h2>
+<table><thead><tr><th>Роль</th><th>Материал</th><th>Бренд · артикул</th></tr></thead><tbody>${DNA.materials.map(m => `<tr><td class="k">${esc(dnaText(m, 'role') || '—')}</td><td>${esc(dnaText(m, 'ru') || dnaText(m, 'en'))}</td><td>по образцу — модель по согласованию</td></tr>`).join('')}${DNA_FLOOR ? `<tr><td class="k">пол</td><td>${esc(DNA_FLOOR)}</td><td>по образцу — модель по согласованию</td></tr>` : ''}</tbody></table>`;
+  }
   for (const r of rooms) {
     const wet = r.type === 'bathroom';
     const g = roomGeometry(r);
@@ -5890,7 +6077,7 @@ function specHTML() {
       [C(), 'LED-подсветка', 'ниша-полка + контур короба, 3000K', sku.led || '—', `${lv.ledLen} м.п.`],
       [C(), 'Сантехника', 'ванна 1700, подвесной унитаз, накладная раковина', 'по дизайн-борду', '3 поз.']
     ] : [
-      [C(), 'Пол', style.floor.name, sku.floor || '—', `${(g.floor * 1.15).toFixed(1)} м² (+15% ёлка)`],
+      [C(), 'Пол', DNA_FLOOR || style.floor.name, DNA_FLOOR ? 'по ДНК проекта — модель по согласованию' : (sku.floor || '—'), `${(g.floor * (1 + FLOOR_WASTE)).toFixed(1)} м² (${FLOOR_WASTE_TXT})`],
       [C(), 'Стены', style.wall.finish, sku.paint || '—', `${(g.walls * 0.25).toFixed(1)} л (2 слоя)`],
       [C(), 'Акцент', style.accent.finish, 'по дизайн-борду', '1 стена'],
       [C(), 'Потолок', style.ceiling, '—', `${g.floor} м²`],
@@ -5919,7 +6106,7 @@ function specHTML() {
   return docHTML('Спецификация материалов', `
 <h1>Спецификация чистовых материалов</h1>
 <p class="sub">Стиль «${style.title}» · тариф «${tier.title}» · ${DATE}</p>
-<div class="pal">${style.palette.map(c => `<span style="background:${c}"></span>`).join('')}<em>палитра проекта</em></div>
+<div class="pal">${PALETTE.map(c => `<span style="background:${c}"></span>`).join('')}<em>палитра проекта</em></div>
 ${body}
 ${vedomost}
 <p class="note"><b>Поставка и монтаж.</b> Черновые материалы и работы — подрядчик; чистовые материалы, сантехника, светильники и мебель — заказчик по этой спецификации, если в договоре не указано иное. Позиции «не в подряде» (техника, декор, текстиль) отмечаются при согласовании комплектации. Артикулы и точные коллекции подбираются на этапе комплектации; допустимы аналоги в той же ценовой группе без изменения образа. Площади стен даны за вычетом проёмов.</p>`);
@@ -5931,11 +6118,23 @@ ${vedomost}
 function roomConcept(r) {
   const f = furnitureFor(r), by = k => f.find(x => x.key === k);
   const m = v => (v / 1000).toFixed(2).replace(/\.?0+$/, '').replace('.', ',');
-  const wallOf = it => !it ? null : (it.y < 300 ? 'A' : (r.l - (it.y + it.h) < 300 ? 'C' : (it.x < 300 ? 'D' : (r.w - (it.x + it.w) < 300 ? 'B' : null))));
+  // ближайшая стена, к которой предмет придвинут (≤ 300 мм). Раньше первой проверялась стена A,
+  // и шкаф у стены D возле верхнего угла подписывался «по стене A». Длинная сторона предмета
+  // решает ничью: шкаф в углу стоит вдоль той стены, к которой обращён фасадом.
+  const wallOf = it => {
+    if (!it) return null;
+    const d = { A: it.y, C: r.l - (it.y + it.h), D: it.x, B: r.w - (it.x + it.w) };
+    const near = Object.keys(d).filter(k => d[k] < 300);
+    if (!near.length) return null;
+    const along = it.w >= it.h ? ['A', 'C'] : ['B', 'D'];
+    near.sort((a, b2) => (along.includes(b2) - along.includes(a)) || d[a] - d[b2]);
+    return near[0];
+  };
+  const hasWindow = w => r.windows.some(o => o.wall === w);
   const at = it => { const w = wallOf(it); return w ? ` по стене ${w}` : ' в центре помещения'; };
   const lv = ceilingLevelsFor(r);
   const b = [];
-  const bed = by('bed') || by('kidbed'), kit = by('kitchen'), sofa = by('sofa'), desk = by('desk'), wr = by('wardrobe');
+  const bed = by('bed') || by('kidbed'), kit = by('kitchen'), sofa = by('sofa'), desk = by('desk'), wr = by('wardrobe') || by('hallwardrobe');
   switch (r.type) {
     case 'living-kitchen':
       b.push(`Единое пространство ${r.area} м² без перегородок`);
@@ -5956,7 +6155,7 @@ function roomConcept(r) {
       break;
     case 'kids':
       b.push(`Детская ${r.area} м²: спальное место${bed ? ' ' + bed.name.replace(/^Кровать /, '') : ''}${at(bed)}`);
-      if (desk) b.push(`рабочий стол ${m(desk.w)} м у окна — свет слева`);
+      if (desk) b.push(`рабочий стол ${m(desk.w)} м${hasWindow(wallOf(desk)) ? ' у окна' : at(desk)}`);
       if (by('rug')) b.push('игровая зона в центре');
       b.push('свет разделён на общий, рабочий и ночной');
       break;
@@ -5979,7 +6178,7 @@ function roomConcept(r) {
       b.push('керамогранит с тёплым полом в зоне входа, зеркало в полный рост');
       break;
     case 'cabinet':
-      b.push(`Кабинет ${r.area} м²: рабочее место${desk ? ' ' + m(desk.w) + ' м' : ''} у окна`);
+      b.push(`Кабинет ${r.area} м²: рабочее место${desk ? ' ' + m(desk.w) + ' м' + (hasWindow(wallOf(desk)) ? ' у окна' : at(desk)) : ''}`);
       b.push('розетки и слаботочка в столе, свет 4000K на рабочей плоскости');
       break;
     default:
@@ -6001,14 +6200,15 @@ function conceptHTML() {
     return `
 <div class="card"><h2>${nn(r.idx)} · ${esc(r.name)}</h2>
 ${gal}
-<p>${esc(roomConcept(r))}</p>
-<p class="mut">Потолок: ${lv.three ? '3 уровня с «парящим» островом' : '2 уровня'}, скрытая LED 3000K — ${lv.ledLen} м.п. ${niches ? '· Ниши: ' + esc(niches) : ''}</p>
-<p class="mut">Свет: ${lightsFor(r).spots.length} точечных${lightsFor(r).pendant ? ' + декоративный подвес' : ''}${lightsFor(r).track ? ' + трек' : ''}. Пол: ${esc(style.floor.name)}.</p></div>`;
+${dnaRoom(r) ? `<p><b>Решение:</b> ${esc(dnaRoom(r))}</p>\n` : ''}<p>${esc(roomConcept(r))}</p>
+${UNPLACED.has(r.name) ? `<p class="note"><b>Не разместилось по габаритам:</b> ${esc(UNPLACED.get(r.name).map(k => FURN_RU[k] || k).join(', '))} — решение дизайнера по обмеру (другая модель, перестановка или отказ).</p>` : ''}
+<p class="mut">Потолок: ${lv.oneLevel ? 'один уровень, ревизионный люк' : (lv.three ? '3 уровня с «парящим» островом' : '2 уровня')}, скрытая LED 3000K — ${lv.ledLen} м.п. ${niches ? '· Ниши: ' + esc(niches) : ''}</p>
+<p class="mut">Свет: ${lightsFor(r).spots.length} точечных${lightsFor(r).pendant ? ' + декоративный подвес' : ''}${lightsFor(r).track ? ' + трек' : ''}. Пол: ${esc(['bathroom', 'wc'].includes(r.type) ? 'керамогранит, −0,020' : (DNA_FLOOR || style.floor.name))}.</p></div>`;
   }).join('');
   return docHTML('Концепция проекта', `
-<h1>Концепция · стиль «${style.title}»</h1>
-<p class="sub">${esc(style.concept)}</p>
-<div class="pal">${style.palette.map(c => `<span style="background:${c}"></span>`).join('')}<em>палитра</em></div>
+<h1>Концепция · ${IDEA ? `«${esc(IDEA)}»` : `стиль «${style.title}»`}</h1>
+<p class="sub">${IDEA ? `Стиль «${style.title}». ` : ''}${esc(style.concept)}</p>
+${DNA && Array.isArray(DNA.moves) && DNA.moves.length ? `<h2>Три сквозных приёма</h2><ol>${DNA.moves.map(m => `<li>${esc(dnaText(m, 'ru') || dnaText(m, 'en'))}</li>`).join('')}</ol>\n` : ''}<div class="pal">${PALETTE.map(c => `<span style="background:${c}"></span>`).join('')}<em>палитра</em></div>
 ${cards}
 <p class="note">${renders.length ? 'Визуализации выполнены по планировочному решению проекта: та же мебель, ниши и сценарии света, что и на чертежах.' : 'Фотореалистичные рендеры каждого помещения выполняются на этапе 2 после согласования планировочного решения.'}</p>`);
 }
@@ -6020,13 +6220,13 @@ function coverHTML(counts) {
 <p class="sub">${esc((brief.object && brief.object.address) || 'Объект')} · ${esc((brief.object && brief.object.type) || 'квартира')} · ${totalArea} м²</p>
 <table><tbody>
 <tr><td class="k">Заказчик</td><td>${esc((brief.client && brief.client.name) || '—')}</td></tr>
-<tr><td class="k">Стиль</td><td>«${style.title}» — ${esc(style.concept)}</td></tr>
+<tr><td class="k">Стиль</td><td>«${style.title}» — ${esc(IDEA || style.concept)}</td></tr>
 <tr><td class="k">Тариф</td><td>«${tier.title}»</td></tr>
 <tr><td class="k">Помещений</td><td>${rooms.length}: ${rooms.map(r => r.name).join(', ')}</td></tr>
 <tr><td class="k">Высота потолков</td><td>${rooms[0] ? rooms[0].h : 2700} мм</td></tr>
 <tr><td class="k">Дата выпуска</td><td>${DATE}</td></tr>
 </tbody></table>
-<div class="pal">${style.palette.map(c => `<span style="background:${c}"></span>`).join('')}<em>палитра проекта</em></div>
+<div class="pal">${PALETTE.map(c => `<span style="background:${c}"></span>`).join('')}<em>палитра проекта</em></div>
 <h2>Состав комплекта · ${counts.flat + counts.obmer + counts.demo + counts.mont + counts.plans + counts.poly + counts.elev + counts.ceil + counts.electro + 1} листов + документы</h2>
 <table><tbody>
 <tr><td class="k">00 Паспорт</td><td>паспорт, пояснительная записка, <a href="vedomost.html">ведомость чертежей</a></td></tr>
@@ -6045,7 +6245,7 @@ ${counts.flat ? `<tr><td class="k">01 Сводные планы квартиры
 <table><tbody>
 <tr><td class="k">Объект</td><td>${esc((brief.object && brief.object.type) || 'квартира')} ${totalArea} м², ${rooms.length} помещений: ${rooms.map(r => `${r.name} (${r.area} м²)`).join(', ')}. Высота потолков ${rooms[0] ? rooms[0].h : 2700} мм.</td></tr>
 <tr><td class="k">Стиль и колористика</td><td>«${style.title}». ${esc(style.concept)} Палитра из 5 тонов: светлая тёплая база, деревянные фактуры, один тёмный якорь и латунный акцент — сочетание проверено на контраст и температуру.</td></tr>
-<tr><td class="k">Потолки</td><td>Два уровня во всех помещениях (короб 450 мм, перепад 120 мм, скрытая LED 3000K по внутреннему контуру)${rooms.some(r => ceilingLevelsFor(r).three) ? '; в гостиной — третий уровень «парящий остров» с теневой щелью 10 мм' : ''}. Узел исполнения — лист «Узел А» (М 1:20). Закладные под все подвесные светильники.</td></tr>
+<tr><td class="k">Потолки</td><td>${(() => { const one = rooms.filter(r => ceilingLevelsFor(r).oneLevel), two = rooms.filter(r => !ceilingLevelsFor(r).oneLevel); return (two.length ? `Два уровня: ${two.map(r => r.name).join(', ')} (короб по периметру, перепад 120 мм, скрытая LED 3000K по внутреннему контуру)` : '') + (one.length ? `${two.length ? '; один' : 'Один'} уровень с ревизионным люком: ${one.map(r => r.name).join(', ')}` : ''); })()}${rooms.some(r => ceilingLevelsFor(r).three) ? '; в гостиной — третий уровень «парящий остров» с теневой щелью 10 мм' : ''}. Узел исполнения — лист «Узел А» (М 1:20). Закладные под все подвесные светильники.</td></tr>
 ${(DEMOLISH.length || PARTITIONS.length) ? `<tr><td class="k">Перепланировка</td><td>Демонтаж: ${DEMOLISH.length ? `${DEMOLISH.length} уч., ${String(+DEMOLISH.reduce((a, d) => a + segAreaM2(d), 0).toFixed(1)).replace('.', ',')} м² (марки С1–С${DEMOLISH.length}, лист «План демонтажа»)` : 'не требуется'}. Возводится: ${PARTITIONS.length ? `${PARTITIONS.length} перегородки, ${String(+PARTITIONS.reduce((a, p) => a + segAreaM2(p), 0).toFixed(1)).replace('.', ',')} м² (${[...new Set(PARTITIONS.map(p => PART_TYPES[p.type].short))].join(', ')}; марки П1–П${PARTITIONS.length}, лист «План монтажа»)` : 'не требуется'}. Несущие конструкции не затрагиваются. Работы выполнять после согласования перепланировки (ЖК РФ, ст. 25–29).</td></tr>\n` : ''}<tr><td class="k">Ниши</td><td>${esc(rooms.flatMap(r => nichesFor(r).map(n => n.label)).filter((v, i, a) => a.indexOf(v) === i).join('; ') || '—')}. Все ниши — ГКЛ с LED-подсветкой в алюминиевом профиле, БП с запасом 30% и ревизией.</td></tr>
 <tr><td class="k">Полы</td><td>${esc(style.floor.name)} (жилые), керамогранит (санузел, −0,020). Стыки покрытий — на оси дверного полотна, без порожков. Запас: +15% на «ёлку», +10% на плитку.</td></tr>
 <tr><td class="k">Электрика</td><td>Розетки по мебельным сценариям (кровать +600, фартук +1100, ТВ-блок +1300 скрыт в нише), выключатели +900 со стороны ручки. Санузлы — через УЗО 30 мА, IP44. Разводку выполняет инженерный проект по привязкам альбома.</td></tr>
@@ -6462,6 +6662,13 @@ const DOC_HTML = {
   '07-materialy/specification.html': specHTML(),
   '08-smeta/smeta.html': smetaHTML(smetaRows)
 };
+if (UNPLACED.size) {
+  for (const [name, keys] of UNPLACED) console.warn(`  ! «${name}»: не разместилось — ${keys.map(k => FURN_RU[k] || k).join(', ')}`);
+  if (FLAGS.strict) {
+    console.error('--strict: альбом не собран — ключевая мебель не встала (см. выше). Поправьте габариты, проёмы или задайте расстановку вручную.');
+    process.exit(2);
+  }
+}
 if (CHECK.errors.length || CHECK.warnings.length) DOC_HTML['00-pasport/zamechaniya.html'] = zamechaniyaHTML();
 for (const [rel, html] of Object.entries(DOC_HTML)) writeOut(rel, html);
 writeOut('08-smeta/smeta.csv', smetaCSV(smetaRows));

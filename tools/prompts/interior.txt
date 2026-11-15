@@ -1,5 +1,5 @@
 TASK:
-Photorealistic interior photograph of one room, taken at eye level, about 1.6 m above the floor, with a 24 mm wide-angle lens held perfectly level so vertical lines stay vertical.
+Photorealistic interior photograph of one room for a high-end design magazine, taken at about 1.2 m above the floor with a 24–28 mm lens and shift correction, so all vertical lines stay perfectly vertical.
 
 COMPOSITION:
-The camera stands at the room entrance looking into the room, so the viewer reads the whole space: floor, two walls and the main furniture group. Foreground, middle ground and background are all present, giving the image depth.
+Either a one-point view along the main axis of the room or a two-point view from a corner along the diagonal. The frame shows the room's feature wall and its hero piece in full, never cut through the middle. Foreground, middle ground and background are all present, giving the image depth; one quiet foreground element (the edge of a chair, a side table) frames the view.

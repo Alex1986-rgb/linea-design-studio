@@ -27,7 +27,7 @@ const STYLES = {
   },
   scandi: {
     key: 'scandi', title: 'Скандинавский',
-    palette: ['#F2F0EA', '#D9BE93', '#9FB4A8', '#42464A', '#C96F4A'],
+    palette: ['#F2F0EA', '#D9BE93', '#9FB4A8', '#42464A', '#BCAE9A'],   // один акцент — шалфей; лён вместо второй терракоты (стандарт, «правило трёх»)
     wall:  { color: '#F2F0EA', finish: 'краска Dulux «Snow White», матовая' },
     accent:{ color: '#9FB4A8', finish: 'акцентная стена: шалфейно-серая краска' },
     floor: { name: 'ламинат 33 кл., дуб светлый', color: '#D9BE93', priceM2: 2400 },
@@ -48,7 +48,7 @@ const STYLES = {
   },
   minimal: {
     key: 'minimal', title: 'Минимализм',
-    palette: ['#ECECE8', '#C9BBA6', '#A9A9A3', '#2F2F2D', '#6E6E68'],
+    palette: ['#ECECE8', '#C9BBA6', '#B5A48C', '#2F2F2D', '#6E6E68'],   // тёплый травертин вместо третьего серого
     wall:  { color: '#ECECE8', finish: 'декоративная штукатурка / микроцемент, светло-серый' },
     accent:{ color: '#6E6E68', finish: 'акцент: микроцемент графит' },
     floor: { name: 'кварцвинил, серо-бежевый камень', color: '#C9BBA6', priceM2: 3200 },
@@ -64,7 +64,7 @@ const STYLES = {
       tile: 'Italon · Metropolis Arctic White 80×80, 610010002338',
       plinth: 'Profilpas · Metal Line 89/6, алюминий скрытый',
       doors: 'Sofia · Invisible 501, скрытый короб',
-      led: 'Arlight · MICROLED-5000 24V Day4000 + теневой профиль'
+      led: 'Arlight · MICROLED-5000 24V Warm3000 + теневой профиль'   // жилые комнаты — 2700–3000K (стандарт, раздел 4)
     }
   },
   modern: {
@@ -111,10 +111,10 @@ const STYLES = {
   },
   loft: {
     key: 'loft', title: 'Лофт',
-    palette: ['#D8D3CA', '#9C6B54', '#8B5F3C', '#2B2A28', '#5E6B5B'],
+    palette: ['#D8D3CA', '#A2523C', '#6E5440', '#2B2A28', '#5E6B5B'],   // кирпич краснее, термодуб темнее — раньше сливались
     wall:  { color: '#D8D3CA', finish: 'бетонная декоративная штукатурка' },
-    accent:{ color: '#9C6B54', finish: 'акцентная стена: кирпич / клинкерная плитка' },
-    floor: { name: 'паркетная доска, дуб термо', color: '#8B5F3C', priceM2: 3900 },
+    accent:{ color: '#A2523C', finish: 'акцентная стена: кирпич / клинкерная плитка' },
+    floor: { name: 'паркетная доска, дуб термо', color: '#6E5440', priceM2: 3900 },
     ceiling: 'окрашенное перекрытие + чёрные трековые системы',
     plinth: 'плинтус металлический, чёрный 60 мм',
     doors: 'полотна ревизионного типа, чёрный муар',
