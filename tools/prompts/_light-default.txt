@@ -1,0 +1,2 @@
+LIGHT:
+Late-afternoon daylight raking through the windows, forming soft pools of light and long gentle shadows on the floor; interior lamps at warm 2700K glowing against the cooler daylight, so the render reads as a real photograph taken at that hour rather than an evenly lit CG model.

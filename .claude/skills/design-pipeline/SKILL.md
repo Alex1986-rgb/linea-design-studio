@@ -10,17 +10,20 @@ description: Оркестрация конвейера дизайн-проект
 ```
 сырой бриф
   → [brief-analyst]      нормализация + engine/validate.js  → clients/<slug>/brief.json
-  → [concept-designer]   стиль, палитра, образ              → concept.md
+  → [concept-designer]   ДНК проекта: идея, 3 приёма, материалы → dna.json + concept.md
   → движок               node engine/generate.js --strict   → project/
   → [space-planner]      эргономика, зазоры, obstacles      → planning-report.md
   → [draftsman]          листы по канону                    → drafting-report.md
   → [cad-normcontrol]    нормоконтроль по ГОСТ и канону     → normcontrol-report.md
   → [estimator]          смета и цены                       → estimate-report.md
-  → [visualizer]*        рендеры                            → project/06-koncept/renders/
+  → [visualizer]*        промпты из ДНК, рендеры            → project/06-koncept/renders/
+  → [art-director]*      приёмка кадров по art-check.md     → team/15b-art-director.md
   → [cad-acceptance]     выпускной контур, блокеры          → acceptance-report.md
   → [chief-architect]    смысловая приёмка для клиента      → ACCEPTED.md / REJECTED.md
 ```
-\* visualizer — только тариф premium.
+\* visualizer и art-director — только тариф premium. Кадр без вердикта арт-директора «ПРИНЯТ» не получает `signed`.
+
+Дизайнерский регламент — `docs/design/elite-standard.md`: ДНК проекта, архитектура вместо мебели, материалы, свет, арт-дирекция, анти-паттерны.
 
 Разделение ответственности: **cad-acceptance** отвечает за формальную готовность (проверки, числа, комплектность), **chief-architect** — за смысл: попадает ли решение в бриф клиента, читается ли альбом человеком, не стыдно ли отдать.
 
@@ -29,7 +32,9 @@ description: Оркестрация конвейера дизайн-проект
 | Файл | Кто пишет | Кто читает |
 |---|---|---|
 | `clients/<slug>/brief.json` | brief-analyst | все агенты и движок |
+| `clients/<slug>/dna.json` | concept-designer | `tools/prompt-build.py`, visualizer, art-director, chief-architect |
 | `clients/<slug>/concept.md` | concept-designer | visualizer, chief-architect |
+| `clients/<slug>/team/15b-art-director.md` | art-director | visualizer, chief-architect |
 | `clients/<slug>/project/**` | движок | все проверяющие |
 | `planning-report.md`, `drafting-report.md`, `normcontrol-report.md`, `estimate-report.md`, `acceptance-report.md` | соответствующие агенты | chief-architect |
 | `ACCEPTED.md` / `REJECTED.md` | chief-architect | оператор |

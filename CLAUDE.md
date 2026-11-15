@@ -20,6 +20,7 @@
 - `clients/<slug>/` — рабочие папки клиентов (brief.json, отчёты, project/)
 - `.claude/agents/` — 7 агентов конвейера; `.claude/commands/` — /new-client, /regen, /qa-project
 - `.claude/skills/cad-drawings` — канон рабочих чертежей (состав альбома, лист А3, слои, размеры, обозначения, чек-лист приёмки)
+- `docs/design/elite-standard.md` — **стандарт элитной студии** (15.11.2026): ДНК проекта (`clients/<slug>/dna.json`, эталон `examples/dna/elite-modern.json`), архитектура вместо мебели, материалы, свет, арт-дирекция, анти-паттерны. Промпты рендеров — только `python3 tools/prompt-build.py interior --dna <dna.json> --room <key> [--evening]` (тесты: `python3 -m unittest tools/test_prompt_build.py`); материалы и свет берутся из ДНК, а не из общего `_quality.txt`. Кадр получает `signed` только с вердиктом агента `art-director` по `tools/prompts/art-check.md`.
 - `docs/` — маркетинг- и SEO-планы
 
 ## Инструменты выпуска

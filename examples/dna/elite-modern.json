@@ -1,0 +1,79 @@
+{
+  "$comment": "ДНК проекта — эталон схемы (docs/design/elite-standard.md, раздел 1). Пример по карточке gost-elitemodern: «орех, латунь, мрамор с прожилкой, букле; у каждой комнаты свой тёмный акцент». Пишет concept-designer в clients/<slug>/dna.json; читает tools/prompt-build.py. Поля *_en — для промпта рендера, остальные — для людей.",
+  "project": "gost-elitemodern",
+  "tier": "elite",
+  "idea": "Тёмный орех обнимает светлый камень: квартира как футляр для коллекции",
+  "idea_en": "Dark walnut wraps pale veined marble: the apartment reads as a fine case built around a collection",
+  "moves": [
+    {
+      "ru": "Ореховые панели от пола до потолка с теневым швом — в каждой комнате одна стена-событие",
+      "en": "floor-to-ceiling American walnut veneer wall panelling with a 10 mm shadow gap, one feature wall per room, visible open wood grain, matte oiled finish"
+    },
+    {
+      "ru": "Мрамор с крупной прожилкой как скульптура, а не облицовка: монолиты, торцы, толщина",
+      "en": "pale marble with bold grey-taupe veining used as sculptural monoliths with thick visible edges, not as thin cladding"
+    },
+    {
+      "ru": "Латунь только в точках касания: ручки, смесители, кромки, тонкие вставки",
+      "en": "brushed satin brass only at touch points: handles, taps, thin inlays and edge trims, never large brass surfaces"
+    }
+  ],
+  "materials": [
+    { "ru": "орех американский, шпон, масло, матовый", "en": "American walnut veneer, matte oil finish, open grain", "role": "главный" },
+    { "ru": "мрамор светлый с серо-бежевой прожилкой, хонингованный", "en": "honed pale marble with bold grey-taupe veining", "role": "камень" },
+    { "ru": "латунь шлифованная, сатин", "en": "brushed satin brass", "role": "металл" },
+    { "ru": "букле молочное, шерсть", "en": "ivory boucle and wool upholstery with visible loop texture", "role": "текстиль" },
+    { "ru": "фактурная известковая штукатурка, тёплый белый", "en": "warm white textured lime plaster walls with soft tonal movement", "role": "фон" }
+  ],
+  "palette": {
+    "base": "#EEE8DF",
+    "support": "#C9B9A6",
+    "anchor": "#3B2A21",
+    "accent": "#4A5A55",
+    "metal": "#B08D57",
+    "en": "warm ivory walls, sand and taupe support tones, deep walnut-brown anchor, one muted green-grey accent, satin brass"
+  },
+  "light": {
+    "ru": "Тёплый 2700K, свет отражённый: подсветка панелей и ниш, бра, торшер; на потолке — теневой шов и световая линия, без сетки точек",
+    "en": "warm 2700K light that is mostly indirect: concealed LED washing the walnut panels and niches, wall sconces and a floor lamp; ceiling with a perimeter shadow gap and one linear light slot, no grid of downlights",
+    "day_en": "soft side daylight from the window, gentle long shadows, interior accent lights faintly on",
+    "evening_en": "blue-hour dusk outside the window, all concealed LED lines and lamps on, warm pools of light, deep but readable shadows"
+  },
+  "rooms": {
+    "living": {
+      "ru": "ТВ-зона в ореховой панели во всю стену; герой — низкий модульный диван букле; тёмный акцент — тёмно-зелёный бархат кресла",
+      "en": "living room: full-height walnut panel wall with a flush-integrated TV niche and concealed storage; hero piece a low modular ivory boucle sofa centred on the panel axis; one deep green velvet lounge chair as the dark accent; a thick marble coffee table monolith; large-format black-and-white photograph on the side wall"
+    },
+    "kitchen": {
+      "ru": "Ореховые рифлёные фасады низа, верх в плоскости стены; герой — мраморный остров-монолит",
+      "en": "kitchen-dining: fluted walnut lower fronts, handleless upper cabinets flush with the wall, full-height marble backsplash slab with continuous veining, brass tap, a marble-topped dining table with sculptural walnut base under a single sculptural pendant"
+    },
+    "bedroom": {
+      "ru": "Изголовье — ореховая панель во всю стену с подсветкой; шторы из ниши в потолке; тёмный акцент — графитовый лён",
+      "en": "bedroom: full-width walnut panelled headboard wall with concealed warm LED, bed centred on the panel axis, ivory and taupe bedding with one graphite linen throw, curtains falling from a concealed ceiling pocket to the floor, brass wall sconces, no visible radiator"
+    },
+    "study": {
+      "ru": "Стеллаж-ниша в орехе с подсветкой полок; стол — массив на оси окна",
+      "en": "study: walnut built-in library wall with lit shelves, solid walnut desk on the window axis, leather desk chair, curated books and two ceramic objects only"
+    },
+    "bath": {
+      "ru": "Мрамор крупного формата с непрерывной прожилкой; тумба в орехе; латунные смесители",
+      "en": "bathroom: large-format marble slabs with continuous book-matched veining, floating walnut vanity with a marble top, brushed brass taps, frameless glass shower, recessed niche with LED, no visible pipes"
+    },
+    "hall": {
+      "ru": "Встроенный шкаф в орехе в плоскости стены, скамья в нише, зеркало в полный рост",
+      "en": "entrance hall: flush walnut wardrobe wall with hidden handles, a bench set into a lit niche, full-height mirror with thin brass frame, marble floor threshold"
+    },
+    "wc": {
+      "ru": "Тёмная стена-акцент, подвесной унитаз, мраморная консоль",
+      "en": "guest WC: one dark accent wall, wall-hung WC, small marble console basin with brass tap, a single sconce"
+    }
+  },
+  "avoid": [
+    { "ru": "подушки двух случайных цветов", "en": "cushions in two random contrasting colours" },
+    { "ru": "пейзаж в золотой раме и абстракция с золотыми дугами", "en": "landscape painting in a gilded frame, abstract art with gold arcs" },
+    { "ru": "открытые панельные радиаторы", "en": "visible panel radiators" },
+    { "ru": "стандартные двери с наличниками", "en": "standard doors with architraves" },
+    { "ru": "сетка точечных светильников", "en": "grid of recessed downlights" }
+  ]
+}
