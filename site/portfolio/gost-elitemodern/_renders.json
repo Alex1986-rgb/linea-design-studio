@@ -1,9 +1,9 @@
 {
  "checked": true,
- "signed": 4,
+ "signed": 7,
  "prelim": 0,
- "rejected": 8,
- "accepted": 4,
+ "rejected": 5,
+ "accepted": 7,
  "ribbon": [
   {
    "src": "assets/portfolio/gost-elitemodern/3d-top.jpg",
@@ -34,15 +34,29 @@
    }
   },
   {
-   "src": "assets/portfolio/gost-elitemodern/room-bath-d2.jpg",
+   "src": "assets/portfolio/gost-elitemodern/room-bath-d1.jpg",
    "alt": "Квартира 68 м² · элитный модерн — ванная, визуализация",
    "w": 1200,
    "h": 800,
    "state": "signed",
-   "name": "room-bath-d2",
+   "name": "room-bath-d1",
    "wall": "r3:mag",
    "clay": {
-    "src": "assets/portfolio/gost-elitemodern/clay-room-bath-d2.jpg",
+    "src": "assets/portfolio/gost-elitemodern/clay-room-bath-d1.jpg",
+    "w": 1200,
+    "h": 800
+   }
+  },
+  {
+   "src": "assets/portfolio/gost-elitemodern/room-hall-s1.jpg",
+   "alt": "Квартира 68 м² · элитный модерн — прихожая, визуализация",
+   "w": 1200,
+   "h": 800,
+   "state": "signed",
+   "name": "room-hall-s1",
+   "wall": "r4:mag",
+   "clay": {
+    "src": "assets/portfolio/gost-elitemodern/clay-room-hall-s1.jpg",
     "w": 1200,
     "h": 800
    }
@@ -60,6 +74,34 @@
     "w": 1200,
     "h": 800
    }
+  },
+  {
+   "src": "assets/portfolio/gost-elitemodern/room-kitchen-m2.jpg",
+   "alt": "Квартира 68 м² · элитный модерн — кухня-столовая, визуализация",
+   "w": 1200,
+   "h": 800,
+   "state": "signed",
+   "name": "room-kitchen-m2",
+   "wall": "r5:mag",
+   "clay": {
+    "src": "assets/portfolio/gost-elitemodern/clay-room-kitchen-m2.jpg",
+    "w": 1200,
+    "h": 800
+   }
+  },
+  {
+   "src": "assets/portfolio/gost-elitemodern/room-bath-d2.jpg",
+   "alt": "Квартира 68 м² · элитный модерн — ванная, визуализация",
+   "w": 1200,
+   "h": 800,
+   "state": "signed",
+   "name": "room-bath-d2",
+   "wall": "r3:mag",
+   "clay": {
+    "src": "assets/portfolio/gost-elitemodern/clay-room-bath-d2.jpg",
+    "w": 1200,
+    "h": 800
+   }
   }
  ],
  "hero": {
@@ -69,7 +111,7 @@
   "h": 1066,
   "kind": "render",
   "state": "signed",
-  "name": "room-kitchen-m1",
+  "name": "room-kitchen-m2",
   "webp": "assets/portfolio/gost-elitemodern-hero.webp"
  }
 }

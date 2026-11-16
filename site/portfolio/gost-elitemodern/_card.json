@@ -11,7 +11,7 @@
  "rooms": 7,
  "total": 126,
  "blockers": 0,
- "issues": 187,
+ "issues": 186,
  "openQ": {
   "n": 28,
   "no": "06"
@@ -24,11 +24,11 @@
   "h": 1066,
   "kind": "render",
   "state": "signed",
-  "name": "room-kitchen-m1",
+  "name": "room-kitchen-m2",
   "webp": "assets/portfolio/gost-elitemodern-hero.webp"
  },
- "visuals": 4,
+ "visuals": 7,
  "visualsPrelim": 0,
- "studioSize": "8 МБ",
+ "studioSize": "9 МБ",
  "pdfSize": "11 МБ"
 }
