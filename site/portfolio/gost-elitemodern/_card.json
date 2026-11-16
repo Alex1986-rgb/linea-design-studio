@@ -9,11 +9,11 @@
  "area": "68,47 м²",
  "declared": "",
  "rooms": 7,
- "total": 118,
+ "total": 124,
  "blockers": 0,
- "issues": 211,
+ "issues": 197,
  "openQ": {
-  "n": 25,
+  "n": 28,
   "no": "06"
  },
  "preReview": "",
@@ -27,8 +27,8 @@
   "name": "room-kitchen-m1",
   "webp": "assets/portfolio/gost-elitemodern-hero.webp"
  },
- "visuals": 6,
+ "visuals": 4,
  "visualsPrelim": 0,
  "studioSize": "8 МБ",
- "pdfSize": "10 МБ"
+ "pdfSize": "11 МБ"
 }

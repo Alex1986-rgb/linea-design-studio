@@ -210,7 +210,7 @@
   <div class="wrap">
     <div class="kicker">Объём альбома</div>
     <h2>Сколько листов будет в вашем альбоме</h2>
-    <p class="sub">Оценка по восьми выпущенным альбомам: квартиры на 5–13 помещений — 108–161 лист. Разброс у реальных проектов — до ±14 листов: больше мебели на заказ и мокрых зон — больше листов.</p>
+    <p class="sub">Оценка по восьми выпущенным альбомам: квартиры на 5–13 помещений — 108–161 лист. Разброс у реальных проектов — до ±15 листов: больше мебели на заказ и мокрых зон — больше листов.</p>
     <div class="calc" data-calc>
       <div class="calc-row"><span>Помещений (комнаты, кухня, санузлы, прихожая, гардеробная)</span>
         <div class="calc-num"><button type="button" data-mm="-1" aria-label="Меньше помещений">−</button><b data-rooms>6</b><button type="button" data-mm="1" aria-label="Больше помещений">+</button></div>
@@ -233,9 +233,9 @@
   function render() {
     $('[data-rooms]').textContent = rooms;
     // коэффициенты посчитаны генератором по выпущенным альбомам (tools/gen-more-pages.js, LS):
-    // листы квартиры ≈ 83.4 + 5.26 × помещений; развёрток ≈ 2.9 на помещение
-    $('[data-base]').textContent = Math.round(83.4 + 5.26 * rooms);
-    $('[data-elev]').textContent = Math.round(2.9 * rooms);
+    // листы квартиры ≈ 86.1 + 5.02 × помещений; развёрток ≈ 2.94 на помещение
+    $('[data-base]').textContent = Math.round(86.1 + 5.02 * rooms);
+    $('[data-elev]').textContent = Math.round(2.94 * rooms);
   }
   root.addEventListener('click', function (e) {
     var b = e.target.closest('button[data-mm]'); if (!b) return;
