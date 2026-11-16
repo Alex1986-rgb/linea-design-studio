@@ -6,6 +6,20 @@
  "accepted": 4,
  "ribbon": [
   {
+   "src": "assets/portfolio/gost-elitemodern/3d-top.jpg",
+   "alt": "Квартира 68 м² · элитный модерн — вид сверху 3D",
+   "w": 1200,
+   "h": 800,
+   "state": "signed",
+   "name": "3d-top",
+   "wall": "top",
+   "clay": {
+    "src": "assets/portfolio/gost-elitemodern/clay-3d-top.jpg",
+    "w": 1200,
+    "h": 800
+   }
+  },
+  {
    "src": "assets/portfolio/gost-elitemodern/room-kitchen-m1.jpg",
    "alt": "Квартира 68 м² · элитный модерн — кухня-столовая, визуализация",
    "w": 1200,
@@ -20,15 +34,15 @@
    }
   },
   {
-   "src": "assets/portfolio/gost-elitemodern/room-bath-d1.jpg",
+   "src": "assets/portfolio/gost-elitemodern/room-bath-d2.jpg",
    "alt": "Квартира 68 м² · элитный модерн — ванная, визуализация",
    "w": 1200,
    "h": 800,
    "state": "signed",
-   "name": "room-bath-d1",
+   "name": "room-bath-d2",
    "wall": "r3:mag",
    "clay": {
-    "src": "assets/portfolio/gost-elitemodern/clay-room-bath-d1.jpg",
+    "src": "assets/portfolio/gost-elitemodern/clay-room-bath-d2.jpg",
     "w": 1200,
     "h": 800
    }
@@ -43,20 +57,6 @@
    "wall": "r2:mag",
    "clay": {
     "src": "assets/portfolio/gost-elitemodern/clay-room-wc-s1.jpg",
-    "w": 1200,
-    "h": 800
-   }
-  },
-  {
-   "src": "assets/portfolio/gost-elitemodern/room-bath-d2.jpg",
-   "alt": "Квартира 68 м² · элитный модерн — ванная, визуализация",
-   "w": 1200,
-   "h": 800,
-   "state": "signed",
-   "name": "room-bath-d2",
-   "wall": "r3:mag",
-   "clay": {
-    "src": "assets/portfolio/gost-elitemodern/clay-room-bath-d2.jpg",
     "w": 1200,
     "h": 800
    }

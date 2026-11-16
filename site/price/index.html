@@ -233,8 +233,8 @@
   function render() {
     $('[data-rooms]').textContent = rooms;
     // коэффициенты посчитаны генератором по выпущенным альбомам (tools/gen-more-pages.js, LS):
-    // листы квартиры ≈ 86.1 + 5.02 × помещений; развёрток ≈ 2.94 на помещение
-    $('[data-base]').textContent = Math.round(86.1 + 5.02 * rooms);
+    // листы квартиры ≈ 86.9 + 4.96 × помещений; развёрток ≈ 2.94 на помещение
+    $('[data-base]').textContent = Math.round(86.9 + 4.96 * rooms);
     $('[data-elev]').textContent = Math.round(2.94 * rooms);
   }
   root.addEventListener('click', function (e) {
