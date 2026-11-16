@@ -1,9 +1,9 @@
 {
  "checked": true,
- "signed": 7,
+ "signed": 10,
  "prelim": 0,
- "rejected": 5,
- "accepted": 7,
+ "rejected": 2,
+ "accepted": 10,
  "ribbon": [
   {
    "src": "assets/portfolio/gost-elitemodern/3d-top.jpg",
@@ -34,15 +34,43 @@
    }
   },
   {
-   "src": "assets/portfolio/gost-elitemodern/room-bath-d1.jpg",
+   "src": "assets/portfolio/gost-elitemodern/room-bedroom-m1.jpg",
+   "alt": "Квартира 68 м² · элитный модерн — спальня, визуализация",
+   "w": 1200,
+   "h": 800,
+   "state": "signed",
+   "name": "room-bedroom-m1",
+   "wall": "r7:mag",
+   "clay": {
+    "src": "assets/portfolio/gost-elitemodern/clay-room-bedroom-m1.jpg",
+    "w": 1200,
+    "h": 800
+   }
+  },
+  {
+   "src": "assets/portfolio/gost-elitemodern/room-study-m1.jpg",
+   "alt": "Квартира 68 м² · элитный модерн — кабинет, визуализация",
+   "w": 1200,
+   "h": 800,
+   "state": "signed",
+   "name": "room-study-m1",
+   "wall": "r1:mag",
+   "clay": {
+    "src": "assets/portfolio/gost-elitemodern/clay-room-study-m1.jpg",
+    "w": 1200,
+    "h": 800
+   }
+  },
+  {
+   "src": "assets/portfolio/gost-elitemodern/room-bath-s1.jpg",
    "alt": "Квартира 68 м² · элитный модерн — ванная, визуализация",
    "w": 1200,
    "h": 800,
    "state": "signed",
-   "name": "room-bath-d1",
+   "name": "room-bath-s1",
    "wall": "r3:mag",
    "clay": {
-    "src": "assets/portfolio/gost-elitemodern/clay-room-bath-d1.jpg",
+    "src": "assets/portfolio/gost-elitemodern/clay-room-bath-s1.jpg",
     "w": 1200,
     "h": 800
    }
@@ -85,6 +113,20 @@
    "wall": "r5:mag",
    "clay": {
     "src": "assets/portfolio/gost-elitemodern/clay-room-kitchen-m2.jpg",
+    "w": 1200,
+    "h": 800
+   }
+  },
+  {
+   "src": "assets/portfolio/gost-elitemodern/room-bath-d1.jpg",
+   "alt": "Квартира 68 м² · элитный модерн — ванная, визуализация",
+   "w": 1200,
+   "h": 800,
+   "state": "signed",
+   "name": "room-bath-d1",
+   "wall": "r3:mag",
+   "clay": {
+    "src": "assets/portfolio/gost-elitemodern/clay-room-bath-d1.jpg",
     "w": 1200,
     "h": 800
    }
