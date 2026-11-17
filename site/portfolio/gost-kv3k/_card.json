@@ -11,7 +11,7 @@
  "rooms": 8,
  "total": 132,
  "blockers": 0,
- "issues": 114,
+ "issues": 118,
  "openQ": {
   "n": 27,
   "no": "06"
@@ -28,7 +28,7 @@
   "webp": "assets/portfolio/gost-kv3k-hero.webp"
  },
  "visuals": 9,
- "visualsPrelim": 0,
+ "visualsPrelim": 1,
  "studioSize": "10 МБ",
  "pdfSize": "13 МБ"
 }

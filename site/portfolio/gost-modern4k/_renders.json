@@ -1,24 +1,10 @@
 {
  "checked": true,
- "signed": 13,
- "prelim": 0,
- "rejected": 11,
- "accepted": 13,
+ "signed": 14,
+ "prelim": 1,
+ "rejected": 10,
+ "accepted": 14,
  "ribbon": [
-  {
-   "src": "assets/portfolio/gost-modern4k/3d-top.jpg",
-   "alt": "Квартира 127 м² · современный модерн, с кабинетом — вид сверху 3D",
-   "w": 1200,
-   "h": 800,
-   "state": "signed",
-   "name": "3d-top",
-   "wall": "top",
-   "clay": {
-    "src": "assets/portfolio/gost-modern4k/clay-3d-top.jpg",
-    "w": 1200,
-    "h": 800
-   }
-  },
   {
    "src": "assets/portfolio/gost-modern4k/room-living-wB.jpg",
    "alt": "Квартира 127 м² · современный модерн, с кабинетом — гостиная, визуализация",
@@ -26,12 +12,7 @@
    "h": 800,
    "state": "signed",
    "name": "room-living-wB",
-   "wall": "r4:B",
-   "clay": {
-    "src": "assets/portfolio/gost-modern4k/clay-room-living-wB.jpg",
-    "w": 1200,
-    "h": 800
-   }
+   "wall": "r4:B"
   },
   {
    "src": "assets/portfolio/gost-modern4k/room-bedroom-wB.jpg",
@@ -67,12 +48,7 @@
    "h": 800,
    "state": "signed",
    "name": "room-bath1-wB",
-   "wall": "r7:B",
-   "clay": {
-    "src": "assets/portfolio/gost-modern4k/clay-room-bath1-wB.jpg",
-    "w": 1200,
-    "h": 800
-   }
+   "wall": "r7:B"
   },
   {
    "src": "assets/portfolio/gost-modern4k/room-bath2-wide.jpg",
@@ -93,18 +69,40 @@
    "wall": "r8:B"
   },
   {
+   "src": "assets/portfolio/gost-modern4k/room-wardrobe-wide.jpg",
+   "alt": "Квартира 127 м² · современный модерн, с кабинетом — гардеробная, визуализация",
+   "w": 1200,
+   "h": 800,
+   "state": "signed",
+   "name": "room-wardrobe-wide",
+   "wall": "r2:room"
+  },
+  {
+   "src": "assets/portfolio/gost-modern4k/room-corridor-wA.jpg",
+   "alt": "Квартира 127 м² · современный модерн, с кабинетом — холл, визуализация",
+   "w": 1200,
+   "h": 800,
+   "state": "signed",
+   "name": "room-corridor-wA",
+   "wall": "r5:A"
+  },
+  {
+   "src": "assets/portfolio/gost-modern4k/3d-top.jpg",
+   "alt": "Квартира 127 м² · современный модерн, с кабинетом — вид сверху 3D",
+   "w": 1200,
+   "h": 800,
+   "state": "prelim",
+   "name": "3d-top",
+   "wall": "top"
+  },
+  {
    "src": "assets/portfolio/gost-modern4k/room-living-wC.jpg",
    "alt": "Квартира 127 м² · современный модерн, с кабинетом — гостиная, визуализация",
    "w": 1200,
    "h": 800,
    "state": "signed",
    "name": "room-living-wC",
-   "wall": "r4:C",
-   "clay": {
-    "src": "assets/portfolio/gost-modern4k/clay-room-living-wC.jpg",
-    "w": 1200,
-    "h": 800
-   }
+   "wall": "r4:C"
   },
   {
    "src": "assets/portfolio/gost-modern4k/room-bedroom-wD.jpg",
@@ -113,12 +111,7 @@
    "h": 800,
    "state": "signed",
    "name": "room-bedroom-wD",
-   "wall": "r1:D",
-   "clay": {
-    "src": "assets/portfolio/gost-modern4k/clay-room-bedroom-wD.jpg",
-    "w": 1200,
-    "h": 800
-   }
+   "wall": "r1:D"
   },
   {
    "src": "assets/portfolio/gost-modern4k/room-kids-wA.jpg",

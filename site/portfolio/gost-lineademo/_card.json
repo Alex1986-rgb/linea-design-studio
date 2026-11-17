@@ -9,9 +9,9 @@
  "area": "56,37 м²",
  "declared": "",
  "rooms": 5,
- "total": 119,
+ "total": 120,
  "blockers": 0,
- "issues": 99,
+ "issues": 97,
  "openQ": {
   "n": 12,
   "no": "06"
@@ -19,16 +19,16 @@
  "preReview": "",
  "hero": {
   "src": "assets/portfolio/gost-lineademo-hero.jpg",
-  "alt": "Квартира 56 м² · джапанди — детская, визуализация",
+  "alt": "Квартира 56 м² · джапанди — спальня, визуализация",
   "w": 1600,
   "h": 1066,
   "kind": "render",
   "state": "signed",
-  "name": "room-kids-wB",
+  "name": "room-bedroom-wD",
   "webp": "assets/portfolio/gost-lineademo-hero.webp"
  },
  "visuals": 8,
- "visualsPrelim": 0,
+ "visualsPrelim": 1,
  "studioSize": "9 МБ",
  "pdfSize": "12 МБ"
 }

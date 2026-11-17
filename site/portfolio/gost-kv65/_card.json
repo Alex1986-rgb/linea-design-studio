@@ -9,7 +9,7 @@
  "area": "65,24 м²",
  "declared": "",
  "rooms": 9,
- "total": 117,
+ "total": 118,
  "blockers": 0,
  "issues": 218,
  "openQ": {
@@ -19,16 +19,16 @@
  "preReview": "",
  "hero": {
   "src": "assets/portfolio/gost-kv65-hero.jpg",
-  "alt": "Квартира 65 м² · после реконструкции — прихожая, визуализация",
+  "alt": "Квартира 65 м² · после реконструкции — детская, визуализация",
   "w": 1600,
   "h": 1066,
   "kind": "render",
   "state": "signed",
-  "name": "room-hall-wide",
+  "name": "room-kids-wD",
   "webp": "assets/portfolio/gost-kv65-hero.webp"
  },
- "visuals": 5,
- "visualsPrelim": 0,
+ "visuals": 6,
+ "visualsPrelim": 1,
  "studioSize": "8 МБ",
  "pdfSize": "10 МБ"
 }

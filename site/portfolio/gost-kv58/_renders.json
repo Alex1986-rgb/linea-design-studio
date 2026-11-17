@@ -1,9 +1,9 @@
 {
  "checked": true,
- "signed": 4,
+ "signed": 6,
  "prelim": 0,
- "rejected": 6,
- "accepted": 4,
+ "rejected": 4,
+ "accepted": 6,
  "ribbon": [
   {
    "src": "assets/portfolio/gost-kv58/room-living-wC.jpg",
@@ -12,12 +12,16 @@
    "h": 800,
    "state": "signed",
    "name": "room-living-wC",
-   "wall": "r1:C",
-   "clay": {
-    "src": "assets/portfolio/gost-kv58/clay-room-living-wC.jpg",
-    "w": 1200,
-    "h": 800
-   }
+   "wall": "r1:C"
+  },
+  {
+   "src": "assets/portfolio/gost-kv58/room-bedroom-wB.jpg",
+   "alt": "Квартира 55 м² · кухня-гостиная и спальня — спальня, визуализация",
+   "w": 1200,
+   "h": 800,
+   "state": "signed",
+   "name": "room-bedroom-wB",
+   "wall": "r2:B"
   },
   {
    "src": "assets/portfolio/gost-kv58/room-bath-wB.jpg",
@@ -26,12 +30,7 @@
    "h": 800,
    "state": "signed",
    "name": "room-bath-wB",
-   "wall": "r3:B",
-   "clay": {
-    "src": "assets/portfolio/gost-kv58/clay-room-bath-wB.jpg",
-    "w": 1200,
-    "h": 800
-   }
+   "wall": "r3:B"
   },
   {
    "src": "assets/portfolio/gost-kv58/room-hall-wide.jpg",
@@ -40,12 +39,16 @@
    "h": 800,
    "state": "signed",
    "name": "room-hall-wide",
-   "wall": "r5:room",
-   "clay": {
-    "src": "assets/portfolio/gost-kv58/clay-room-hall-wide.jpg",
-    "w": 1200,
-    "h": 800
-   }
+   "wall": "r5:room"
+  },
+  {
+   "src": "assets/portfolio/gost-kv58/room-wc-wide.jpg",
+   "alt": "Квартира 55 м² · кухня-гостиная и спальня — санузел, визуализация",
+   "w": 1200,
+   "h": 800,
+   "state": "signed",
+   "name": "room-wc-wide",
+   "wall": "r4:room"
   },
   {
    "src": "assets/portfolio/gost-kv58/room-bath-wC.jpg",
@@ -54,22 +57,17 @@
    "h": 800,
    "state": "signed",
    "name": "room-bath-wC",
-   "wall": "r3:C",
-   "clay": {
-    "src": "assets/portfolio/gost-kv58/clay-room-bath-wC.jpg",
-    "w": 1200,
-    "h": 800
-   }
+   "wall": "r3:C"
   }
  ],
  "hero": {
   "src": "assets/portfolio/gost-kv58-hero.jpg",
-  "alt": "Квартира 55 м² · кухня-гостиная и спальня — ванная, визуализация",
+  "alt": "Квартира 55 м² · кухня-гостиная и спальня — спальня, визуализация",
   "w": 1600,
   "h": 1066,
   "kind": "render",
   "state": "signed",
-  "name": "room-bath-wB",
+  "name": "room-bedroom-wB",
   "webp": "assets/portfolio/gost-kv58-hero.webp"
  }
 }

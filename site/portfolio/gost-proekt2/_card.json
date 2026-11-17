@@ -11,7 +11,7 @@
  "rooms": 13,
  "total": 161,
  "blockers": 0,
- "issues": 162,
+ "issues": 167,
  "openQ": {
   "n": 28,
   "no": "07"
@@ -27,7 +27,7 @@
   "name": "room-living1-wB",
   "webp": "assets/portfolio/gost-proekt2-hero.webp"
  },
- "visuals": 12,
+ "visuals": 14,
  "visualsPrelim": 0,
  "studioSize": "13 МБ",
  "pdfSize": "16 МБ"

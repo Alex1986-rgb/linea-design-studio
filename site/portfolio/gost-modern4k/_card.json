@@ -9,9 +9,9 @@
  "area": "127,29 м²",
  "declared": "",
  "rooms": 9,
- "total": 138,
+ "total": 139,
  "blockers": 0,
- "issues": 263,
+ "issues": 267,
  "openQ": {
   "n": 13,
   "no": "07"
@@ -27,8 +27,8 @@
   "name": "room-living-wB",
   "webp": "assets/portfolio/gost-modern4k-hero.webp"
  },
- "visuals": 13,
- "visualsPrelim": 0,
+ "visuals": 14,
+ "visualsPrelim": 1,
  "studioSize": "12 МБ",
  "pdfSize": "14 МБ"
 }

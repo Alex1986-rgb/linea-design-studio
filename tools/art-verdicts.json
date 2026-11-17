@@ -90,10 +90,12 @@
    ]
   },
   "room-living2-wA": {
-   "score": 7,
-   "verdict": "ВОЗВРАТ",
+   "score": 16,
+   "verdict": "ПРИНЯТ",
    "flags": [],
-   "nodes": []
+   "nodes": [
+    "дверь с наличником"
+   ]
   },
   "room-hall-wide": {
    "score": 18,
@@ -118,6 +120,14 @@
    "verdict": "ДОРАБОТКА",
    "flags": [],
    "nodes": []
+  },
+  "room-corridor-wD": {
+   "score": 16,
+   "verdict": "ПРИНЯТ",
+   "flags": [],
+   "nodes": [
+    "дверь с наличником"
+   ]
   }
  },
  "gost-kv3k": {
@@ -236,6 +246,12 @@
    "nodes": [
     "сетка точек"
    ]
+  },
+  "room-corridor-wB": {
+   "score": 19,
+   "verdict": "ПРИНЯТ",
+   "flags": [],
+   "nodes": []
   }
  },
  "gost-kv65": {
@@ -256,31 +272,27 @@
    ]
   },
   "room-corridor-wA": {
-   "score": 8,
-   "verdict": "ВОЗВРАТ",
-   "flags": [
-    "R1: дуб (главный) почти не виден — только рамки; лён, плетёное, абажур отс"
-   ],
+   "score": 20,
+   "verdict": "ПРИНЯТ",
+   "flags": [],
    "nodes": []
   },
   "room-kids-wC": {
-   "score": 8,
-   "verdict": "ВОЗВРАТ",
-   "flags": [
-    "R3б: нейросетевая живопись"
-   ],
+   "score": 12,
+   "verdict": "ДОРАБОТКА",
+   "flags": [],
    "nodes": [
-    "радиатор"
+    "радиатор под окном",
+    "спот в потолке"
    ]
   },
   "room-kids-wD": {
-   "score": 16,
-   "verdict": "ВОЗВРАТ",
-   "flags": [
-    "R2: счёт не совпадает — декоративных подушек 4 при 3 в COUNTED PARTS; створки шкафа (5) не читаются",
-    "R5: в отражении зеркала виден лишний предмет (пуф/сиденье), которого в комнате нет"
-   ],
-   "nodes": []
+   "score": 17,
+   "verdict": "ПРИНЯТ",
+   "flags": [],
+   "nodes": [
+    "радиатор под окном"
+   ]
   },
   "room-bedroom-wA": {
    "score": 12,
@@ -357,14 +369,10 @@
    ]
   },
   "room-bedroom-wB": {
-   "score": 11,
-   "verdict": "ВОЗВРАТ",
-   "flags": [
-    "R3б: нейросетевая живопись"
-   ],
-   "nodes": [
-    "радиатор"
-   ]
+   "score": 18,
+   "verdict": "ПРИНЯТ",
+   "flags": [],
+   "nodes": []
   },
   "room-bath-wB": {
    "score": 17,
@@ -379,11 +387,9 @@
    "nodes": []
   },
   "room-wc-wide": {
-   "score": 10,
-   "verdict": "ВОЗВРАТ",
-   "flags": [
-    "R1: дуб (главный материал) и пыльный синий в кадре отсутствуют"
-   ],
+   "score": 18,
+   "verdict": "ПРИНЯТ",
+   "flags": [],
    "nodes": []
   },
   "room-hall-wide": {
@@ -423,11 +429,9 @@
    "nodes": []
   },
   "room-wardrobe-wide": {
-   "score": 6,
-   "verdict": "ВОЗВРАТ",
-   "flags": [
-    "R1: морёный тёмный дуб, шалфейная стена, латунь не читаются — светлый дуб,"
-   ],
+   "score": 19,
+   "verdict": "ПРИНЯТ",
+   "flags": [],
    "nodes": []
   },
   "room-study-wD": {
@@ -570,6 +574,12 @@
     "R1: материалы ДНК не видны — только бежевая стена и пол, шалфея, латуни, д"
    ],
    "nodes": []
+  },
+  "room-corridor-wA": {
+   "score": 18,
+   "verdict": "ПРИНЯТ",
+   "flags": [],
+   "nodes": []
   }
  },
  "gost-retro103": {
@@ -683,11 +693,9 @@
    ]
   },
   "room-corridor-wB": {
-   "score": 8,
-   "verdict": "ВОЗВРАТ",
-   "flags": [
-    "R1: орех и драгоценный цвет отсутствуют, видна только латунная ручка"
-   ],
+   "score": 16,
+   "verdict": "ПРИНЯТ",
+   "flags": [],
    "nodes": []
   },
   "room-bedroom2-wA": {
@@ -757,16 +765,20 @@
    "nodes": []
   },
   "room-bedroom-wC": {
-   "score": 16,
+   "score": 15,
    "verdict": "ДОРАБОТКА",
    "flags": [],
-   "nodes": []
+   "nodes": [
+    "споты на потолке вместо уступа с подсветкой"
+   ]
   },
   "room-bedroom-wD": {
    "score": 16,
-   "verdict": "ДОРАБОТКА",
+   "verdict": "ПРИНЯТ",
    "flags": [],
-   "nodes": []
+   "nodes": [
+    "радиатор у правого края"
+   ]
   },
   "room-kids-wA": {
    "score": 14,
@@ -837,7 +849,7 @@
    ]
   },
   "room-living-m1": {
-   "score": 19,
+   "score": 18,
    "verdict": "ПРИНЯТ",
    "flags": [],
    "nodes": []
@@ -893,8 +905,8 @@
    ]
   },
   "room-living-s1": {
-   "score": 17,
-   "verdict": "ДОРАБОТКА",
+   "score": 16,
+   "verdict": "ПРИНЯТ",
    "flags": [],
    "nodes": []
   }

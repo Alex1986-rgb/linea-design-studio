@@ -1,9 +1,9 @@
 {
  "checked": true,
- "signed": 10,
+ "signed": 11,
  "prelim": 0,
- "rejected": 2,
- "accepted": 10,
+ "rejected": 1,
+ "accepted": 11,
  "ribbon": [
   {
    "src": "assets/portfolio/gost-elitemodern/3d-top.jpg",
@@ -12,12 +12,16 @@
    "h": 800,
    "state": "signed",
    "name": "3d-top",
-   "wall": "top",
-   "clay": {
-    "src": "assets/portfolio/gost-elitemodern/clay-3d-top.jpg",
-    "w": 1200,
-    "h": 800
-   }
+   "wall": "top"
+  },
+  {
+   "src": "assets/portfolio/gost-elitemodern/room-living-s1.jpg",
+   "alt": "Квартира 68 м² · элитный модерн — гостиная, визуализация",
+   "w": 1200,
+   "h": 800,
+   "state": "signed",
+   "name": "room-living-s1",
+   "wall": "r6:mag"
   },
   {
    "src": "assets/portfolio/gost-elitemodern/room-kitchen-m1.jpg",
@@ -26,12 +30,7 @@
    "h": 800,
    "state": "signed",
    "name": "room-kitchen-m1",
-   "wall": "r5:mag",
-   "clay": {
-    "src": "assets/portfolio/gost-elitemodern/clay-room-kitchen-m1.jpg",
-    "w": 1200,
-    "h": 800
-   }
+   "wall": "r5:mag"
   },
   {
    "src": "assets/portfolio/gost-elitemodern/room-bedroom-m1.jpg",
@@ -40,12 +39,7 @@
    "h": 800,
    "state": "signed",
    "name": "room-bedroom-m1",
-   "wall": "r7:mag",
-   "clay": {
-    "src": "assets/portfolio/gost-elitemodern/clay-room-bedroom-m1.jpg",
-    "w": 1200,
-    "h": 800
-   }
+   "wall": "r7:mag"
   },
   {
    "src": "assets/portfolio/gost-elitemodern/room-study-m1.jpg",
@@ -54,12 +48,7 @@
    "h": 800,
    "state": "signed",
    "name": "room-study-m1",
-   "wall": "r1:mag",
-   "clay": {
-    "src": "assets/portfolio/gost-elitemodern/clay-room-study-m1.jpg",
-    "w": 1200,
-    "h": 800
-   }
+   "wall": "r1:mag"
   },
   {
    "src": "assets/portfolio/gost-elitemodern/room-bath-s1.jpg",
@@ -68,12 +57,7 @@
    "h": 800,
    "state": "signed",
    "name": "room-bath-s1",
-   "wall": "r3:mag",
-   "clay": {
-    "src": "assets/portfolio/gost-elitemodern/clay-room-bath-s1.jpg",
-    "w": 1200,
-    "h": 800
-   }
+   "wall": "r3:mag"
   },
   {
    "src": "assets/portfolio/gost-elitemodern/room-hall-s1.jpg",
@@ -82,12 +66,7 @@
    "h": 800,
    "state": "signed",
    "name": "room-hall-s1",
-   "wall": "r4:mag",
-   "clay": {
-    "src": "assets/portfolio/gost-elitemodern/clay-room-hall-s1.jpg",
-    "w": 1200,
-    "h": 800
-   }
+   "wall": "r4:mag"
   },
   {
    "src": "assets/portfolio/gost-elitemodern/room-wc-s1.jpg",
@@ -96,12 +75,7 @@
    "h": 800,
    "state": "signed",
    "name": "room-wc-s1",
-   "wall": "r2:mag",
-   "clay": {
-    "src": "assets/portfolio/gost-elitemodern/clay-room-wc-s1.jpg",
-    "w": 1200,
-    "h": 800
-   }
+   "wall": "r2:mag"
   },
   {
    "src": "assets/portfolio/gost-elitemodern/room-kitchen-m2.jpg",
@@ -110,12 +84,7 @@
    "h": 800,
    "state": "signed",
    "name": "room-kitchen-m2",
-   "wall": "r5:mag",
-   "clay": {
-    "src": "assets/portfolio/gost-elitemodern/clay-room-kitchen-m2.jpg",
-    "w": 1200,
-    "h": 800
-   }
+   "wall": "r5:mag"
   },
   {
    "src": "assets/portfolio/gost-elitemodern/room-bath-d1.jpg",
@@ -124,12 +93,7 @@
    "h": 800,
    "state": "signed",
    "name": "room-bath-d1",
-   "wall": "r3:mag",
-   "clay": {
-    "src": "assets/portfolio/gost-elitemodern/clay-room-bath-d1.jpg",
-    "w": 1200,
-    "h": 800
-   }
+   "wall": "r3:mag"
   },
   {
    "src": "assets/portfolio/gost-elitemodern/room-bath-d2.jpg",
@@ -138,22 +102,17 @@
    "h": 800,
    "state": "signed",
    "name": "room-bath-d2",
-   "wall": "r3:mag",
-   "clay": {
-    "src": "assets/portfolio/gost-elitemodern/clay-room-bath-d2.jpg",
-    "w": 1200,
-    "h": 800
-   }
+   "wall": "r3:mag"
   }
  ],
  "hero": {
   "src": "assets/portfolio/gost-elitemodern-hero.jpg",
-  "alt": "Квартира 68 м² · элитный модерн — кухня-столовая, визуализация",
+  "alt": "Квартира 68 м² · элитный модерн — гостиная, визуализация",
   "w": 1600,
   "h": 1066,
   "kind": "render",
   "state": "signed",
-  "name": "room-kitchen-m2",
+  "name": "room-living-s1",
   "webp": "assets/portfolio/gost-elitemodern-hero.webp"
  }
 }

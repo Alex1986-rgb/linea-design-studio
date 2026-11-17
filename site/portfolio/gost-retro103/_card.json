@@ -9,9 +9,9 @@
  "area": "100,72 м²",
  "declared": "По обмерному плану общая площадь двух квартир с тамбуром — 102,98 м²; по экспликации альбома (сумма помещений) — 100,72 м², она и стоит в названии.",
  "rooms": 11,
- "total": 131,
+ "total": 133,
  "blockers": 0,
- "issues": 382,
+ "issues": 385,
  "openQ": {
   "n": 7,
   "no": "06"
@@ -28,7 +28,7 @@
   "webp": "assets/portfolio/gost-retro103-hero.webp"
  },
  "visuals": 13,
- "visualsPrelim": 0,
- "studioSize": "12 МБ",
+ "visualsPrelim": 1,
+ "studioSize": "11 МБ",
  "pdfSize": "13 МБ"
 }
